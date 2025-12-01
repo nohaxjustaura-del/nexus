@@ -1,0 +1,143 @@
+'use client'
+
+import { useEffect, useState } from 'react'
+import { X, CheckCircle, AlertCircle, Info, AlertTriangle } from 'lucide-react'
+import { cn } from '@/lib/utils'
+
+export type ToastType = 'success' | 'error' | 'info' | 'warning'
+
+interface ToastProps {
+  message: string
+  type?: ToastType
+  duration?: number
+  onClose?: () => void
+}
+
+const icons = {
+  success: CheckCircle,
+  error: AlertCircle,
+  info: Info,
+  warning: AlertTriangle,
+}
+
+const styles = {
+  success: 'bg-green-50 border-green-200 text-green-900',
+  error: 'bg-red-50 border-red-200 text-red-900',
+  info: 'bg-blue-50 border-blue-200 text-blue-900',
+  warning: 'bg-yellow-50 border-yellow-200 text-yellow-900',
+}
+
+const iconStyles = {
+  success: 'text-green-600',
+  error: 'text-red-600',
+  info: 'text-blue-600',
+  warning: 'text-yellow-600',
+}
+
+export function Toast({ message, type = 'info', duration = 5000, onClose }: ToastProps) {
+  const [isVisible, setIsVisible] = useState(true)
+  const Icon = icons[type]
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsVisible(false)
+      onClose?.()
+    }, duration)
+
+    return () => clearTimeout(timer)
+  }, [duration, onClose])
+
+  if (!isVisible) return null
+
+  return (
+    <div
+      className={cn(
+        'fixed top-4 right-4 z-[100] max-w-md rounded-lg border p-4 shadow-lg animate-slide-down',
+        'flex items-start gap-3',
+        styles[type]
+      )}
+      role="alert"
+      aria-live="polite"
+    >
+      <Icon className={cn('h-5 w-5 mt-0.5 flex-shrink-0', iconStyles[type])} />
+      <p className="flex-1 text-sm font-medium">{message}</p>
+      <button
+        onClick={() => {
+          setIsVisible(false)
+          onClose?.()
+        }}
+        className="flex-shrink-0 hover:opacity-70 transition-opacity"
+        aria-label="Close notification"
+      >
+        <X className="h-4 w-4" />
+      </button>
+    </div>
+  )
+}
+
+// Toast manager for programmatic usage
+class ToastManager {
+  private listeners: Array<(toast: ToastProps & { id: string }) => void> = []
+
+  subscribe(listener: (toast: ToastProps & { id: string }) => void) {
+    this.listeners.push(listener)
+    return () => {
+      this.listeners = this.listeners.filter(l => l !== listener)
+    }
+  }
+
+  show(props: ToastProps) {
+    const id = Math.random().toString(36).substr(2, 9)
+    this.listeners.forEach(listener => listener({ ...props, id }))
+  }
+
+  success(message: string, duration?: number) {
+    this.show({ message, type: 'success', duration })
+  }
+
+  error(message: string, duration?: number) {
+    this.show({ message, type: 'error', duration })
+  }
+
+  info(message: string, duration?: number) {
+    this.show({ message, type: 'info', duration })
+  }
+
+  warning(message: string, duration?: number) {
+    this.show({ message, type: 'warning', duration })
+  }
+}
+
+export const toast = new ToastManager()
+
+// Provider component
+export function ToastProvider({ children }: { children: React.ReactNode }) {
+  const [toasts, setToasts] = useState<Array<ToastProps & { id: string }>>([])
+
+  useEffect(() => {
+    const unsubscribe = toast.subscribe((newToast) => {
+      setToasts(prev => [...prev, newToast])
+    })
+
+    return unsubscribe
+  }, [])
+
+  return (
+    <>
+      {children}
+      <div className="fixed top-0 right-0 z-[100] p-4 space-y-2">
+        {toasts.map((t) => (
+          <Toast
+            key={t.id}
+            {...t}
+            onClose={() => setToasts(prev => prev.filter(toast => toast.id !== t.id))}
+          />
+        ))}
+      </div>
+    </>
+  )
+}
+
+
+
+

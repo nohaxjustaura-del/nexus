@@ -1,0 +1,537 @@
+'use client'
+
+import { useState, useEffect } from 'react'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { 
+  Building2,
+  CheckCircle,
+  XCircle,
+  Clock,
+  Search,
+  ExternalLink,
+  Mail,
+  Globe,
+  Linkedin,
+  Filter,
+  Download,
+  Eye,
+  EyeOff
+} from "lucide-react"
+import Link from "next/link"
+import { parseJSON } from "@/lib/utils"
+
+interface Investor {
+  id: string
+  email: string
+  name: string
+  firmName: string
+  verified: boolean
+  stages: string
+  sectors: string
+  checkMin: number
+  checkMax: number
+  geoFocus: string
+  applicationUrl: string | null
+  linkedinUrl: string | null
+  websiteUrl: string | null
+  createdAt: Date
+  updatedAt: Date
+}
+
+interface VCClaim {
+  id: string
+  email: string
+  name: string
+  firmName: string
+  status: 'pending' | 'approved' | 'rejected'
+  checkMin: number
+  checkMax: number
+  stages: string
+  sectors: string
+  createdAt: Date
+}
+
+export default function AdminVCsPage() {
+  const [investors, setInvestors] = useState<Investor[]>([])
+  const [claims, setClaims] = useState<VCClaim[]>([])
+  const [loading, setLoading] = useState(true)
+  const [searchTerm, setSearchTerm] = useState('')
+  const [filterStatus, setFilterStatus] = useState<'all' | 'verified' | 'unverified'>('all')
+  const [showPendingClaims, setShowPendingClaims] = useState(true)
+
+  useEffect(() => {
+    loadData()
+  }, [])
+
+  const loadData = async () => {
+    try {
+      const [investorsRes, claimsRes] = await Promise.all([
+        fetch('/api/admin/vcs'),
+        fetch('/api/admin/vc-claims')
+      ])
+      
+      const investorsData = await investorsRes.json()
+      const claimsData = await claimsRes.json()
+      
+      setInvestors(investorsData.investors || [])
+      setClaims(claimsData.claims || [])
+      setLoading(false)
+    } catch (error) {
+      console.error('Error loading data:', error)
+      setLoading(false)
+    }
+  }
+
+  const handleApprove = async (claimId: string) => {
+    try {
+      const res = await fetch(`/api/vc-claim/approve`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ claimId }),
+      })
+      
+      if (res.ok) {
+        await loadData()
+      } else {
+        alert('Failed to approve VC claim')
+      }
+    } catch (error) {
+      console.error('Error approving claim:', error)
+      alert('Error approving claim')
+    }
+  }
+
+  const handleReject = async (claimId: string, notes?: string) => {
+    const rejectionNotes = notes || prompt('Rejection reason (optional):') || undefined
+    if (rejectionNotes === null) return // User cancelled
+    
+    try {
+      const res = await fetch(`/api/vc-claim/reject`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ claimId, notes: rejectionNotes }),
+      })
+      
+      if (res.ok) {
+        await loadData()
+      } else {
+        alert('Failed to reject VC claim')
+      }
+    } catch (error) {
+      console.error('Error rejecting claim:', error)
+      alert('Error rejecting claim')
+    }
+  }
+
+  const handleToggleVerification = async (investorId: string, currentStatus: boolean) => {
+    try {
+      const res = await fetch(`/api/admin/vcs/${investorId}/verify`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ verified: !currentStatus }),
+      })
+      
+      if (res.ok) {
+        await loadData()
+      } else {
+        alert('Failed to update verification status')
+      }
+    } catch (error) {
+      console.error('Error toggling verification:', error)
+      alert('Error updating verification')
+    }
+  }
+
+  const handleDelete = async (investorId: string) => {
+    const confirmDelete = confirm('Delete this VC? This action cannot be undone.')
+    if (!confirmDelete) return
+
+    try {
+      const res = await fetch(`/api/admin/vcs/${investorId}`, {
+        method: 'DELETE',
+      })
+
+      if (res.ok) {
+        await loadData()
+      } else {
+        const data = await res.json().catch(() => ({}))
+        alert(data.error || 'Failed to delete VC')
+      }
+    } catch (error) {
+      console.error('Error deleting VC:', error)
+      alert('Error deleting VC')
+    }
+  }
+
+  const filteredInvestors = investors.filter(inv => {
+    const matchesSearch = 
+      inv.firmName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      inv.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      inv.email.toLowerCase().includes(searchTerm.toLowerCase())
+    
+    const matchesFilter = 
+      filterStatus === 'all' ||
+      (filterStatus === 'verified' && inv.verified) ||
+      (filterStatus === 'unverified' && !inv.verified)
+    
+    return matchesSearch && matchesFilter
+  })
+
+  const pendingClaims = claims.filter(c => c.status === 'pending')
+  const stats = {
+    total: investors.length,
+    verified: investors.filter(i => i.verified).length,
+    unverified: investors.filter(i => !i.verified).length,
+    pendingClaims: pendingClaims.length,
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-4 text-muted-foreground">Loading VCs...</p>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="min-h-screen bg-background">
+      {/* Header */}
+      <header className="border-b">
+        <div className="container mx-auto flex h-16 items-center justify-between px-4">
+          <Link href="/" className="flex items-center gap-2">
+            <Building2 className="h-6 w-6 text-primary" />
+            <span className="text-xl font-bold">FounderMatch Admin</span>
+          </Link>
+          <div className="flex items-center gap-4">
+            <Link href="/admin/waitlist">
+              <Button variant="ghost">Waitlist</Button>
+            </Link>
+            <Badge variant="secondary">VC Management</Badge>
+          </div>
+        </div>
+      </header>
+
+      <div className="container mx-auto px-4 py-8">
+        <div className="mb-8">
+          <h1 className="mb-2 text-3xl font-bold">VC Management Dashboard</h1>
+          <p className="text-muted-foreground">
+            Approve VC claims and manage investor profiles
+          </p>
+        </div>
+
+        {/* Stats */}
+        <div className="mb-8 grid gap-4 md:grid-cols-4">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium">Total VCs</CardTitle>
+              <Building2 className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats.total}</div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium">Verified</CardTitle>
+              <CheckCircle className="h-4 w-4 text-green-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-green-600">{stats.verified}</div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium">Unverified</CardTitle>
+              <XCircle className="h-4 w-4 text-orange-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-orange-600">{stats.unverified}</div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium">Pending Claims</CardTitle>
+              <Clock className="h-4 w-4 text-blue-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-blue-600">{stats.pendingClaims}</div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Pending Claims Section */}
+        {showPendingClaims && pendingClaims.length > 0 && (
+          <Card className="mb-8 border-blue-200">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <Clock className="h-5 w-5 text-blue-600" />
+                    Pending VC Claims ({pendingClaims.length})
+                  </CardTitle>
+                  <CardDescription>
+                    Review and approve new VC profile claims
+                  </CardDescription>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowPendingClaims(false)}
+                >
+                  <EyeOff className="h-4 w-4" />
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {pendingClaims.map((claim) => (
+                  <div
+                    key={claim.id}
+                    className="flex items-start justify-between p-4 border rounded-lg hover:bg-muted/50"
+                  >
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-2">
+                        <h3 className="font-semibold">{claim.firmName}</h3>
+                        <Badge variant="outline" className="text-blue-600 border-blue-600">
+                          Pending
+                        </Badge>
+                      </div>
+                      <p className="text-sm text-muted-foreground mb-1">
+                        <strong>{claim.name}</strong> • {claim.email}
+                      </p>
+                      <div className="flex flex-wrap gap-2 mt-2">
+                        <Badge variant="secondary">
+                          ${claim.checkMin}K - ${claim.checkMax}K
+                        </Badge>
+                        <Badge variant="secondary">
+                          {parseJSON<string[]>(claim.stages, []).join(', ')}
+                        </Badge>
+                        <Badge variant="secondary">
+                          {parseJSON<string[]>(claim.sectors, []).slice(0, 2).join(', ')}
+                        </Badge>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-2">
+                        Submitted {new Date(claim.createdAt).toLocaleDateString()}
+                      </p>
+                    </div>
+                    <div className="flex gap-2 ml-4">
+                      <Button
+                        size="sm"
+                        onClick={() => handleApprove(claim.id)}
+                        className="bg-green-600 hover:bg-green-700"
+                      >
+                        <CheckCircle className="h-4 w-4 mr-1" />
+                        Approve
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        onClick={() => handleReject(claim.id)}
+                      >
+                        <XCircle className="h-4 w-4 mr-1" />
+                        Reject
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {!showPendingClaims && pendingClaims.length > 0 && (
+          <div className="mb-8">
+            <Button
+              variant="outline"
+              onClick={() => setShowPendingClaims(true)}
+            >
+              <Eye className="h-4 w-4 mr-2" />
+              Show Pending Claims ({pendingClaims.length})
+            </Button>
+          </div>
+        )}
+
+        {/* Filters and Search */}
+        <Card className="mb-6">
+          <CardContent className="pt-6">
+            <div className="flex flex-col md:flex-row gap-4">
+              <div className="flex-1 relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search by firm name, contact name, or email..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    window.open('/api/admin/vcs/export-csv', '_blank')
+                  }}
+                  className="gap-2"
+                >
+                  <Download className="h-4 w-4" />
+                  Export CSV
+                </Button>
+                <Button
+                  variant={filterStatus === 'all' ? 'default' : 'outline'}
+                  onClick={() => setFilterStatus('all')}
+                >
+                  All
+                </Button>
+                <Button
+                  variant={filterStatus === 'verified' ? 'default' : 'outline'}
+                  onClick={() => setFilterStatus('verified')}
+                >
+                  <CheckCircle className="h-4 w-4 mr-1" />
+                  Verified
+                </Button>
+                <Button
+                  variant={filterStatus === 'unverified' ? 'default' : 'outline'}
+                  onClick={() => setFilterStatus('unverified')}
+                >
+                  <XCircle className="h-4 w-4 mr-1" />
+                  Unverified
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* VC List */}
+        <div className="space-y-4">
+          {filteredInvestors.length === 0 ? (
+            <Card>
+              <CardContent className="pt-6 text-center text-muted-foreground">
+                No VCs found matching your criteria.
+              </CardContent>
+            </Card>
+          ) : (
+            filteredInvestors.map((investor) => (
+              <Card key={investor.id} className="hover:shadow-md transition-shadow">
+                <CardContent className="pt-6">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-2">
+                        <h3 className="text-lg font-semibold">{investor.firmName}</h3>
+                        {investor.verified ? (
+                          <Badge className="bg-green-600">
+                            <CheckCircle className="h-3 w-3 mr-1" />
+                            Verified
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="text-orange-600 border-orange-600">
+                            <XCircle className="h-3 w-3 mr-1" />
+                            Unverified
+                          </Badge>
+                        )}
+                      </div>
+                      <p className="text-sm text-muted-foreground mb-3">
+                        <strong>{investor.name}</strong> • {investor.email}
+                      </p>
+                      
+                      <div className="flex flex-wrap gap-2 mb-3">
+                        <Badge variant="secondary">
+                          ${investor.checkMin}K - ${investor.checkMax}K
+                        </Badge>
+                        {parseJSON<string[]>(investor.stages, []).map((stage) => (
+                          <Badge key={stage} variant="secondary">{stage}</Badge>
+                        ))}
+                        {parseJSON<string[]>(investor.sectors, []).slice(0, 3).map((sector) => (
+                          <Badge key={sector} variant="outline">{sector}</Badge>
+                        ))}
+                      </div>
+
+                      <div className="flex gap-4 mt-3">
+                        {investor.websiteUrl && (
+                          <a
+                            href={investor.websiteUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-1 text-sm text-muted-foreground hover:text-primary"
+                          >
+                            <Globe className="h-4 w-4" />
+                            Website
+                          </a>
+                        )}
+                        {investor.linkedinUrl && (
+                          <a
+                            href={investor.linkedinUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-1 text-sm text-muted-foreground hover:text-primary"
+                          >
+                            <Linkedin className="h-4 w-4" />
+                            LinkedIn
+                          </a>
+                        )}
+                        {investor.applicationUrl && (
+                          <a
+                            href={investor.applicationUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-1 text-sm text-muted-foreground hover:text-primary"
+                          >
+                            <ExternalLink className="h-4 w-4" />
+                            Apply
+                          </a>
+                        )}
+                      </div>
+
+                      <p className="text-xs text-muted-foreground mt-3">
+                        Created {new Date(investor.createdAt).toLocaleDateString()} • 
+                        Updated {new Date(investor.updatedAt).toLocaleDateString()}
+                      </p>
+                    </div>
+
+                    <div className="flex flex-col gap-2 ml-4">
+                      <Button
+                        size="sm"
+                        variant={investor.verified ? "outline" : "default"}
+                        onClick={() => handleToggleVerification(investor.id, investor.verified)}
+                      >
+                        {investor.verified ? (
+                          <>
+                            <EyeOff className="h-4 w-4 mr-1" />
+                            Unverify
+                          </>
+                        ) : (
+                          <>
+                            <CheckCircle className="h-4 w-4 mr-1" />
+                            Verify
+                          </>
+                        )}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        onClick={() => handleDelete(investor.id)}
+                      >
+                        <XCircle className="h-4 w-4 mr-1" />
+                        Delete
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+
+

@@ -1,0 +1,115 @@
+MICHAEL RODRIGUEZ
+michael@salesplatform.com | New York, NY
+linkedin.com/in/michaelrodriguez
+
+=== CURRENT VENTURE ===
+
+Founder & CEO - Enterprise Sales Intelligence Platform (June 2023 - Present)
+B2B SaaS for sales teams at mid-market companies
+
+Key Metrics (as of Nov 2024):
+- ARR: $450K (from $0 in June 2023)
+- MRR: $38K growing 28% month-over-month
+- Customers: 22 companies (avg deal size: $24K/year)
+- Net Revenue Retention: 118%
+- Gross Margin: 87%
+
+Sales Metrics:
+- Pipeline: $1.2M qualified
+- Win Rate: 32%
+- Sales Cycle: 45 days average
+- CAC Payback: 11 months
+- LTV/CAC Ratio: 4.2x
+
+Product:
+- Daily active usage: 450 sales reps across 22 companies
+- Integration with Salesforce, HubSpot, Outreach
+- Implementation time: 2 weeks average
+
+Team:
+- 4 people (2 eng, 1 sales, 1 founder)
+- Hiring: VP Sales (offer out), 2 more engineers
+
+=== EXPERIENCE ===
+
+VP Sales - SalesLoft (2021-2023)
+- Grew revenue from $15M to $45M ARR in 2 years
+- Built and led team of 12 AEs
+- Closed 50+ deals ranging from $25K-$250K
+- Developed repeatable sales playbook
+
+Account Executive - HubSpot (2019-2021)
+- Top performer: 145% of quota in 2020
+- Closed $2.8M in new business
+- Average deal size: $35K
+
+Sales Development Rep - ZoomInfo (2018-2019)
+- Generated $5M pipeline
+- 25% conversion to closed-won
+
+=== EDUCATION ===
+
+New York University - Stern School of Business
+BBA, Marketing & Information Systems, 2018
+
+=== SKILLS ===
+
+Sales: Enterprise B2B, SaaS Sales, Account Management
+Technical: Basic Python, SQL, API integrations
+Tools: Salesforce, HubSpot, Outreach, Apollo, LinkedIn Sales Nav
+Leadership: Team Building, Sales Training, Process Design
+
+=== TRACTION DETAILS ===
+
+Customer Profile:
+- ICP: 50-500 person companies with 10+ sales reps
+- Verticals: SaaS (60%), fintech (25%), services (15%)
+- Average seats: 18 per company
+- Expansion rate: 140% year 1
+
+Go-to-Market:
+- Outbound: 60% of pipeline
+- Inbound: 30% of pipeline
+- Referrals: 10% of pipeline
+- Demo-to-close: 28%
+
+Proof Points:
+- 3 customers over $50K ARR
+- 2 Fortune 1000 pilots in progress
+- 95% customer satisfaction (NPS: 62)
+
+=== SEEKING ===
+
+Raising: $2M Seed Round
+Stage: Seed (validated PMF, need to scale sales)
+Sectors: SaaS, Enterprise, B2B
+Use of Funds: 
+  - $800K: Hire VP Sales + 3 AEs
+  - $600K: Product (2 engineers, product manager)
+  - $400K: Marketing & demand gen
+  - $200K: Runway buffer
+
+Ideal Investor:
+- Experience with B2B SaaS go-to-market
+- Network for hiring sales leadership
+- Customer intros to mid-market enterprises
+- Board experience with sales-led SaaS companies
+- Okay with 3-4 week decision timeline
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

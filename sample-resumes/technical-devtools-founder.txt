@@ -1,0 +1,92 @@
+ALEX CHEN
+alex.chen@devtools.io | San Francisco, CA
+alex-chen (GitHub) | @alexchen (Twitter)
+
+=== CURRENT VENTURE ===
+
+Founder & CTO - DevOps Analytics Platform (Mar 2024 - Present)
+Building developer tools for CI/CD pipeline optimization
+
+Traction:
+- 850 GitHub stars on core OSS library
+- 2,500 weekly NPM downloads
+- 120 active contributors to ecosystem
+- 45 companies using in production (including 3 YC startups)
+- Time-to-value: Developers integrate in <8 minutes
+
+Technical Achievement:
+- Reduced CI/CD costs by average 60% for users
+- 99.9% uptime across all deployments
+- Processing 100K builds/day
+
+Revenue: $12K MRR from premium tier (launched 2 months ago)
+Growth: 40% MoM user growth, 25% MoM revenue growth
+
+=== EXPERIENCE ===
+
+Senior Software Engineer - Vercel (2022-2024)
+- Built Next.js deployment infrastructure
+- Improved build times by 50%
+- Led team of 4 engineers
+- Tech: TypeScript, Go, Kubernetes, Docker
+
+Software Engineer - GitHub (2020-2022)
+- Worked on GitHub Actions CI/CD
+- Shipped features used by millions of developers
+- Open-source contributions to core platform
+
+=== SKILLS ===
+
+Programming: TypeScript, Go, Python, Rust, JavaScript
+DevOps: Docker, Kubernetes, GitHub Actions, GitLab CI
+Cloud: AWS, GCP, Vercel, Railway
+Databases: PostgreSQL, Redis, MongoDB
+Developer Experience: CLI design, SDK development, API design
+
+=== OPEN SOURCE ===
+
+Main Projects:
+- DevAnalyzer (850+ stars): CI/CD optimization toolkit
+- BuildFast (320 stars): Deployment automation
+- CostOptim (180 stars): Cloud cost analyzer
+
+Total: 1,350+ combined GitHub stars
+Active in: TypeScript, DevTools, CI/CD communities
+
+=== EDUCATION ===
+
+UC Berkeley
+BS Computer Science, 2020
+Minor: Business Administration
+
+=== SEEKING ===
+
+Raising: $750K Seed Round
+Stage: Seed (have product-market fit signals)
+Sectors: Developer Tools, SaaS, Infrastructure
+Lead Sought: Yes, looking for lead investor + value-add
+
+Ideal Investor Profile:
+- Experience with developer tools/infrastructure
+- Technical background (can evaluate our architecture)
+- Network in engineering communities
+- Fast decision timeline preferred (1-2 weeks ideal)
+- Helpful with hiring senior engineers
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

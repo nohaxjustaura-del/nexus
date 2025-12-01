@@ -1,0 +1,13 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /admin/
+Disallow: /account/
+Disallow: /founder/dashboard
+Disallow: /vc/dashboard
+
+Sitemap: https://foundermatch.com/sitemap.xml
+
+
+
+

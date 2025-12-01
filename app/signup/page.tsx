@@ -1,0 +1,213 @@
+'use client'
+
+import { useState, useEffect } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
+import Link from 'next/link'
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Button } from '@/components/ui/button'
+import { Mail, Loader2 } from 'lucide-react'
+
+export default function SignUpPage() {
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const redirectUrl = searchParams.get('redirect') || ''
+  const [email, setEmail] = useState('')
+  const [userType, setUserType] = useState<'founder' | 'investor' | 'mentor'>('founder')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setError('')
+    
+    // Validate email before submitting
+    const trimmedEmail = email.trim()
+    if (!trimmedEmail || !trimmedEmail.includes('@')) {
+      setError('Please enter a valid email address')
+      return
+    }
+    
+    setLoading(true)
+
+    try {
+      const response = await fetch('/api/auth/signup', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email: trimmedEmail, userType }),
+      })
+
+      // Check if response is JSON
+      const contentType = response.headers.get('content-type')
+      if (!contentType || !contentType.includes('application/json')) {
+        const text = await response.text()
+        console.error('Non-JSON response:', text.substring(0, 500))
+        setError('Server error. Please check console for details.')
+        setLoading(false)
+        return
+      }
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        // Better error handling
+        const errorMsg = data.error || data.message || 'Something went wrong'
+        
+        // If account exists, offer to redirect to login
+        if (data.existingAccount) {
+          setError(`${errorMsg} Would you like to log in instead?`)
+          // Show login link option
+          setTimeout(() => {
+            if (confirm(`${errorMsg}\n\nWould you like to go to the login page?`)) {
+              router.push(`/login${redirectUrl ? `?redirect=${encodeURIComponent(redirectUrl)}` : ''}`)
+            }
+          }, 100)
+        } else {
+          setError(errorMsg)
+        }
+        setLoading(false)
+        return
+      }
+
+      // Success! Show code in dev mode if provided
+      if (data.code) {
+        // Show code in a nicer way
+        setTimeout(() => {
+          alert(`🔐 Verification Code (Dev Mode - No Email Service)\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\nYour code is: ${data.code}\n\nThis code will expire in 10 minutes.\n\n📧 To receive emails:\n   1. Get API key from https://resend.com\n   2. Add RESEND_API_KEY to .env file\n   3. Restart your dev server\n\n💡 For now, check your terminal/console for the code.\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`)
+        }, 100)
+      } else {
+        // Email was sent successfully
+        setTimeout(() => {
+          alert(`✅ Verification code sent!\n\nCheck your email inbox for the code.\n\n(If you don't see it, check your spam folder.)`)
+        }, 100)
+      }
+
+      // Redirect to verification page with email and return URL
+      const verifyUrl = `/verify?email=${encodeURIComponent(data.email || email)}${redirectUrl ? `&redirect=${encodeURIComponent(redirectUrl)}` : ''}`
+      router.push(verifyUrl)
+    } catch (err: any) {
+      console.error('Signup error:', err)
+      // More helpful error message
+      if (err.message?.includes('JSON')) {
+        setError('Server error: Please check your connection and try again.')
+      } else {
+        setError(err.message || 'Failed to send verification code. Please try again.')
+      }
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-white via-primary/5 to-purple-50/40 p-4 relative overflow-hidden">
+      {/* Background decorations */}
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-primary/5 rounded-full blur-3xl -z-10" />
+      <div className="absolute bottom-0 right-0 w-[400px] h-[400px] bg-purple-500/5 rounded-full blur-3xl -z-10" />
+      
+      <Card className="w-full max-w-md border-2 border-slate-200 shadow-2xl bg-white/95 backdrop-blur-sm">
+        <CardHeader className="space-y-1 text-center pb-6">
+          <div className="mx-auto w-16 h-16 bg-gradient-to-br from-primary via-blue-600 to-purple-600 rounded-2xl flex items-center justify-center mb-4 shadow-lg">
+            <Mail className="w-8 h-8 text-white" />
+          </div>
+          <CardTitle className="text-3xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">Create Your Account</CardTitle>
+          <CardDescription className="text-base mt-2">
+            Enter your email to get started. We'll send you a verification code.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <label htmlFor="email" className="text-sm font-semibold text-slate-700">
+                Email Address
+              </label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="you@example.com"
+                value={email}
+                onChange={(e) => {
+                  setEmail(e.target.value)
+                  setError('') // Clear error when typing
+                }}
+                onKeyDown={(e) => {
+                  // Allow Enter key to submit
+                  if (e.key === 'Enter' && email.trim() && !loading) {
+                    handleSubmit(e as any)
+                  }
+                }}
+                required
+                disabled={loading}
+                className="w-full h-12 border-2 border-slate-300 focus:border-primary rounded-xl text-base transition-all"
+                autoComplete="email"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label htmlFor="userType" className="text-sm font-semibold text-slate-700">
+                I am a...
+              </label>
+              <select
+                id="userType"
+                value={userType}
+                onChange={(e) => setUserType(e.target.value as 'founder' | 'investor' | 'mentor')}
+                disabled={loading}
+                className="flex h-12 w-full rounded-xl border-2 border-slate-300 focus:border-primary bg-background px-4 py-2 text-base ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 transition-all"
+              >
+                <option value="founder">Founder</option>
+                <option value="investor">Investor/VC</option>
+                <option value="mentor">Mentor</option>
+              </select>
+            </div>
+
+            {error && (
+              <div className="p-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded-md">
+                {error}
+              </div>
+            )}
+
+            <Button
+              type="submit"
+              className="w-full h-12 bg-gradient-to-r from-primary via-blue-600 to-purple-600 hover:from-primary/90 hover:via-blue-600/90 hover:to-purple-600/90 shadow-lg hover:shadow-xl transition-all duration-300 font-semibold text-base"
+              disabled={loading}
+              onClick={(e) => {
+                // Allow click even if email is empty - validation happens in handleSubmit
+                if (!email.trim()) {
+                  e.preventDefault()
+                  setError('Please enter your email address')
+                  return
+                }
+              }}
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                  Sending Code...
+                </>
+              ) : (
+                <>
+                  Send Verification Code
+                  <Mail className="ml-2 h-5 w-5" />
+                </>
+              )}
+            </Button>
+
+            <p className="text-xs text-center text-muted-foreground">
+              By signing up, you agree to our Terms of Service and Privacy Policy
+            </p>
+
+            <div className="pt-4 border-t">
+              <p className="text-sm text-center text-muted-foreground">
+                Already have an account?{' '}
+                <Link href={`/login${redirectUrl ? `?redirect=${encodeURIComponent(redirectUrl)}` : ''}`} className="text-primary hover:underline">
+                  Log in
+                </Link>
+              </p>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
+

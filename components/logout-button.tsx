@@ -1,0 +1,75 @@
+'use client'
+
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { Button } from '@/components/ui/button'
+import { LogOut, Loader2 } from 'lucide-react'
+
+export function LogoutButton() {
+  const router = useRouter()
+  const [loading, setLoading] = useState(false)
+
+  const handleLogout = async () => {
+    setLoading(true)
+    try {
+      const response = await fetch('/api/auth/logout', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Cache-Control': 'no-store' },
+      })
+
+      if (response.ok) {
+        // Clear localStorage backup
+        try {
+          localStorage.removeItem('fm_user_email')
+          localStorage.removeItem('fm_logged_in')
+        } catch (e) {
+          // Ignore localStorage errors
+        }
+        // Proactively clear cookie in client as well
+        document.cookie = 'session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT;'
+        // Force a hard reload to clear all cached data
+        window.location.href = '/'
+      } else {
+        // Even if API fails, try to clear locally and redirect
+        document.cookie = 'session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT;'
+        window.location.href = '/'
+      }
+    } catch (error) {
+      console.error('Logout error:', error)
+      // Fallback: clear cookie and localStorage, then redirect
+      try {
+        localStorage.removeItem('fm_user_email')
+        localStorage.removeItem('fm_logged_in')
+      } catch (e) {
+        // Ignore localStorage errors
+      }
+      document.cookie = 'session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT;'
+      window.location.href = '/'
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <Button
+      size="sm"
+      variant="ghost"
+      onClick={handleLogout}
+      disabled={loading}
+      className="h-8 px-2.5 text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+    >
+      {loading ? (
+        <>
+          <Loader2 className="h-4 w-4 animate-spin" />
+        </>
+      ) : (
+        <>
+          <LogOut className="h-4 w-4" />
+          <span className="hidden md:inline ml-1.5">Log Out</span>
+        </>
+      )}
+    </Button>
+  )
+}
+

@@ -1,0 +1,85 @@
+JANE DOE
+jane.doe@stanford.edu | San Francisco, CA
+Stanford University, Computer Science (Sophomore, Age 20)
+
+WILLING TO DROP OUT TO PURSUE STARTUP FULL-TIME
+
+=== CURRENT VENTURE ===
+
+Founder & CEO - AI Study Platform (Jan 2024 - Present)
+- Built AI-powered study assistant using GPT-4 and custom fine-tuned models
+- Achieved 1,200 monthly active users growing 50% month-over-month
+- 350 GitHub stars on open-source flashcard generation tool
+- Technical stack: Python, PyTorch, React, TypeScript, Next.js
+- Model performance: 92% accuracy on comprehension tests vs 78% baseline
+
+Key Metrics:
+- Users: 1,200 MAU (up from 100 in Month 1)
+- Retention: D7: 48%, D30: 32%
+- Growth: 50% MoM for 4 consecutive months
+- Revenue: $5K MRR from premium subscriptions
+
+=== EXPERIENCE ===
+
+ML Research Intern - Stanford AI Lab (Summer 2023)
+- Improved transformer model latency by 35%
+- Published research on efficient attention mechanisms
+- Tools used: PyTorch, Python, JAX
+
+Software Engineering Intern - Google (Summer 2022)
+- Built internal developer tools
+- 500+ engineers using the tooling daily
+
+=== SKILLS ===
+
+Programming Languages: Python, JavaScript, TypeScript, Java
+ML/AI: PyTorch, TensorFlow, LLMs, Fine-tuning, RAG, LangChain
+Web: React, Next.js, Node.js, Tailwind CSS
+Tools: Git, Docker, PostgreSQL, Supabase
+
+=== OPEN SOURCE ===
+
+- StudyAI Library: 350+ GitHub stars, 15 contributors
+- Weekly downloads: 200+ npm installs
+- Active maintainer of 3 AI/education OSS projects
+
+=== EDUCATION ===
+
+Stanford University
+Bachelor of Science, Computer Science
+Expected: 2026 (will drop out to pursue startup)
+GPA: 3.9/4.0
+
+=== AWARDS ===
+
+- Stanford TreeHacks 2024: Best AI Application
+- YC Startup School 2024 Participant
+- Google Code-in Finalist
+
+=== SEEKING ===
+
+Raising: $500K Pre-Seed/Seed
+Stage: Pre-Seed with strong early traction
+Sectors: AI/ML, EdTech, SaaS
+Use of Funds: Product development, team expansion, marketing
+
+Looking for technical mentors who understand AI/ML and have experience with
+student founders or young first-time entrepreneurs.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

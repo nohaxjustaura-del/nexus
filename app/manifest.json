@@ -1,0 +1,12 @@
+{
+  "name": "FounderMatch - Find Your Perfect Investor",
+  "short_name": "FounderMatch",
+  "description": "AI-powered platform connecting founders with compatible VCs, angels, and mentors",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#155DFD",
+  "orientation": "portrait-primary",
+  "icons": []
+}
+

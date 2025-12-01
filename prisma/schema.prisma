@@ -1,0 +1,920 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model Founder {
+  id               String  @id @default(cuid())
+  email            String  @unique
+  name             String
+  age              Int?
+  education        String?
+  gender           String? // male, female, non-binary, prefer-not-to-say
+  willingToDropOut Boolean @default(false)
+
+  // Profile enhancements
+  bio           String? // Founder and startup bio
+  photoUrl      String? // Profile photo
+  videoPitchUrl String? // Link to 1-2 minute intro video
+  demoUrl       String? // Product demo link
+  logoUrl       String? // Startup logo
+
+  // Social links
+  linkedinUrl   String?
+  twitterUrl    String?
+  websiteUrl    String?
+  crunchbaseUrl String?
+
+  // Startup details
+  startupName   String?
+  stage         String // idea, mvp, revenue, seed, seriesA
+  sectors       String // JSON array of sectors
+  businessModel String? // B2B, B2C, marketplace, etc.
+  location      String
+  fundingNeed   Int // in thousands
+  pitchDeck     String? // URL to deck
+
+  // Traction metrics (optional, privacy-controlled)
+  revenue    Int? // Monthly revenue in dollars
+  users      Int? // User count
+  growthRate String? // e.g., "20% MoM"
+  teamSize   Int?
+
+  // Preferences
+  ethicsTags      String // JSON array
+  personalityTags String // JSON array
+  valueAddNeeds   String // JSON array
+
+  // Profile status
+  profileComplete     Boolean @default(false)
+  profileCompleteness Float   @default(0) // 0-100 percentage
+  isPublic            Boolean @default(true)
+  isStealth           Boolean @default(false) // Hide startup name/details
+
+  // Resume analysis
+  resumeUrl      String?
+  resumeAnalyses ResumeAnalysis[]
+
+  // Video pitches
+  videoPitches VideoPitch[]
+
+  bookmarks    Bookmark[]
+  applications Application[]
+
+  // Relations for new features
+  conversations        Conversation[]
+  notifications        Notification[] // userId matches Founder email or id
+  profileViews         ProfileView[]        @relation("FounderProfileViews")
+  viewerProfileViews   ProfileView[]        @relation("FounderViewerViews")
+  matchInteractions    MatchInteraction[]
+  referrals            Referral[] // referrerId or referredUserId matches Founder id
+  media                ProfileMedia[] // userId matches Founder id
+  endorsementsGiven    ProfileEndorsement[] @relation("EndorsementsGiven")
+  endorsementsReceived ProfileEndorsement[] @relation("EndorsementsReceived")
+  achievements         Achievement[] // userId matches Founder id
+  savedSearches        SavedSearch[] // userId matches Founder id
+  reportsMade          Report[]             @relation("ReportsMade")
+  reportsReceived      Report[]             @relation("ReportsReceived")
+  firmDeals            VCFirmDeal[] // founderId matches Founder id
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Investor {
+  id       String  @id @default(cuid())
+  email    String  @unique
+  name     String
+  firmName String
+  verified Boolean @default(false)
+
+  // Profile enhancements
+  bio      String  @default("") // Personal and firm bio
+  photoUrl String? // Profile photo
+  logoUrl  String? // Firm logo
+
+  // Investment thesis
+  stages     String // JSON array: preseed, seed, seriesA
+  checkMin   Int    @default(0) // in thousands
+  checkMax   Int    @default(0) // in thousands
+  sectors    String // JSON array
+  geoFocus   String // JSON array of regions
+  leadFollow String // lead, follow, either
+
+  // Profile details
+  fundSize           String? // e.g., "$5M-$10M"
+  notableInvestments String? // JSON array
+  linkedinUrl        String?
+  websiteUrl         String?
+  applicationUrl     String?
+  twitterUrl         String?
+  crunchbaseUrl      String?
+
+  // Additional investment details
+  fundType        String  @default("Venture Capital") // micro-VC, institutional, CVC, accelerator
+  thesis          String? // Full narrative investment thesis
+  proofPoints     String? // JSON array of sector-specific requirements
+  portfolio       String? // JSON array of portfolio companies
+  ownershipTarget String? // e.g., "15-20% at Series A"
+
+  // Standardized fields for AI matching
+  checkSizeMin Int      @default(0)
+  checkSizeMax Int      @default(0)
+  geography    String   @default("[]") // JSON array
+  website      String?
+
+  // Value proposition
+  valueAddTags    String // JSON array
+  ethicsTags      String // JSON array
+  personalityType String? // hands-on, hands-off, mentor
+  decisionSpeed   String? // e.g., "2 weeks typical"
+
+  // Aggregated reputation
+  responsivenessScore Float @default(0)
+  averageRating       Float @default(0) // From private endorsements
+  totalRatings        Int   @default(0)
+
+  // Profile status
+  profileComplete     Boolean @default(false)
+  profileCompleteness Float   @default(0)
+  isPublic            Boolean @default(true)
+  discoverable        Boolean @default(true) // Can be found in searches
+
+  // Firm membership
+  firmId   String? // Optional: Link to VCFirm
+  firmRole String? // Role within firm
+
+  bookmarkedBy Bookmark[]
+  applications Application[]
+
+  // Relations for new features
+  conversations        Conversation[]
+  notifications        Notification[] // userId matches Investor email or id
+  profileViews         ProfileView[]        @relation("InvestorProfileViews")
+  viewerProfileViews   ProfileView[]        @relation("InvestorViewerViews")
+  matchInteractions    MatchInteraction[]
+  referrals            Referral[] // referrerId or referredUserId matches Investor id
+  media                ProfileMedia[] // userId matches Investor id
+  firmMemberships      VCFirmMember[]
+  endorsementsGiven    ProfileEndorsement[] @relation("EndorsementsGiven")
+  endorsementsReceived ProfileEndorsement[] @relation("EndorsementsReceived")
+  achievements         Achievement[] // userId matches Investor id
+  savedSearches        SavedSearch[] // userId matches Investor id
+  reportsMade          Report[]             @relation("ReportsMade")
+  reportsReceived      Report[]             @relation("ReportsReceived")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Mentor {
+  id            String  @id @default(cuid())
+  email         String  @unique
+  name          String
+  expertiseTags String // JSON array
+  sectors       String // JSON array
+  location      String?
+  timePerMonth  String? // e.g., "2-4 hours"
+  linkedinUrl   String?
+  bio           String?
+  verified      Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model ResumeAnalysis {
+  id        String  @id @default(cuid())
+  founderId String
+  founder   Founder @relation(fields: [founderId], references: [id], onDelete: Cascade)
+
+  // Analysis data
+  skills             String // JSON array
+  experiences        String // JSON array
+  keywords           String // JSON array
+  gaps               String // JSON array
+  topVCs             String // JSON array of matched investor IDs
+  suggestions        String // JSON array
+  compatibilityScore Float
+
+  // Full analysis result stored as JSON for history
+  fullResult String? // JSON string of complete analysis result
+
+  // Resume metadata
+  resumeFileName String?
+  resumeText     String? // Store resume text for reference
+
+  createdAt DateTime @default(now())
+
+  @@index([founderId])
+  @@index([createdAt])
+}
+
+model Bookmark {
+  id         String  @id @default(cuid())
+  founderId  String
+  investorId String
+  notes      String?
+
+  founder  Founder  @relation(fields: [founderId], references: [id], onDelete: Cascade)
+  investor Investor @relation(fields: [investorId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([founderId, investorId])
+}
+
+model Application {
+  id         String  @id @default(cuid())
+  founderId  String
+  investorId String
+  status     String  @default("applied") // applied, viewed, replied, meeting
+  message    String?
+
+  founder  Founder  @relation(fields: [founderId], references: [id], onDelete: Cascade)
+  investor Investor @relation(fields: [investorId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([founderId, investorId])
+}
+
+model MatchScore {
+  id         String @id @default(cuid())
+  founderId  String
+  investorId String
+  score      Float
+  components String // JSON object with breakdown
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([founderId, investorId])
+  @@index([founderId])
+  @@index([investorId])
+  @@index([score])
+}
+
+model UserCredits {
+  id                   String    @id @default(cuid())
+  userId               String    @unique
+  user                 User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  credits              Int       @default(0)
+  isPremium            Boolean   @default(false)
+  premiumExpiresAt     DateTime?
+  stripeCustomerId     String?
+  stripeSubscriptionId String?
+  lastDailyClaim       DateTime? // Track last daily claim date
+  purchases            String?   @default("[]") // JSON array of purchased item IDs
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([stripeCustomerId])
+  @@index([stripeSubscriptionId])
+}
+
+model Reviewer {
+  id            String  @id @default(cuid())
+  email         String  @unique
+  name          String
+  vcAccepted    Boolean @default(false) // Has been accepted to a VC/accelerator
+  acceptedVC    String? // Name of VC/accelerator they were accepted to
+  acceptedYear  Int? // Year they were accepted
+  expertise     String // JSON array of sectors/expertise
+  bio           String?
+  linkedinUrl   String?
+  verified      Boolean @default(false)
+  active        Boolean @default(true) // Can accept new reviews
+  averageRating Float   @default(0)
+  totalReviews  Int     @default(0)
+
+  reviews VideoPitchReview[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model VideoPitch {
+  id        String  @id @default(cuid())
+  founderId String
+  founder   Founder @relation(fields: [founderId], references: [id], onDelete: Cascade)
+
+  fileName       String
+  fileUrl        String?
+  fileType       String?
+  fileSize       Int?
+  transcript     String?
+  transcriptText String?
+  analysisResult String? // JSON
+
+  reviews VideoPitchReview[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([founderId])
+}
+
+model VideoPitchReview {
+  id           String     @id @default(cuid())
+  videoPitchId String
+  videoPitch   VideoPitch @relation(fields: [videoPitchId], references: [id], onDelete: Cascade)
+  reviewerId   String
+  reviewer     Reviewer   @relation(fields: [reviewerId], references: [id], onDelete: Cascade)
+
+  // Review content
+  overallScore      Float?
+  presentationScore Float?
+  contentScore      Float?
+  strengths         String? // JSON array
+  weaknesses        String? // JSON array
+  improvements      String? // JSON array
+  feedback          String? // Detailed written feedback
+  vcRecommendations String? // JSON array of recommended VCs
+  rating            Int? // 1-5 star rating from founder
+
+  status      String    @default("pending") // pending, in_progress, completed
+  completedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([videoPitchId])
+  @@index([reviewerId])
+  @@index([status])
+}
+
+model User {
+  id             String    @id @default(cuid())
+  email          String    @unique
+  emailVerified  Boolean   @default(false)
+  userType       String    @default("founder") // founder, vc, mentor
+  sessionToken   String?
+  sessionExpires DateTime?
+
+  // Onboarding & AI Matching
+  onboardingCompleted Boolean  @default(false)
+  founderProfile      String? // JSON: background, skills, demographics, etc.
+  startupProfile      String? // JSON: company info, traction, fundraising, etc.
+  lastAiAnalysis      String? // Latest AI-generated analysis & matches
+  lastAnalysisDate    DateTime?
+
+  credits UserCredits?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([email])
+}
+
+model VerificationCode {
+  id        String   @id @default(cuid())
+  code      String
+  email     String
+  userId    String
+  expiresAt DateTime
+  verified  Boolean  @default(false)
+
+  createdAt DateTime @default(now())
+
+  @@index([email])
+  @@index([code])
+}
+
+model Waitlist {
+  id       String  @id @default(cuid())
+  email    String  @unique
+  source   String? // 'hero', 'cta', 'nav'
+  userType String? // 'founder', 'vc', 'mentor'
+  notified Boolean @default(false)
+
+  createdAt DateTime @default(now())
+
+  @@index([email])
+}
+
+model FounderContact {
+  email             String  @id
+  phone             String?
+  altEmail          String?
+  website           String?
+  linkedin          String?
+  city              String?
+  country           String?
+  cofounders        String?
+  hoursPerWeek      String?
+  prevFunding       String?
+  prevFundingAmount String?
+
+  updatedAt DateTime @default(now()) @updatedAt
+}
+
+model FounderPrefs {
+  email              String  @id
+  geoPreference      String?
+  decisionSpeedDays  String?
+  targetOwnershipMax String?
+  fundTypePreference String?
+  leadPreference     String?
+  isImmigrant        Boolean @default(false)
+  isUnderrepresented Boolean @default(false)
+  isStudent          Boolean @default(false)
+  isVeteran          Boolean @default(false)
+
+  updatedAt DateTime @default(now()) @updatedAt
+}
+
+model FounderVerification {
+  email         String    @id
+  url           String?
+  status        String    @default("pending") // pending, approved, rejected
+  submittedAt   DateTime  @default(now())
+  verifiedAt    DateTime?
+  reviewerEmail String?
+
+  @@index([status])
+}
+
+model UserApproval {
+  email      String    @id
+  status     String    @default("pending") // pending, approved, rejected
+  createdAt  DateTime  @default(now())
+  reviewedAt DateTime?
+
+  @@index([status])
+}
+
+model VCClaim {
+  id                String  @id @default(cuid())
+  email             String
+  name              String
+  firmName          String
+  idVerificationUrl String?
+  idVerified        Boolean @default(false)
+  status            String  @default("pending") // pending, approved, rejected
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([email])
+  @@index([status])
+}
+
+// ===== NEW MODELS FOR ENHANCED FEATURES =====
+
+// Messaging system for founder-VC communication
+model Conversation {
+  id            String  @id @default(cuid())
+  founderId     String?
+  investorId    String?
+  applicationId String? // Link to application if exists
+
+  // Relations
+  founder  Founder?  @relation(fields: [founderId], references: [id], onDelete: Cascade)
+  investor Investor? @relation(fields: [investorId], references: [id], onDelete: Cascade)
+
+  lastMessageAt      DateTime @default(now())
+  lastMessagePreview String?
+
+  messages Message[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([founderId, investorId])
+  @@index([founderId])
+  @@index([investorId])
+  @@index([lastMessageAt])
+}
+
+model Message {
+  id             String       @id @default(cuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  senderId   String // User ID (founder or investor)
+  senderType String // "founder" or "investor"
+  content    String
+  read       Boolean   @default(false)
+  readAt     DateTime?
+
+  // Optional attachments
+  attachmentUrl  String?
+  attachmentType String? // "file", "image", "pitch_deck", etc.
+
+  createdAt DateTime @default(now())
+
+  @@index([conversationId])
+  @@index([senderId])
+  @@index([createdAt])
+}
+
+// Notifications system
+model Notification {
+  id       String @id @default(cuid())
+  userId   String
+  userType String // "founder" or "investor"
+
+  type    String // "match", "message", "application_response", "new_investor", etc.
+  title   String
+  message String
+  link    String? // URL to relevant page
+
+  read   Boolean   @default(false)
+  readAt DateTime?
+
+  // Optional metadata
+  metadata String? // JSON object with additional data
+
+  createdAt  DateTime  @default(now())
+  Founder    Founder?  @relation(fields: [founderId], references: [id])
+  founderId  String?
+  Investor   Investor? @relation(fields: [investorId], references: [id])
+  investorId String?
+
+  @@index([userId])
+  @@index([read])
+  @@index([createdAt])
+}
+
+// Profile views analytics
+model ProfileView {
+  id         String @id @default(cuid())
+  viewerId   String // User who viewed
+  viewerType String // "founder" or "investor"
+  viewedId   String // Profile being viewed (founder or investor ID)
+  viewedType String // "founder" or "investor"
+
+  // Relations for proper cascading
+  founderViewed  Founder?  @relation("FounderProfileViews", fields: [viewedId], references: [id], onDelete: Cascade)
+  founderViewer  Founder?  @relation("FounderViewerViews", fields: [viewerId], references: [id], onDelete: Cascade)
+  investorViewed Investor? @relation("InvestorProfileViews", fields: [viewedId], references: [id], onDelete: Cascade)
+  investorViewer Investor? @relation("InvestorViewerViews", fields: [viewerId], references: [id], onDelete: Cascade)
+
+  // Optional: how they found it
+  source String? // "discover", "match", "search", "referral", etc.
+
+  createdAt DateTime @default(now())
+
+  @@index([viewerId])
+  @@index([viewedId])
+  @@index([createdAt])
+}
+
+// Match interactions (swipes, likes, passes)
+model MatchInteraction {
+  id         String  @id @default(cuid())
+  founderId  String?
+  investorId String?
+
+  // Relations
+  founder  Founder?  @relation(fields: [founderId], references: [id], onDelete: Cascade)
+  investor Investor? @relation(fields: [investorId], references: [id], onDelete: Cascade)
+
+  // Who initiated the interaction
+  initiatorId   String
+  initiatorType String // "founder" or "investor"
+
+  // Action type
+  action String // "like", "pass", "super_like"
+
+  // Match status
+  isMatch   Boolean   @default(false) // True if both parties liked
+  matchedAt DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@unique([founderId, investorId, initiatorType])
+  @@index([founderId])
+  @@index([investorId])
+  @@index([isMatch])
+  @@index([createdAt])
+}
+
+// Referral system
+model Referral {
+  id           String @id @default(cuid())
+  referrerId   String // User who made the referral
+  referrerType String // "founder" or "investor"
+
+  referredEmail  String
+  referredUserId String? // Set when the referred user signs up
+
+  // Status tracking
+  status String @default("pending") // "pending", "signed_up", "completed_profile", "reward_claimed"
+
+  // Rewards
+  rewardType   String? // "credits", "premium_month", "badge"
+  rewardAmount Int? // e.g., number of credits
+
+  createdAt   DateTime  @default(now())
+  completedAt DateTime?
+  Founder     Founder?  @relation(fields: [founderId], references: [id])
+  founderId   String?
+  Investor    Investor? @relation(fields: [investorId], references: [id])
+  investorId  String?
+
+  @@index([referrerId])
+  @@index([referredEmail])
+  @@index([status])
+}
+
+// VC Firm/Team accounts for collaboration
+model VCFirm {
+  id          String  @id @default(cuid())
+  name        String
+  description String?
+  website     String?
+  logoUrl     String?
+
+  // Firm settings
+  settings String? // JSON object with firm preferences
+
+  members     VCFirmMember[]
+  sharedDeals VCFirmDeal[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([name])
+}
+
+model VCFirmMember {
+  id     String @id @default(cuid())
+  firmId String
+  firm   VCFirm @relation(fields: [firmId], references: [id], onDelete: Cascade)
+
+  investorId String // Link to Investor
+  role       String @default("member") // "admin", "partner", "associate", "member"
+
+  // Permissions
+  canViewAllDeals  Boolean @default(true)
+  canEditDeals     Boolean @default(false)
+  canInviteMembers Boolean @default(false)
+
+  joinedAt DateTime @default(now())
+  Investor Investor @relation(fields: [investorId], references: [id])
+
+  @@unique([firmId, investorId])
+  @@index([firmId])
+  @@index([investorId])
+}
+
+// VC Deal pipeline management
+model VCFirmDeal {
+  id     String @id @default(cuid())
+  firmId String
+  firm   VCFirm @relation(fields: [firmId], references: [id], onDelete: Cascade)
+
+  founderId  String
+  investorId String? // Which investor in the firm owns this deal
+
+  // Pipeline stage
+  stage String @default("interested") // "interested", "contacted", "meeting_scheduled", "due_diligence", "term_sheet", "invested", "passed"
+
+  // Deal details
+  notes    String? // Internal notes visible to firm
+  priority String? // "high", "medium", "low"
+  rating   Int? // 1-5 star rating
+
+  // Meeting tracking
+  meetings VCFirmDealMeeting[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  Founder   Founder  @relation(fields: [founderId], references: [id])
+
+  @@index([firmId])
+  @@index([founderId])
+  @@index([stage])
+}
+
+model VCFirmDealMeeting {
+  id     String     @id @default(cuid())
+  dealId String
+  deal   VCFirmDeal @relation(fields: [dealId], references: [id], onDelete: Cascade)
+
+  scheduledAt DateTime
+  duration    Int? // Minutes
+  meetingType String? // "call", "video", "in_person"
+  notes       String?
+
+  createdAt DateTime @default(now())
+
+  @@index([dealId])
+  @@index([scheduledAt])
+}
+
+// Profile enhancements - rich media
+model ProfileMedia {
+  id       String @id @default(cuid())
+  userId   String // Founder or Investor ID
+  userType String // "founder" or "investor"
+
+  type         String // "image", "video", "pitch_deck", "demo"
+  url          String
+  thumbnailUrl String?
+  title        String?
+  description  String?
+  order        Int     @default(0) // For ordering media
+
+  createdAt  DateTime  @default(now())
+  Founder    Founder?  @relation(fields: [founderId], references: [id])
+  founderId  String?
+  Investor   Investor? @relation(fields: [investorId], references: [id])
+  investorId String?
+
+  @@index([userId])
+  @@index([userType])
+}
+
+// Profile privacy settings
+model ProfilePrivacy {
+  id       String @id @default(cuid())
+  userId   String @unique
+  userType String // "founder" or "investor"
+
+  // Visibility settings
+  profileVisible  Boolean @default(true)
+  showToAll       Boolean @default(true)
+  showOnlyMatches Boolean @default(false)
+
+  // Field-level privacy (JSON object mapping field names to visibility)
+  fieldPrivacy String? // JSON: {"fundingNeed": "matches_only", "email": "hidden"}
+
+  // Stealth mode
+  stealthMode Boolean @default(false)
+  stealthName String? // Alternative name in stealth mode
+
+  updatedAt DateTime @default(now()) @updatedAt
+
+  @@index([userId])
+}
+
+// Endorsements and reviews (private ratings)
+model ProfileEndorsement {
+  id           String @id @default(cuid())
+  endorserId   String // User giving endorsement
+  endorserType String // "founder" or "investor"
+  endorsedId   String // User being endorsed
+  endorsedType String // "founder" or "investor"
+
+  // Relations
+  endorserFounder  Founder?  @relation("EndorsementsGiven", fields: [endorserId], references: [id], onDelete: Cascade)
+  endorserInvestor Investor? @relation("EndorsementsGiven", fields: [endorserId], references: [id], onDelete: Cascade)
+  endorsedFounder  Founder?  @relation("EndorsementsReceived", fields: [endorsedId], references: [id], onDelete: Cascade)
+  endorsedInvestor Investor? @relation("EndorsementsReceived", fields: [endorsedId], references: [id], onDelete: Cascade)
+
+  // Endorsement content
+  rating  Int // 1-5 stars
+  comment String? // Private comment (not shown publicly)
+
+  // Public visibility (if both parties agree)
+  public        Boolean @default(false)
+  publicComment String? // Public testimonial if both agree
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([endorserId, endorsedId])
+  @@index([endorsedId])
+}
+
+// User achievements and badges
+model Achievement {
+  id       String @id @default(cuid())
+  userId   String
+  userType String // "founder" or "investor"
+
+  type        String // "profile_complete", "first_match", "first_investment", "referral_master", etc.
+  title       String
+  description String?
+  iconUrl     String?
+
+  unlockedAt DateTime  @default(now())
+  Founder    Founder?  @relation(fields: [founderId], references: [id])
+  founderId  String?
+  Investor   Investor? @relation(fields: [investorId], references: [id])
+  investorId String?
+
+  @@index([userId])
+  @@index([type])
+}
+
+// Saved searches/filters for quick access
+model SavedSearch {
+  id       String @id @default(cuid())
+  userId   String
+  userType String // "founder" or "investor"
+
+  name    String // User-given name for the search
+  filters String // JSON object with all filter criteria
+
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  Founder    Founder?  @relation(fields: [founderId], references: [id])
+  founderId  String?
+  Investor   Investor? @relation(fields: [investorId], references: [id])
+  investorId String?
+
+  @@index([userId])
+}
+
+// Feedback and reporting system
+model Report {
+  id           String @id @default(cuid())
+  reporterId   String
+  reporterType String // "founder" or "investor"
+  reportedId   String // User/Profile being reported
+  reportedType String // "founder" or "investor"
+
+  // Relations
+  reporterFounder  Founder?  @relation("ReportsMade", fields: [reporterId], references: [id], onDelete: Cascade)
+  reporterInvestor Investor? @relation("ReportsMade", fields: [reporterId], references: [id], onDelete: Cascade)
+  reportedFounder  Founder?  @relation("ReportsReceived", fields: [reportedId], references: [id], onDelete: Cascade)
+  reportedInvestor Investor? @relation("ReportsReceived", fields: [reportedId], references: [id], onDelete: Cascade)
+
+  reason      String // "spam", "fraudulent", "inappropriate", "harassment", "other"
+  description String? // Additional details
+
+  status          String    @default("pending") // "pending", "reviewing", "resolved", "dismissed"
+  resolvedAt      DateTime?
+  resolutionNotes String?
+
+  createdAt DateTime @default(now())
+
+  @@index([reportedId])
+  @@index([status])
+}
+
+// ===== CURSOR FUND COACH MODELS =====
+
+// Comprehensive founder onboarding profile
+model FounderProfile {
+  id        String @id @default(cuid())
+  
+  // Founder Info
+  founderName        String
+  founderBackground  String
+  founderExperience  String
+  coFounders         String?
+  
+  // Startup Info
+  startupName   String
+  industry      String
+  stage         String
+  location      String
+  businessModel String
+  
+  // Problem & Solution
+  problemStatement String
+  solution         String
+  uniqueValue      String
+  
+  // Traction
+  currentTraction String
+  revenue         String?
+  users           String?
+  growth          String?
+  
+  // Fundraising
+  fundraisingStage String
+  targetAmount     String
+  previousFunding  String?
+  
+  // Additional Context
+  pitchDeck     String?
+  competitors   String?
+  futureVision  String
+  
+  // Relations
+  analyses Analysis[]
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@index([createdAt])
+  @@index([startupName])
+}
+
+// Cached AI analysis results
+model Analysis {
+  id        String         @id @default(cuid())
+  profileId String
+  profile   FounderProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  
+  // Full analysis stored as JSON
+  data String // JSON string of CoachFeedback
+  
+  createdAt DateTime @default(now())
+  
+  @@index([profileId])
+  @@index([createdAt])
+}
