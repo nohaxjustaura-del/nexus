@@ -57,21 +57,23 @@ export default function Home() {
       <div className="flex flex-col relative z-10">
       
       {/* Hero Section - Clean & Attractive */}
-      <section className="relative px-4 pt-16 pb-8 md:pt-24 md:pb-12 text-center max-w-6xl mx-auto">
+      <section className="relative px-4 pt-12 pb-6 md:pt-20 md:pb-8 text-center max-w-6xl mx-auto">
         {/* Main Content */}
         <div className="relative z-10">
-            <h1 className="mb-6 text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight text-slate-900 leading-tight">
-              Find VCs Who <br className="hidden md:block" />
+            <h1 className="mb-4 text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight text-slate-900 leading-tight">
+              Get matched to{" "}
               <span className="bg-gradient-to-r from-primary via-blue-600 to-primary bg-clip-text text-transparent animate-gradient bg-[length:200%_auto]">
-                Actually Fit You
+                1,038 investors
               </span>
+              <br className="hidden md:block" />
+              who actually fund startups like yours
             </h1>
-          <p className="mx-auto mb-8 max-w-2xl text-lg md:text-xl text-slate-600 leading-relaxed">
-            Evidence-based matching by stage, sector, check size, and working style.
+          <p className="mx-auto mb-6 max-w-2xl text-lg md:text-xl text-slate-600 leading-relaxed">
+            Answer a few questions → AI analyzes your startup → we show investors who are a real fit, not just a giant spreadsheet.
           </p>
           
-          {/* CTA Button - Enhanced */}
-          <div className="mb-6">
+          {/* CTA Buttons - Primary & Secondary */}
+          <div className="mb-4 flex flex-col sm:flex-row gap-4 items-center justify-center">
             {mounted && isAuthenticated ? (
               <Link href="/founder/dashboard">
                 <Button 
@@ -87,29 +89,40 @@ export default function Home() {
                 </Button>
               </Link>
             ) : (
-              <Button 
-                onClick={() => {
-                  track('cta_clicked', { name: 'start_free', page: 'home' })
-                  if (mounted && isAuthenticated === false) {
-                    router.push('/signup')
-                  }
-                }}
-                size="lg" 
-                className="group relative text-base px-10 py-6 bg-gradient-to-r from-primary via-blue-600 to-primary bg-[length:200%_auto] hover:bg-[length:200%_auto] hover:bg-[position:100%_0] shadow-lg hover:shadow-xl hover:shadow-primary/40 transition-all duration-500 hover:-translate-y-1 hover:scale-105 font-semibold overflow-hidden border-0"
-              >
-                <span className="relative z-10 flex items-center">
-                  Get Started Free
-                  <Rocket className="ml-2 h-5 w-5 transition-all duration-300 group-hover:translate-x-1 group-hover:-translate-y-1 group-hover:rotate-12 group-hover:scale-110" />
-                </span>
-                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent translate-x-[-200%] group-hover:translate-x-[200%] transition-transform duration-1000 ease-in-out" />
-                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 bg-gradient-to-r from-white/0 via-white/20 to-white/0 animate-pulse" />
-              </Button>
+              <>
+                <Button 
+                  onClick={() => {
+                    track('cta_clicked', { name: 'start_free', page: 'home' })
+                    if (mounted && isAuthenticated === false) {
+                      router.push('/signup')
+                    }
+                  }}
+                  size="lg" 
+                  className="group relative text-base px-10 py-6 bg-gradient-to-r from-primary via-blue-600 to-primary bg-[length:200%_auto] hover:bg-[length:200%_auto] hover:bg-[position:100%_0] shadow-lg hover:shadow-xl hover:shadow-primary/40 transition-all duration-500 hover:-translate-y-1 hover:scale-105 font-semibold overflow-hidden border-0"
+                >
+                  <span className="relative z-10 flex items-center">
+                    Find My Matches
+                    <Rocket className="ml-2 h-5 w-5 transition-all duration-300 group-hover:translate-x-1 group-hover:-translate-y-1 group-hover:rotate-12 group-hover:scale-110" />
+                  </span>
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent translate-x-[-200%] group-hover:translate-x-[200%] transition-transform duration-1000 ease-in-out" />
+                  <div className="absolute inset-0 opacity-0 group-hover:opacity-100 bg-gradient-to-r from-white/0 via-white/20 to-white/0 animate-pulse" />
+                </Button>
+                <Link href="/founder/discover">
+                  <Button 
+                    size="lg"
+                    variant="outline"
+                    className="text-base px-10 py-6 border-2 border-slate-300 hover:border-primary hover:bg-primary/5 transition-all duration-300 font-semibold"
+                  >
+                    Browse Investors
+                  </Button>
+                </Link>
+              </>
             )}
           </div>
           
           {/* Interactive Trust Badges - Compact */}
           {mounted && (
-            <div className="flex flex-wrap items-center justify-center gap-4 max-w-2xl mx-auto mt-2">
+            <div className="flex flex-wrap items-center justify-center gap-4 max-w-2xl mx-auto mt-1">
               <div className="group relative flex items-center gap-2 px-4 py-1.5 rounded-lg bg-white/90 backdrop-blur-sm border border-slate-200 hover:border-green-400 hover:shadow-lg transition-all duration-300 cursor-pointer hover:-translate-y-1 hover:scale-105 overflow-hidden">
                 <div className="absolute inset-0 bg-gradient-to-r from-green-50/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                 <div className="relative w-2 h-2 rounded-full bg-green-500 group-hover:scale-150 group-hover:shadow-lg group-hover:shadow-green-500/50 transition-all duration-300 animate-pulse" />
@@ -131,7 +144,7 @@ export default function Home() {
       </section>
 
       {/* Cursor Fund Coach CTA - NEW */}
-      <section className="relative px-4 py-12 md:py-16">
+      <section className="relative px-4 py-8 md:py-12">
         <div className="max-w-6xl mx-auto">
           <div className="relative rounded-3xl bg-gradient-to-br from-indigo-600 via-blue-600 to-purple-600 p-1 shadow-2xl overflow-hidden">
             {/* Animated shimmer effect */}
@@ -225,7 +238,7 @@ export default function Home() {
       </section>
 
       {/* Hype Panel - Exciting Value Props */}
-      <section className="relative px-4 pt-4 pb-6 md:pt-6 md:pb-8">
+      <section className="relative px-4 pt-2 pb-4 md:pt-4 md:pb-6">
         <div className="max-w-6xl mx-auto">
           <div className={`relative rounded-2xl bg-gradient-to-br from-white via-white to-blue-50/30 border border-slate-200/80 shadow-xl overflow-hidden backdrop-blur-sm transition-all duration-1000 ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
             {/* Animated background glow */}
@@ -316,7 +329,7 @@ export default function Home() {
       </section>
 
       {/* Quick Stats Section - Interactive & Attractive */}
-      <section className="relative pt-8 pb-12 md:pt-12 md:pb-16 px-4">
+      <section className="relative pt-4 pb-8 md:pt-6 md:pb-10 px-4">
         <div className="container-body px-4">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8 max-w-6xl mx-auto">
             <div className="group relative text-center p-5 rounded-xl bg-white/95 backdrop-blur-sm border border-slate-200 hover:border-primary/40 hover:shadow-xl hover:shadow-primary/20 transition-all duration-300 hover:-translate-y-1.5 hover:scale-105 cursor-pointer overflow-hidden">
@@ -350,6 +363,51 @@ export default function Home() {
                 <span className="absolute -top-1 -right-1 w-2 h-2 bg-orange-500 rounded-full opacity-0 group-hover:opacity-100 group-hover:animate-ping" />
               </div>
               <p className="relative text-xs md:text-sm text-slate-600 font-medium group-hover:text-slate-700">Avg Response</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Trust & Privacy Footer */}
+      <section className="relative px-4 pb-12 md:pb-16">
+        <div className="max-w-6xl mx-auto">
+          <div className="rounded-2xl bg-slate-50/80 backdrop-blur-sm border border-slate-200/50 p-8 md:p-10">
+            <div className="text-center mb-6">
+              <h3 className="text-xl md:text-2xl font-bold text-slate-900 mb-2">
+                Your data is safe with us
+              </h3>
+              <p className="text-slate-600 max-w-2xl mx-auto">
+                We take your privacy seriously. Your pitch deck and personal information are secure and never shared without your permission.
+              </p>
+            </div>
+            <div className="grid md:grid-cols-3 gap-6 text-sm">
+              <div className="text-center">
+                <div className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-green-100 mb-3">
+                  <svg className="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                </div>
+                <h4 className="font-semibold text-slate-900 mb-1">Secure Storage</h4>
+                <p className="text-slate-600">Your deck and data are encrypted and stored securely</p>
+              </div>
+              <div className="text-center">
+                <div className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-blue-100 mb-3">
+                  <svg className="w-5 h-5 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+                  </svg>
+                </div>
+                <h4 className="font-semibold text-slate-900 mb-1">Private by Default</h4>
+                <p className="text-slate-600">Investors only see your profile if you choose to connect</p>
+              </div>
+              <div className="text-center">
+                <div className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-purple-100 mb-3">
+                  <svg className="w-5 h-5 text-purple-600" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M11 3a1 1 0 10-2 0v1a1 1 0 102 0V3zM15.657 5.757a1 1 0 00-1.414-1.414l-.707.707a1 1 0 001.414 1.414l.707-.707zM18 10a1 1 0 01-1 1h-1a1 1 0 110-2h1a1 1 0 011 1zM5.05 6.464A1 1 0 106.464 5.05l-.707-.707a1 1 0 00-1.414 1.414l.707.707zM5 10a1 1 0 01-1 1H3a1 1 0 110-2h1a1 1 0 011 1zM8 16v-1h4v1a2 2 0 11-4 0zM12 14c.015-.34.208-.646.477-.859a4 4 0 10-4.954 0c.27.213.462.519.476.859h4.002z" />
+                  </svg>
+                </div>
+                <h4 className="font-semibold text-slate-900 mb-1">Full Control</h4>
+                <p className="text-slate-600">Delete your account and data anytime with one click</p>
+              </div>
             </div>
           </div>
         </div>
