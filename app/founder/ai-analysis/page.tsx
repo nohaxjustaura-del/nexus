@@ -1410,6 +1410,8 @@ function VideoPitchAnalysisTab() {
 function PitchIdeaAnalysisTab() {
   const router = useRouter()
   const [ideaText, setIdeaText] = useState('')
+  const [ideaFile, setIdeaFile] = useState<File | null>(null)
+  const [inputMode, setInputMode] = useState<'text' | 'file'>('text')
   const [analyzing, setAnalyzing] = useState(false)
   const [result, setResult] = useState<any>(null)
   const [error, setError] = useState<string | null>(null)
@@ -1428,8 +1430,14 @@ function PitchIdeaAnalysisTab() {
   }, [])
 
   const handleAnalyze = async () => {
-    if (!ideaText.trim()) {
+    // Validate input
+    if (inputMode === 'text' && !ideaText.trim()) {
       setError('Please describe your pitch idea or product concept')
+      return
+    }
+    
+    if (inputMode === 'file' && !ideaFile) {
+      setError('Please upload a document with your pitch idea')
       return
     }
     
@@ -1447,10 +1455,18 @@ function PitchIdeaAnalysisTab() {
     setError(null)
     
     try {
+      // Use FormData to support both text and file uploads
+      const formData = new FormData()
+      
+      if (inputMode === 'file' && ideaFile) {
+        formData.append('file', ideaFile)
+      } else {
+        formData.append('idea', ideaText)
+      }
+      
       const response = await fetch('/api/analyze-pitch-idea', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ idea: ideaText }),
+        body: formData,
         credentials: 'include',
       })
 
@@ -1544,6 +1560,8 @@ function PitchIdeaAnalysisTab() {
               <Button onClick={() => {
                 setResult(null)
                 setIdeaText('')
+                setIdeaFile(null)
+                setInputMode('text')
               }} variant="outline">
                 Analyze Another
               </Button>
@@ -1726,30 +1744,140 @@ function PitchIdeaAnalysisTab() {
 
       <Card className="mx-auto max-w-4xl w-full">
         <CardHeader>
-          <CardTitle>Describe Your Pitch Idea</CardTitle>
+          <CardTitle>Share Your Pitch Idea</CardTitle>
           <CardDescription>
-            Share your product idea, pitch concept, or startup vision. We'll analyze it and give you feedback.
+            Type your idea directly or upload a document. We'll analyze it and give you feedback.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          <div className="space-y-2">
-            <Label htmlFor="idea">Your Pitch Idea or Product Concept *</Label>
-            <textarea
-              id="idea"
-              value={ideaText}
-              onChange={(e) => {
-                setIdeaText(e.target.value)
+          {/* Input Mode Toggle */}
+          <div className="flex gap-2 p-1 bg-slate-100 rounded-lg">
+            <button
+              type="button"
+              onClick={() => {
+                setInputMode('text')
+                setIdeaFile(null)
                 setError(null)
               }}
-              placeholder="Describe your startup idea, product concept, or pitch. What problem are you solving? Who is your target market? What makes your solution unique?"
-              className="flex min-h-[200px] w-full rounded-xl border-2 border-slate-300 focus:border-primary bg-background px-4 py-3 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 transition-all"
-              required
+              className={`flex-1 px-4 py-2 rounded-md text-sm font-medium transition-all ${
+                inputMode === 'text'
+                  ? 'bg-white text-slate-900 shadow-sm'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
               disabled={analyzing}
-            />
-            <p className="text-xs text-muted-foreground">
-              Be specific about your idea, target market, and what makes it unique. The more detail, the better the feedback.
-            </p>
+            >
+              <FileText className="inline-block w-4 h-4 mr-2" />
+              Type Text
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setInputMode('file')
+                setIdeaText('')
+                setError(null)
+              }}
+              className={`flex-1 px-4 py-2 rounded-md text-sm font-medium transition-all ${
+                inputMode === 'file'
+                  ? 'bg-white text-slate-900 shadow-sm'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+              disabled={analyzing}
+            >
+              <Upload className="inline-block w-4 h-4 mr-2" />
+              Upload Document
+            </button>
           </div>
+
+          {/* Text Input */}
+          {inputMode === 'text' && (
+            <div className="space-y-2">
+              <Label htmlFor="idea">Your Pitch Idea or Product Concept *</Label>
+              <textarea
+                id="idea"
+                value={ideaText}
+                onChange={(e) => {
+                  setIdeaText(e.target.value)
+                  setError(null)
+                }}
+                placeholder="Describe your startup idea, product concept, or pitch. What problem are you solving? Who is your target market? What makes your solution unique?"
+                className="flex min-h-[200px] w-full rounded-xl border-2 border-slate-300 focus:border-primary bg-background px-4 py-3 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 transition-all"
+                required
+                disabled={analyzing}
+              />
+              <p className="text-xs text-muted-foreground">
+                Be specific about your idea, target market, and what makes it unique. The more detail, the better the feedback.
+              </p>
+            </div>
+          )}
+
+          {/* File Upload */}
+          {inputMode === 'file' && (
+            <div className="space-y-2">
+              <Label htmlFor="idea-file">Upload Your Pitch Document *</Label>
+              <div className="flex flex-col gap-3">
+                <div
+                  className={`flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-xl transition-all ${
+                    ideaFile
+                      ? 'border-primary bg-primary/5'
+                      : 'border-slate-300 hover:border-primary/50 bg-slate-50/50'
+                  }`}
+                >
+                  {ideaFile ? (
+                    <div className="flex flex-col items-center gap-2">
+                      <FileText className="w-8 h-8 text-primary" />
+                      <p className="text-sm font-medium text-slate-900">{ideaFile.name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {(ideaFile.size / 1024).toFixed(1)} KB
+                      </p>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setIdeaFile(null)
+                          setError(null)
+                        }}
+                        disabled={analyzing}
+                      >
+                        Remove
+                      </Button>
+                    </div>
+                  ) : (
+                    <label htmlFor="idea-file" className="flex flex-col items-center cursor-pointer w-full h-full justify-center">
+                      <Upload className="w-8 h-8 text-slate-400 mb-2" />
+                      <p className="text-sm font-medium text-slate-600">
+                        Click to upload or drag and drop
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        PDF, DOCX, DOC, or TXT (max 10MB)
+                      </p>
+                    </label>
+                  )}
+                </div>
+                <input
+                  id="idea-file"
+                  type="file"
+                  accept=".pdf,.doc,.docx,.txt"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0]
+                    if (file) {
+                      if (file.size > 10 * 1024 * 1024) {
+                        setError('File size must be less than 10MB')
+                        return
+                      }
+                      setIdeaFile(file)
+                      setError(null)
+                    }
+                  }}
+                  className="hidden"
+                  disabled={analyzing}
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Upload a document containing your pitch idea, business plan, or product description.
+              </p>
+            </div>
+          )}
 
           {error && (
             <div className="rounded-lg border border-red-500 bg-red-50 p-4 text-sm text-red-700">
@@ -1787,7 +1915,13 @@ function PitchIdeaAnalysisTab() {
 
           <Button 
             onClick={handleAnalyze} 
-            disabled={!ideaText.trim() || analyzing || !credits || (!credits.isPremium && (credits.credits ?? 0) < PITCH_IDEA_CREDIT_COST)}
+            disabled={
+              (inputMode === 'text' && !ideaText.trim()) ||
+              (inputMode === 'file' && !ideaFile) ||
+              analyzing || 
+              !credits || 
+              (!credits.isPremium && (credits.credits ?? 0) < PITCH_IDEA_CREDIT_COST)
+            }
             className="w-full"
             size="lg"
           >
