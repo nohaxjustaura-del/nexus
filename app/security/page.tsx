@@ -5,7 +5,8 @@ export default function SecurityPage() {
         <h1 className="mb-4 text-3xl font-bold">Security</h1>
         <p className="text-muted-foreground">
           Data in transit is protected with TLS; data at rest is encrypted. We apply least‑privilege
-          access and monitor for abuse. This is a placeholder page for your security program.
+          access and monitor for abuse. We regularly conduct security audits and update our systems
+          to protect your information.
         </p>
       </div>
     </div>

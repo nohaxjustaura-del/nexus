@@ -1,3 +1,4 @@
+import React from "react"
 import type { Metadata } from "next"
 import { Inter } from "next/font/google"
 import "./globals.css"
@@ -7,6 +8,7 @@ import { NavAuth } from "@/components/nav-auth"
 import { ProtectedNavLink } from "@/components/protected-nav-link"
 import Link from "next/link"
 import { Heart } from "lucide-react"
+import { MobileNav } from "@/components/ui/mobile-nav"
 
 const inter = Inter({ 
   subsets: ["latin"],
@@ -21,7 +23,7 @@ export const metadata: Metadata = {
     default: "FounderMatch - Find Your Perfect Investor",
     template: "%s | FounderMatch"
   },
-  description: "AI-powered platform connecting founders with compatible VCs, angels, and mentors. Evidence-based matching by stage, sector, check size, and working style.",
+  description: "AI-powered platform connecting founders with 1,002 verified investors. Get matched with VCs who actually fund startups like yours through intelligent analysis of your pitch idea, deck, and video pitch.",
   keywords: ["venture capital", "VC matching", "founder", "investor", "startup funding", "AI matching", "pitch deck", "fundraising"],
   authors: [{ name: "FounderMatch", url: "https://foundermatch.com" }],
   creator: "FounderMatch",
@@ -37,7 +39,7 @@ export const metadata: Metadata = {
     url: "https://foundermatch.com",
     siteName: "FounderMatch",
     title: "FounderMatch - Find Your Perfect Investor",
-    description: "AI-powered platform connecting founders with compatible VCs, angels, and mentors",
+    description: "AI-powered platform connecting founders with 1,002 verified investors. Smart matching through pitch analysis and evidence-based recommendations.",
     images: [
       {
         url: "/og-image.png",
@@ -85,7 +87,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="scroll-smooth">
-      <body className={cn(inter.className, "min-h-screen bg-background antialiased")}>
+      <body className={cn(inter.className, "min-h-screen bg-background antialiased")} suppressHydrationWarning>
         <SessionKeeper />
         
         {/* Skip to main content - Accessibility */}
@@ -96,25 +98,32 @@ export default function RootLayout({
           Skip to main content
         </a>
 
-        {/* Global Header - Clean & Modern */}
-        <header className="border-b border-slate-100 bg-white/95 backdrop-blur-md sticky top-0 z-50 no-print transition-all">
-          <div className="container mx-auto max-w-6xl flex h-14 items-center justify-between px-4">
-            <Link href="/" className="flex items-center gap-2 hover:opacity-70 transition-all group">
-              <Heart className="h-6 w-6 text-primary group-hover:scale-110 transition-transform" />
-              <span className="text-xl font-bold text-slate-900">FounderMatch</span>
+        {/* Global Header - Clean & Simple */}
+        <header className="border-b border-slate-200/60 bg-white sticky top-0 z-50 no-print shadow-sm">
+          <div className="container mx-auto max-w-7xl flex h-16 items-center justify-between px-4 sm:px-6">
+            <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity group">
+              <Heart className="h-6 w-6 text-primary" />
+              <span className="text-xl font-semibold text-slate-900">FounderMatch</span>
             </Link>
-            <nav className="hidden md:flex items-center gap-0.5 text-sm" role="navigation" aria-label="Main navigation" suppressHydrationWarning>
-              <ProtectedNavLink href="/founder/discover" className="text-slate-600 hover:text-slate-900 hover:bg-slate-50 px-3 py-2 rounded-lg transition-all font-medium">For Founders</ProtectedNavLink>
-              <ProtectedNavLink href="/vc/claim" publicRoute className="text-slate-600 hover:text-slate-900 hover:bg-slate-50 px-3 py-2 rounded-lg transition-all font-medium">For VCs</ProtectedNavLink>
-              <ProtectedNavLink href="/founder/ai-analysis" className="text-slate-600 hover:text-slate-900 hover:bg-slate-50 px-3 py-2 rounded-lg transition-all font-medium">AI Analysis</ProtectedNavLink>
-              <ProtectedNavLink href="/pricing" publicRoute className="text-slate-600 hover:text-slate-900 hover:bg-slate-50 px-3 py-2 rounded-lg transition-all font-medium">Pricing</ProtectedNavLink>
-              <div className="ml-3 pl-3 border-l border-slate-200" suppressHydrationWarning>
+            
+            {/* Desktop Navigation */}
+            <nav className="hidden lg:flex items-center gap-1 text-sm" role="navigation" aria-label="Main navigation" suppressHydrationWarning>
+              <ProtectedNavLink href="/founder/discover" className="text-slate-700 hover:text-slate-900 px-3 py-2 rounded-md transition-colors font-medium">Discover</ProtectedNavLink>
+              <ProtectedNavLink href="/founder/ai-analysis" className="text-slate-700 hover:text-slate-900 px-3 py-2 rounded-md transition-colors font-medium">AI Analysis</ProtectedNavLink>
+              <ProtectedNavLink href="/pricing" publicRoute className="text-slate-700 hover:text-slate-900 px-3 py-2 rounded-md transition-colors font-medium">Pricing</ProtectedNavLink>
+              <div className="ml-2 pl-2 border-l border-slate-200" suppressHydrationWarning>
                 <NavAuth />
               </div>
             </nav>
             
-            {/* Mobile Navigation - Hidden on desktop */}
-            <div className="md:hidden flex items-center gap-2">
+            {/* Mobile Navigation */}
+            <div className="lg:hidden flex items-center gap-2">
+              <MobileNav links={[
+                { href: "/founder/discover", label: "Discover VCs" },
+                { href: "/founder/ai-analysis", label: "AI Analysis" },
+                { href: "/pricing", label: "Pricing" },
+                { href: "/vc/claim", label: "For VCs" }
+              ]} />
               <NavAuth />
             </div>
           </div>

@@ -37,13 +37,14 @@ function VCCardsGrid({ investors, profileComplete }: VCCardsGridProps) {
     return null
   }
 
-  // Generate unique, useful description from available data
+  // Generate unique, high-signal description (3-part structure)
   const generateFullDescription = (investor: Investor) => {
     // Guard against invalid investor
     if (!investor || typeof investor !== 'object') {
       return 'No description available.'
     }
     const sectors = parseJSON<string[]>(investor.sectors, [])
+    const stages = parseJSON<string[]>(investor.stages, [])
     const valueAdd = parseJSON<string[]>(investor.valueAddTags, [])
     const proofPoints = parseJSON<any>(investor.proofPoints, {})
     const portfolio = parseJSON<any[]>(investor.portfolio, [])
@@ -54,48 +55,79 @@ function VCCardsGrid({ investors, profileComplete }: VCCardsGridProps) {
       return investor.thesis
     }
     
-    // Priority 2: Combine unique value props with specific details (full version)
+    // NEW: 3-part structure (Identity + Behavior + Best-for)
     const parts: string[] = []
     
-    // Add fund type context
-    if (investor.fundType === 'accelerator') {
-      parts.push('Accelerator program')
-    } else if (investor.fundType === 'CVC') {
-      parts.push('Corporate venture capital fund')
-    } else if (investor.fundType === 'micro-VC') {
-      parts.push('Micro-VC fund')
-    } else if (investor.fundType === 'institutional') {
-      parts.push('Institutional venture capital firm')
+    // PART 1: Identity wedge (stage + sector + type)
+    let identity = ''
+    
+    // Stage
+    if (stages.length > 0) {
+      identity = stages.slice(0, 2).join('/') + ' '
     }
     
-    // Add unique value props (all of them)
-    if (valueAdd.length > 0) {
-      const valueAddText = valueAdd.length === 1 
-        ? valueAdd[0].toLowerCase()
-        : valueAdd.slice(0, -1).map(v => v.toLowerCase()).join(', ') + ', and ' + valueAdd[valueAdd.length - 1].toLowerCase()
-      parts.push(`offers ${valueAddText}`)
-    }
-    
-    // Add personality/approach
-    if (investor.personalityType) {
-      if (investor.personalityType === 'hands-on') {
-        parts.push('with hands-on operational support')
-      } else if (investor.personalityType === 'mentor') {
-        parts.push('with deep mentorship and guidance')
-      } else if (investor.personalityType === 'hands-off') {
-        parts.push('with a hands-off approach')
-      }
-    }
-    
-    // Add sector focus (all sectors)
+    // Sector (max 2)
     if (sectors.length > 0) {
-      if (sectors.length === 1) {
-        parts.push(`focused on ${sectors[0]}`)
-      } else if (sectors.length === 2) {
-        parts.push(`focused on ${sectors.join(' and ')}`)
-      } else {
-        parts.push(`focused on ${sectors.slice(0, -1).join(', ')}, and ${sectors[sectors.length - 1]}`)
+      identity += sectors.slice(0, 2).join(' + ') + ' '
+    }
+    
+    // Fund type
+    if (investor.fundType === 'accelerator') {
+      identity += 'accelerator'
+    } else if (investor.fundType === 'micro-VC') {
+      identity += 'micro-VC'
+    } else if (investor.fundType === 'CVC') {
+      identity += 'corporate VC'
+    } else {
+      identity += 'investor'
+    }
+    
+    // Add unique angle if available
+    if (valueAdd.length > 0 && valueAdd[0]) {
+      const uniqueTag = valueAdd[0].toLowerCase()
+      if (uniqueTag.includes('oss') || uniqueTag.includes('open source')) {
+        identity += ' with OSS bias'
+      } else if (uniqueTag.includes('technical')) {
+        identity += ' for technical founders'
+      } else if (uniqueTag.includes('student')) {
+        identity += ' backing student founders'
       }
+    }
+    
+    parts.push(identity.trim())
+    
+    // PART 2: Behavior/proof (lead, check size, decision speed)
+    const behaviors: string[] = []
+    
+    if (investor.leadFollow === 'lead') {
+      behaviors.push('leads rounds')
+    } else if (investor.leadFollow === 'follow') {
+      behaviors.push('follows')
+    }
+    
+    if (investor.checkSizeMin && investor.checkSizeMax) {
+      const min = investor.checkSizeMin >= 1000 ? `$${Math.round(investor.checkSizeMin/1000)}M` : `$${investor.checkSizeMin}k`
+      const max = investor.checkSizeMax >= 1000 ? `$${Math.round(investor.checkSizeMax/1000)}M` : `$${investor.checkSizeMax}k`
+      behaviors.push(`${min}–${max} checks`)
+    }
+    
+    if (investor.decisionSpeed && !investor.decisionSpeed.includes('typical')) {
+      behaviors.push(investor.decisionSpeed.toLowerCase())
+    }
+    
+    if (behaviors.length > 0) {
+      parts.push(behaviors.join(', '))
+    }
+    
+    // PART 3: Best-for (what they look for)
+    if (investor.personalityType === 'hands-on') {
+      parts.push('Best if you want operational help')
+    } else if (investor.personalityType === 'mentor') {
+      parts.push('Best for first-time founders needing guidance')
+    } else if (notableInvestments.length > 0) {
+      parts.push(`Backed ${notableInvestments[0]}`)
+    } else if (portfolio.length > 0 && portfolio[0]) {
+      parts.push(`Portfolio includes ${portfolio[0]}`)
     }
     
     // Add proof points if available (all of them)
@@ -145,10 +177,27 @@ function VCCardsGrid({ investors, profileComplete }: VCCardsGridProps) {
       parts.push(`targets ${investor.ownershipTarget} ownership`)
     }
     
-    // Combine all parts
-    const description = parts.length > 0 
-      ? parts.join('. ').charAt(0).toUpperCase() + parts.join('. ').slice(1) + '.'
-      : `Leading ${investor.fundType || 'venture capital'} investor${sectors.length > 0 ? ` in ${sectors.slice(0, 2).join(' and ')}` : ' in technology'}.`
+    // Combine all parts into professional description
+    if (parts.length === 0) {
+      // Fallback: Create professional description from basic info
+      const fundTypeLabel = investor.fundType === 'accelerator' ? 'startup accelerator' :
+                           investor.fundType === 'CVC' ? 'corporate venture capital fund' :
+                           investor.fundType === 'micro-VC' ? 'early-stage venture capital fund' :
+                           'venture capital firm'
+      
+      const sectorText = sectors.length > 0 
+        ? ` specializing in ${sectors.slice(0, 2).join(' and ')}`
+        : ''
+      
+      const stageText = stages.length > 0
+        ? `. Invests in ${stages.slice(0, 2).join(' and ')} stage companies`
+        : ''
+      
+      return `${fundTypeLabel.charAt(0).toUpperCase() + fundTypeLabel.slice(1)}${sectorText}${stageText}.`
+    }
+    
+    // Join parts with proper formatting
+    const description = parts.join('. ').charAt(0).toUpperCase() + parts.join('. ').slice(1) + '.'
     
     return description
   }

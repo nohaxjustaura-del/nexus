@@ -1,32 +1,45 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { getCurrentUser } from '@/lib/auth'
 import { db } from '@/lib/db'
 import OpenAI from 'openai'
 import { FUND_COACH_SYSTEM_PROMPT } from '@/lib/ai-prompts'
+import { getOpenRouterClient, getModelName } from '@/lib/openrouter'
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-})
+// Get AI client - supports both OpenRouter and OpenAI
+function getAIClient(): OpenAI | null {
+  const openRouterClient = getOpenRouterClient()
+  if (openRouterClient) {
+    return openRouterClient
+  }
+  
+  try {
+    if (process.env.OPENAI_API_KEY) {
+      return new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+    }
+  } catch (error) {
+    console.error('[MATCH-INVESTORS] Failed to initialize AI client:', error)
+  }
+  return null
+}
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
+    const user = await getCurrentUser()
     
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    if (!user?.id) {
+      return NextResponse.json({ error: 'Unauthorized. Please sign in first.' }, { status: 401 })
     }
 
     // Get user's founder and startup profile
-    const user = await db.user.findUnique({
-      where: { id: session.user.id },
+    const userProfile = await db.user.findUnique({
+      where: { id: user.id },
       select: {
         founderProfile: true,
         startupProfile: true,
       },
     })
 
-    if (!user?.founderProfile || !user?.startupProfile) {
+    if (!userProfile?.founderProfile || !userProfile?.startupProfile) {
       return NextResponse.json(
         { error: 'Please complete onboarding first' },
         { status: 400 }
@@ -34,8 +47,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Parse profiles
-    const founderProfile = JSON.parse(user.founderProfile as string)
-    const startupProfile = JSON.parse(user.startupProfile as string)
+    const founderProfile = JSON.parse(userProfile.founderProfile as string)
+    const startupProfile = JSON.parse(userProfile.startupProfile as string)
 
     // Fetch ALL investors from database for matching
     const investors = await db.investor.findMany({
@@ -103,9 +116,20 @@ ${JSON.stringify(investorDatabase.slice(0, 100), null, 2)}
 Please analyze this founder and startup, provide detailed feedback, and match them with the best investors from the database.
 `
 
-    // Call OpenAI GPT-4
-    const completion = await openai.chat.completions.create({
-      model: 'gpt-4-turbo-preview',
+    // Call AI service (OpenRouter or OpenAI)
+    const aiClient = getAIClient()
+    if (!aiClient) {
+      return NextResponse.json(
+        { error: 'AI service not configured', message: 'Please set OPENROUTER_API_KEY or OPENAI_API_KEY' },
+        { status: 503 }
+      )
+    }
+
+    // Limit max_tokens for free tier OpenRouter accounts (reduce from 4000 to 3000 to be safe)
+    const maxTokens = process.env.OPENROUTER_API_KEY ? 3000 : 4000
+    
+    const completion = await aiClient.chat.completions.create({
+      model: getModelName('gpt-4-turbo-preview'), // Uses OpenRouter format if OpenRouter is configured
       messages: [
         {
           role: 'system',
@@ -117,7 +141,7 @@ Please analyze this founder and startup, provide detailed feedback, and match th
         },
       ],
       temperature: 0.7,
-      max_tokens: 4000,
+      max_tokens: maxTokens, // Limit tokens for OpenRouter free tier
     })
 
     const analysis = completion.choices[0]?.message?.content
@@ -128,7 +152,7 @@ Please analyze this founder and startup, provide detailed feedback, and match th
 
     // Save the analysis
     await db.user.update({
-      where: { id: session.user.id },
+      where: { id: user.id },
       data: {
         lastAiAnalysis: analysis,
         lastAnalysisDate: new Date(),

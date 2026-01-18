@@ -31,6 +31,7 @@ import {
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { loadStripe } from '@stripe/stripe-js'
+import SmartMatchResults from '@/components/smart-match-results'
 
 interface PitchAnalysisResult {
   pitchDeckId: string
@@ -74,6 +75,18 @@ interface PitchAnalysisResult {
       differentiators?: string[]
     }
   }
+  smartMatches?: Array<{
+    id: string
+    firmName: string
+    similarity: number
+    metadata: {
+      stages?: string[]
+      sectors?: string[]
+      geography?: string[]
+      checkSize?: any
+      investorType?: string
+    }
+  }>
 }
 
 export default function PitchDeckAnalysisPage() {
@@ -193,7 +206,16 @@ export default function PitchDeckAnalysisPage() {
       const data = await response.json()
 
       if (!response.ok) {
-        throw new Error(data.error || data.message || 'Failed to analyze pitch deck')
+        // Create detailed error message
+        let errorMessage = data.error || data.message || 'Failed to analyze pitch deck'
+        
+        if (data.whatWentWrong || data.howToFix) {
+          errorMessage = `${errorMessage}\n\n${data.whatWentWrong || ''}\n\nWhy: ${data.whyItFailed || ''}\n\nHow to fix:\n${(data.howToFix || []).map((fix: string, i: number) => `${i + 1}. ${fix}`).join('\n')}`
+        }
+        
+        const error = new Error(errorMessage)
+        ;(error as any).errorData = data // Attach full error data
+        throw error
       }
 
       setResult(data)
@@ -208,6 +230,10 @@ export default function PitchDeckAnalysisPage() {
       } catch (err) {
         console.error('Error loading credits:', err)
       }
+
+      // SUCCESS - Immediately redirect to results page (replace to prevent back navigation)
+      window.location.replace('/founder/my-analyses')
+      return // Exit immediately
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to analyze pitch deck. Please try again.')
     } finally {
@@ -291,11 +317,39 @@ export default function PitchDeckAnalysisPage() {
               </div>
 
               {error && (
-                <div className="rounded-lg border border-red-500 bg-red-50 p-4 text-sm text-red-700 flex items-start gap-2">
-                  <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
-                  <div>
-                    <strong>Error:</strong> {error}
+                <div className="rounded-lg border border-red-500 bg-red-50 p-4 text-sm text-red-700">
+                  <div className="flex items-start gap-2 mb-3">
+                    <AlertCircle className="h-5 w-5 mt-0.5 shrink-0" />
+                    <div className="flex-1">
+                      <div className="font-semibold text-base mb-1">Error</div>
+                      <div className="text-red-800">{error.split('\n\n')[0]}</div>
+                    </div>
                   </div>
+                  
+                  {error.includes('What went wrong:') && (
+                    <div className="mt-3 pt-3 border-t border-red-200">
+                      <div className="font-semibold mb-1">What went wrong:</div>
+                      <div className="text-red-700 mb-3">{error.split('What went wrong:')[1]?.split('Why:')[0]?.trim()}</div>
+                      
+                      {error.includes('Why:') && (
+                        <>
+                          <div className="font-semibold mb-1">Why it failed:</div>
+                          <div className="text-red-700 mb-3">{error.split('Why:')[1]?.split('How to fix:')[0]?.trim()}</div>
+                        </>
+                      )}
+                      
+                      {error.includes('How to fix:') && (
+                        <>
+                          <div className="font-semibold mb-2">How to fix:</div>
+                          <ul className="list-decimal list-inside space-y-1 text-red-700">
+                            {error.split('How to fix:')[1]?.split('\n').filter((line: string) => line.trim().match(/^\d+\./)).map((line: string, i: number) => (
+                              <li key={i}>{line.trim().replace(/^\d+\.\s*/, '')}</li>
+                            ))}
+                          </ul>
+                        </>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -402,6 +456,11 @@ export default function PitchDeckAnalysisPage() {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Smart Match Results */}
+            {result.smartMatches && result.smartMatches.length > 0 && (
+              <SmartMatchResults matches={result.smartMatches} />
+            )}
 
             {/* Strengths & Weaknesses */}
             <div className="grid gap-6 md:grid-cols-2">

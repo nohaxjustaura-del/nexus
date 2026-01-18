@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { LogoutButton } from '@/components/logout-button'
 import { CreditCounter } from '@/components/credit-counter'
+import { NotificationBell } from '@/components/notification-bell'
 import { User } from 'lucide-react'
 
 export const NavAuth = memo(function NavAuth() {
@@ -47,8 +48,11 @@ export const NavAuth = memo(function NavAuth() {
 
   useEffect(() => {
     let isMounted = true
+    let hasChecked = false
     
-    if (isMounted) {
+    // Only check once on mount, not repeatedly
+    if (isMounted && !hasChecked) {
+      hasChecked = true
       checkAuth()
     }
     
@@ -69,7 +73,7 @@ export const NavAuth = memo(function NavAuth() {
       window.removeEventListener('storage', handleStorageChange)
       clearInterval(interval)
     }
-  }, [checkAuth])
+  }, []) // Remove checkAuth from dependencies to prevent re-runs
 
   // Always render the same structure to prevent hydration mismatch
   // Use consistent gap and structure on server and client
@@ -94,6 +98,7 @@ export const NavAuth = memo(function NavAuth() {
         
         {/* User actions grouped together */}
         <div className="flex items-center gap-1.5">
+          <NotificationBell />
           <Link href="/founder/dashboard">
             <Button size="sm" variant="default" className="h-8 px-3 text-sm font-medium shadow-sm">
               Dashboard

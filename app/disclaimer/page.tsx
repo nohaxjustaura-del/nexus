@@ -6,7 +6,7 @@ export default function DisclaimerPage() {
         <p className="text-muted-foreground">
           FounderMatch provides information and educational tools only. Nothing on this site is an
           offer to buy or sell securities, or a solicitation, recommendation, or advice. Always do
-          your own diligence and consult professionals. Placeholder content.
+          your own diligence and consult professionals before making any investment decisions.
         </p>
       </div>
     </div>

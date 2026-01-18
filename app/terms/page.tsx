@@ -6,7 +6,7 @@ export default function TermsPage() {
         <p className="text-muted-foreground">
           FounderMatch provides information and tools only. We do not give investment advice,
           solicit investments, or broker transactions. By using the site you agree to these Terms.
-          This is a placeholder; please have counsel review before public launch.
+          We reserve the right to modify these terms at any time.
         </p>
       </div>
     </div>

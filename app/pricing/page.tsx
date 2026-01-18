@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { toast } from "@/components/ui/toast-simple"
 import { 
   Sparkles, 
   Zap, 
@@ -44,12 +45,12 @@ export default function PricingPage() {
       if (response.ok && data.url) {
         window.location.href = data.url
       } else {
-        alert(data.error || 'Failed to create checkout session')
+        toast.error(data.error || 'Failed to create checkout session')
         setLoading(null)
       }
     } catch (error) {
       console.error('Purchase error:', error)
-      alert('Failed to process payment. Please try again.')
+      toast.error('Failed to process payment. Please try again.')
       setLoading(null)
     }
   }
@@ -68,12 +69,12 @@ export default function PricingPage() {
       if (response.ok && data.url) {
         window.location.href = data.url
       } else {
-        alert(data.error || 'Failed to create subscription')
+        toast.error(data.error || 'Failed to create subscription')
         setLoading(null)
       }
     } catch (error) {
       console.error('Subscription error:', error)
-      alert('Failed to process subscription. Please try again.')
+      toast.error('Failed to process subscription. Please try again.')
       setLoading(null)
     }
   }
@@ -121,11 +122,11 @@ export default function PricingPage() {
                 </li>
                 <li className="flex items-center gap-2">
                   <CheckCircle className="h-4 w-4 text-primary shrink-0" />
-                  <span>Video or Pitch Deck analysis (50 credits)</span>
+                  <span>1 Video Pitch (50) OR 1 Pitch Deck (30) + extras</span>
                 </li>
                 <li className="flex items-center gap-2">
                   <CheckCircle className="h-4 w-4 text-primary shrink-0" />
-                  <span>Browse all 1,038 VCs for free</span>
+                  <span>Browse all 1,002 VCs for free</span>
                 </li>
                 <li className="flex items-center gap-2">
                   <CheckCircle className="h-4 w-4 text-primary shrink-0" />
@@ -161,7 +162,7 @@ export default function PricingPage() {
                 </li>
                 <li className="flex items-center gap-2">
                   <CheckCircle className="h-4 w-4 text-primary shrink-0" />
-                  <span>3 Video/Pitch Deck analyses (150 credits)</span>
+                  <span>10 Pitch Ideas OR 5 Pitch Decks OR 3 Video Pitches</span>
                 </li>
                 <li className="flex items-center gap-2">
                   <CheckCircle className="h-4 w-4 text-primary shrink-0" />
@@ -205,7 +206,7 @@ export default function PricingPage() {
                 </li>
                 <li className="flex items-center gap-2">
                   <CheckCircle className="h-4 w-4 text-primary shrink-0" />
-                  <span>8 Video/Pitch Deck analyses (400 credits)</span>
+                  <span>33 Pitch Ideas OR 16 Pitch Decks OR 10 Video Pitches</span>
                 </li>
                 <li className="flex items-center gap-2">
                   <CheckCircle className="h-4 w-4 text-primary shrink-0" />
@@ -338,11 +339,22 @@ export default function PricingPage() {
                 <div className="flex items-center gap-3">
                   <Sparkles className="h-5 w-5 text-primary shrink-0" />
                   <div>
-                    <div className="font-medium">Pitch Deck Analysis</div>
+                    <div className="font-medium">Pitch Idea Analysis</div>
                     <div className="text-sm text-muted-foreground">AI-powered feedback</div>
                   </div>
                 </div>
-                <Badge variant="secondary" className="text-base px-3 py-1 shrink-0">50</Badge>
+                <Badge variant="secondary" className="text-base px-3 py-1 shrink-0">15</Badge>
+              </div>
+
+              <div className="flex items-center justify-between rounded-lg border-2 p-4 hover:border-primary/40 transition-colors">
+                <div className="flex items-center gap-3">
+                  <Sparkles className="h-5 w-5 text-primary shrink-0" />
+                  <div>
+                    <div className="font-medium">Pitch Deck Analysis</div>
+                    <div className="text-sm text-muted-foreground">AI-powered deck review</div>
+                  </div>
+                </div>
+                <Badge variant="secondary" className="text-base px-3 py-1 shrink-0">30</Badge>
               </div>
 
               <div className="flex items-center justify-between rounded-lg border-2 p-4 hover:border-primary/40 transition-colors">

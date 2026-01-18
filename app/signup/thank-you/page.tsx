@@ -13,26 +13,70 @@ export default function SignupThankYouPage() {
     // Check if user is authenticated and verified - if so, redirect them away
     async function checkAuth() {
       try {
+        console.log('[THANK-YOU] Checking auth status...')
         const res = await fetch('/api/auth/check', {
           credentials: 'include',
           headers: { 'Cache-Control': 'no-cache' }
         })
         const data = await res.json().catch(() => ({}))
         
-        // If user is authenticated and verified, redirect to dashboard or home
+        console.log('[THANK-YOU] Auth check result:', { authenticated: data?.authenticated, verified: data?.verified, userType: data?.user?.userType })
+        
+        // If user is authenticated and verified, check if they have a founder profile
         if (data?.authenticated && data?.verified) {
-          const nextUrl = searchParams.get('next') || '/founder/discover'
-          router.replace(nextUrl)
-          return
+          // For founders, check if profile exists - if not, redirect to onboarding
+          if (data?.user?.userType === 'founder') {
+            try {
+              const profileRes = await fetch('/api/founder/profile', { credentials: 'include' })
+              if (profileRes.ok) {
+                const profileData = await profileRes.json()
+                console.log('[THANK-YOU] Profile check result:', { exists: profileData.exists })
+                if (!profileData.exists) {
+                  // No profile - redirect to onboarding (required during signup)
+                  console.log('[THANK-YOU] No profile found, redirecting to onboarding')
+                  router.replace('/founder/onboarding')
+                  return
+                }
+              } else {
+                // Profile check failed - redirect to onboarding to be safe
+                console.log('[THANK-YOU] Profile check failed, redirecting to onboarding')
+                router.replace('/founder/onboarding')
+                return
+              }
+            } catch (e) {
+              // Error checking profile - redirect to onboarding
+              console.log('[THANK-YOU] Error checking profile, redirecting to onboarding:', e)
+              router.replace('/founder/onboarding')
+              return
+            }
+          }
+          
+          // Profile exists - DO NOT redirect automatically
+          // User should be able to navigate themselves
+          // Only redirect if they explicitly have a next URL parameter
+          const nextUrl = searchParams.get('next')
+          console.log('[THANK-YOU] Next URL:', nextUrl)
+          if (nextUrl && nextUrl.includes('onboarding')) {
+            // User explicitly wants onboarding - allow it
+            console.log('[THANK-YOU] Redirecting to onboarding as requested:', nextUrl)
+            router.replace(nextUrl)
+            return
+          }
+          // DO NOT auto-redirect to discover - let user stay or navigate themselves
+          console.log('[THANK-YOU] Profile exists, staying on thank-you page - no auto-redirect')
+          // router.replace('/founder/discover')
+          // return
         }
         
         // If not authenticated at all, redirect to signup
         if (!data?.authenticated) {
+          console.log('[THANK-YOU] Not authenticated, redirecting to signup')
           router.replace('/signup')
           return
         }
       } catch (error) {
         // On error, redirect to signup
+        console.error('[THANK-YOU] Error in checkAuth:', error)
         router.replace('/signup')
       }
     }

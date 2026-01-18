@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { toast } from "@/components/ui/toast-simple"
 import { 
   Heart, 
   TrendingUp,
@@ -25,7 +26,10 @@ import {
   CheckCircle,
   Award,
   GraduationCap,
-  Zap
+  Zap,
+  ChevronLeft,
+  ChevronRight,
+  FileJson
 } from "lucide-react"
 import Link from "next/link"
 
@@ -49,6 +53,8 @@ export default function VCDashboard() {
   const [loading, setLoading] = useState(true)
   const [applicants, setApplicants] = useState<Applicant[]>([])
   const [vcProfile, setVcProfile] = useState<any>(null)
+  const [currentPage, setCurrentPage] = useState(1)
+  const itemsPerPage = 10
 
   useEffect(() => {
     async function loadData() {
@@ -225,7 +231,43 @@ export default function VCDashboard() {
                 </div>
               </div>
               <div className="flex flex-col gap-2">
-                <Button size="lg" className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold shadow-lg hover:shadow-xl transition-all">
+                <Button 
+                  size="lg" 
+                  className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold shadow-lg hover:shadow-xl transition-all"
+                  onClick={async () => {
+                    try {
+                      const response = await fetch('/api/vc/applicants/export', {
+                        credentials: 'include',
+                      })
+                      
+                      if (!response.ok) {
+                        const error = await response.json()
+                        alert(error.message || 'Failed to export founders')
+                        return
+                      }
+                      
+                      // Get filename from Content-Disposition header or use default
+                      const contentDisposition = response.headers.get('Content-Disposition')
+                      const filename = contentDisposition
+                        ? contentDisposition.split('filename=')[1]?.replace(/"/g, '') || 'matched_founders.csv'
+                        : 'matched_founders.csv'
+                      
+                      // Download the CSV
+                      const blob = await response.blob()
+                      const url = window.URL.createObjectURL(blob)
+                      const a = document.createElement('a')
+                      a.href = url
+                      a.download = filename
+                      document.body.appendChild(a)
+                      a.click()
+                      window.URL.revokeObjectURL(url)
+                      document.body.removeChild(a)
+                    } catch (error) {
+                      console.error('Export error:', error)
+                      alert('Failed to export founders. Please try again.')
+                    }
+                  }}
+                >
                   <Download className="mr-2 h-5 w-5" />
                   Export All
                 </Button>
@@ -307,17 +349,17 @@ export default function VCDashboard() {
                       </div>
                     </div>
                     <div className="flex gap-3 items-center shrink-0 ml-4">
-                      <Button size="sm" variant="outline" className="border-2 hover:bg-slate-50" asChild>
-                        <Link href={`/founder/discover?founder=${applicant.id}`}>
+                      <Link href={`/founder/discover?founder=${applicant.id}`}>
+                        <Button size="sm" variant="outline" className="border-2 hover:bg-slate-50">
                           View Profile
-                        </Link>
-                      </Button>
-                      <Button size="sm" className="bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white font-semibold shadow-md hover:shadow-lg transition-all" asChild>
-                        <a href={`mailto:${applicant.email}`}>
+                        </Button>
+                      </Link>
+                      <a href={`mailto:${applicant.email}`}>
+                        <Button size="sm" className="bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white font-semibold shadow-md hover:shadow-lg transition-all">
                           <MessageSquare className="mr-2 h-4 w-4" />
                           Contact
-                        </a>
-                      </Button>
+                        </Button>
+                      </a>
                     </div>
                   </div>
                 ))}
@@ -341,9 +383,84 @@ export default function VCDashboard() {
                   <Filter className="mr-2 h-4 w-4" />
                   Filter
                 </Button>
-                <Button size="sm" variant="outline" className="border-2 font-semibold">
+                <Button 
+                  size="sm" 
+                  variant="outline" 
+                  className="border-2 font-semibold"
+                  onClick={async () => {
+                    try {
+                      const response = await fetch('/api/vc/applicants/export', {
+                        credentials: 'include',
+                      })
+                      
+                      if (!response.ok) {
+                        const error = await response.json()
+                        toast.error(error.message || 'Failed to export founders')
+                        return
+                      }
+                      
+                      // Get filename from Content-Disposition header or use default
+                      const contentDisposition = response.headers.get('Content-Disposition')
+                      const filename = contentDisposition
+                        ? contentDisposition.split('filename=')[1]?.replace(/"/g, '') || 'matched_founders.csv'
+                        : 'matched_founders.csv'
+                      
+                      // Download the CSV
+                      const blob = await response.blob()
+                      const url = window.URL.createObjectURL(blob)
+                      const a = document.createElement('a')
+                      a.href = url
+                      a.download = filename
+                      document.body.appendChild(a)
+                      a.click()
+                      window.URL.revokeObjectURL(url)
+                      document.body.removeChild(a)
+                      toast.success('Founders exported successfully!')
+                    } catch (error) {
+                      console.error('Export error:', error)
+                      toast.error('Failed to export founders. Please try again.')
+                    }
+                  }}
+                >
                   <Download className="mr-2 h-4 w-4" />
-                  Export
+                  Export CSV
+                </Button>
+                <Button 
+                  size="sm" 
+                  variant="outline" 
+                  className="border-2 font-semibold"
+                  onClick={async () => {
+                    try {
+                      const response = await fetch('/api/vc/applicants', {
+                        credentials: 'include',
+                      })
+                      
+                      if (!response.ok) {
+                        const error = await response.json()
+                        toast.error(error.message || 'Failed to export founders')
+                        return
+                      }
+                      
+                      const data = await response.json()
+                      const jsonData = JSON.stringify(data.applicants || [], null, 2)
+                      const blob = new Blob([jsonData], { type: 'application/json' })
+                      const url = window.URL.createObjectURL(blob)
+                      const a = document.createElement('a')
+                      a.href = url
+                      a.download = `matched_founders_${new Date().toISOString().split('T')[0]}.json`
+                      document.body.appendChild(a)
+                      a.click()
+                      window.URL.revokeObjectURL(url)
+                      document.body.removeChild(a)
+                      toast.success('Founders exported as JSON!')
+                    } catch (error) {
+                      console.error('Export error:', error)
+                      toast.error('Failed to export founders. Please try again.')
+                    }
+                  }}
+                >
+                  <FileJson className="mr-2 h-4 w-4" />
+                  Export JSON
                 </Button>
               </div>
             </div>
@@ -358,8 +475,9 @@ export default function VCDashboard() {
                 <p className="text-slate-600">Founders will appear here as they complete their profiles and match your criteria.</p>
               </div>
             ) : (
-              <div className="space-y-3">
-                {applicants.slice(0, 10).map((applicant) => (
+              <>
+                <div className="space-y-3">
+                  {applicants.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map((applicant) => (
                   <div
                     key={applicant.id}
                     className="group flex items-center justify-between rounded-lg border-2 border-slate-200 bg-white p-4 hover:bg-slate-50 hover:border-blue-300 hover:shadow-md transition-all duration-300"
@@ -406,29 +524,54 @@ export default function VCDashboard() {
                       </div>
                     </div>
                     <div className="flex gap-2 items-center ml-4">
-                      <Button size="sm" variant="outline" asChild className="shrink-0">
-                        <Link href={`/founder/discover?founder=${applicant.id}`}>
+                      <Link href={`/founder/discover?founder=${applicant.id}`}>
+                        <Button size="sm" variant="outline" className="shrink-0">
                           View Profile
-                        </Link>
-                      </Button>
-                      <Button size="sm" asChild className="shrink-0 bg-blue-600 hover:bg-blue-700">
-                        <a href={`mailto:${applicant.email}`}>
+                        </Button>
+                      </Link>
+                      <a href={`mailto:${applicant.email}`}>
+                        <Button size="sm" className="shrink-0 bg-blue-600 hover:bg-blue-700">
                           <MessageSquare className="mr-2 h-4 w-4" />
                           Contact
-                        </a>
+                        </Button>
+                      </a>
+                    </div>
+                  </div>
+                  ))}
+                </div>
+                {applicants.length > itemsPerPage && (
+                  <div className="flex items-center justify-between pt-6 border-t">
+                    <div className="text-sm text-slate-600">
+                      Showing {(currentPage - 1) * itemsPerPage + 1} to {Math.min(currentPage * itemsPerPage, applicants.length)} of {applicants.length} founders
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                        disabled={currentPage === 1}
+                        className="border-2"
+                      >
+                        <ChevronLeft className="h-4 w-4" />
+                        Previous
+                      </Button>
+                      <div className="text-sm text-slate-600 px-3">
+                        Page {currentPage} of {Math.ceil(applicants.length / itemsPerPage)}
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setCurrentPage(prev => Math.min(Math.ceil(applicants.length / itemsPerPage), prev + 1))}
+                        disabled={currentPage >= Math.ceil(applicants.length / itemsPerPage)}
+                        className="border-2"
+                      >
+                        Next
+                        <ChevronRight className="h-4 w-4" />
                       </Button>
                     </div>
                   </div>
-                ))}
-                {applicants.length > 10 && (
-                  <div className="text-center pt-6">
-                    <Button variant="outline" size="lg" className="border-2 font-semibold">
-                      View All {applicants.length} Matches
-                      <ExternalLink className="ml-2 h-4 w-4" />
-                    </Button>
-                  </div>
                 )}
-              </div>
+              </>
             )}
           </CardContent>
         </Card>

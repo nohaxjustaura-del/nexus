@@ -8,7 +8,8 @@ import {
   Building2,
   MapPin,
   Trash2,
-  MessageSquare
+  MessageSquare,
+  Target
 } from "lucide-react"
 import Link from "next/link"
 
@@ -90,14 +91,22 @@ export default function BookmarksPage() {
         </div>
 
         {bookmarks.length === 0 ? (
-          <Card className="p-12 text-center">
-            <MessageSquare className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
-            <h2 className="mb-2 text-xl font-semibold">No bookmarks yet</h2>
-            <p className="mb-6 text-muted-foreground">
+          <Card className="p-12 text-center border-2 border-dashed">
+            <div className="mx-auto mb-4 w-16 h-16 rounded-full bg-gradient-to-br from-primary/10 to-blue-50 flex items-center justify-center">
+              <MessageSquare className="h-8 w-8 text-primary" />
+            </div>
+            <h2 className="mb-2 text-2xl font-bold text-slate-900">No Bookmarks Yet</h2>
+            <p className="mb-2 text-slate-600 max-w-md mx-auto">
               Start exploring and save your favorite VCs to keep track of them
             </p>
+            <p className="mb-6 text-sm text-slate-500">
+              Click the heart icon on any VC card to bookmark them
+            </p>
             <Link href="/founder/discover">
-              <Button>Discover VCs</Button>
+              <Button size="lg" className="bg-gradient-to-r from-primary to-blue-600 hover:from-primary/90 hover:to-blue-700">
+                <Target className="mr-2 h-5 w-5" />
+                Discover VCs
+              </Button>
             </Link>
           </Card>
         ) : (

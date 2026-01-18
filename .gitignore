@@ -36,4 +36,22 @@ next-env.d.ts
 # prisma
 prisma/dev.db
 prisma/dev.db-journal
+prisma/*.db
+prisma/*.db-journal
+
+# uploads and temp files
+public/uploads/*
+!public/uploads/.gitkeep
+*.tmp
+*.temp
+
+# IDE
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+.idea/
+
+# OS
+Thumbs.db
+.DS_Store
 

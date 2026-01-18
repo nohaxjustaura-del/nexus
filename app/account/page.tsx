@@ -18,38 +18,31 @@ export default async function AccountPage() {
     }
 
     return (
-    <div className="min-h-screen bg-background">
-      <div className="container mx-auto max-w-4xl px-4 py-12">
+    <div className="min-h-screen bg-white">
+      <div className="container mx-auto max-w-4xl px-4 py-8 md:py-12">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">My Account</h1>
-          <p className="text-muted-foreground">Manage your account settings and preferences</p>
+          <h1 className="text-3xl font-bold mb-2 text-slate-900">Account</h1>
+          <p className="text-slate-600">Manage your settings and preferences</p>
         </div>
 
         <div className="grid gap-6 md:grid-cols-2">
           {/* Account Info */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <User className="h-5 w-5" />
-                Account Information
-              </CardTitle>
-              <CardDescription>Your account details</CardDescription>
+          <Card className="border border-slate-200">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg">Account Information</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <label className="text-sm font-medium text-muted-foreground">Email</label>
-                <p className="text-lg font-medium flex items-center gap-2">
-                  <Mail className="h-4 w-4" />
-                  {user.email}
-                </p>
+                <label className="text-sm text-slate-600">Email</label>
+                <p className="text-base font-medium text-slate-900 mt-1">{user.email}</p>
               </div>
               <div>
-                <label className="text-sm font-medium text-muted-foreground">Account Type</label>
-                <p className="text-lg font-medium capitalize">{user.userType || 'Founder'}</p>
+                <label className="text-sm text-slate-600">Account Type</label>
+                <p className="text-base font-medium text-slate-900 mt-1 capitalize">{user.userType || 'Founder'}</p>
               </div>
               <div>
-                <label className="text-sm font-medium text-muted-foreground">Email Verified</label>
-                <p className="text-lg font-medium">
+                <label className="text-sm text-slate-600">Status</label>
+                <p className="text-base font-medium mt-1">
                   {user.emailVerified ? (
                     <span className="text-green-600">✓ Verified</span>
                   ) : (
@@ -61,59 +54,63 @@ export default async function AccountPage() {
           </Card>
 
           {/* Quick Actions */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Settings className="h-5 w-5" />
-                Quick Actions
-              </CardTitle>
-              <CardDescription>Access your features</CardDescription>
+          <Card className="border border-slate-200">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg">Quick Actions</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3">
+            <CardContent className="space-y-2">
               {user.userType === 'founder' || !user.userType ? (
                 <>
                   <Link href="/founder/discover">
-                    <Button variant="outline" className="w-full justify-between">
+                    <Button variant="outline" className="w-full justify-between border-slate-200">
                       Discover VCs
                       <ArrowRight className="h-4 w-4" />
                     </Button>
                   </Link>
-                  <Link href="/founder/onboarding">
-                    <Button variant="outline" className="w-full justify-between">
-                      Complete Profile
-                      <ArrowRight className="h-4 w-4" />
-                    </Button>
-                  </Link>
                   <Link href="/founder/ai-analysis">
-                    <Button variant="outline" className="w-full justify-between">
-                      AI Analysis (Resume, Pitch Deck, Video)
+                    <Button variant="outline" className="w-full justify-between border-slate-200">
+                      AI Analysis
                       <ArrowRight className="h-4 w-4" />
                     </Button>
                   </Link>
                   <Link href="/founder/my-analyses">
-                    <Button variant="outline" className="w-full justify-between">
-                      My Analysis Reports
+                    <Button variant="outline" className="w-full justify-between border-slate-200">
+                      My Analyses
                       <ArrowRight className="h-4 w-4" />
                     </Button>
                   </Link>
                   <Link href="/founder/bookmarks">
-                    <Button variant="outline" className="w-full justify-between">
-                      My Bookmarks
+                    <Button variant="outline" className="w-full justify-between border-slate-200">
+                      Bookmarks
                       <ArrowRight className="h-4 w-4" />
                     </Button>
                   </Link>
+                  <Link href="/founder/credits">
+                    <Button variant="outline" className="w-full justify-between border-slate-200">
+                      Credits
+                      <ArrowRight className="h-4 w-4" />
+                    </Button>
+                  </Link>
+                  {user.email === 'nohaxjustaura@gmail.com' && (
+                    <Link href="/founder/vc-database">
+                      <Button variant="outline" className="w-full justify-between border-slate-200">
+                        VC Database (Admin)
+                        <ArrowRight className="h-4 w-4" />
+                      </Button>
+                    </Link>
+                  )}
                 </>
               ) : user.userType === 'investor' ? (
                 <>
                   <Link href="/vc/dashboard">
-                    <Button variant="outline" className="w-full justify-between">
-                      VC Dashboard
+                    <Button variant="outline" className="w-full justify-between border-slate-200">
+                      Dashboard
                       <ArrowRight className="h-4 w-4" />
                     </Button>
                   </Link>
                   <Link href="/vc/claim">
-                    <Button variant="outline" className="w-full justify-between">
-                      Edit VC Profile
+                    <Button variant="outline" className="w-full justify-between border-slate-200">
+                      Edit Profile
                       <ArrowRight className="h-4 w-4" />
                     </Button>
                   </Link>

@@ -1,13 +1,7 @@
 import { db } from "@/lib/db"
 import { getCurrentUser } from "@/lib/auth"
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
+import { Card, CardContent } from "@/components/ui/card"
 import { parseJSON } from "@/lib/utils"
-import { 
-  Heart, 
-  Target
-} from "lucide-react"
 import Link from "next/link"
 import DiscoverClient from "./discover-client"
 
@@ -131,6 +125,11 @@ export default async function DiscoverPage({
         sectors = []
       }
       profileComplete = !!founder?.name && !!founder?.stage && !!founder?.location && Array.isArray(sectors) && sectors.length > 0
+      
+      // CRITICAL: Redirect to onboarding if profile is not complete
+      if (!profileComplete) {
+        redirect('/founder/onboarding')
+      }
       
       // Set preference defaults
       if (Array.isArray(prefs) && prefs.length > 0) {
@@ -415,12 +414,12 @@ export default async function DiscoverPage({
   }
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white" data-page="discover">
       <div className="container mx-auto max-w-7xl px-4 py-6 md:py-8">
         {/* Clean Title */}
         <div className="mb-8">
           <h1 className="text-3xl md:text-4xl font-bold text-slate-900 mb-2">
-            1,038 Verified Investors
+            1,002 Verified Investors
           </h1>
           <p className="text-slate-600 text-lg">
             Find the right investors for your startup
@@ -450,7 +449,7 @@ export default async function DiscoverPage({
             </Link>
             <Link
               href="/founder/my-analyses"
-              className="px-4 py-2 text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors"
+              className="px-1 py-3 text-sm font-medium text-slate-600 hover:text-slate-900 border-b-2 border-transparent hover:border-slate-300 transition-colors"
             >
               My Analyses
             </Link>
@@ -530,4 +529,3 @@ export default async function DiscoverPage({
     </div>
   )
 }
-

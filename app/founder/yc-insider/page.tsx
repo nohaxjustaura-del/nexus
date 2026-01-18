@@ -17,7 +17,11 @@ import {
   ExternalLink,
   AlertCircle,
   TrendingUp,
-  Clock
+  Clock,
+  Target,
+  Zap,
+  BarChart3,
+  Users
 } from 'lucide-react'
 
 export default function YCInsiderPage() {
@@ -65,9 +69,16 @@ export default function YCInsiderPage() {
         const data = await res.json()
         setCredits(data.remainingCredits)
         setPurchases([...purchases, itemId])
+        // Reload credits to get updated purchases
+        const creditsRes = await fetch('/api/user/credits', { credentials: 'include' })
+        if (creditsRes.ok) {
+          const creditsData = await creditsRes.json()
+          setPurchases(creditsData.purchases || [])
+        }
         alert('Purchase successful! You can now access this material.')
       } else {
-        alert('Purchase failed. Please try again.')
+        const errorData = await res.json().catch(() => ({}))
+        alert(errorData.error || 'Purchase failed. Please try again.')
       }
     } catch (e) {
       alert('Purchase failed. Please try again.')
@@ -107,14 +118,28 @@ export default function YCInsiderPage() {
           <div className="text-center">
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-orange-50 border border-orange-200 mb-4">
               <Sparkles className="h-4 w-4 text-orange-600" />
-              <span className="text-sm font-semibold text-orange-700">Premium • Currently in YC W26</span>
+              <span className="text-sm font-semibold text-orange-700">Verified • YC W26</span>
             </div>
             <h1 className="mb-3 text-4xl md:text-5xl font-bold text-slate-900">
-              Learn from YC W26 Founders
+              Steal YC-Winning Decisions, Not Just Decks
             </h1>
             <p className="mx-auto max-w-2xl text-lg text-slate-600">
-              Get their actual pitch deck, application, and answers to YC interview questions
+              Annotated deck, interview patterns, traction timeline, and exact decision logic — structured into actionable templates
             </p>
+            <div className="flex items-center justify-center gap-6 mt-6 text-sm text-slate-500">
+              <div className="flex items-center gap-1">
+                <CheckCircle className="h-4 w-4 text-green-600" />
+                <span>Verified YC W26</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <CheckCircle className="h-4 w-4 text-green-600" />
+                <span>Actionable templates</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <CheckCircle className="h-4 w-4 text-green-600" />
+                <span>Decision breakdowns</span>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -126,13 +151,13 @@ export default function YCInsiderPage() {
                 Unlock YC Insider Access
               </CardTitle>
               <CardDescription className="text-slate-600">
-                See exactly how Luel got into YC W26 — their deck, application, and interview prep
+                Get operator-grade breakdowns from founders currently in YC W26
               </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="flex items-center justify-between pt-4 border-t">
                 <p className="text-sm text-slate-600">
-                  Access real materials from founders who just got accepted to YC
+                  Access decision logic, templates, and insider intelligence you can't Google
                 </p>
                 {/* @ts-ignore */}
                 <Button asChild className="bg-orange-600 hover:bg-orange-700">
@@ -146,7 +171,7 @@ export default function YCInsiderPage() {
         {/* Content visible for premium members */}
         <div className={`${!isPremium ? 'opacity-50 pointer-events-none select-none' : ''} space-y-8`}>
           
-          {/* Founders - Both Currently in YC W26 */}
+          {/* Founders */}
           <Card className="border-2">
             <CardHeader>
               <CardTitle>Meet the Founders</CardTitle>
@@ -164,9 +189,12 @@ export default function YCInsiderPage() {
                       <h4 className="font-semibold">William Namgyal</h4>
                       <Badge className="bg-orange-100 text-orange-800 border-orange-300 text-xs">YC W26</Badge>
                     </div>
-                    <p className="text-sm text-slate-600 mb-3">
-                      Co-Founder & CEO at <strong>Luel</strong>, currently in <strong>Y Combinator W26</strong>. Berkeley M.E.T. (Management, Entrepreneurship & Technology).
+                    <p className="text-sm text-slate-600 mb-2">
+                      Co-Founder & CEO at <strong>Luel</strong>, currently in <strong>Y Combinator W26</strong>. Berkeley M.E.T.
                     </p>
+                    <div className="mb-3">
+                      <Badge variant="outline" className="text-xs">Product + Strategy</Badge>
+                    </div>
                     <div className="flex gap-2">
                       {/* @ts-ignore */}
                       <Button asChild size="sm" variant="outline" disabled={!isPremium}>
@@ -202,9 +230,12 @@ export default function YCInsiderPage() {
                       <h4 className="font-semibold">Inigo Lenderking</h4>
                       <Badge className="bg-orange-100 text-orange-800 border-orange-300 text-xs">YC W26</Badge>
                     </div>
-                    <p className="text-sm text-slate-600 mb-3">
-                      Co-Founder at <strong>Luel</strong>, currently in <strong>Y Combinator W26</strong>. Berkeley dropout. Food enthusiast.
+                    <p className="text-sm text-slate-600 mb-2">
+                      Co-Founder at <strong>Luel</strong>, currently in <strong>Y Combinator W26</strong>. Berkeley dropout.
                     </p>
+                    <div className="mb-3">
+                      <Badge variant="outline" className="text-xs">Growth + Operations</Badge>
+                    </div>
                     <div className="flex gap-2">
                       {/* @ts-ignore */}
                       <Button asChild size="sm" variant="outline" disabled={!isPremium}>
@@ -233,11 +264,106 @@ export default function YCInsiderPage() {
             </CardContent>
           </Card>
 
-          {/* What You Get - Real Materials */}
-          <div className="grid md:grid-cols-2 gap-4">
-            {/* Pitch Deck */}
-            <Card className="border-2 hover:border-primary/30 transition-colors relative">
-              {hasPurchased('pitch-deck') && (
+          {/* Premium Modules */}
+          <div className="space-y-4">
+            
+            {/* Module 1: Application Deconstruction */}
+            <Card className="border-2 hover:border-purple-300 transition-colors relative">
+              {hasPurchased('application-deconstruction') && (
+                <div className="absolute top-3 right-3">
+                  <CheckCircle className="h-5 w-5 text-green-600" />
+                </div>
+              )}
+              <CardHeader className="pb-3">
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-purple-100 flex items-center justify-center flex-shrink-0">
+                    <FileText className="h-5 w-5 text-purple-600" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <CardTitle className="text-lg">Application Deconstruction</CardTitle>
+                      <Badge className="bg-purple-100 text-purple-700 text-xs">Most Valuable</Badge>
+                    </div>
+                    <CardDescription className="text-xs">Raw YC application answers + why each works + fill-in templates</CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3 mb-4">
+                  <p className="text-sm text-slate-600">
+                    <strong>What you get:</strong> Every YC application question with their actual answer, breakdown of why it works, risk flags they avoided, and a rewrite template you can use.
+                  </p>
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div className="flex items-center gap-1 text-slate-600">
+                      <CheckCircle className="h-3 w-3 text-green-600" />
+                      <span>Raw application answers</span>
+                    </div>
+                    <div className="flex items-center gap-1 text-slate-600">
+                      <CheckCircle className="h-3 w-3 text-green-600" />
+                      <span>"Why this works" analysis</span>
+                    </div>
+                    <div className="flex items-center gap-1 text-slate-600">
+                      <CheckCircle className="h-3 w-3 text-green-600" />
+                      <span>Risk flags avoided</span>
+                    </div>
+                    <div className="flex items-center gap-1 text-slate-600">
+                      <CheckCircle className="h-3 w-3 text-green-600" />
+                      <span>Fill-in templates</span>
+                    </div>
+                  </div>
+                </div>
+                {hasPurchased('application-deconstruction') ? (
+                  <Button 
+                    className="w-full" 
+                    size="sm"
+                    onClick={async (e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      try {
+                        const res = await fetch(`/api/yc-insider/download?itemId=application-deconstruction`, {
+                          credentials: 'include'
+                        })
+                        if (res.ok) {
+                          const data = await res.json()
+                          alert(`Download would start: ${data.filename}\n\nNote: Actual materials will be available in production.`)
+                        } else {
+                          alert('Failed to access material. Please try again.')
+                        }
+                      } catch (e) {
+                        alert('Failed to download. Please try again.')
+                      }
+                    }}
+                  >
+                    <Download className="h-3 w-3 mr-2" />
+                    Access Application Breakdown
+                  </Button>
+                ) : (
+                  <Button 
+                    className="w-full bg-purple-600 hover:bg-purple-700" 
+                    size="sm"
+                    onClick={(e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      handlePurchase('application-deconstruction', 75)
+                    }}
+                    disabled={purchasing === 'application-deconstruction'}
+                  >
+                    {purchasing === 'application-deconstruction' ? (
+                      'Processing...'
+                    ) : (
+                      <>
+                        <Lock className="h-3 w-3 mr-2" />
+                        Unlock for 75 Credits
+                      </>
+                    )}
+                  </Button>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Module 2: Pitch Deck Autopsy */}
+            <Card className="border-2 hover:border-blue-300 transition-colors relative">
+              {hasPurchased('pitch-deck-autopsy') && (
                 <div className="absolute top-3 right-3">
                   <CheckCircle className="h-5 w-5 text-green-600" />
                 </div>
@@ -248,32 +374,258 @@ export default function YCInsiderPage() {
                     <FileText className="h-5 w-5 text-blue-600" />
                   </div>
                   <div className="flex-1">
-                    <CardTitle className="text-lg">Their YC Pitch Deck</CardTitle>
-                    <CardDescription className="text-xs">The exact deck they used to get into YC W26</CardDescription>
+                    <CardTitle className="text-lg">Pitch Deck Autopsy</CardTitle>
+                    <CardDescription className="text-xs">Annotated deck + critical slides + what YC questioned</CardDescription>
                   </div>
                 </div>
               </CardHeader>
               <CardContent>
-                <p className="text-sm text-slate-600 mb-4">
-                  See their actual slides, structure, and how they presented their idea, traction, and team.
-                </p>
-                {hasPurchased('pitch-deck') ? (
-                  <Button className="w-full" size="sm">
-                    <Download className="h-3 w-3 mr-2" />
-                    Download PDF
-                  </Button>
-                ) : (
+                <div className="space-y-3 mb-4">
+                  <p className="text-sm text-slate-600">
+                    <strong>What you get:</strong> Their full deck with slide-by-slide annotations explaining what each slide must prove, why the wording works, and what YC likely questioned.
+                  </p>
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div className="flex items-center gap-1 text-slate-600">
+                      <CheckCircle className="h-3 w-3 text-green-600" />
+                      <span>Full annotated deck</span>
+                    </div>
+                    <div className="flex items-center gap-1 text-slate-600">
+                      <CheckCircle className="h-3 w-3 text-green-600" />
+                      <span>Critical 5 slides spotlight</span>
+                    </div>
+                    <div className="flex items-center gap-1 text-slate-600">
+                      <CheckCircle className="h-3 w-3 text-green-600" />
+                      <span>YC question predictions</span>
+                    </div>
+                    <div className="flex items-center gap-1 text-slate-600">
+                      <CheckCircle className="h-3 w-3 text-green-600" />
+                      <span>Deck checklist</span>
+                    </div>
+                  </div>
+                </div>
+                {hasPurchased('pitch-deck-autopsy') ? (
                   <Button 
                     className="w-full" 
                     size="sm"
-                    onClick={() => handlePurchase('pitch-deck', 50)}
-                    disabled={purchasing !== null}
+                    onClick={async (e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      try {
+                        const res = await fetch(`/api/yc-insider/download?itemId=pitch-deck-autopsy`, {
+                          credentials: 'include'
+                        })
+                        if (res.ok) {
+                          const data = await res.json()
+                          alert(`Download would start: ${data.filename}\n\nNote: Actual materials will be available in production.`)
+                        } else {
+                          alert('Failed to access material. Please try again.')
+                        }
+                      } catch (e) {
+                        alert('Failed to download. Please try again.')
+                      }
+                    }}
                   >
-                    {purchasing === 'pitch-deck' ? (
+                    <Download className="h-3 w-3 mr-2" />
+                    Access Deck Autopsy
+                  </Button>
+                ) : (
+                  <Button 
+                    className="w-full bg-blue-600 hover:bg-blue-700" 
+                    size="sm"
+                    onClick={(e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      handlePurchase('pitch-deck-autopsy', 60)
+                    }}
+                    disabled={purchasing === 'pitch-deck-autopsy'}
+                  >
+                    {purchasing === 'pitch-deck-autopsy' ? (
                       'Processing...'
                     ) : (
                       <>
-                        <Sparkles className="h-3 w-3 mr-2" />
+                        <Lock className="h-3 w-3 mr-2" />
+                        Unlock for 60 Credits
+                      </>
+                    )}
+                  </Button>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Module 3: Interview Simulator */}
+            <Card className="border-2 hover:border-green-300 transition-colors relative">
+              {hasPurchased('interview-simulator') && (
+                <div className="absolute top-3 right-3">
+                  <CheckCircle className="h-5 w-5 text-green-600" />
+                </div>
+              )}
+              <CardHeader className="pb-3">
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-green-100 flex items-center justify-center flex-shrink-0">
+                    <Target className="h-5 w-5 text-green-600" />
+                  </div>
+                  <div className="flex-1">
+                    <CardTitle className="text-lg">Interview Simulator</CardTitle>
+                    <CardDescription className="text-xs">YC questions + their answers + what YC was testing + drill mode</CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3 mb-4">
+                  <p className="text-sm text-slate-600">
+                    <strong>What you get:</strong> Interactive drill with actual YC interview questions, their answers, YC's intent behind each question, and follow-up patterns.
+                  </p>
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div className="flex items-center gap-1 text-slate-600">
+                      <CheckCircle className="h-3 w-3 text-green-600" />
+                      <span>Actual interview questions</span>
+                    </div>
+                    <div className="flex items-center gap-1 text-slate-600">
+                      <CheckCircle className="h-3 w-3 text-green-600" />
+                      <span>Their winning answers</span>
+                    </div>
+                    <div className="flex items-center gap-1 text-slate-600">
+                      <CheckCircle className="h-3 w-3 text-green-600" />
+                      <span>YC intent analysis</span>
+                    </div>
+                    <div className="flex items-center gap-1 text-slate-600">
+                      <CheckCircle className="h-3 w-3 text-green-600" />
+                      <span>Follow-up patterns</span>
+                    </div>
+                  </div>
+                </div>
+                {hasPurchased('interview-simulator') ? (
+                  <Button 
+                    className="w-full" 
+                    size="sm"
+                    onClick={async (e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      try {
+                        const res = await fetch(`/api/yc-insider/download?itemId=interview-simulator`, {
+                          credentials: 'include'
+                        })
+                        if (res.ok) {
+                          const data = await res.json()
+                          alert(`Download would start: ${data.filename}\n\nNote: Actual materials will be available in production.`)
+                        } else {
+                          alert('Failed to access material. Please try again.')
+                        }
+                      } catch (e) {
+                        alert('Failed to download. Please try again.')
+                      }
+                    }}
+                  >
+                    <Download className="h-3 w-3 mr-2" />
+                    Access Interview Prep
+                  </Button>
+                ) : (
+                  <Button 
+                    className="w-full bg-green-600 hover:bg-green-700" 
+                    size="sm"
+                    onClick={(e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      handlePurchase('interview-simulator', 65)
+                    }}
+                    disabled={purchasing === 'interview-simulator'}
+                  >
+                    {purchasing === 'interview-simulator' ? (
+                      'Processing...'
+                    ) : (
+                      <>
+                        <Lock className="h-3 w-3 mr-2" />
+                        Unlock for 65 Credits
+                      </>
+                    )}
+                  </Button>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Module 4: Metrics Timeline */}
+            <Card className="border-2 hover:border-amber-300 transition-colors relative">
+              {hasPurchased('metrics-timeline') && (
+                <div className="absolute top-3 right-3">
+                  <CheckCircle className="h-5 w-5 text-green-600" />
+                </div>
+              )}
+              <CardHeader className="pb-3">
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-amber-100 flex items-center justify-center flex-shrink-0">
+                    <BarChart3 className="h-5 w-5 text-amber-600" />
+                  </div>
+                  <div className="flex-1">
+                    <CardTitle className="text-lg">Metrics Snapshot Timeline</CardTitle>
+                    <CardDescription className="text-xs">Their traction at 90/30/0 days before YC + growth story</CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3 mb-4">
+                  <p className="text-sm text-slate-600">
+                    <strong>What you get:</strong> Exact metrics at 90 days, 30 days, and application week — showing progress velocity, not just scale.
+                  </p>
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div className="flex items-center gap-1 text-slate-600">
+                      <CheckCircle className="h-3 w-3 text-green-600" />
+                      <span>90/30/0 day snapshots</span>
+                    </div>
+                    <div className="flex items-center gap-1 text-slate-600">
+                      <CheckCircle className="h-3 w-3 text-green-600" />
+                      <span>Growth rate analysis</span>
+                    </div>
+                    <div className="flex items-center gap-1 text-slate-600">
+                      <CheckCircle className="h-3 w-3 text-green-600" />
+                      <span>Retention signals</span>
+                    </div>
+                    <div className="flex items-center gap-1 text-slate-600">
+                      <CheckCircle className="h-3 w-3 text-green-600" />
+                      <span>How they framed progress</span>
+                    </div>
+                  </div>
+                </div>
+                {hasPurchased('metrics-timeline') ? (
+                  <Button 
+                    className="w-full" 
+                    size="sm"
+                    onClick={async (e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      try {
+                        const res = await fetch(`/api/yc-insider/download?itemId=metrics-timeline`, {
+                          credentials: 'include'
+                        })
+                        if (res.ok) {
+                          const data = await res.json()
+                          alert(`Download would start: ${data.filename}\n\nNote: Actual materials will be available in production.`)
+                        } else {
+                          alert('Failed to access material. Please try again.')
+                        }
+                      } catch (e) {
+                        alert('Failed to download. Please try again.')
+                      }
+                    }}
+                  >
+                    <Download className="h-3 w-3 mr-2" />
+                    Access Metrics Timeline
+                  </Button>
+                ) : (
+                  <Button 
+                    className="w-full bg-amber-600 hover:bg-amber-700" 
+                    size="sm"
+                    onClick={(e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      handlePurchase('metrics-timeline', 50)
+                    }}
+                    disabled={purchasing === 'metrics-timeline'}
+                  >
+                    {purchasing === 'metrics-timeline' ? (
+                      'Processing...'
+                    ) : (
+                      <>
+                        <Lock className="h-3 w-3 mr-2" />
                         Unlock for 50 Credits
                       </>
                     )}
@@ -282,284 +634,252 @@ export default function YCInsiderPage() {
               </CardContent>
             </Card>
 
-            {/* Application Video */}
-            <Card className="border-2 hover:border-primary/30 transition-colors relative">
-              {hasPurchased('application-video') && (
+            {/* Module 5: Distribution Diary */}
+            <Card className="border-2 hover:border-indigo-300 transition-colors relative">
+              {hasPurchased('distribution-diary') && (
                 <div className="absolute top-3 right-3">
                   <CheckCircle className="h-5 w-5 text-green-600" />
                 </div>
               )}
               <CardHeader className="pb-3">
                 <div className="flex items-start gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-purple-100 flex items-center justify-center flex-shrink-0">
-                    <Video className="h-5 w-5 text-purple-600" />
+                  <div className="w-10 h-10 rounded-lg bg-indigo-100 flex items-center justify-center flex-shrink-0">
+                    <Zap className="h-5 w-5 text-indigo-600" />
                   </div>
                   <div className="flex-1">
-                    <CardTitle className="text-lg">Application Video</CardTitle>
-                    <CardDescription className="text-xs">Their 60-second video that got them the interview</CardDescription>
+                    <CardTitle className="text-lg">Distribution Diary</CardTitle>
+                    <CardDescription className="text-xs">First 10 customers + outreach scripts + what worked/failed</CardDescription>
                   </div>
                 </div>
               </CardHeader>
               <CardContent>
-                <p className="text-sm text-slate-600 mb-4">
-                  Watch their actual video submission with notes on what worked and why.
-                </p>
-                {hasPurchased('application-video') ? (
-                  <Button className="w-full" variant="outline" size="sm">
-                    <Video className="h-3 w-3 mr-2" />
-                    Watch Video
+                <div className="space-y-3 mb-4">
+                  <p className="text-sm text-slate-600">
+                    <strong>What you get:</strong> Copy/paste scripts, channel playbooks, and the exact experiments they ran to get early traction.
+                  </p>
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div className="flex items-center gap-1 text-slate-600">
+                      <CheckCircle className="h-3 w-3 text-green-600" />
+                      <span>First 10 customer stories</span>
+                    </div>
+                    <div className="flex items-center gap-1 text-slate-600">
+                      <CheckCircle className="h-3 w-3 text-green-600" />
+                      <span>Outreach scripts (DM/email)</span>
+                    </div>
+                    <div className="flex items-center gap-1 text-slate-600">
+                      <CheckCircle className="h-3 w-3 text-green-600" />
+                      <span>Channel experiments</span>
+                    </div>
+                    <div className="flex items-center gap-1 text-slate-600">
+                      <CheckCircle className="h-3 w-3 text-green-600" />
+                      <span>What didn't work + why</span>
+                    </div>
+                  </div>
+                </div>
+                {hasPurchased('distribution-diary') ? (
+                  <Button 
+                    className="w-full" 
+                    size="sm"
+                    onClick={async (e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      try {
+                        const res = await fetch(`/api/yc-insider/download?itemId=distribution-diary`, {
+                          credentials: 'include'
+                        })
+                        if (res.ok) {
+                          const data = await res.json()
+                          alert(`Download would start: ${data.filename}\n\nNote: Actual materials will be available in production.`)
+                        } else {
+                          alert('Failed to access material. Please try again.')
+                        }
+                      } catch (e) {
+                        alert('Failed to download. Please try again.')
+                      }
+                    }}
+                  >
+                    <Download className="h-3 w-3 mr-2" />
+                    Access Distribution Playbook
                   </Button>
                 ) : (
                   <Button 
-                    className="w-full" 
-                    variant="outline"
+                    className="w-full bg-indigo-600 hover:bg-indigo-700" 
                     size="sm"
-                    onClick={() => handlePurchase('application-video', 30)}
-                    disabled={purchasing !== null}
+                    onClick={(e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      handlePurchase('distribution-diary', 55)
+                    }}
+                    disabled={purchasing === 'distribution-diary'}
                   >
-                    {purchasing === 'application-video' ? (
+                    {purchasing === 'distribution-diary' ? (
                       'Processing...'
                     ) : (
                       <>
-                        <Sparkles className="h-3 w-3 mr-2" />
-                        Unlock for 30 Credits
+                        <Lock className="h-3 w-3 mr-2" />
+                        Unlock for 55 Credits
                       </>
                     )}
                   </Button>
                 )}
               </CardContent>
             </Card>
-          </div>
 
-          {/* Interview Questions & Answers */}
-          <Card className="border-2 relative">
-            {hasPurchased('interview-qa') && (
-              <div className="absolute top-3 right-3">
-                <CheckCircle className="h-5 w-5 text-green-600" />
-              </div>
-            )}
-            <CardHeader>
-              <CardTitle>YC Interview: Questions & Their Answers</CardTitle>
-              <CardDescription>The exact questions YC partners asked them and how they responded</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="bg-slate-50 rounded-lg p-4 border">
-                <div className="flex items-start gap-2 mb-2">
-                  <span className="text-sm font-semibold text-slate-900">Q:</span>
-                  <span className="text-sm text-slate-700">"What problem are you solving and why is now the time?"</span>
+            {/* Module 6: Demo Teardown */}
+            <Card className="border-2 hover:border-rose-300 transition-colors relative">
+              {hasPurchased('demo-teardown') && (
+                <div className="absolute top-3 right-3">
+                  <CheckCircle className="h-5 w-5 text-green-600" />
                 </div>
-                <div className="flex items-start gap-2">
-                  <span className="text-sm font-semibold text-green-700">A:</span>
-                  <span className="text-sm text-slate-600">
-                    {hasPurchased('interview-qa') ? 'Their full answer: [Full answer would appear here]' : 'See their actual answer and why it worked →'}
-                  </span>
-                </div>
-              </div>
-
-              <div className="bg-slate-50 rounded-lg p-4 border">
-                <div className="flex items-start gap-2 mb-2">
-                  <span className="text-sm font-semibold text-slate-900">Q:</span>
-                  <span className="text-sm text-slate-700">"Show us your traction numbers"</span>
-                </div>
-                <div className="flex items-start gap-2">
-                  <span className="text-sm font-semibold text-green-700">A:</span>
-                  <span className="text-sm text-slate-600">
-                    {hasPurchased('interview-qa') ? 'Their exact metrics: [Full metrics would appear here]' : 'Their exact metrics when they applied →'}
-                  </span>
-                </div>
-              </div>
-
-              <div className="bg-slate-50 rounded-lg p-4 border">
-                <div className="flex items-start gap-2 mb-2">
-                  <span className="text-sm font-semibold text-slate-900">Q:</span>
-                  <span className="text-sm text-slate-700">"Who are your users and how do you reach them?"</span>
-                </div>
-                <div className="flex items-start gap-2">
-                  <span className="text-sm font-semibold text-green-700">A:</span>
-                  <span className="text-sm text-slate-600">
-                    {hasPurchased('interview-qa') ? 'Their distribution answer: [Full answer would appear here]' : 'How they explained their distribution →'}
-                  </span>
-                </div>
-              </div>
-
-              {hasPurchased('interview-qa') ? (
-                <Button className="w-full" variant="outline" size="sm">
-                  <Download className="h-3 w-3 mr-2" />
-                  Download Full Q&A Document
-                </Button>
-              ) : (
-                <Button 
-                  className="w-full" 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => handlePurchase('interview-qa', 75)}
-                  disabled={purchasing !== null}
-                >
-                  {purchasing === 'interview-qa' ? (
-                    'Processing...'
-                  ) : (
-                    <>
-                      <Sparkles className="h-3 w-3 mr-2" />
-                      Unlock for 75 Credits
-                    </>
-                  )}
-                </Button>
               )}
-            </CardContent>
-          </Card>
+              <CardHeader className="pb-3">
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-rose-100 flex items-center justify-center flex-shrink-0">
+                    <Video className="h-5 w-5 text-rose-600" />
+                  </div>
+                  <div className="flex-1">
+                    <CardTitle className="text-lg">Demo Teardown</CardTitle>
+                    <CardDescription className="text-xs">Application video + timestamp notes + what to copy</CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3 mb-4">
+                  <p className="text-sm text-slate-600">
+                    <strong>What you get:</strong> Their application video with timestamp annotations showing what's being proven at each moment and what to replicate.
+                  </p>
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div className="flex items-center gap-1 text-slate-600">
+                      <CheckCircle className="h-3 w-3 text-green-600" />
+                      <span>Full application video</span>
+                    </div>
+                    <div className="flex items-center gap-1 text-slate-600">
+                      <CheckCircle className="h-3 w-3 text-green-600" />
+                      <span>Timestamp breakdowns</span>
+                    </div>
+                    <div className="flex items-center gap-1 text-slate-600">
+                      <CheckCircle className="h-3 w-3 text-green-600" />
+                      <span>What to copy</span>
+                    </div>
+                    <div className="flex items-center gap-1 text-slate-600">
+                      <CheckCircle className="h-3 w-3 text-green-600" />
+                      <span>Demo script</span>
+                    </div>
+                  </div>
+                </div>
+                {hasPurchased('demo-teardown') ? (
+                  <Button 
+                    className="w-full" 
+                    size="sm"
+                    onClick={async (e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      try {
+                        const res = await fetch(`/api/yc-insider/download?itemId=demo-teardown`, {
+                          credentials: 'include'
+                        })
+                        if (res.ok) {
+                          const data = await res.json()
+                          alert(`Download would start: ${data.filename}\n\nNote: Actual materials will be available in production.`)
+                        } else {
+                          alert('Failed to access material. Please try again.')
+                        }
+                      } catch (e) {
+                        alert('Failed to download. Please try again.')
+                      }
+                    }}
+                  >
+                    <Download className="h-3 w-3 mr-2" />
+                    Watch Demo Teardown
+                  </Button>
+                ) : (
+                  <Button 
+                    className="w-full bg-rose-600 hover:bg-rose-700" 
+                    size="sm"
+                    onClick={(e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      handlePurchase('demo-teardown', 55)
+                    }}
+                    disabled={purchasing === 'demo-teardown'}
+                  >
+                    {purchasing === 'demo-teardown' ? (
+                      'Processing...'
+                    ) : (
+                      <>
+                        <Lock className="h-3 w-3 mr-2" />
+                        Unlock for 55 Credits
+                      </>
+                    )}
+                  </Button>
+                )}
+              </CardContent>
+            </Card>
 
-          {/* Their Traction When They Applied */}
-          <Card className="border-2 bg-gradient-to-br from-green-50 to-white">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <TrendingUp className="h-5 w-5 text-green-600" />
-                Their Traction When They Applied
-              </CardTitle>
-              <CardDescription>What their metrics looked like when YC accepted them</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid md:grid-cols-3 gap-4">
-                <div className="text-center p-4 bg-white rounded-lg border">
-                  <div className="text-2xl font-bold text-green-600 mb-1">$XK</div>
-                  <div className="text-xs text-slate-600">Monthly Revenue</div>
+            {/* Bundle Deal */}
+            <Card className="border-2 border-orange-300 bg-gradient-to-br from-orange-50/30 to-white">
+              <CardHeader>
+                <div className="flex items-center gap-2 mb-2">
+                  <Sparkles className="h-5 w-5 text-orange-600" />
+                  <CardTitle className="text-xl">Complete Insider Pack</CardTitle>
+                  <Badge className="bg-orange-100 text-orange-700">Save 40 Credits</Badge>
                 </div>
-                <div className="text-center p-4 bg-white rounded-lg border">
-                  <div className="text-2xl font-bold text-green-600 mb-1">X</div>
-                  <div className="text-xs text-slate-600">Active Users/Customers</div>
+                <CardDescription>Get all 6 modules + bonus templates</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  <p className="text-sm text-slate-600">
+                    Everything above plus exclusive bonus: Founder Operating System (weekly cadence, decision principles, tool stack)
+                  </p>
+                  <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                    <div>
+                      <div className="text-sm text-slate-600">Individual: 360 credits</div>
+                      <div className="text-2xl font-bold text-slate-900">Bundle: 320 credits</div>
+                    </div>
+                    <Button 
+                      className="bg-orange-600 hover:bg-orange-700"
+                      onClick={(e) => {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        handlePurchase('complete-pack', 320)
+                      }}
+                      disabled={purchasing === 'complete-pack'}
+                    >
+                      {purchasing === 'complete-pack' ? 'Processing...' : 'Unlock Complete Pack'}
+                    </Button>
+                  </div>
                 </div>
-                <div className="text-center p-4 bg-white rounded-lg border">
-                  <div className="text-2xl font-bold text-green-600 mb-1">X%</div>
-                  <div className="text-xs text-slate-600">MoM Growth</div>
-                </div>
-              </div>
-              <p className="mt-4 text-sm text-slate-600 text-center">
-                <strong>Key insight:</strong> You don't need massive traction — you need clear progress and a strong story.
-              </p>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
 
-          {/* Common Mistakes That Get You Rejected */}
-          <Card className="border-2 border-red-200 bg-red-50/30">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-red-900">
-                <AlertCircle className="h-5 w-5 text-red-600" />
-                Common Mistakes That Get Applications Rejected
-              </CardTitle>
-              <CardDescription>What they've seen (and avoided) that causes YC to say no</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                <div className="flex items-start gap-2 text-sm">
-                  <span className="text-red-600 font-bold">×</span>
-                  <span className="text-slate-700"><strong>Focusing on features instead of problems</strong> — YC wants to see you understand the pain, not just your solution</span>
-                </div>
-                <div className="flex items-start gap-2 text-sm">
-                  <span className="text-red-600 font-bold">×</span>
-                  <span className="text-slate-700"><strong>Vague traction</strong> — "growing fast" doesn't work. You need specific numbers (even if small)</span>
-                </div>
-                <div className="flex items-start gap-2 text-sm">
-                  <span className="text-red-600 font-bold">×</span>
-                  <span className="text-slate-700"><strong>Not knowing your numbers</strong> — In interviews, you must know revenue, users, churn, CAC, LTV by heart</span>
-                </div>
-                <div className="flex items-start gap-2 text-sm">
-                  <span className="text-red-600 font-bold">×</span>
-                  <span className="text-slate-700"><strong>Overly polished videos</strong> — A simple, clear demo beats production quality. Show the product working.</span>
-                </div>
-                <div className="flex items-start gap-2 text-sm">
-                  <span className="text-red-600 font-bold">×</span>
-                  <span className="text-slate-700"><strong>Not showing why now</strong> — YC asks "why now?" You need a clear answer about market timing</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Application Timeline */}
-          <Card className="border-2">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Clock className="h-5 w-5 text-primary" />
-                Their Application Timeline
-              </CardTitle>
-              <CardDescription>What they did and when leading up to YC</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="flex gap-4">
-                  <div className="flex-shrink-0 w-20 text-sm font-semibold text-slate-600">3 months before</div>
-                  <div className="flex-1 text-sm text-slate-700">Started getting initial traction — focused on one metric to show progress</div>
-                </div>
-                <div className="flex gap-4">
-                  <div className="flex-shrink-0 w-20 text-sm font-semibold text-slate-600">1 month before</div>
-                  <div className="flex-1 text-sm text-slate-700">Filmed application video — multiple takes until it was clear and concise</div>
-                </div>
-                <div className="flex gap-4">
-                  <div className="flex-shrink-0 w-20 text-sm font-semibold text-slate-600">2 weeks before</div>
-                  <div className="flex-1 text-sm text-slate-700">Finalized pitch deck — got feedback from previous YC founders</div>
-                </div>
-                <div className="flex gap-4">
-                  <div className="flex-shrink-0 w-20 text-sm font-semibold text-slate-600">Application day</div>
-                  <div className="flex-1 text-sm text-slate-700">Submitted — then immediately started preparing for possible interview</div>
-                </div>
-                <div className="flex gap-4">
-                  <div className="flex-shrink-0 w-20 text-sm font-semibold text-slate-600">Interview prep</div>
-                  <div className="flex-1 text-sm text-slate-700">Practiced answers to common questions, prepared live demo, memorized all metrics</div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Get Feedback on Your Application */}
-          <Card className="border-2 border-primary/30 bg-primary/5">
-            <CardHeader>
-              <CardTitle>Get Feedback on Your Application</CardTitle>
-              <CardDescription>Book a session to review your deck, video, or application before submitting</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center gap-4 text-sm text-slate-600">
-                <div className="flex items-center gap-2">
-                  <Calendar className="h-4 w-4" />
-                  <span>30-45 min sessions</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Clock className="h-4 w-4" />
-                  <span>~2 day response time</span>
-                </div>
-              </div>
-              <div className="flex gap-2">
-                {/* @ts-ignore */}
-                <Button asChild disabled={!isPremium}>
-                  <Link href={isPremium ? 'mailto:support@foundermatch.local?subject=Book%20YC%20Application%20Review' : '#'}>
-                    <Calendar className="h-4 w-4 mr-2" />
-                    Book Application Review
-                  </Link>
-                </Button>
-                {/* @ts-ignore */}
-                <Button asChild variant="outline" disabled={!isPremium}>
-                  <Link href={isPremium ? 'mailto:support@foundermatch.local?subject=YC%20Question' : '#'}>
-                    <MessageSquare className="h-4 w-4 mr-2" />
-                    Ask Quick Question
-                  </Link>
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {!isPremium && (
-          <div className="mt-8 text-center p-6 bg-orange-50 rounded-lg border border-orange-200">
-            <p className="text-slate-600 mb-4">
-              Ready to see exactly how they got into YC W26?
-            </p>
-            {/* @ts-ignore */}
-            <Button asChild size="lg" className="bg-orange-600 hover:bg-orange-700">
-              <Link href="/pricing">
-                <Sparkles className="h-4 w-4 mr-2" />
-                Upgrade to Premium
-              </Link>
-            </Button>
           </div>
-        )}
+
+          {/* Why This Matters */}
+          <Card className="border-2 bg-slate-50">
+            <CardHeader>
+              <CardTitle>Why This Is Different</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid md:grid-cols-3 gap-4 text-sm">
+                <div>
+                  <div className="font-semibold text-slate-900 mb-1">Not Google-able</div>
+                  <p className="text-slate-600">Decision logic, templates, and insider patterns you can't find anywhere else</p>
+                </div>
+                <div>
+                  <div className="font-semibold text-slate-900 mb-1">Actionable Templates</div>
+                  <p className="text-slate-600">Fill-in frameworks you can use immediately for your own application</p>
+                </div>
+                <div>
+                  <div className="font-semibold text-slate-900 mb-1">Verified & Current</div>
+                  <p className="text-slate-600">From founders currently in YC W26, not outdated advice from years ago</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+        </div>
       </div>
     </div>
   )
 }
+

@@ -35,6 +35,36 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       exists: true,
+      founder: {
+        name: founder.name,
+        email: founder.email,
+        marketingOptIn: (founder as any).marketingOptIn || false,
+        age: founder.age,
+        education: founder.education,
+        gender: founder.gender,
+        willingToDropOut: founder.willingToDropOut,
+        startupName: founder.startupName,
+        stage: founder.stage,
+        sectors: (() => {
+          try { return JSON.parse(founder.sectors || '[]') } catch { return [] }
+        })(),
+        businessModel: founder.businessModel,
+        location: founder.location,
+        fundingNeed: founder.fundingNeed,
+        bio: founder.bio,
+        pitchDeck: founder.pitchDeck,
+        videoPitchUrl: founder.videoPitchUrl,
+        linkedinUrl: founder.linkedinUrl,
+        ethicsTags: (() => {
+          try { return JSON.parse(founder.ethicsTags || '[]') } catch { return [] }
+        })(),
+        personalityTags: (() => {
+          try { return JSON.parse(founder.personalityTags || '[]') } catch { return [] }
+        })(),
+        valueAddNeeds: (() => {
+          try { return JSON.parse(founder.valueAddNeeds || '[]') } catch { return [] }
+        })(),
+      },
       profile: {
         name: founder.name,
         email: founder.email,
@@ -51,6 +81,10 @@ export async function GET(request: NextRequest) {
         businessModel: founder.businessModel,
         location: founder.location,
         fundingNeed: founder.fundingNeed,
+        bio: founder.bio,
+        pitchDeck: founder.pitchDeck,
+        videoPitchUrl: founder.videoPitchUrl,
+        linkedinUrl: founder.linkedinUrl,
         ethicsTags: (() => {
           try { return JSON.parse(founder.ethicsTags || '[]') } catch { return [] }
         })(),

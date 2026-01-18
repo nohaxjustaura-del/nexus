@@ -1,9 +1,11 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { Input } from "@/components/ui/input"
+import { Skeleton } from "@/components/ui/skeleton"
 import { 
   Calendar,
   TrendingUp,
@@ -12,13 +14,18 @@ import {
   ExternalLink,
   RefreshCw,
   Video,
-  Presentation
+  Presentation,
+  Lightbulb,
+  Search,
+  Filter,
+  X
 } from "lucide-react"
 import Link from "next/link"
+import { PitchFeedbackComparison } from "@/components/pitch-feedback-comparison"
 
 interface Analysis {
   id: string
-  type: 'video-pitch' | 'pitch-deck'
+  type: 'video-pitch' | 'pitch-deck' | 'pitch-idea'
   createdAt: string
   compatibilityScore: number
   confidence: number
@@ -31,10 +38,9 @@ export default function MyAnalysesPage() {
   const [analyses, setAnalyses] = useState<Analysis[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-
-  useEffect(() => {
-    loadAnalyses()
-  }, [])
+  const [searchQuery, setSearchQuery] = useState('')
+  const [typeFilter, setTypeFilter] = useState<'all' | 'video-pitch' | 'pitch-deck' | 'pitch-idea'>('all')
+  const [sortBy, setSortBy] = useState<'date' | 'score'>('date')
 
   const loadAnalyses = async () => {
     try {
@@ -63,12 +69,73 @@ export default function MyAnalysesPage() {
     }
   }
 
+  useEffect(() => {
+    loadAnalyses()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  const filteredAndSortedAnalyses = useMemo(() => {
+    let filtered = analyses
+
+    // Filter by type
+    if (typeFilter !== 'all') {
+      filtered = filtered.filter(a => a.type === typeFilter)
+    }
+
+    // Filter by search query
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase()
+      filtered = filtered.filter(a => {
+        const fileName = a.fileName?.toLowerCase() || ''
+        const type = a.type.toLowerCase()
+        return fileName.includes(query) || type.includes(query)
+      })
+    }
+
+    // Sort
+    if (sortBy === 'date') {
+      filtered = [...filtered].sort((a, b) => 
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      )
+    } else {
+      filtered = [...filtered].sort((a, b) => 
+        (b.compatibilityScore || 0) - (a.compatibilityScore || 0)
+      )
+    }
+
+    return filtered
+  }, [analyses, typeFilter, searchQuery, sortBy])
+
   if (loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <RefreshCw className="h-12 w-12 animate-spin text-primary mx-auto mb-4" />
-          <p className="text-muted-foreground">Loading your analyses...</p>
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50/30">
+        <div className="container mx-auto px-4 py-4 md:py-6">
+          <div className="mb-6">
+            <Skeleton className="h-10 w-64 mb-2" />
+            <Skeleton className="h-6 w-96" />
+          </div>
+          <div className="space-y-4">
+            {[1, 2, 3].map((i) => (
+              <Card key={i} className="border-2">
+                <CardHeader>
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <Skeleton className="h-6 w-48 mb-2" />
+                      <Skeleton className="h-4 w-64" />
+                    </div>
+                    <Skeleton className="h-12 w-20" />
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <Skeleton className="h-32 w-full mb-4" />
+                  <div className="flex gap-3">
+                    <Skeleton className="h-10 flex-1" />
+                    <Skeleton className="h-10 flex-1" />
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
         </div>
       </div>
     )
@@ -131,42 +198,98 @@ export default function MyAnalysesPage() {
             My Analyses
           </h1>
           <p className="text-slate-600 text-lg">
-            View your previous AI analysis reports and VC matches (Video Pitch, Pitch Deck)
+            View your previous AI analysis reports and VC matches
           </p>
         </div>
+
+        {/* Pitch Feedback Comparison */}
+        {analyses.length > 1 && (
+          <div className="mb-6">
+            <PitchFeedbackComparison analyses={analyses} />
+          </div>
+        )}
+
+        {/* Search and Filter Bar */}
+        {analyses.length > 0 && (
+          <Card className="mb-6 border-2">
+            <CardContent className="pt-6">
+              <div className="flex flex-col md:flex-row gap-4">
+                {/* Search */}
+                <div className="flex-1 relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+                  <Input
+                    placeholder="Search analyses by filename or type..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-10"
+                  />
+                  {searchQuery && (
+                    <button
+                      onClick={() => setSearchQuery('')}
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
+
+                {/* Type Filter */}
+                <div className="flex items-center gap-2">
+                  <Filter className="h-4 w-4 text-slate-400" />
+                  <select
+                    value={typeFilter}
+                    onChange={(e) => setTypeFilter(e.target.value as any)}
+                    className="px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                  >
+                    <option value="all">All Types</option>
+                    <option value="video-pitch">Video Pitch</option>
+                    <option value="pitch-deck">Pitch Deck</option>
+                    <option value="pitch-idea">Pitch Idea</option>
+                  </select>
+                </div>
+
+                {/* Sort */}
+                <div className="flex items-center gap-2">
+                  <select
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value as 'date' | 'score')}
+                    className="px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                  >
+                    <option value="date">Sort by Date</option>
+                    <option value="score">Sort by Score</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Results count */}
+              {filteredAndSortedAnalyses.length !== analyses.length && (
+                <div className="mt-4 text-sm text-slate-600">
+                  Showing {filteredAndSortedAnalyses.length} of {analyses.length} analyses
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         {analyses.length === 0 ? (
           <Card className="border-2">
             <CardContent className="pt-12 pb-12 text-center">
               <div className="flex items-center justify-center gap-3 mb-6">
                 <div className="p-4 rounded-lg bg-primary/10">
+                  <Presentation className="h-10 w-10 text-primary" />
+                </div>
+                <div className="p-4 rounded-lg bg-primary/10">
                   <Video className="h-10 w-10 text-primary" />
                 </div>
                 <div className="p-4 rounded-lg bg-primary/10">
-                  <Presentation className="h-10 w-10 text-primary" />
+                  <Lightbulb className="h-10 w-10 text-primary" />
                 </div>
               </div>
               <h3 className="text-2xl font-bold mb-3">No Analyses Yet</h3>
               <p className="text-muted-foreground mb-8 max-w-md mx-auto">
                 Get AI-powered feedback and VC matches by analyzing your pitch materials
               </p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-2xl mx-auto">
-                <Link href="/founder/video-pitch">
-                  <Card className="hover:shadow-md transition-all border-2 hover:border-primary/40 h-full">
-                    <CardContent className="pt-6 text-center">
-                      <div className="p-3 rounded-lg bg-primary/10 w-fit mx-auto mb-3">
-                        <Video className="h-6 w-6 text-primary" />
-                      </div>
-                      <h4 className="font-semibold mb-2">Video Pitch</h4>
-                      <p className="text-xs text-muted-foreground mb-4">
-                        Upload a video pitch for expert review and feedback
-                      </p>
-                      <Button size="sm" className="w-full">
-                        Get Started
-                      </Button>
-                    </CardContent>
-                  </Card>
-                </Link>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 max-w-4xl mx-auto">
                 <Link href="/founder/pitch-deck">
                   <Card className="hover:shadow-md transition-all border-2 hover:border-primary/40 h-full">
                     <CardContent className="pt-6 text-center">
@@ -183,12 +306,69 @@ export default function MyAnalysesPage() {
                     </CardContent>
                   </Card>
                 </Link>
+                <Link href="/founder/video-pitch">
+                  <Card className="hover:shadow-md transition-all border-2 hover:border-primary/40 h-full">
+                    <CardContent className="pt-6 text-center">
+                      <div className="p-3 rounded-lg bg-primary/10 w-fit mx-auto mb-3">
+                        <Video className="h-6 w-6 text-primary" />
+                      </div>
+                      <h4 className="font-semibold mb-2">Video Pitch</h4>
+                      <p className="text-xs text-muted-foreground mb-4">
+                        Upload a video pitch for expert review and feedback
+                      </p>
+                      <Button size="sm" className="w-full">
+                        Get Started
+                      </Button>
+                    </CardContent>
+                  </Card>
+                </Link>
+                <Link href="/founder/ai-analysis">
+                  <Card className="hover:shadow-md transition-all border-2 hover:border-primary/40 h-full">
+                    <CardContent className="pt-6 text-center">
+                      <div className="p-3 rounded-lg bg-primary/10 w-fit mx-auto mb-3">
+                        <Lightbulb className="h-6 w-6 text-primary" />
+                      </div>
+                      <h4 className="font-semibold mb-2">Pitch Idea</h4>
+                      <p className="text-xs text-muted-foreground mb-4">
+                        Get feedback on your startup idea from AI trained on real investor feedback
+                      </p>
+                      <Button size="sm" className="w-full">
+                        Get Started
+                      </Button>
+                    </CardContent>
+                  </Card>
+                </Link>
               </div>
+            </CardContent>
+          </Card>
+        ) : filteredAndSortedAnalyses.length === 0 ? (
+          <Card className="border-2">
+            <CardContent className="pt-12 pb-12 text-center">
+              <div className="p-4 rounded-lg bg-slate-100 w-fit mx-auto mb-4">
+                <Search className="h-8 w-8 text-slate-400" />
+              </div>
+              <h3 className="text-xl font-bold mb-2">No analyses found</h3>
+              <p className="text-muted-foreground mb-4">
+                {searchQuery || typeFilter !== 'all' 
+                  ? 'Try adjusting your search or filters'
+                  : 'Get started by analyzing your pitch materials'}
+              </p>
+              {(searchQuery || typeFilter !== 'all') && (
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setSearchQuery('')
+                    setTypeFilter('all')
+                  }}
+                >
+                  Clear Filters
+                </Button>
+              )}
             </CardContent>
           </Card>
         ) : (
           <div className="space-y-4">
-            {analyses.map((analysis) => (
+            {filteredAndSortedAnalyses.map((analysis) => (
               <Card key={analysis.id} className="hover:shadow-medium transition-all duration-300 border-2 border-slate-200 hover:border-primary/40 overflow-hidden relative group">
                 {/* Gradient accent bar */}
                 <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-primary via-blue-500 to-purple-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
@@ -200,9 +380,11 @@ export default function MyAnalysesPage() {
                         <div className="p-2 rounded-lg bg-primary/10">
                           {analysis.type === 'video-pitch' && <Video className="h-5 w-5 text-primary" />}
                           {analysis.type === 'pitch-deck' && <Presentation className="h-5 w-5 text-primary" />}
+                          {analysis.type === 'pitch-idea' && <Lightbulb className="h-5 w-5 text-primary" />}
                         </div>
-                        {analysis.type === 'video-pitch' && 'Video Pitch Analysis Report'}
-                        {analysis.type === 'pitch-deck' && 'Pitch Deck Analysis Report'}
+                        {analysis.type === 'video-pitch' ? 'Video Pitch Analysis Report' :
+                         analysis.type === 'pitch-deck' ? 'Pitch Deck Analysis Report' :
+                         'Pitch Idea Analysis Report'}
                       </CardTitle>
                       <CardDescription className="mt-2 flex items-center gap-2">
                         <Calendar className="h-4 w-4" />
@@ -262,14 +444,15 @@ export default function MyAnalysesPage() {
                       )}
 
                       {/* Top Matches - for all analysis types */}
-                      {analysis.result?.matches && analysis.result.matches.length > 0 && (
+                      {((analysis.result?.matches && analysis.result.matches.length > 0) || 
+                        (analysis.result?.matchedVCs && analysis.result.matchedVCs.length > 0)) && (
                         <div className="mb-4">
                           <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
                             <TrendingUp className="h-4 w-4 text-primary" />
-                            Top {Math.min(5, analysis.result.matches.length)} VC Matches
+                            Top {Math.min(5, (analysis.result.matches || analysis.result.matchedVCs || []).length)} VC Matches
                           </h4>
                           <div className="space-y-2">
-                            {analysis.result.matches.slice(0, 5).map((match: any, i: number) => (
+                            {(analysis.result.matches || analysis.result.matchedVCs || []).slice(0, 5).map((match: any, i: number) => (
                             <div
                               key={i}
                               className="flex items-center justify-between p-3 rounded-lg border-2 border-slate-200 bg-gradient-to-r from-white to-slate-50/50 hover:border-primary/40 hover:shadow-sm transition-all"
@@ -279,7 +462,7 @@ export default function MyAnalysesPage() {
                                   <span className="text-xs font-bold text-primary bg-primary/10 px-2 py-0.5 rounded">
                                     #{i + 1}
                                   </span>
-                                  <span className="text-sm font-semibold text-slate-900">{match.investor.firmName}</span>
+                                  <span className="text-sm font-semibold text-slate-900">{match.firmName || match.investor?.firmName || 'Unknown Firm'}</span>
                                 </div>
                                 {match.reasons && match.reasons.length > 0 && (
                                   <p className="text-xs text-slate-600 mt-1.5">
@@ -299,9 +482,14 @@ export default function MyAnalysesPage() {
                                   {match.score}% match
                                 </Badge>
                                 <a
-                                  href={match.investor.applicationUrl}
+                                  href={match.applicationUrl || match.investor?.applicationUrl || '#'}
                                   target="_blank"
                                   rel="noopener noreferrer"
+                                  onClick={(e) => {
+                                    if (!match.applicationUrl && !match.investor?.applicationUrl) {
+                                      e.preventDefault()
+                                    }
+                                  }}
                                 >
                                   <Button variant="ghost" size="sm" className="hover:bg-primary/10 hover:text-primary">
                                     <ExternalLink className="h-4 w-4" />
@@ -373,7 +561,7 @@ export default function MyAnalysesPage() {
                   )}
                 </CardContent>
               </Card>
-            ))}
+              ))}
           </div>
         )}
       </div>

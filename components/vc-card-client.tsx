@@ -1,13 +1,14 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Heart, Crown, Target, Eye } from "lucide-react"
+import { Heart, Crown, Target, Eye, Send, Bookmark } from "lucide-react"
 import Link from "next/link"
-import VCDetailModal from '@/components/vc-detail-modal'
+import InvestorProfileModal from '@/components/investor-profile-modal'
 import { parseJSON } from '@/lib/utils'
+import { toast } from '@/components/ui/toast-simple'
 
 interface VCCardClientProps {
   investor: any
@@ -27,6 +28,41 @@ export function VCCardClient({
   applicationLink 
 }: VCCardClientProps) {
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [isBookmarked, setIsBookmarked] = useState(false)
+
+  // Check if bookmarked
+  useEffect(() => {
+    if (investor?.id) {
+      fetch(`/api/bookmarks?investorId=${investor.id}`, { credentials: 'include' })
+        .then(res => res.json())
+        .then(data => {
+          if (data.bookmarks) {
+            setIsBookmarked(data.bookmarks.some((b: any) => b.investor.id === investor.id))
+          }
+        })
+        .catch(() => {})
+    }
+  }, [investor?.id])
+
+  const handleBookmark = async (e: React.MouseEvent) => {
+    e.stopPropagation()
+    try {
+      const response = await fetch('/api/bookmarks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ investorId: investor.id }),
+      })
+
+      const data = await response.json()
+      setIsBookmarked(data.bookmarked)
+      toast.success(data.bookmarked ? 'Bookmarked!' : 'Bookmark removed')
+    } catch (error) {
+      toast.error('Failed to update bookmark')
+    }
+  }
+
+  // Removed handleQuickApply - now just direct link to application URL
 
   // Guard against missing investor data with more thorough checks
   if (!investor || typeof investor !== 'object' || !investor.id) {
@@ -114,15 +150,30 @@ export function VCCardClient({
             </button>
           </div>
           
-          {/* Stages - with icon */}
-          {safeStages.length > 0 && (
-            <div className="flex items-center gap-2 text-xs text-slate-600 mb-3 bg-slate-50 px-2 py-1 rounded-md group-hover:bg-primary/5 transition-colors">
-              <Target className="h-3 w-3 text-primary" />
-              <span className="font-medium">{safeStages.slice(0, 3).join(', ')}{safeStages.length > 3 ? '...' : ''}</span>
-            </div>
-          )}
+          {/* Key Facts Row - stage, check, geo */}
+          <div className="flex flex-wrap gap-2 mb-3 text-xs">
+            {safeStages.length > 0 && (
+              <div className="flex items-center gap-1 bg-blue-50 text-blue-700 px-2 py-1 rounded">
+                <Target className="h-3 w-3" />
+                <span className="font-medium">{safeStages.slice(0, 2).join(', ')}</span>
+              </div>
+            )}
+            {investor?.checkSizeMin && investor?.checkSizeMax && (
+              <div className="flex items-center gap-1 bg-green-50 text-green-700 px-2 py-1 rounded">
+                <span className="font-medium">
+                  ${investor.checkSizeMin >= 1000 ? `${Math.round(investor.checkSizeMin/1000)}M` : `${investor.checkSizeMin}k`}–
+                  ${investor.checkSizeMax >= 1000 ? `${Math.round(investor.checkSizeMax/1000)}M` : `${investor.checkSizeMax}k`}
+                </span>
+              </div>
+            )}
+            {investor?.leadFollow && (
+              <div className="flex items-center gap-1 bg-purple-50 text-purple-700 px-2 py-1 rounded">
+                <span className="font-medium capitalize">{investor.leadFollow === 'lead' ? 'Leads' : investor.leadFollow === 'follow' ? 'Follows' : 'Either'}</span>
+              </div>
+            )}
+          </div>
           
-          {/* Sectors - interactive badges */}
+          {/* Sectors - max 3 */}
           {safeSectors.length > 0 && (
             <div className="flex flex-wrap gap-1.5 mb-2">
               {safeSectors.slice(0, 3).map((sector: string, i: number) => (
@@ -134,31 +185,38 @@ export function VCCardClient({
                   {sector}
                 </Badge>
               ))}
-              {safeSectors.length > 3 && (
-                <Badge variant="secondary" className="text-xs">
-                  +{safeSectors.length - 3}
-                </Badge>
-              )}
             </div>
           )}
         </CardHeader>
 
         <CardContent className="pb-4 relative z-10">
-          {/* Niche Details - enhanced */}
+          {/* Differentiator chips - max 3, unique only */}
           <div className="space-y-2.5">
-            {safeValueAdd.length > 0 && (
-              <div className="flex flex-wrap gap-1.5">
-                {safeValueAdd.slice(0, 3).map((tag: string, i: number) => (
-                  <Badge 
-                    key={i} 
-                    variant="outline" 
-                    className="text-xs bg-primary/5 border-primary/20 text-primary group-hover:bg-primary/10 group-hover:border-primary/30 transition-all"
-                  >
-                    {tag}
-                  </Badge>
-                ))}
-              </div>
-            )}
+            {safeValueAdd.length > 0 && (() => {
+              // Filter out generic/duplicate tags
+              const uniqueTags = safeValueAdd.filter((tag: string) => {
+                const lower = tag.toLowerCase()
+                // Keep only specific, non-generic tags
+                return !lower.includes('focused') && 
+                       !lower.includes('invests') && 
+                       !lower.includes('additional') &&
+                       tag.length < 25 // Keep it concise
+              }).slice(0, 3) // Max 3
+              
+              return uniqueTags.length > 0 && (
+                <div className="flex flex-wrap gap-1.5">
+                  {uniqueTags.map((tag: string, i: number) => (
+                    <Badge 
+                      key={i} 
+                      variant="outline" 
+                      className="text-xs bg-primary/5 border-primary/20 text-primary group-hover:bg-primary/10 group-hover:border-primary/30 transition-all"
+                    >
+                      {tag}
+                    </Badge>
+                  ))}
+                </div>
+              )
+            })()}
             
             {proofPoints && (Array.isArray(proofPoints) ? proofPoints.length > 0 : Object.keys(proofPoints).length > 0) && (
               <div className="text-xs text-slate-600 bg-slate-50 px-2 py-1.5 rounded-md group-hover:bg-primary/5 transition-colors">
@@ -199,7 +257,11 @@ export function VCCardClient({
           {/* YC Insider subsection - only for Y Combinator */}
           {isYC && (
             <div className="mt-4 pt-4 border-t border-slate-200">
-              <Link href="/founder/yc-insider" className="flex items-center gap-2 text-xs font-semibold bg-gradient-to-r from-orange-500 to-red-500 text-white px-3 py-2 rounded-lg hover:from-orange-600 hover:to-red-600 transition-all shadow-sm hover:shadow-md hover:scale-105 transform">
+              <Link 
+                href="/founder/yc-insider" 
+                onClick={(e) => e.stopPropagation()}
+                className="flex items-center gap-2 text-xs font-semibold bg-gradient-to-r from-orange-500 to-red-500 text-white px-3 py-2 rounded-lg hover:from-orange-600 hover:to-red-600 transition-all shadow-sm hover:shadow-md hover:scale-105 transform"
+              >
                 <Crown className="h-4 w-4" />
                 <span>YC Insider: Alumni tips & office hours</span>
               </Link>
@@ -209,29 +271,39 @@ export function VCCardClient({
 
         <CardFooter className="flex items-center gap-2 pt-4 border-t border-slate-100 relative z-10 bg-slate-50/50 group-hover:bg-white transition-colors">
           {profileComplete ? (
-            applicationLink ? (
-              <a 
-                href={applicationLink} 
-                target="_blank" 
-                rel="noopener noreferrer" 
-                className="flex-1"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <Button className={`w-full font-semibold transition-all group-hover:scale-105 ${isYC ? 'bg-amber-600 hover:bg-amber-700 shadow-md hover:shadow-lg' : 'bg-primary hover:bg-primary/90 shadow-md hover:shadow-lg'}`} size="sm">
-                  Apply
+            <>
+              {applicationLink ? (
+                <a 
+                  href={applicationLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex-1"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <Button 
+                    className={`w-full font-semibold transition-all group-hover:scale-105 ${isYC ? 'bg-amber-600 hover:bg-amber-700 shadow-md hover:shadow-lg' : 'bg-primary hover:bg-primary/90 shadow-md hover:shadow-lg'}`} 
+                    size="sm"
+                  >
+                    <Send className="mr-2 h-4 w-4" />
+                    Apply Now
+                  </Button>
+                </a>
+              ) : investor?.email ? (
+                <a 
+                  href={`mailto:${investor.email}?subject=Investment Inquiry`} 
+                  className="flex-1"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <Button className="w-full font-semibold bg-primary hover:bg-primary/90 shadow-md hover:shadow-lg transition-all group-hover:scale-105" size="sm">
+                    Contact ↗
+                  </Button>
+                </a>
+              ) : (
+                <Button className="flex-1 font-semibold bg-slate-400 cursor-not-allowed" size="sm" disabled>
+                  Contact N/A
                 </Button>
-              </a>
-            ) : (
-              <a 
-                href={`mailto:${investor?.email || 'contact@example.com'}?subject=Investment Inquiry`} 
-                className="flex-1"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <Button className="w-full font-semibold bg-primary hover:bg-primary/90 shadow-md hover:shadow-lg transition-all group-hover:scale-105" size="sm">
-                  Contact ↗
-                </Button>
-              </a>
-            )
+              )}
+            </>
           ) : (
             <Link 
               href="/founder/onboarding" 
@@ -246,22 +318,26 @@ export function VCCardClient({
           <Button 
             variant="ghost" 
             size="sm" 
-            className="hover:bg-red-50 hover:text-red-600 transition-all rounded-lg group-hover:scale-110"
-            onClick={(e) => e.stopPropagation()}
+            className={`transition-all rounded-lg group-hover:scale-110 ${
+              isBookmarked 
+                ? 'bg-red-50 text-red-600 hover:bg-red-100' 
+                : 'hover:bg-red-50 hover:text-red-600'
+            }`}
+            onClick={handleBookmark}
+            title={isBookmarked ? 'Remove bookmark' : 'Bookmark this VC'}
           >
-            <Heart className="h-4 w-4" />
+            <Heart className={`h-4 w-4 ${isBookmarked ? 'fill-current' : ''}`} />
           </Button>
         </CardFooter>
       </Card>
 
       {/* Modal */}
       {investor && (
-        <VCDetailModal
+        <InvestorProfileModal
           investor={investor}
           isOpen={isModalOpen}
           onClose={() => setIsModalOpen(false)}
           profileComplete={profileComplete}
-          fullDescription={fullDescription || description}
         />
       )}
     </>

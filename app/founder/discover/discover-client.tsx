@@ -1,8 +1,11 @@
 'use client'
 
-import { Suspense } from 'react'
-import VCSearchWrapperClient from "@/components/vc-search-wrapper-client"
+import { useEffect, useState } from 'react'
+import VCSearchSimple from "@/components/vc-search-simple"
 import VCCardsGrid from "@/components/vc-cards-grid"
+import { Button } from "@/components/ui/button"
+import { Sparkles } from "lucide-react"
+import Link from "next/link"
 
 interface DiscoverClientProps {
   investors: Array<{
@@ -31,37 +34,66 @@ interface DiscoverClientProps {
 }
 
 export default function DiscoverClient({ investors, profileComplete }: DiscoverClientProps) {
+  const [mounted, setMounted] = useState(false)
+  
   // Ensure investors is always an array
   const safeInvestors = Array.isArray(investors) ? investors : []
 
-  return (
-    <>
-      {/* Search Bar */}
-      <div className="mb-6">
-        <Suspense fallback={<div className="h-10 bg-slate-100 rounded-md animate-pulse" />}>
-          <VCSearchWrapperClient />
-        </Suspense>
-      </div>
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
-      {/* Investor Cards Grid */}
-      <Suspense fallback={
+  if (!mounted) {
+    return (
+      <>
+        <div className="mb-6">
+          <div className="h-12 bg-slate-100 rounded-md animate-pulse" />
+        </div>
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {[...Array(8)].map((_, i) => (
             <div key={i} className="h-64 bg-slate-100 rounded-lg animate-pulse" />
           ))}
         </div>
-      }>
-        {safeInvestors.length > 0 ? (
-          <VCCardsGrid 
-            investors={safeInvestors} 
-            profileComplete={profileComplete} 
-          />
-        ) : (
-          <div className="text-center py-12 text-slate-600">
-            <p>No investors found. Try adjusting your filters.</p>
+      </>
+    )
+  }
+
+  return (
+    <>
+      {/* Search Bar + Smart Match */}
+      <div className="mb-6 space-y-4">
+        <VCSearchSimple />
+        
+        {/* Smart Match CTA */}
+        <div className="flex items-center justify-center gap-4 p-4 bg-gradient-to-r from-purple-50 to-pink-50 border-2 border-purple-200 rounded-lg">
+          <div className="flex-1">
+            <p className="text-sm font-semibold text-slate-900">
+              Want AI to find your best matches?
+            </p>
+            <p className="text-xs text-slate-600">
+              Analyze your pitch first, then use Smart Match to rank all 1,002 investors by fit
+            </p>
           </div>
-        )}
-      </Suspense>
+          <Link href="/founder/pitch-deck-analysis">
+            <Button className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700">
+              <Sparkles className="mr-2 h-4 w-4" />
+              Get Started
+            </Button>
+          </Link>
+        </div>
+      </div>
+
+      {/* Investor Cards Grid */}
+      {safeInvestors.length > 0 ? (
+        <VCCardsGrid 
+          investors={safeInvestors} 
+          profileComplete={profileComplete} 
+        />
+      ) : (
+        <div className="text-center py-12 text-slate-600">
+          <p>No investors found. Try adjusting your filters.</p>
+        </div>
+      )}
     </>
   )
 }

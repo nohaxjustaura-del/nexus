@@ -5,7 +5,7 @@ export default function CookiesPage() {
         <h1 className="mb-4 text-3xl font-bold">Cookies & Do‑Not‑Sell</h1>
         <p className="text-muted-foreground">
           We use cookies for essential functionality and analytics. You can opt‑out of analytics in
-          your browser. We do not sell personal information. Placeholder content.
+          your browser settings. We do not sell personal information to third parties.
         </p>
       </div>
     </div>

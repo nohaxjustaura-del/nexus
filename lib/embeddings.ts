@@ -1,0 +1,432 @@
+/**
+ * Embedding utilities for semantic matching between pitches and VCs
+ * Uses Google Gemini's embedding API (text-embedding-004)
+ */
+
+import { GoogleGenerativeAI } from '@google/generative-ai'
+
+// Gemini embedding model
+const EMBEDDING_MODEL = 'text-embedding-004' // Latest Gemini embedding model
+const EMBEDDING_DIMENSIONS = 768 // Gemini's embedding dimension
+
+// Lazy-load Gemini client
+let geminiClient: GoogleGenerativeAI | null = null
+
+function getGeminiClient(): GoogleGenerativeAI {
+  if (!geminiClient) {
+    const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY
+    if (!apiKey) {
+      throw new Error('GEMINI_API_KEY or GOOGLE_API_KEY is required for Smart Match')
+    }
+    geminiClient = new GoogleGenerativeAI(apiKey)
+  }
+  return geminiClient
+}
+
+// ============================================================================
+// PITCH EMBEDDING
+// ============================================================================
+
+interface PitchFeatures {
+  companyName?: string
+  oneLineSummary?: string
+  stage?: string
+  sectorPrimary?: string
+  sectorSecondary?: string[]
+  problemStatement?: string
+  solutionDescription?: string
+  targetCustomer?: {
+    customerType?: string
+    buyerRole?: string
+    companySize?: string
+  }
+  geography?: {
+    hqLocation?: string
+    markets?: string[]
+  }
+  businessModel?: string
+  traction?: {
+    revenue?: string
+    users?: string
+    growthSignal?: string
+  }
+  keyTechnologies?: string[]
+  competitiveMoat?: string[]
+  keywords?: string[]
+}
+
+/**
+ * Build high-signal embedding text from pitch features
+ */
+export function buildPitchEmbeddingText(pitch: PitchFeatures): string {
+  const safe = (value: any, defaultValue = 'Not mentioned'): string => {
+    if (value === null || value === undefined || value === '') return defaultValue
+    if (Array.isArray(value)) return value.join(', ')
+    return String(value)
+  }
+
+  const sections: string[] = []
+
+  // PITCH OVERVIEW
+  sections.push(
+    `PITCH OVERVIEW
+Company: ${safe(pitch.companyName)}
+One-line summary: ${safe(pitch.oneLineSummary)}
+Stage: ${safe(pitch.stage)}
+Primary sector: ${safe(pitch.sectorPrimary)}
+Secondary sectors: ${safe(pitch.sectorSecondary)}`
+  )
+
+  // PROBLEM
+  sections.push(`PROBLEM
+${safe(pitch.problemStatement)}`)
+
+  // SOLUTION
+  sections.push(`SOLUTION
+${safe(pitch.solutionDescription)}`)
+
+  // CUSTOMER
+  const tc = pitch.targetCustomer || {}
+  sections.push(
+    `CUSTOMER
+Customer type: ${safe(tc.customerType)}
+Buyer role: ${safe(tc.buyerRole)}
+Company size: ${safe(tc.companySize)}`
+  )
+
+  // MARKET & GEOGRAPHY
+  const geo = pitch.geography || {}
+  sections.push(
+    `MARKET & GEOGRAPHY
+HQ location: ${safe(geo.hqLocation)}
+Markets: ${safe(geo.markets)}`
+  )
+
+  // BUSINESS MODEL
+  sections.push(`BUSINESS MODEL
+${safe(pitch.businessModel)}`)
+
+  // TRACTION
+  const traction = pitch.traction || {}
+  sections.push(
+    `TRACTION
+Revenue: ${safe(traction.revenue)}
+Users or customers: ${safe(traction.users)}
+Growth signal: ${safe(traction.growthSignal)}`
+  )
+
+  // TECHNOLOGY & MOAT
+  sections.push(
+    `TECHNOLOGY & MOAT
+Key technologies: ${safe(pitch.keyTechnologies)}
+Competitive moat: ${safe(pitch.competitiveMoat)}`
+  )
+
+  // 🆕 ENHANCE: Founder background (from onboarding/profile)
+  const fb = (pitch as any).founderBackground || {}
+  if (fb.education || fb.university || fb.isStudent) {
+    sections.push(
+      `FOUNDER BACKGROUND
+Education: ${safe(fb.education)}
+University: ${safe(fb.university)}
+Student status: ${fb.isStudent ? 'Current student' : 'Not a student'}
+Age: ${fb.age || 'Not specified'}
+Tech background: ${fb.techBackground ? 'Yes' : 'No'}
+Experience level: ${safe(fb.experienceLevel)}
+Immigrant founder: ${fb.isImmigrant ? 'Yes' : 'No'}
+Underrepresented: ${fb.isUnderrepresented ? 'Yes' : 'No'}
+Veteran: ${fb.isVeteran ? 'Yes' : 'No'}
+Willing to drop out: ${fb.willingToDropOut ? 'Yes' : 'No'}`
+    )
+  }
+
+  // 🆕 ENHANCE: Detected patterns (VC affiliations, universities)
+  const patterns = (pitch as any).detectedPatterns || {}
+  if (patterns.vcAffiliations?.length > 0 || patterns.universitySignals?.length > 0 || patterns.founderPatterns?.length > 0) {
+    sections.push(
+      `DETECTED PATTERNS
+VC Affiliations: ${safe(patterns.vcAffiliations)}
+Universities: ${safe(patterns.universitySignals)}
+Accelerators: ${safe(patterns.acceleratorSignals)}
+Founder Patterns: ${safe(patterns.founderPatterns)}`
+    )
+  }
+
+  // 🆕 ENHANCE: Preferences (from onboarding)
+  const prefs = (pitch as any).preferences || {}
+  if (prefs.valueAddNeeds?.length > 0 || prefs.ethicsTags?.length > 0) {
+    sections.push(
+      `FOUNDER PREFERENCES
+Value-add needs: ${safe(prefs.valueAddNeeds)}
+Ethics tags: ${safe(prefs.ethicsTags)}
+Personality tags: ${safe(prefs.personalityTags)}
+Geo preference: ${safe(prefs.geoPreference)}
+Decision speed: ${safe(prefs.decisionSpeedDays)}
+Fund type preference: ${safe(prefs.fundTypePreference)}`
+    )
+  }
+
+  // KEYWORDS (now includes detected patterns)
+  sections.push(`KEYWORDS
+${safe(pitch.keywords)}`)
+
+  return sections.join('\n\n')
+}
+
+/**
+ * Generate embedding vector for a pitch using Gemini
+ */
+export async function generatePitchEmbedding(pitch: PitchFeatures): Promise<number[]> {
+  const embeddingText = buildPitchEmbeddingText(pitch)
+  const client = getGeminiClient()
+  
+  const model = client.getGenerativeModel({ model: EMBEDDING_MODEL })
+  const result = await model.embedContent(embeddingText)
+  
+  return result.embedding.values
+}
+
+// ============================================================================
+// VC EMBEDDING
+// ============================================================================
+
+interface VCProfile {
+  firmName: string
+  fundType?: string
+  stages?: string[]
+  sectors?: string[]
+  geography?: string[]
+  checkSizeMin?: number
+  checkSizeMax?: number
+  leadFollow?: string
+  thesis?: string
+  valueAddTags?: string[]
+  portfolio?: string[]
+  notableInvestments?: string[]
+}
+
+/**
+ * Build high-signal embedding text from VC profile
+ */
+export function buildVCEmbeddingText(vc: VCProfile): string {
+  const safe = (value: any, defaultValue = 'Not specified'): string => {
+    if (value === null || value === undefined || value === '') return defaultValue
+    if (Array.isArray(value)) return value.join(', ')
+    return String(value)
+  }
+
+  const sections: string[] = []
+
+  // FIRM OVERVIEW
+  sections.push(
+    `FIRM OVERVIEW
+Name: ${safe(vc.firmName)}
+Type: ${safe(vc.fundType)}
+Investment stages: ${safe(vc.stages)}
+Primary sectors: ${safe(vc.sectors)}
+Geography focus: ${safe(vc.geography)}`
+  )
+
+  // INVESTMENT CRITERIA
+  const checkSize = vc.checkSizeMin && vc.checkSizeMax 
+    ? `$${vc.checkSizeMin}K - $${vc.checkSizeMax}K`
+    : 'Not specified'
+  
+  sections.push(
+    `INVESTMENT CRITERIA
+Check size: ${checkSize}
+Lead or follow: ${safe(vc.leadFollow)}
+Investment thesis: ${safe(vc.thesis)}`
+  )
+
+  // VALUE ADD
+  sections.push(
+    `VALUE ADD
+Specializations: ${safe(vc.valueAddTags)}`
+  )
+
+  // PORTFOLIO
+  if (vc.portfolio && vc.portfolio.length > 0) {
+    sections.push(`PORTFOLIO COMPANIES
+${vc.portfolio.slice(0, 20).join(', ')}`)
+  }
+
+  if (vc.notableInvestments && vc.notableInvestments.length > 0) {
+    sections.push(`NOTABLE INVESTMENTS
+${vc.notableInvestments.slice(0, 10).join(', ')}`)
+  }
+
+  return sections.join('\n\n')
+}
+
+/**
+ * Generate embedding vector for a VC using Gemini
+ */
+export async function generateVCEmbedding(vc: VCProfile): Promise<number[]> {
+  const embeddingText = buildVCEmbeddingText(vc)
+  const client = getGeminiClient()
+  
+  const model = client.getGenerativeModel({ model: EMBEDDING_MODEL })
+  const result = await model.embedContent(embeddingText)
+  
+  return result.embedding.values
+}
+
+// ============================================================================
+// SIMILARITY CALCULATION
+// ============================================================================
+
+/**
+ * Calculate cosine similarity between two vectors
+ */
+export function cosineSimilarity(vecA: number[], vecB: number[]): number {
+  if (vecA.length !== vecB.length) {
+    throw new Error('Vectors must have the same length')
+  }
+
+  let dotProduct = 0
+  let normA = 0
+  let normB = 0
+
+  for (let i = 0; i < vecA.length; i++) {
+    dotProduct += vecA[i] * vecB[i]
+    normA += vecA[i] * vecA[i]
+    normB += vecB[i] * vecB[i]
+  }
+
+  normA = Math.sqrt(normA)
+  normB = Math.sqrt(normB)
+
+  if (normA === 0 || normB === 0) return 0
+
+  return dotProduct / (normA * normB)
+}
+
+/**
+ * Rank VCs by similarity to a pitch
+ */
+export interface RankedVC {
+  id: string
+  firmName: string
+  similarity: number
+  metadata: {
+    stages?: string[]
+    sectors?: string[]
+    geography?: string[]
+    checkSize?: string
+    fundType?: string
+  }
+}
+
+/**
+ * Rank VCs using FAISS service (faster, uses pre-built index)
+ * Falls back to in-memory cosine similarity if service unavailable
+ */
+export async function rankVCsWithFAISS(
+  pitchEmbedding: number[],
+  topK: number = 20
+): Promise<RankedVC[]> {
+  const faissServiceUrl = process.env.FAISS_SERVICE_URL || 'http://localhost:8001'
+  
+  try {
+    const response = await fetch(`${faissServiceUrl}/rank`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        pitch_embedding: pitchEmbedding,
+        top_k: topK,
+      }),
+    })
+
+    if (!response.ok) {
+      throw new Error(`FAISS service returned ${response.status}`)
+    }
+
+    const results = await response.json()
+    
+    // Convert FAISS API response to RankedVC format
+    return results.map((vc: any) => ({
+      id: vc.id,
+      firmName: vc.firm_name,
+      similarity: vc.similarity,
+      metadata: vc.metadata,
+    }))
+  } catch (error: any) {
+    // Check if it's a dimension mismatch error
+    if (error.message?.includes('dimension mismatch') || error.message?.includes('400')) {
+      console.warn('[FAISS] Dimension mismatch - FAISS index was built with different embedding dimensions. Falling back to in-memory ranking.')
+    } else {
+      console.warn('[FAISS] Service unavailable, falling back to in-memory ranking:', error.message)
+    }
+    throw error // Re-throw so caller can fall back
+  }
+}
+
+export async function rankVCsForPitch(
+  pitchEmbedding: number[],
+  vcEmbeddings: Array<{ id: string; firmName: string; embedding: number[]; metadata: any }>,
+  topK: number = 20,
+  useFAISS: boolean = true
+): Promise<RankedVC[]> {
+  // Try FAISS service first if enabled
+  if (useFAISS && (!vcEmbeddings || vcEmbeddings.length === 0)) {
+    try {
+      return await rankVCsWithFAISS(pitchEmbedding, topK)
+    } catch {
+      // Fall through to in-memory ranking if FAISS fails
+    }
+  }
+
+  // Fallback to in-memory cosine similarity
+  if (!vcEmbeddings || vcEmbeddings.length === 0) {
+    throw new Error('No VC embeddings provided and FAISS service unavailable')
+  }
+
+  // Calculate similarities
+  const scored = vcEmbeddings.map(vc => ({
+    id: vc.id,
+    firmName: vc.firmName,
+    similarity: cosineSimilarity(pitchEmbedding, vc.embedding),
+    metadata: vc.metadata,
+  }))
+
+  // Sort by similarity (descending)
+  scored.sort((a, b) => b.similarity - a.similarity)
+
+  // Return top K
+  return scored.slice(0, topK)
+}
+
+// ============================================================================
+// BATCH OPERATIONS
+// ============================================================================
+
+/**
+ * Generate embeddings for multiple texts in batch
+ * Gemini supports batch requests
+ */
+export async function generateBatchEmbeddings(texts: string[]): Promise<number[][]> {
+  const client = getGeminiClient()
+  const model = client.getGenerativeModel({ model: EMBEDDING_MODEL })
+  
+  const embeddings: number[][] = []
+  
+  // Process in batches to avoid rate limits
+  const BATCH_SIZE = 100
+  for (let i = 0; i < texts.length; i += BATCH_SIZE) {
+    const batch = texts.slice(i, i + BATCH_SIZE)
+    
+    // Process batch sequentially (Gemini doesn't have true batch API yet)
+    for (const text of batch) {
+      const result = await model.embedContent(text)
+      embeddings.push(result.embedding.values)
+      
+      // Small delay to avoid rate limiting
+      await new Promise(resolve => setTimeout(resolve, 100))
+    }
+  }
+
+  return embeddings
+}

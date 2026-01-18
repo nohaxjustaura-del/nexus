@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { getCurrentUser } from '@/lib/auth'
+import { ADMIN_EMAIL, CREDIT_COSTS } from '@/lib/constants'
+import { logger } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'
-
-const ADMIN_EMAIL = 'nohaxjustaura@gmail.com'
 
 // GET: Get user credits
 export async function GET(request: NextRequest) {
@@ -67,7 +67,7 @@ export async function GET(request: NextRequest) {
       purchases,
     })
   } catch (error: any) {
-    console.error('Error fetching credits:', error)
+    logger.error('[USER-CREDITS] Error fetching credits:', error)
     return NextResponse.json(
       { error: 'Failed to fetch credits' },
       { status: 500 }
@@ -115,7 +115,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (action === 'unlock_top_matches') {
-      const CREDIT_COST = 10 // 10 credits to unlock top 5 matches
+      const CREDIT_COST = CREDIT_COSTS.UNLOCK_TOP_MATCHES
       // Check if user has credits or is premium
       if (credits.isPremium || credits.credits >= CREDIT_COST) {
         // Deduct credits if not premium
@@ -160,7 +160,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ error: 'Invalid action' }, { status: 400 })
   } catch (error: any) {
-    console.error('Error updating credits:', error)
+    logger.error('[USER-CREDITS] Error updating credits:', error)
     return NextResponse.json(
       { error: 'Failed to update credits' },
       { status: 500 }

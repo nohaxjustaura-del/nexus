@@ -361,7 +361,7 @@ export class AIFundCoach {
   }
   
   /**
-   * Generates overall assessment
+   * Generates overall assessment with deep understanding of ideas and vision
    */
   private static generateOverallAssessment(profile: StartupProfile, strengths: string[], weaknesses: string[]): string {
     const stage = profile.stage;
@@ -369,16 +369,38 @@ export class AIFundCoach {
     const hasUsers = profile.users && this.extractNumber(profile.users) > 0;
     const hasPreviousFunding = profile.previousFunding && this.extractNumber(profile.previousFunding) > 0;
     
+    // Deep analysis of the core idea and vision
+    const ideaAnalysis = this.analyzeCoreIdea(profile);
+    const visionAnalysis = this.analyzeVision(profile);
+    const nichePositioning = this.identifyNichePositioning(profile);
+    
     let assessment = `**${profile.startupName}** is a ${stage.toLowerCase()}-stage ${profile.industry} company`;
     
-    if (hasRevenue && hasUsers) {
-      assessment += ' with demonstrated product-market fit through both revenue and user growth. ';
-    } else if (hasRevenue) {
-      assessment += ' with early revenue traction showing customer willingness to pay. ';
-    } else if (hasUsers) {
-      assessment += ' with a growing user base that needs to be monetized. ';
+    // Start with the core idea and vision
+    if (ideaAnalysis.isNovel) {
+      assessment += ` with a ${ideaAnalysis.noveltyLevel} idea: ${ideaAnalysis.coreInsight}. `;
     } else {
-      assessment += ' in the early validation phase. ';
+      assessment += ` addressing ${ideaAnalysis.marketNeed}. `;
+    }
+    
+    if (visionAnalysis.hasClearVision) {
+      assessment += `Your vision to ${visionAnalysis.visionSummary} shows ${visionAnalysis.ambitionLevel} ambition. `;
+    }
+    
+    if (nichePositioning.hasNiche) {
+      assessment += `You're targeting a ${nichePositioning.nicheDescription} - this focused approach ${nichePositioning.nicheAdvantage}. `;
+    }
+    
+    if (hasRevenue && hasUsers) {
+      assessment += 'You have demonstrated product-market fit through both revenue and user growth. ';
+    } else if (hasRevenue) {
+      assessment += 'Early revenue traction shows customer willingness to pay. ';
+    } else if (hasUsers) {
+      assessment += 'A growing user base demonstrates market interest. ';
+    } else if (stage === 'Idea') {
+      assessment += 'As an idea-stage startup, your focus should be on validating the core hypothesis and building an MVP. ';
+    } else {
+      assessment += 'You\'re in the early validation phase. ';
     }
     
     // Strength summary
@@ -649,7 +671,7 @@ export class AIFundCoach {
   private static async findMatchingInvestors(profile: StartupProfile): Promise<InvestorMatch[]> {
     // Import Prisma client dynamically to avoid issues
     const { PrismaClient } = await import('@prisma/client');
-    const prisma = new PrismaClient();
+    const { db } = await import('./db'); // Use singleton
     
     try {
       // Determine search criteria from profile
@@ -977,15 +999,17 @@ export class AIFundCoach {
   
   private static mapStageToInvestorStage(stage: string): string {
     const stageMap: { [key: string]: string } = {
+      'Idea': 'Pre-seed',
       'Pre-seed': 'Pre-seed',
       'Seed': 'Seed',
       'Series A': 'Series A',
       'Series B': 'Series B',
       'Series C': 'Series C+',
+      'Series C+': 'Series C+',
       'Growth': 'Series C+',
       'Late Stage': 'Series C+'
     };
-    return stageMap[stage] || 'Seed';
+    return stageMap[stage] || 'Pre-seed';
   }
   
   private static extractSectors(industry: string): string[] {
@@ -1058,6 +1082,150 @@ export class AIFundCoach {
       return (num / 1000).toFixed(0) + 'K';
     }
     return num.toFixed(0);
+  }
+  
+  /**
+   * Deep analysis of the core idea - understanding what makes it unique
+   */
+  private static analyzeCoreIdea(profile: StartupProfile): {
+    isNovel: boolean;
+    noveltyLevel: string;
+    coreInsight: string;
+    marketNeed: string;
+  } {
+    const problem = profile.problemStatement.toLowerCase();
+    const solution = profile.solution.toLowerCase();
+    const unique = profile.uniqueValue.toLowerCase();
+    
+    // Detect novelty signals
+    const noveltyKeywords = ['first', 'only', 'novel', 'unique', 'revolutionary', 'breakthrough', 'unprecedented', 'new approach'];
+    const hasNovelty = noveltyKeywords.some(kw => problem.includes(kw) || solution.includes(kw) || unique.includes(kw));
+    
+    // Extract core insight
+    let coreInsight = '';
+    if (unique.length > 50) {
+      coreInsight = unique.substring(0, 150) + (unique.length > 150 ? '...' : '');
+    } else if (solution.length > 50) {
+      coreInsight = solution.substring(0, 150) + (solution.length > 150 ? '...' : '');
+    } else {
+      coreInsight = 'addressing a specific market need';
+    }
+    
+    // Determine novelty level
+    let noveltyLevel = 'promising';
+    if (hasNovelty && (unique.length > 100 || solution.length > 100)) {
+      noveltyLevel = 'highly innovative';
+    } else if (hasNovelty) {
+      noveltyLevel = 'innovative';
+    }
+    
+    // Extract market need
+    let marketNeed = '';
+    if (problem.length > 50) {
+      marketNeed = problem.substring(0, 100) + (problem.length > 100 ? '...' : '');
+    } else {
+      marketNeed = 'a market opportunity in ' + profile.industry;
+    }
+    
+    return {
+      isNovel: hasNovelty,
+      noveltyLevel,
+      coreInsight,
+      marketNeed
+    };
+  }
+  
+  /**
+   * Analyzes the long-term vision and ambition
+   */
+  private static analyzeVision(profile: StartupProfile): {
+    hasClearVision: boolean;
+    visionSummary: string;
+    ambitionLevel: string;
+  } {
+    const vision = profile.futureVision.toLowerCase();
+    const hasVision = Boolean(profile.futureVision && profile.futureVision.length > 50);
+    
+    let visionSummary = '';
+    if (hasVision) {
+      visionSummary = profile.futureVision.substring(0, 100) + (profile.futureVision.length > 100 ? '...' : '');
+    } else {
+      visionSummary = 'build a successful company';
+    }
+    
+    // Detect ambition level
+    const ambitiousKeywords = ['transform', 'revolutionize', 'dominate', 'leader', 'standard', 'platform', 'ecosystem', 'category'];
+    const hasAmbition = ambitiousKeywords.some(kw => vision.includes(kw));
+    
+    let ambitionLevel = 'moderate';
+    if (hasAmbition && vision.length > 100) {
+      ambitionLevel = 'high';
+    } else if (hasAmbition) {
+      ambitionLevel = 'moderate-to-high';
+    }
+    
+    return {
+      hasClearVision: hasVision,
+      visionSummary,
+      ambitionLevel
+    };
+  }
+  
+  /**
+   * Identifies niche positioning and advantages
+   */
+  private static identifyNichePositioning(profile: StartupProfile): {
+    hasNiche: boolean;
+    nicheDescription: string;
+    nicheAdvantage: string;
+  } {
+    const industry = profile.industry.toLowerCase();
+    const problem = profile.problemStatement.toLowerCase();
+    const solution = profile.solution.toLowerCase();
+    
+    // Detect niche signals
+    const nicheKeywords = ['specific', 'focused', 'niche', 'vertical', 'specialized', 'targeted', 'particular'];
+    const hasNicheSignal = nicheKeywords.some(kw => problem.includes(kw) || solution.includes(kw));
+    
+    // Extract niche description
+    let nicheDescription = '';
+    if (hasNicheSignal) {
+      // Try to extract the specific niche
+      const nichePatterns = [
+        /targeting\s+([^,\.]+)/i,
+        /focusing\s+on\s+([^,\.]+)/i,
+        /serving\s+([^,\.]+)/i,
+        /for\s+([^,\.]+)\s+companies/i
+      ];
+      
+      for (const pattern of nichePatterns) {
+        const match = (problem + ' ' + solution).match(pattern);
+        if (match && match[1]) {
+          nicheDescription = match[1].trim();
+          break;
+        }
+      }
+      
+      if (!nicheDescription) {
+        nicheDescription = 'specific segment within ' + profile.industry;
+      }
+    } else {
+      nicheDescription = 'broad market in ' + profile.industry;
+    }
+    
+    // Determine advantage
+    let nicheAdvantage = '';
+    if (hasNicheSignal) {
+      nicheAdvantage = 'allows for deeper expertise and faster customer acquisition';
+    } else {
+      nicheAdvantage = 'provides larger addressable market but requires clear differentiation';
+    }
+    
+    return {
+      hasNiche: hasNicheSignal,
+      nicheDescription,
+      nicheAdvantage
+    };
   }
 }
 

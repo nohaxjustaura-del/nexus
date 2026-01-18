@@ -139,20 +139,9 @@ export default function VerifyPage() {
         } else if (data.user?.userType === 'mentor') {
           targetUrl = '/'
         } else {
-          // For founders, check if profile exists
-          try {
-            const profileResponse = await fetch('/api/founder/profile', {
-              credentials: 'include',
-            })
-            if (profileResponse.ok) {
-              const profileData = await profileResponse.json()
-              targetUrl = profileData.exists ? '/founder/discover' : '/founder/onboarding'
-            } else {
-              targetUrl = '/founder/onboarding'
-            }
-          } catch (e) {
-            targetUrl = '/founder/onboarding'
-          }
+          // For founders, ALWAYS redirect to onboarding first (required during signup)
+          // They must complete onboarding before accessing other features
+          targetUrl = '/founder/onboarding'
         }
       }
       

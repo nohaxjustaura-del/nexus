@@ -79,7 +79,7 @@ export default async function OGImage() {
             textAlign: 'center',
           }}
         >
-          Evidence-based matching by stage, sector, check size, and working style
+          Evidence-based matching by stage, sector, vision, and working style
         </div>
       </div>
     ),

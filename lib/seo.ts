@@ -11,7 +11,7 @@ interface SEOProps {
 
 const defaultMetadata = {
   title: 'FounderMatch - Find Your Perfect Investor',
-  description: 'AI-powered platform connecting founders with compatible VCs, angels, and mentors. Evidence-based matching by stage, sector, check size, and working style.',
+  description: 'AI-powered platform connecting founders with compatible VCs, angels, and mentors. Evidence-based matching by stage, sector, vision, and working style.',
   image: '/og-image.png',
   url: 'https://foundermatch.com',
 }

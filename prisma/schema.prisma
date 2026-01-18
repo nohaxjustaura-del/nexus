@@ -133,6 +133,9 @@ model Investor {
   personalityType String? // hands-on, hands-off, mentor
   decisionSpeed   String? // e.g., "2 weeks typical"
 
+  // Smart Match - Embedding for semantic search
+  embedding       String? // JSON array of embedding vector (1536 dimensions)
+
   // Aggregated reputation
   responsivenessScore Float @default(0)
   averageRating       Float @default(0) // From private endorsements
@@ -313,6 +316,7 @@ model VideoPitch {
   transcript     String?
   transcriptText String?
   analysisResult String? // JSON
+  smartMatchResults String? // JSON array of ranked VCs
 
   reviews VideoPitchReview[]
 

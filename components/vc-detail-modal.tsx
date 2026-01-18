@@ -370,13 +370,17 @@ export function VCDetailModal({ investor, isOpen, onClose, profileComplete, full
                     <ExternalLink className="ml-2 h-4 w-4" />
                   </Button>
                 </a>
-              ) : (
-                <a href={`mailto:${investor.email || 'contact@example.com'}?subject=Investment Inquiry`} className="block">
+              ) : investor.email ? (
+                <a href={`mailto:${investor.email}?subject=Investment Inquiry`} className="block">
                   <Button className="w-full font-semibold bg-primary hover:bg-primary/90 shadow-md">
                     Contact VC
                     <ExternalLink className="ml-2 h-4 w-4" />
                   </Button>
                 </a>
+              ) : (
+                <Button className="w-full font-semibold bg-slate-400 cursor-not-allowed" disabled>
+                  Contact Info Unavailable
+                </Button>
               )
             ) : (
               <Link href="/founder/onboarding" className="block">

@@ -63,61 +63,50 @@ export default function Home() {
             <h1 className="mb-4 text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight text-slate-900 leading-tight">
               Get matched to{" "}
               <span className="bg-gradient-to-r from-primary via-blue-600 to-primary bg-clip-text text-transparent animate-gradient bg-[length:200%_auto]">
-                1,038 investors
+                1,002 investors
               </span>
               <br className="hidden md:block" />
               who actually fund startups like yours
             </h1>
-          <p className="mx-auto mb-6 max-w-2xl text-lg md:text-xl text-slate-600 leading-relaxed">
-            Answer a few questions → AI analyzes your startup → we show investors who are a real fit, not just a giant spreadsheet.
+          <p className="mx-auto mb-6 max-w-2xl text-lg md:text-xl text-slate-600 leading-relaxed" suppressHydrationWarning>
+            Upload your pitch idea, deck, or video → AI analyzes and provides feedback → get matched with investors who are a real fit, not just a giant spreadsheet.
           </p>
           
           {/* CTA Buttons - Primary & Secondary */}
           <div className="mb-4 flex flex-col sm:flex-row gap-4 items-center justify-center">
-            {mounted && isAuthenticated ? (
-              <Link href="/founder/dashboard">
-                <Button 
-                  size="lg" 
-                  className="group relative text-base px-10 py-6 bg-gradient-to-r from-primary via-blue-600 to-primary bg-[length:200%_auto] hover:bg-[length:200%_auto] hover:bg-[position:100%_0] shadow-lg hover:shadow-xl hover:shadow-primary/40 transition-all duration-500 hover:-translate-y-1 hover:scale-105 font-semibold overflow-hidden border-0"
-                >
-                  <span className="relative z-10 flex items-center">
-                    Go to Dashboard
-                    <LayoutDashboard className="ml-2 h-5 w-5 transition-all duration-300 group-hover:rotate-12 group-hover:scale-110" />
-                  </span>
-                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent translate-x-[-200%] group-hover:translate-x-[200%] transition-transform duration-1000 ease-in-out" />
-                  <div className="absolute inset-0 opacity-0 group-hover:opacity-100 bg-gradient-to-r from-white/0 via-white/20 to-white/0 animate-pulse" />
-                </Button>
-              </Link>
-            ) : (
-              <>
-                <Button 
-                  onClick={() => {
-                    track('cta_clicked', { name: 'start_free', page: 'home' })
-                    if (mounted && isAuthenticated === false) {
-                      router.push('/signup')
-                    }
-                  }}
-                  size="lg" 
-                  className="group relative text-base px-10 py-6 bg-gradient-to-r from-primary via-blue-600 to-primary bg-[length:200%_auto] hover:bg-[length:200%_auto] hover:bg-[position:100%_0] shadow-lg hover:shadow-xl hover:shadow-primary/40 transition-all duration-500 hover:-translate-y-1 hover:scale-105 font-semibold overflow-hidden border-0"
-                >
-                  <span className="relative z-10 flex items-center">
-                    Find My Matches
-                    <Rocket className="ml-2 h-5 w-5 transition-all duration-300 group-hover:translate-x-1 group-hover:-translate-y-1 group-hover:rotate-12 group-hover:scale-110" />
-                  </span>
-                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent translate-x-[-200%] group-hover:translate-x-[200%] transition-transform duration-1000 ease-in-out" />
-                  <div className="absolute inset-0 opacity-0 group-hover:opacity-100 bg-gradient-to-r from-white/0 via-white/20 to-white/0 animate-pulse" />
-                </Button>
-                <Link href="/founder/discover">
-                  <Button 
-                    size="lg"
-                    variant="outline"
-                    className="text-base px-10 py-6 border-2 border-slate-300 hover:border-primary hover:bg-primary/5 transition-all duration-300 font-semibold"
-                  >
-                    Browse Investors
-                  </Button>
-                </Link>
-              </>
-            )}
+            <Button 
+              onClick={() => {
+                track('cta_clicked', { name: 'find_matches', page: 'home' })
+                if (!mounted || !isAuthenticated) {
+                  router.push('/signup')
+                } else {
+                  router.push('/founder/dashboard')
+                }
+              }}
+              size="lg" 
+              className="group relative text-base px-10 py-6 bg-gradient-to-r from-primary via-blue-600 to-primary bg-[length:200%_auto] hover:bg-[length:200%_auto] hover:bg-[position:100%_0] shadow-lg hover:shadow-xl hover:shadow-primary/40 transition-all duration-500 hover:-translate-y-1 hover:scale-105 font-semibold overflow-hidden border-0"
+            >
+              <span className="relative z-10 flex items-center">
+                {mounted && isAuthenticated ? 'Go to Dashboard' : 'Find My Matches'}
+                {mounted && isAuthenticated ? (
+                  <LayoutDashboard className="ml-2 h-5 w-5 transition-all duration-300 group-hover:rotate-12 group-hover:scale-110" />
+                ) : (
+                  <Rocket className="ml-2 h-5 w-5 transition-all duration-300 group-hover:translate-x-1 group-hover:-translate-y-1 group-hover:rotate-12 group-hover:scale-110" />
+                )}
+              </span>
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent translate-x-[-200%] group-hover:translate-x-[200%] transition-transform duration-1000 ease-in-out" />
+              <div className="absolute inset-0 opacity-0 group-hover:opacity-100 bg-gradient-to-r from-white/0 via-white/20 to-white/0 animate-pulse" />
+            </Button>
+            <Button
+              onClick={() => {
+                router.push('/founder/discover')
+              }}
+              size="lg"
+              variant="outline"
+              className="text-base px-10 py-6 border-2 border-slate-300 hover:border-primary hover:bg-primary/5 transition-all duration-300 font-semibold"
+            >
+              Browse Investors
+            </Button>
           </div>
           
           {/* Interactive Trust Badges - Compact */}
@@ -145,7 +134,7 @@ export default function Home() {
 
       {/* Cursor Fund Coach CTA - NEW */}
       <section className="relative px-4 py-8 md:py-12">
-        <div className="max-w-6xl mx-auto">
+        <div className="w-full max-w-6xl mx-auto px-0">
           <div className="relative rounded-3xl bg-gradient-to-br from-indigo-600 via-blue-600 to-purple-600 p-1 shadow-2xl overflow-hidden">
             {/* Animated shimmer effect */}
             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-200%] animate-[shimmer_3s_ease-in-out_infinite]" />
@@ -165,10 +154,10 @@ export default function Home() {
               </h2>
               
               <p className="text-xl text-slate-600 mb-8 max-w-3xl leading-relaxed">
-                Our AI analyzes your startup, gives investor-style feedback on your pitch, and matches you with the 
-                <span className="font-semibold text-slate-900"> best VCs, accelerators, and funding programs</span> from our database of 
-                <span className="font-bold text-indigo-600"> 1,038 verified investors</span>. 
-                Genuine, tailored recommendations based on your specific traction and stage.
+                Upload your pitch idea, pitch deck, or video pitch. Our AI analyzes your materials, gives investor-style feedback, 
+                and matches you with the <span className="font-semibold text-slate-900"> best VCs, accelerators, and funding programs</span> from our database of 
+                <span className="font-bold text-indigo-600"> 1,002 verified investors</span>. 
+                Get genuine, tailored recommendations with personalized talking points for each investor.
               </p>
               
               <div className="grid sm:grid-cols-3 gap-6 mb-10">
@@ -210,17 +199,23 @@ export default function Home() {
               </div>
               
               <div className="flex flex-col sm:flex-row gap-5">
-                <Link href="/onboarding/founder">
-                  <Button 
-                    size="lg"
-                    className="group relative text-lg px-10 py-7 bg-gradient-to-r from-indigo-600 via-blue-600 to-purple-600 hover:from-indigo-700 hover:via-blue-700 hover:to-purple-700 shadow-lg hover:shadow-2xl hover:shadow-blue-500/40 transition-all duration-300 hover:-translate-y-1 hover:scale-105 font-bold border-0 rounded-xl"
-                  >
-                    <span className="relative z-10 flex items-center">
-                      Start Free Analysis
-                      <Sparkles className="ml-2 h-6 w-6 transition-all duration-300 group-hover:rotate-12 group-hover:scale-110" />
-                    </span>
-                  </Button>
-                </Link>
+                <Button 
+                  onClick={() => {
+                    track('cta_clicked', { name: 'start_free_analysis', page: 'home' })
+                    if (!mounted || !isAuthenticated) {
+                      router.push('/signup')
+                    } else {
+                      router.push('/onboarding/founder')
+                    }
+                  }}
+                  size="lg"
+                  className="group relative text-lg px-10 py-7 bg-gradient-to-r from-indigo-600 via-blue-600 to-purple-600 hover:from-indigo-700 hover:via-blue-700 hover:to-purple-700 shadow-lg hover:shadow-2xl hover:shadow-blue-500/40 transition-all duration-300 hover:-translate-y-1 hover:scale-105 font-bold border-0 rounded-xl"
+                >
+                  <span className="relative z-10 flex items-center">
+                    Start Free Analysis
+                    <Sparkles className="ml-2 h-6 w-6 transition-all duration-300 group-hover:rotate-12 group-hover:scale-110" />
+                  </span>
+                </Button>
                 
                 <Link href="/analysis">
                   <Button 
@@ -239,7 +234,7 @@ export default function Home() {
 
       {/* Hype Panel - Exciting Value Props */}
       <section className="relative px-4 pt-2 pb-4 md:pt-4 md:pb-6">
-        <div className="max-w-6xl mx-auto">
+        <div className="w-full max-w-6xl mx-auto px-0">
           <div className={`relative rounded-2xl bg-gradient-to-br from-white via-white to-blue-50/30 border border-slate-200/80 shadow-xl overflow-hidden backdrop-blur-sm transition-all duration-1000 ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
             {/* Animated background glow */}
             <div className="absolute inset-0 bg-gradient-to-r from-purple-500/5 via-transparent to-blue-500/5 animate-pulse" />
@@ -272,7 +267,7 @@ export default function Home() {
                     Smart Matching
                   </h3>
                   <p className="text-sm text-slate-600 leading-relaxed">
-                    AI analyzes stage, sector, check size, and working style to find your perfect fit
+                    AI analyzes your stage, sector, vision, and working style to match you with investors who truly get your ideas
                   </p>
                 </div>
 
@@ -306,7 +301,7 @@ export default function Home() {
                     Quality Network
                   </h3>
                   <p className="text-sm text-slate-600 leading-relaxed">
-                    Connect with 500+ verified VCs, accelerators, and corporate programs worldwide
+                    Connect with 1,002+ verified VCs, accelerators, and corporate programs worldwide
                   </p>
                 </div>
               </div>
@@ -315,12 +310,12 @@ export default function Home() {
               <div className="mt-8 pt-8 border-t border-slate-200/50 flex flex-col sm:flex-row items-center justify-center gap-4">
                 <div className="flex items-center gap-2 text-sm text-slate-600">
                   <TrendingUp className="w-4 h-4 text-green-500" />
-                  <span className="font-medium">95% match quality</span>
+                  <span className="font-medium">AI-powered matching</span>
                   <span className="text-slate-400">•</span>
                   <Sparkles className="w-4 h-4 text-purple-500" />
                   <span className="font-medium">Evidence-based</span>
                   <span className="text-slate-400">•</span>
-                  <span className="font-medium text-slate-900">1,038 verified investors</span>
+                  <span className="font-medium text-slate-900">1,002 verified investors</span>
                 </div>
               </div>
             </div>
@@ -330,8 +325,8 @@ export default function Home() {
 
       {/* Quick Stats Section - Interactive & Attractive */}
       <section className="relative pt-4 pb-8 md:pt-6 md:pb-10 px-4">
-        <div className="container-body px-4">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8 max-w-6xl mx-auto">
+        <div className="w-full max-w-6xl mx-auto px-0">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8">
             <div className="group relative text-center p-5 rounded-xl bg-white/95 backdrop-blur-sm border border-slate-200 hover:border-primary/40 hover:shadow-xl hover:shadow-primary/20 transition-all duration-300 hover:-translate-y-1.5 hover:scale-105 cursor-pointer overflow-hidden">
               <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
               <div className="relative text-3xl md:text-4xl font-bold text-slate-900 mb-2 group-hover:text-primary transition-all duration-300 group-hover:scale-110">
@@ -343,7 +338,7 @@ export default function Home() {
             <div className="group relative text-center p-5 rounded-xl bg-white/95 backdrop-blur-sm border border-slate-200 hover:border-blue-400 hover:shadow-xl hover:shadow-blue-400/20 transition-all duration-300 hover:-translate-y-1.5 hover:scale-105 cursor-pointer overflow-hidden">
               <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
               <div className="relative text-3xl md:text-4xl font-bold text-slate-900 mb-2 group-hover:text-blue-600 transition-all duration-300 group-hover:scale-110">
-                1,038
+                1,002
                 <span className="absolute -top-1 -right-1 w-2 h-2 bg-blue-500 rounded-full opacity-0 group-hover:opacity-100 group-hover:animate-ping" />
               </div>
               <p className="relative text-xs md:text-sm text-slate-600 font-medium group-hover:text-slate-700">Verified Investors</p>
@@ -351,18 +346,18 @@ export default function Home() {
             <div className="group relative text-center p-5 rounded-xl bg-white/95 backdrop-blur-sm border border-slate-200 hover:border-green-400 hover:shadow-xl hover:shadow-green-400/20 transition-all duration-300 hover:-translate-y-1.5 hover:scale-105 cursor-pointer overflow-hidden">
               <div className="absolute inset-0 bg-gradient-to-br from-green-500/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
               <div className="relative text-3xl md:text-4xl font-bold text-slate-900 mb-2 group-hover:text-green-600 transition-all duration-300 group-hover:scale-110">
-                95%
+                50+
                 <span className="absolute -top-1 -right-1 w-2 h-2 bg-green-500 rounded-full opacity-0 group-hover:opacity-100 group-hover:animate-ping" />
               </div>
-              <p className="relative text-xs md:text-sm text-slate-600 font-medium group-hover:text-slate-700">Match Quality</p>
+              <p className="relative text-xs md:text-sm text-slate-600 font-medium group-hover:text-slate-700">Sectors Covered</p>
             </div>
             <div className="group relative text-center p-5 rounded-xl bg-white/95 backdrop-blur-sm border border-slate-200 hover:border-orange-400 hover:shadow-xl hover:shadow-orange-400/20 transition-all duration-300 hover:-translate-y-1.5 hover:scale-105 cursor-pointer overflow-hidden">
               <div className="absolute inset-0 bg-gradient-to-br from-orange-500/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
               <div className="relative text-3xl md:text-4xl font-bold text-slate-900 mb-2 group-hover:text-orange-600 transition-all duration-300 group-hover:scale-110">
-                24h
+                AI
                 <span className="absolute -top-1 -right-1 w-2 h-2 bg-orange-500 rounded-full opacity-0 group-hover:opacity-100 group-hover:animate-ping" />
               </div>
-              <p className="relative text-xs md:text-sm text-slate-600 font-medium group-hover:text-slate-700">Avg Response</p>
+              <p className="relative text-xs md:text-sm text-slate-600 font-medium group-hover:text-slate-700">Smart Matching</p>
             </div>
           </div>
         </div>
@@ -370,7 +365,7 @@ export default function Home() {
 
       {/* Trust & Privacy Footer */}
       <section className="relative px-4 pb-12 md:pb-16">
-        <div className="max-w-6xl mx-auto">
+        <div className="w-full max-w-6xl mx-auto px-0">
           <div className="rounded-2xl bg-slate-50/80 backdrop-blur-sm border border-slate-200/50 p-8 md:p-10">
             <div className="text-center mb-6">
               <h3 className="text-xl md:text-2xl font-bold text-slate-900 mb-2">

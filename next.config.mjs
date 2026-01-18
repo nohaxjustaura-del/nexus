@@ -20,9 +20,13 @@ const nextConfig = {
   },
   
   // Experimental features for better performance
-  experimental: {
-    optimizePackageImports: ['lucide-react'],
-  },
+  // Temporarily disabled to fix webpack module loading issues
+  // experimental: {
+  //   optimizePackageImports: ['lucide-react'],
+  // },
+  
+  // Webpack config removed to fix module loading errors
+  // If needed, add back with minimal configuration
   
   // Headers for caching and security
   async headers() {
@@ -64,6 +68,23 @@ const nextConfig = {
       {
         source: '/_next/static/:path*',
         headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=31536000, immutable'
+          },
+          {
+            key: 'Content-Type',
+            value: 'application/javascript; charset=utf-8'
+          }
+        ],
+      },
+      {
+        source: '/_next/static/css/:path*',
+        headers: [
+          {
+            key: 'Content-Type',
+            value: 'text/css; charset=utf-8'
+          },
           {
             key: 'Cache-Control',
             value: 'public, max-age=31536000, immutable'

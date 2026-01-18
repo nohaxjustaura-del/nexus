@@ -42,24 +42,24 @@ export async function refreshSession(userId: string): Promise<void> {
 
 export async function getCurrentUser(extendSession: boolean = true) {
   try {
-    console.log('[AUTH] getCurrentUser called, extendSession:', extendSession)
+    // Removed verbose logging to reduce terminal spam
     const cookieStore = await cookies()
     const token = cookieStore.get('session')?.value
     
     if (!token) {
-      console.log('[AUTH] No session token found')
+      // No session token
       return null
     }
     
-    console.log('[AUTH] Session token found, verifying JWT...')
+    // Verifying JWT
     // Verify JWT is valid (not expired, correct signature)
     let decoded: { userId: string; exp?: number }
     try {
       decoded = jwt.verify(token, JWT_SECRET) as { userId: string; exp?: number }
-      console.log('[AUTH] JWT verified, userId:', decoded.userId)
+      // JWT verified
     } catch (error) {
       // Invalid or expired JWT
-      console.log('[AUTH] JWT verification failed:', error instanceof Error ? error.message : 'Unknown error')
+      // JWT verification failed
       return null
     }
     
@@ -70,11 +70,11 @@ export async function getCurrentUser(extendSession: boolean = true) {
     
     let user
     try {
-      console.log('[AUTH] Fetching user from database, userId:', decoded.userId)
+      // Fetching user from database
       user = await db.user.findUnique({
         where: { id: decoded.userId },
       })
-      console.log('[AUTH] User fetched:', user ? `found (${user.email})` : 'not found')
+      // User fetched
     } catch (dbError) {
       // Database error - return null to allow page to load
       console.error('[AUTH] Database error in getCurrentUser:', dbError instanceof Error ? dbError.message : dbError)
@@ -83,7 +83,7 @@ export async function getCurrentUser(extendSession: boolean = true) {
     
     // Check if user exists
     if (!user) {
-      console.log('[AUTH] User not found in database')
+      // User not found
       return null
     }
     
@@ -109,7 +109,7 @@ export async function getCurrentUser(extendSession: boolean = true) {
     
     // Return user - trust JWT validation for session validity
     // Don't require strict token matching to avoid blocking valid sessions
-    console.log('[AUTH] getCurrentUser success, returning user:', user.email)
+    // getCurrentUser success
     return user
   } catch (error) {
     return null

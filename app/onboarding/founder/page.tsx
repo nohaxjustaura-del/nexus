@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -48,30 +48,130 @@ export default function FounderOnboarding() {
     futureVision: ''
   })
 
+  // Debug: Log component mount and form data changes
+  useEffect(() => {
+    console.log('[FounderOnboarding] Component mounted')
+    console.log('[FounderOnboarding] Initial form state:', formData)
+    console.log('[FounderOnboarding] Router available:', !!router)
+  }, [router])
+  
+  useEffect(() => {
+    console.log('[FounderOnboarding] Form data changed:', formData)
+  }, [formData])
+
   const updateField = (field: string, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }))
+    console.log(`[FounderOnboarding] Field update: ${field} = "${value}"`)
+    setFormData(prev => {
+      const updated = { ...prev, [field]: value }
+      console.log(`[FounderOnboarding] Updated form state:`, updated)
+      return updated
+    })
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    console.log('[FounderOnboarding] Form submission started')
+    console.log('[FounderOnboarding] Current form data:', formData)
+    
+    // Validate required fields with detailed logging
+    const requiredFields = {
+      founderName: formData.founderName,
+      founderBackground: formData.founderBackground,
+      founderExperience: formData.founderExperience,
+      startupName: formData.startupName,
+      industry: formData.industry,
+      stage: formData.stage,
+      location: formData.location,
+      businessModel: formData.businessModel,
+      problemStatement: formData.problemStatement,
+      solution: formData.solution,
+      uniqueValue: formData.uniqueValue,
+      currentTraction: formData.currentTraction,
+      fundraisingStage: formData.fundraisingStage,
+      targetAmount: formData.targetAmount,
+      futureVision: formData.futureVision
+    }
+    
+    const missingFields = Object.entries(requiredFields)
+      .filter(([key, value]) => !value || value.trim() === '')
+      .map(([key]) => key)
+    
+    if (missingFields.length > 0) {
+      console.warn('[FounderOnboarding] Validation failed - missing fields:', missingFields)
+      console.warn('[FounderOnboarding] Required fields status:', requiredFields)
+      alert(`Please fill in all required fields. Missing: ${missingFields.join(', ')}`)
+      return
+    }
+    
+    console.log('[FounderOnboarding] Validation passed, submitting form...')
     setLoading(true)
     
     try {
+      const requestBody = JSON.stringify(formData)
+      console.log('[FounderOnboarding] API Request:', {
+        url: '/api/onboarding/founder',
+        method: 'POST',
+        bodyLength: requestBody.length,
+        bodyPreview: requestBody.substring(0, 200) + '...'
+      })
+      
       const response = await fetch('/api/onboarding/founder', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
+        body: requestBody
+      })
+
+      console.log('[FounderOnboarding] API Response:', {
+        status: response.status,
+        statusText: response.statusText,
+        ok: response.ok,
+        headers: Object.fromEntries(response.headers.entries())
       })
 
       if (response.ok) {
+        const responseData = await response.json().catch(() => null)
+        console.log('[FounderOnboarding] Success response data:', responseData)
+        console.log('[FounderOnboarding] Navigating to /analysis')
         router.push('/analysis')
       } else {
-        alert('Failed to submit. Please try again.')
+        let errorMessage = 'Unknown error'
+        try {
+          const errorData = await response.json()
+          errorMessage = errorData.error || errorData.message || errorMessage
+        } catch {
+          const errorText = await response.text().catch(() => 'Unknown error')
+          errorMessage = errorText || errorMessage
+        }
+        
+        console.error('[FounderOnboarding] API Error Response:', {
+          status: response.status,
+          statusText: response.statusText,
+          errorMessage
+        })
+        
+        // Provide user-friendly error messages
+        if (response.status === 401) {
+          alert('Please sign in to continue. Redirecting to sign in page...')
+          router.push('/signup')
+        } else if (response.status === 403) {
+          alert(`Email verification required: ${errorMessage}`)
+          router.push('/verify')
+        } else if (response.status === 400) {
+          alert(`Please check your form: ${errorMessage}`)
+        } else {
+          alert(`Failed to submit: ${errorMessage}\n\nIf this problem persists, please check your internet connection and try again.`)
+        }
       }
     } catch (error) {
-      console.error('Onboarding error:', error)
-      alert('An error occurred. Please try again.')
+      console.error('[FounderOnboarding] Exception during form submission:', error)
+      console.error('[FounderOnboarding] Error details:', {
+        name: error instanceof Error ? error.name : 'Unknown',
+        message: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined
+      })
+      alert(`An error occurred: ${error instanceof Error ? error.message : 'Unknown error'}`)
     } finally {
+      console.log('[FounderOnboarding] Form submission completed, setting loading to false')
       setLoading(false)
     }
   }
@@ -97,7 +197,7 @@ export default function FounderOnboarding() {
         <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow-lg border border-gray-200 p-8 space-y-8">
           {/* Section 1: Founder */}
           <div className="space-y-6">
-            <h2 className="text-2xl font-bold text-gray-900 border-b pb-3">About You</h2>
+            <h2 className="text-2xl font-bold text-gray-900 border-b pb-3">1. About You</h2>
             
             <div>
               <Label htmlFor="founderName" className="text-base">Your Name *</Label>
@@ -151,7 +251,7 @@ export default function FounderOnboarding() {
 
           {/* Section 2: Startup */}
           <div className="space-y-6">
-            <h2 className="text-2xl font-bold text-gray-900 border-b pb-3">Your Startup</h2>
+            <h2 className="text-2xl font-bold text-gray-900 border-b pb-3">2. Your Startup</h2>
             
             <div>
               <Label htmlFor="startupName" className="text-base">Startup Name *</Label>
@@ -193,11 +293,12 @@ export default function FounderOnboarding() {
 
             <div>
               <Label htmlFor="stage" className="text-base">Stage *</Label>
-              <Select value={formData.stage} onValueChange={(v: string) => updateField('stage', v)} required>
+              <Select value={formData.stage} onValueChange={(v: string) => updateField('stage', v)}>
                 <SelectTrigger id="stage" className="mt-2">
                   <SelectValue placeholder="Select your stage" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="Idea">Idea</SelectItem>
                   <SelectItem value="Pre-seed">Pre-seed</SelectItem>
                   <SelectItem value="Seed">Seed</SelectItem>
                   <SelectItem value="Series A">Series A</SelectItem>
@@ -222,7 +323,7 @@ export default function FounderOnboarding() {
 
           {/* Section 3: Problem & Solution */}
           <div className="space-y-6">
-            <h2 className="text-2xl font-bold text-gray-900 border-b pb-3">The Problem & Solution</h2>
+            <h2 className="text-2xl font-bold text-gray-900 border-b pb-3">3. The Problem & Solution</h2>
             
             <div>
               <Label htmlFor="problemStatement" className="text-base">What Problem Are You Solving? *</Label>
@@ -277,7 +378,7 @@ export default function FounderOnboarding() {
 
           {/* Section 4: Traction */}
           <div className="space-y-6">
-            <h2 className="text-2xl font-bold text-gray-900 border-b pb-3">Traction & Metrics</h2>
+            <h2 className="text-2xl font-bold text-gray-900 border-b pb-3">4. Traction & Metrics</h2>
             
             <div>
               <Label htmlFor="currentTraction" className="text-base">Current Traction *</Label>
@@ -330,15 +431,16 @@ export default function FounderOnboarding() {
 
           {/* Section 5: Fundraising */}
           <div className="space-y-6">
-            <h2 className="text-2xl font-bold text-gray-900 border-b pb-3">Fundraising</h2>
+            <h2 className="text-2xl font-bold text-gray-900 border-b pb-3">5. Fundraising</h2>
             
             <div>
               <Label htmlFor="fundraisingStage" className="text-base">Fundraising Stage *</Label>
-              <Select value={formData.fundraisingStage} onValueChange={(v: string) => updateField('fundraisingStage', v)} required>
+              <Select value={formData.fundraisingStage} onValueChange={(v: string) => updateField('fundraisingStage', v)}>
                 <SelectTrigger id="fundraisingStage" className="mt-2">
                   <SelectValue placeholder="What are you raising?" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="Idea">Idea Stage</SelectItem>
                   <SelectItem value="Pre-seed">Pre-seed Round</SelectItem>
                   <SelectItem value="Seed">Seed Round</SelectItem>
                   <SelectItem value="Series A">Series A</SelectItem>
@@ -374,7 +476,7 @@ export default function FounderOnboarding() {
 
           {/* Section 6: Vision & Assets */}
           <div className="space-y-6">
-            <h2 className="text-2xl font-bold text-gray-900 border-b pb-3">Vision & Materials</h2>
+            <h2 className="text-2xl font-bold text-gray-900 border-b pb-3">6. Vision & Materials</h2>
             
             <div>
               <Label htmlFor="futureVision" className="text-base">Long-term Vision *</Label>

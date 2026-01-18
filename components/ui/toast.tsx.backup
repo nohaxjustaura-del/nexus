@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { X, CheckCircle, AlertCircle, Info, AlertTriangle } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -108,13 +108,68 @@ class ToastManager {
   }
 }
 
-export const toast = new ToastManager()
+// Create toast instance only on client side
+let toastInstance: ToastManager | null = null
+
+// No-op toast manager for SSR
+const noOpToast: ToastManager = {
+  success: () => {},
+  error: () => {},
+  info: () => {},
+  warning: () => {},
+  show: () => {},
+  subscribe: () => () => {},
+} as ToastManager
+
+function getToastInstance(): ToastManager {
+  // Always return no-op during SSR to prevent hydration issues
+  if (typeof window === 'undefined') {
+    return noOpToast
+  }
+  
+  try {
+    // Check if we're in a browser environment
+    if (window.document) {
+      if (!toastInstance) {
+        toastInstance = new ToastManager()
+      }
+      return toastInstance
+    }
+  } catch {
+    // If window is not available, return no-op
+  }
+  return noOpToast
+}
+
+// Export toast as an object with lazy getters - methods are called only at runtime
+export const toast = {
+  success: (message: string, duration?: number) => {
+    getToastInstance().success(message, duration)
+  },
+  error: (message: string, duration?: number) => {
+    getToastInstance().error(message, duration)
+  },
+  info: (message: string, duration?: number) => {
+    getToastInstance().info(message, duration)
+  },
+  warning: (message: string, duration?: number) => {
+    getToastInstance().warning(message, duration)
+  },
+  show: (props: ToastProps) => {
+    getToastInstance().show(props)
+  },
+  subscribe: (listener: (toast: ToastProps & { id: string }) => void) => {
+    return getToastInstance().subscribe(listener)
+  },
+}
 
 // Provider component
 export function ToastProvider({ children }: { children: React.ReactNode }) {
   const [toasts, setToasts] = useState<Array<ToastProps & { id: string }>>([])
+  const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
+    setMounted(true)
     const unsubscribe = toast.subscribe((newToast) => {
       setToasts(prev => [...prev, newToast])
     })
@@ -125,8 +180,8 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   return (
     <>
       {children}
-      <div className="fixed top-0 right-0 z-[100] p-4 space-y-2">
-        {toasts.map((t) => (
+      <div className="fixed top-0 right-0 z-[100] p-4 space-y-2" suppressHydrationWarning>
+        {mounted && toasts.map((t) => (
           <Toast
             key={t.id}
             {...t}

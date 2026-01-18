@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
     const fakeUrl = `founder-id://${encodeURIComponent(user.email || 'unknown')}/${encodeURIComponent(file.name)}`
     console.log('🪪 Founder ID Upload:', { email: user.email, fileName: file.name, type: file.type, size: file.size, fakeUrl })
 
-    // Persist to local SQLite (BLOB). This is fine for dev/test. Replace with S3 in production.
+    // Persist to local SQLite (BLOB)
     try {
       await (db as any).$executeRawUnsafe?.(`
         CREATE TABLE IF NOT EXISTS FounderIdFiles (

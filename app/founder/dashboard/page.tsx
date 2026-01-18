@@ -18,20 +18,38 @@ import {
   Rocket,
   Video,
   Lightbulb,
-  Crown
+  Crown,
+  CheckCircle,
+  Clock,
+  Activity,
+  ArrowRight,
+  Send
 } from "lucide-react"
 import Link from "next/link"
+import { Skeleton } from "@/components/ui/skeleton"
+import { MatchQualityInsights } from "@/components/match-quality-insights"
 
 export default function FounderDashboard() {
   const router = useRouter()
   const [loading, setLoading] = useState(true)
   const [credits, setCredits] = useState<{ credits: number; isPremium: boolean } | null>(null)
+  const [stats, setStats] = useState<{
+    analysesCount: number
+    bookmarksCount: number
+    matchesCount: number
+    profileCompleteness: number
+    recentAnalyses: any[]
+  } | null>(null)
+  const [founderProfile, setFounderProfile] = useState<any>(null)
 
   useEffect(() => {
+    let isMounted = true
+
     // Check auth
     fetch('/api/auth/check', { credentials: 'include' })
       .then(res => res.json())
       .then(data => {
+        if (!isMounted) return
         if (!data?.authenticated) {
           router.push('/signup')
           return
@@ -39,20 +57,76 @@ export default function FounderDashboard() {
         setLoading(false)
       })
       .catch(() => {
+        if (!isMounted) return
         router.push('/signup')
       })
 
     // Load credits
     fetch('/api/user/credits', { credentials: 'include' })
       .then(res => res.json())
-      .then(data => setCredits(data))
+      .then(data => {
+        if (isMounted) setCredits(data)
+      })
       .catch(() => {})
+
+    // Load stats
+    Promise.all([
+      fetch('/api/all-analyses', { credentials: 'include' }).then(r => r.json()).catch(() => ({ analyses: [] })),
+      fetch('/api/founder/profile', { credentials: 'include' }).then(r => r.json()).catch(() => ({ founder: null }))
+    ]).then(([analysesData, profileData]) => {
+      if (!isMounted) return
+      
+      const analyses = (analysesData.analyses || []).filter((a: any) => a.type !== 'resume')
+      const founder = profileData.founder || profileData.profile
+      
+      // Store founder profile for insights
+      if (founder) {
+        setFounderProfile(founder)
+      }
+      
+      // Calculate profile completeness
+      let completeness = 0
+      if (founder) {
+        const fields = [
+          founder.name, founder.startupName, founder.bio, founder.stage,
+          founder.sectors, founder.location, founder.fundingNeed,
+          founder.pitchDeck, founder.videoPitchUrl, founder.linkedinUrl
+        ]
+        const filledFields = fields.filter(f => f && f !== '' && f !== '[]').length
+        completeness = Math.round((filledFields / fields.length) * 100)
+      }
+
+      // Calculate matches count more safely
+      const matchesCount = analyses.reduce((sum: number, a: any) => {
+        const count = a.result?.matchCount || a.result?.matches?.length || 0
+        return sum + (typeof count === 'number' ? count : 0)
+      }, 0)
+
+      setStats({
+        analysesCount: analyses.length,
+        bookmarksCount: 0, // Would need separate API call
+        matchesCount,
+        profileCompleteness: completeness,
+        recentAnalyses: analyses.slice(0, 3)
+      })
+    }).catch(() => {})
+
+    return () => {
+      isMounted = false
+    }
   }, [router])
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50/30">
+        <div className="container mx-auto max-w-7xl px-4 py-8 md:py-12">
+          <Skeleton className="h-12 w-64 mb-8" />
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+            {[1, 2, 3, 4].map(i => (
+              <Skeleton key={i} className="h-32" />
+            ))}
+          </div>
+        </div>
       </div>
     )
   }
@@ -90,9 +164,6 @@ export default function FounderDashboard() {
       description: 'Your saved investors',
       icon: Bookmark,
       href: '/founder/bookmarks',
-      color: 'from-orange-500 to-red-500',
-      bgColor: 'bg-orange-50',
-      iconColor: 'text-orange-600'
     },
   ]
 
@@ -121,27 +192,29 @@ export default function FounderDashboard() {
   ]
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50/30">
+    <div className="min-h-screen bg-white">
       <div className="container mx-auto max-w-7xl px-4 py-8 md:py-12">
-        {/* Header */}
-        <div className="mb-8 animate-slide-up">
-          <div className="flex items-center justify-between mb-4">
+        {/* Header - Simplified */}
+        <div className="mb-8">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
             <div>
-              <h1 className="text-4xl md:text-5xl font-bold text-slate-900 mb-2">
-                Welcome Back
+              <h1 className="text-3xl md:text-4xl font-bold text-slate-900 mb-2">
+                Dashboard
               </h1>
-              <p className="text-lg text-slate-600">
-                Choose what you'd like to do next
+              <p className="text-slate-600">
+                Manage your startup journey
               </p>
             </div>
             {credits && (
-              <div className="text-right">
-                <div className="text-2xl font-bold text-slate-900">
-                  {credits.credits ?? 0}
+              <div className="flex items-center gap-3">
+                <div className="text-right">
+                  <div className="text-2xl font-bold text-slate-900">
+                    {credits.credits ?? 0}
+                  </div>
+                  <div className="text-sm text-slate-600">Credits</div>
                 </div>
-                <div className="text-sm text-slate-600">Credits</div>
                 {credits.isPremium && (
-                  <Badge className="mt-1 bg-gradient-to-r from-amber-400 to-orange-500 text-white">
+                  <Badge className="bg-amber-500 text-white">
                     <Crown className="h-3 w-3 mr-1" />
                     Premium
                   </Badge>
@@ -152,92 +225,184 @@ export default function FounderDashboard() {
         </div>
 
         {/* Daily Claim */}
-        <div className="mb-8 animate-slide-up" style={{ animationDelay: '0.1s' }}>
+        <div className="mb-8">
           <DailyClaim />
         </div>
 
-        {/* Quick Actions */}
-        <div className="mb-12">
-          <h2 className="text-2xl font-bold text-slate-900 mb-6">Quick Actions</h2>
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4 stagger-children">
-            {quickActions.map((action, idx) => {
+        {/* Stats - Simplified */}
+        {stats && (
+          <div className="mb-8 grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <Card className="border border-slate-200 bg-white">
+              <CardContent className="p-5">
+                <div className="text-2xl font-bold text-slate-900 mb-1">{stats.analysesCount}</div>
+                <p className="text-sm text-slate-600">Analyses</p>
+              </CardContent>
+            </Card>
+            <Card className="border border-slate-200 bg-white">
+              <CardContent className="p-5">
+                <div className="text-2xl font-bold text-slate-900 mb-1">{stats.matchesCount}</div>
+                <p className="text-sm text-slate-600">Matches</p>
+              </CardContent>
+            </Card>
+            <Card className="border border-slate-200 bg-white">
+              <CardContent className="p-5">
+                <div className="text-2xl font-bold text-slate-900 mb-1">{stats.bookmarksCount}</div>
+                <p className="text-sm text-slate-600">Bookmarks</p>
+              </CardContent>
+            </Card>
+            <Card className="border border-slate-200 bg-white">
+              <CardContent className="p-5">
+                <div className="text-2xl font-bold text-slate-900 mb-1">{stats.profileCompleteness}%</div>
+                <p className="text-sm text-slate-600">Profile</p>
+                {stats.profileCompleteness < 100 && (
+                  <Link href="/founder/onboarding" className="mt-2 inline-block">
+                    <Button size="sm" variant="outline" className="w-full text-xs">
+                      Complete
+                    </Button>
+                  </Link>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {/* Smart Reminders - Simplified */}
+        {stats && (
+          <Card className="mb-8 border border-slate-200 bg-white">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg">Quick Actions</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                {stats.profileCompleteness < 100 && (
+                  <Link href="/founder/onboarding">
+                    <div className="flex items-center justify-between p-3 rounded-lg border border-amber-200 bg-amber-50 hover:bg-amber-100 transition-colors">
+                      <div>
+                        <p className="font-medium text-sm text-amber-900">Complete Your Profile</p>
+                        <p className="text-xs text-amber-700">{stats.profileCompleteness}% complete</p>
+                      </div>
+                      <ArrowRight className="h-4 w-4 text-amber-600" />
+                    </div>
+                  </Link>
+                )}
+                {stats.analysesCount === 0 && (
+                  <Link href="/founder/ai-analysis">
+                    <div className="flex items-center justify-between p-3 rounded-lg border border-blue-200 bg-blue-50 hover:bg-blue-100 transition-colors">
+                      <div>
+                        <p className="font-medium text-sm text-blue-900">Get Your First Analysis</p>
+                        <p className="text-xs text-blue-700">Analyze your pitch materials</p>
+                      </div>
+                      <ArrowRight className="h-4 w-4 text-blue-600" />
+                    </div>
+                  </Link>
+                )}
+                <Link href="/founder/discover">
+                  <div className="flex items-center justify-between p-3 rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 transition-colors">
+                    <div>
+                      <p className="font-medium text-sm text-slate-900">Discover VCs</p>
+                      <p className="text-xs text-slate-600">Browse 1,002 investors</p>
+                    </div>
+                    <ArrowRight className="h-4 w-4 text-slate-600" />
+                  </div>
+                </Link>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Match Quality Insights */}
+        {stats && founderProfile && (
+          <div className="mb-8">
+            <MatchQualityInsights
+              analyses={stats.recentAnalyses || []}
+              founderProfile={founderProfile}
+              matches={stats.recentAnalyses?.[0]?.result?.matches || []}
+            />
+          </div>
+        )}
+
+        {/* Recent Activity */}
+        {stats && stats.recentAnalyses.length > 0 && (
+          <Card className="mb-8 border-2 border-slate-200 animate-slide-up" style={{ animationDelay: '0.2s' }}>
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <Activity className="h-5 w-5 text-primary" />
+                <CardTitle>Recent Activity</CardTitle>
+              </div>
+              <CardDescription>Your latest analyses and matches</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {stats.recentAnalyses.map((analysis: any) => (
+                  <Link key={analysis.id} href="/founder/my-analyses">
+                    <div className="flex items-center justify-between p-3 rounded-lg border-2 border-slate-200 hover:border-primary/40 hover:bg-slate-50 transition-all cursor-pointer">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 rounded-lg bg-primary/10">
+                          {analysis.type === 'video-pitch' && <Video className="h-4 w-4 text-primary" />}
+                          {analysis.type === 'pitch-deck' && <FileText className="h-4 w-4 text-primary" />}
+                          {analysis.type === 'pitch-idea' && <Lightbulb className="h-4 w-4 text-primary" />}
+                        </div>
+                        <div>
+                          <p className="font-semibold text-sm text-slate-900">
+                            {analysis.type === 'video-pitch' && 'Video Pitch Analysis'}
+                            {analysis.type === 'pitch-deck' && 'Pitch Deck Analysis'}
+                            {analysis.type === 'pitch-idea' && 'Pitch Idea Analysis'}
+                          </p>
+                          <p className="text-xs text-slate-500 flex items-center gap-1">
+                            <Clock className="h-3 w-3" />
+                            {new Date(analysis.createdAt).toLocaleDateString('en-US', {
+                              month: 'short',
+                              day: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })}
+                          </p>
+                        </div>
+                      </div>
+                      {analysis.compatibilityScore > 0 && (
+                        <Badge className="bg-gradient-to-r from-primary to-blue-600 text-white">
+                          {Math.round(analysis.compatibilityScore)}% match
+                        </Badge>
+                      )}
+                    </div>
+                  </Link>
+                ))}
+              </div>
+              <Link href="/founder/my-analyses">
+                <Button variant="outline" className="w-full mt-4 border-2">
+                  View All Analyses
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              </Link>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Quick Actions - Simplified */}
+        <div className="mb-8">
+          <h2 className="text-xl font-semibold text-slate-900 mb-4">Quick Actions</h2>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {quickActions.slice(0, 6).map((action, idx) => {
               const Icon = action.icon
               return (
                 <Link key={idx} href={action.href}>
-                  <Card className={`${action.bgColor} border-2 border-transparent hover:border-slate-300 card-animated cursor-pointer h-full transition-all duration-300`}>
-                    <CardContent className="p-6">
-                      <div className={`inline-flex items-center justify-center w-12 h-12 rounded-xl bg-white mb-4 shadow-sm`}>
-                        <Icon className={`h-6 w-6 ${action.iconColor}`} />
+                  <Card className="border border-slate-200 hover:border-primary/50 hover:shadow-sm transition-all bg-white">
+                    <CardContent className="p-4">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 rounded-lg bg-slate-100">
+                          <Icon className="h-5 w-5 text-slate-700" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-medium text-sm text-slate-900 truncate">{action.title}</h3>
+                          <p className="text-xs text-slate-600 truncate">{action.description}</p>
+                        </div>
                       </div>
-                      <h3 className="font-bold text-lg text-slate-900 mb-2">{action.title}</h3>
-                      <p className="text-sm text-slate-600">{action.description}</p>
                     </CardContent>
                   </Card>
                 </Link>
               )
             })}
           </div>
-        </div>
-
-        {/* AI Analysis Options */}
-        <div className="mb-12">
-          <h2 className="text-2xl font-bold text-slate-900 mb-6">AI Analysis</h2>
-          <div className="grid md:grid-cols-3 gap-4 stagger-children">
-            {analysisOptions.map((option, idx) => {
-              const Icon = option.icon
-              return (
-                <Link key={idx} href={option.href}>
-                  <Card className="border-2 border-slate-200 hover:border-primary/40 card-animated cursor-pointer h-full transition-all duration-300 bg-white">
-                    <CardHeader>
-                      <div className="flex items-start justify-between mb-2">
-                        <div className="inline-flex items-center justify-center w-10 h-10 rounded-lg bg-primary/10 mb-3">
-                          <Icon className="h-5 w-5 text-primary" />
-                        </div>
-                        <Badge variant="secondary">{option.credits} credits</Badge>
-                      </div>
-                      <CardTitle className="text-lg mb-2">{option.title}</CardTitle>
-                      <CardDescription className="text-sm">{option.description}</CardDescription>
-                    </CardHeader>
-                  </Card>
-                </Link>
-              )
-            })}
-          </div>
-        </div>
-
-        {/* Additional Resources */}
-        <div className="grid md:grid-cols-2 gap-4">
-          <Link href="/founder/my-analyses">
-            <Card className="border-2 border-slate-200 hover:border-primary/40 card-animated cursor-pointer transition-all duration-300 bg-white">
-              <CardContent className="p-6">
-                <div className="flex items-center gap-4">
-                  <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-slate-100">
-                    <BarChart3 className="h-6 w-6 text-slate-600" />
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-lg text-slate-900 mb-1">My Analyses</h3>
-                    <p className="text-sm text-slate-600">View all your past analyses</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </Link>
-
-          <Link href="/pricing">
-            <Card className="border-2 border-slate-200 hover:border-primary/40 card-animated cursor-pointer transition-all duration-300 bg-white">
-              <CardContent className="p-6">
-                <div className="flex items-center gap-4">
-                  <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-br from-primary/20 to-blue-500/20">
-                    <Rocket className="h-6 w-6 text-primary" />
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-lg text-slate-900 mb-1">Buy Credits</h3>
-                    <p className="text-sm text-slate-600">Get more credits or upgrade to Premium</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </Link>
         </div>
       </div>
     </div>

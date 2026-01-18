@@ -3,16 +3,40 @@ import { db } from '@/lib/db'
 import { getCurrentUser } from '@/lib/auth'
 import { logger } from '@/lib/logger'
 import OpenAI from 'openai'
+import { getOpenRouterClient, getModelName } from '@/lib/openrouter'
+import { ADMIN_EMAIL, CREDIT_COSTS } from '@/lib/constants'
+import { rateLimitMiddleware, RATE_LIMITS } from '@/lib/rate-limit'
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
-
-const ADMIN_EMAIL = 'nohaxjustaura@gmail.com'
-const FOUNDER_FEEDBACK_CREDIT_COST = 200
+// Get AI client - supports both OpenRouter and OpenAI
+function getAIClient(): OpenAI | null {
+  const openRouterClient = getOpenRouterClient()
+  if (openRouterClient) {
+    return openRouterClient
+  }
+  
+  try {
+    if (process.env.OPENAI_API_KEY) {
+      return new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+    }
+  } catch (error) {
+    logger.error('[FOUNDER-FEEDBACK] Failed to initialize AI client:', error)
+  }
+  return null
+}
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
 export async function POST(request: NextRequest) {
+  // Rate limiting - check before processing
+  const rateLimitResponse = await rateLimitMiddleware(request, {
+    ...RATE_LIMITS.AI_ANALYSIS,
+    identifier: 'founder-feedback',
+  })
+  if (rateLimitResponse) {
+    return rateLimitResponse
+  }
+
   try {
     logger.log('[FOUNDER-FEEDBACK] Starting founder feedback request...')
     
@@ -23,30 +47,22 @@ export async function POST(request: NextRequest) {
 
     const { analysisId, idea, pitchDeckText, videoTranscript } = await request.json()
 
-    // Check credits (admin bypass)
+    // Check credits (admin bypass) - but don't deduct yet
     if (user.email !== ADMIN_EMAIL) {
       const userCredits = await db.userCredits.findUnique({
         where: { userId: user.id },
       })
 
-      if (!userCredits || (!userCredits.isPremium && (userCredits.credits ?? 0) < FOUNDER_FEEDBACK_CREDIT_COST)) {
+      if (!userCredits || (!userCredits.isPremium && (userCredits.credits ?? 0) < CREDIT_COSTS.FOUNDER_FEEDBACK)) {
         return NextResponse.json(
           { 
             error: 'Insufficient credits',
-            message: `Founder feedback costs ${FOUNDER_FEEDBACK_CREDIT_COST} credits. You have ${userCredits?.credits ?? 0} credits.`,
+            message: `Founder feedback costs ${CREDIT_COSTS.FOUNDER_FEEDBACK} credits. You have ${userCredits?.credits ?? 0} credits.`,
             requiresPayment: true,
           },
           { status: 402 }
         )
       }
-
-      // Deduct credits
-      await db.userCredits.update({
-        where: { userId: user.id },
-        data: {
-          credits: { decrement: FOUNDER_FEEDBACK_CREDIT_COST },
-        },
-      })
     }
 
     // Note: Analysis model doesn't exist in schema
@@ -86,8 +102,19 @@ export async function POST(request: NextRequest) {
     Be honest, supportive, and specific. Write in a conversational but professional tone, as if you're a mentor giving direct feedback.
     Format as plain text (not JSON), 3-5 paragraphs.`
 
-    const completion = await openai.chat.completions.create({
-      model: 'gpt-4o',
+    const aiClient = getAIClient()
+    if (!aiClient) {
+      return NextResponse.json(
+        { error: 'AI service not configured', message: 'Please set OPENROUTER_API_KEY or OPENAI_API_KEY' },
+        { status: 503 }
+      )
+    }
+
+    // Limit max_tokens for free tier OpenRouter accounts
+    const maxTokens = process.env.OPENROUTER_API_KEY ? 4000 : undefined
+    
+    const completion = await aiClient.chat.completions.create({
+      model: getModelName('gpt-4o'), // Uses OpenRouter format if OpenRouter is configured
       messages: [
         {
           role: 'system',
@@ -96,9 +123,26 @@ export async function POST(request: NextRequest) {
         { role: 'user', content: feedbackPrompt },
       ],
       temperature: 0.8,
+      max_tokens: maxTokens, // Limit tokens for OpenRouter free tier
     })
 
     const feedback = completion.choices[0]?.message?.content || 'Unable to generate feedback at this time. Please try again.'
+
+    // Deduct credits AFTER successful analysis (admin bypass)
+    if (user.email !== ADMIN_EMAIL) {
+      try {
+        await db.userCredits.update({
+          where: { userId: user.id },
+          data: {
+            credits: { decrement: CREDIT_COSTS.FOUNDER_FEEDBACK },
+          },
+        })
+        logger.log(`[FOUNDER-FEEDBACK] Deducted ${CREDIT_COSTS.FOUNDER_FEEDBACK} credits from user ${user.id}`)
+      } catch (creditError: any) {
+        // Log but don't fail the request if credit deduction fails
+        console.error('[FOUNDER-FEEDBACK] Error deducting credits:', creditError)
+      }
+    }
 
     // Note: Analysis model doesn't exist in schema
     // Saving feedback is temporarily disabled until Analysis model is added to schema
