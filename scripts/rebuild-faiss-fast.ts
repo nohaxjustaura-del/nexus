@@ -4,25 +4,33 @@
  */
 
 import { generateVCEmbedding } from '../lib/embeddings'
-import { readFileSync, writeFileSync } from 'fs'
+import { readFileSync, writeFileSync, existsSync } from 'fs'
 import { join } from 'path'
 import { execSync } from 'child_process'
 
 async function main() {
   console.log('🚀 Fast FAISS index rebuild...\n')
 
-  // Read existing VC data from JSON file
   const jsonlPath = join(process.cwd(), 'faiss-data', 'vcs_embedding_inputs_trimmed.json')
+
+  if (!existsSync(jsonlPath)) {
+    console.error(`❌ JSON file not found: ${jsonlPath}`)
+    console.log('   Run "npm run rebuild-faiss-index" first to generate the JSON from the database.')
+    process.exit(1)
+  }
+
   const jsonlContent = readFileSync(jsonlPath, 'utf-8')
   const vcRows = jsonlContent.split('\n').filter(line => line.trim()).map(line => JSON.parse(line))
 
   console.log(`Found ${vcRows.length} VCs in JSON file\n`)
-  console.log('🔄 Generating 768-dimensional embeddings...\n')
+  console.log('🔄 Generating 1024-dimensional embeddings (Voyage AI)...\n')
+  console.log('⚠️  Voyage AI rate limits: 3 RPM, 10K TPM\n')
 
   const embeddings: number[][] = []
   const vcData: any[] = []
 
-  // Generate embeddings for each VC
+  let apiCalls = 0
+
   for (let i = 0; i < vcRows.length; i++) {
     const vc = vcRows[i]
     
@@ -31,7 +39,6 @@ async function main() {
         console.log(`[${i + 1}/${vcRows.length}] Processing ${vc.firm_name}...`)
       }
 
-      // Extract VC profile from JSON data
       const vcProfile = {
         firmName: vc.firm_name,
         fundType: vc.metadata?.investor_type || 'vc',
@@ -47,18 +54,16 @@ async function main() {
         notableInvestments: [],
       }
 
-      // Generate embedding
       const embedding = await generateVCEmbedding(vcProfile)
+      apiCalls++
 
-      // Verify dimension
-      if (embedding.length !== 768) {
-        console.log(`⚠️  Warning: ${vc.firm_name} has dimension ${embedding.length}, expected 768`)
+      if (embedding.length !== 1024) {
+        console.log(`⚠️  Warning: ${vc.firm_name} has dimension ${embedding.length}, expected 1024`)
         continue
       }
 
       embeddings.push(embedding)
 
-      // Update VC data entry with ID if available
       const vcEntry = {
         id: vc.id || vc.firm_name.toLowerCase().replace(/\s+/g, '_'),
         firm_name: vc.firm_name,
@@ -67,13 +72,17 @@ async function main() {
       }
 
       vcData.push(vcEntry)
-
-      // Rate limiting - wait 100ms between requests (faster than 200ms)
-      if (i < vcRows.length - 1) {
-        await new Promise(resolve => setTimeout(resolve, 100))
-      }
     } catch (error: any) {
       console.error(`❌ Error processing ${vc.firm_name}:`, error.message)
+      apiCalls++
+    }
+
+    // Rate limiting OUTSIDE try/catch — applies after every API call
+    if (apiCalls > 0 && apiCalls % 3 === 0) {
+      console.log(`⏳ Rate-limit pause (60s) after ${apiCalls} API calls...`)
+      await new Promise(resolve => setTimeout(resolve, 60_000))
+    } else if (apiCalls > 0) {
+      await new Promise(resolve => setTimeout(resolve, 500))
     }
   }
 
@@ -82,12 +91,12 @@ async function main() {
     return
   }
 
-  console.log(`\n✅ Generated ${embeddings.length} embeddings (768 dimensions each)\n`)
+  console.log(`\n✅ Generated ${embeddings.length} embeddings (1024 dimensions each)\n`)
 
   // Write updated JSONL file
   const updatedJsonlPath = join(process.cwd(), 'faiss-data', 'vcs_embedding_inputs_trimmed.json')
-  const jsonlContent = vcData.map(vc => JSON.stringify(vc)).join('\n')
-  writeFileSync(updatedJsonlPath, jsonlContent, 'utf-8')
+  const updatedJsonlContent = vcData.map(vc => JSON.stringify(vc)).join('\n')
+  writeFileSync(updatedJsonlPath, updatedJsonlContent, 'utf-8')
   console.log(`✅ Updated VC data file`)
 
   // Write embeddings as JSON for Python script
@@ -105,7 +114,7 @@ async function main() {
       stdio: 'inherit'
     })
     console.log('\n✅ FAISS index rebuilt successfully!')
-    console.log('   - Dimension: 768 (Gemini text-embedding-004)')
+    console.log('   - Dimension: 1024 (Voyage AI voyage-3)')
     console.log('   - Vectors: ' + embeddings.length)
     console.log('\n🔄 Restart the FAISS service to use the new index:')
     console.log('   cd faiss-service')

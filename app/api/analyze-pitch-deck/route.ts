@@ -1,14 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { getCurrentUser } from '@/lib/auth'
-import { extractPitchDeckFeatures, PitchDeckFeatures } from '@/lib/ai'
-import { intelligentMatchVCs } from '@/lib/intelligent-matching'
+import { extractPitchDeckFeatures } from '@/lib/ai'
+import { aiNativeMatchVCs } from '@/lib/ai-native-matching'
 import { logger } from '@/lib/logger'
 import { validatePitchDeck } from '@/lib/content-validator'
 import { ADMIN_EMAIL, CREDIT_COSTS } from '@/lib/constants'
 import { rateLimitMiddleware, RATE_LIMITS } from '@/lib/rate-limit'
-import { generatePitchEmbedding, rankVCsForPitch } from '@/lib/embeddings'
 import { parseJSON } from '@/lib/utils'
+import { getComprehensiveFounderContext } from '@/lib/founder-context'
+import { saveFileToDisk, buildFounderSnapshot } from '@/lib/file-storage'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -215,6 +216,17 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Save pitch deck file to local disk for training data
+    let savedFilePath = ''
+    try {
+      const arrayBuffer = await file.arrayBuffer()
+      const buffer = Buffer.from(arrayBuffer)
+      savedFilePath = await saveFileToDisk(buffer, 'pitch-decks', founder.id, file.name)
+      logger.log(`[ANALYZE-PITCH-DECK] File saved to: ${savedFilePath}`)
+    } catch (saveErr: any) {
+      logger.error('[ANALYZE-PITCH-DECK] Failed to save file to disk (non-critical):', saveErr.message)
+    }
+
     // Extract text from pitch deck
     const deckText = await extractTextFromPDF(file)
     
@@ -290,166 +302,151 @@ export async function POST(request: NextRequest) {
     // Analyze pitch deck
     const features = await extractPitchDeckFeatures(deckText, founder)
 
-    // Get all investors
-    const investors = await db.investor.findMany({
-      where: {
-        verified: true,
-      },
-      take: 200,
+    // 🆕 Get cached investors (faster) and comprehensive founder context
+    const { getCachedInvestors } = await import('@/lib/investor-cache')
+    const investors = await getCachedInvestors()
+    const founderContext = await getComprehensiveFounderContext(founder.email)
+
+    // Build enhanced founder data with all profile context
+    const enhancedFounder = {
+      ...founder,
+      ...founderContext,
+      sectors: parseJSON<string[]>(founder.sectors || '[]', []),
+    }
+
+    logger.log('[ANALYZE-PITCH-DECK] Starting AI-native matching with FAISS...')
+    logger.log(`[ANALYZE-PITCH-DECK] Deck text length: ${deckText.length} characters`)
+    
+    // 🆕 AI-NATIVE MATCHING: Combined intelligent + vector matching (same as Video Pitch)
+    // Uses 60% intelligent matching + 40% FAISS vector similarity + pattern boosts
+    let matchedVCs = await aiNativeMatchVCs(
+      enhancedFounder,
+      investors,
+      {
+        pitchAnalysis: features,
+        transcript: deckText, // Use the deck text for pattern detection
+        resumeFeatures: undefined,
+        useFAISS: true,
+      }
+    )
+    
+    logger.log(`[ANALYZE-PITCH-DECK] AI-native matching completed: ${matchedVCs.length} matches found`)
+    
+    // Enhance matches with application recommendations based on combined scores
+    matchedVCs = matchedVCs.map(match => {
+      const vc = match.investor
+      const sectors = parseJSON<string[]>(vc.sectors || '[]', [])
+      const founderSectors = parseJSON<string[]>(founder.sectors || '[]', [])
+      const sectorMatch = sectors.some((s: string) => 
+        founderSectors.some((fs: string) => 
+          fs.toLowerCase().includes(s.toLowerCase()) || 
+          s.toLowerCase().includes(fs.toLowerCase())
+        )
+      )
+
+      // Generate application recommendations based on COMBINED score
+      const score = match.combinedScore || match.score || 0
+      const vectorSim = (match.vectorSimilarity ?? 0) || 0
+
+      let whyApply = `Strong ${sectorMatch ? 'sector' : 'stage'} fit with ${vc.firmName}'s investment thesis.`
+      let bestApproach = 'Warm introduction preferred'
+      let timing = 'Apply within 2-4 weeks'
+
+      if (score >= 90) {
+        whyApply = `🏆 Elite match! ${vc.firmName} actively invests in ${sectors.slice(0, 2).join(' and ')} at ${founder.stage} stage. Your deck shows ${(vectorSim * 100).toFixed(0)}% semantic alignment with their thesis.`
+        bestApproach = 'Warm introduction through portfolio founder or mutual connection'
+        timing = 'Apply immediately - high priority match'
+      } else if (score >= 80) {
+        whyApply = `⭐️⭐️⭐️ Excellent match! ${vc.firmName} invests in ${sectors[0]} and your stage aligns. ${(vectorSim * 100).toFixed(0)}% semantic similarity indicates strong fit.`
+        bestApproach = 'Warm introduction or personalized cold email with specific thesis alignment'
+        timing = 'Apply within 1 week - strong match'
+      } else if (score >= 70) {
+        whyApply = `⭐️⭐️ Strong match with ${vc.firmName}. They invest in ${sectors[0]} and your stage aligns. ${(vectorSim * 100).toFixed(0)}% semantic similarity.`
+        bestApproach = 'Warm introduction or personalized cold email with specific thesis alignment'
+        timing = 'Apply within 1-2 weeks'
+      } else if (score >= 60) {
+        whyApply = `⭐️ Good match. ${vc.firmName} may be interested given your sector and traction. ${(vectorSim * 100).toFixed(0)}% semantic similarity.`
+        bestApproach = 'Personalized cold email highlighting specific alignment points'
+        timing = 'Apply within 2-4 weeks'
+      } else {
+        whyApply = `💡 Moderate fit. ${vc.firmName} may consider your pitch. Build more traction for stronger match.`
+        bestApproach = 'Personalized cold email highlighting specific alignment points'
+        timing = 'Apply when you have stronger traction metrics'
+      }
+
+      return {
+        ...match,
+        whyApply,
+        bestApproach,
+        timing,
+      }
     })
+    
+    // Top 20 matches with enhanced data
+    const top20Matches = matchedVCs.slice(0, 20)
 
-    // Prepare founder data for matching
-    const founderData = {
-      email: founder.email,
-      name: founder.name,
-      stage: founder.stage || 'Seed',
-      sectors: JSON.parse(founder.sectors || '[]'),
-      fundingNeed: founder.fundingNeed || 500,
-      location: founder.location || 'US',
-    }
-
-    // Convert pitch deck features to resume-like features for matching
-    const resumeFeatures = {
-      skills: [],
-      experiences: [],
-      keywords: features.strengths || [],
-      traction: features.tractionMetrics || {},
-    }
-
-    // Match with VCs
-    const matches = await intelligentMatchVCs(resumeFeatures as any, founderData, investors)
-
-    // Prepare analysis result
-    const analysisResult = {
-      features,
-      matches: matches.slice(0, 20).map(m => ({
+    // 🆕 Save pitch deck analysis to database (like video pitch)
+    const analysisData = {
+      overallScore: features.overallScore,
+      strengths: features.strengths,
+      weaknesses: features.weaknesses,
+      improvements: features.improvements,
+      sectorFit: features.sectorFit,
+      tractionMetrics: features.tractionMetrics,
+      marketAnalysis: features.marketAnalysis,
+      teamAnalysis: features.teamAnalysis,
+      productFit: features.productFit,
+      matches: top20Matches.map((m, idx) => ({
+        rank: idx + 1,
+        investorId: m.investor.id,
+        investor: {
+          id: m.investor.id,
+          name: m.investor.name,
+          firmName: m.investor.firmName,
+          fundType: m.investor.fundType,
+          stages: parseJSON<string[]>(m.investor.stages || '[]', []),
+          sectors: parseJSON<string[]>(m.investor.sectors || '[]', []),
+          checkMin: m.investor.checkMin || m.investor.checkSizeMin,
+          checkMax: m.investor.checkMax || m.investor.checkSizeMax,
+          thesis: m.investor.thesis,
+          applicationUrl: m.investor.applicationUrl,
+        },
+        score: Math.round(m.combinedScore || m.score || 0),
+        confidence: m.confidence || 85,
+        reasons: m.reasons || [],
+        suggestions: m.suggestions || [],
+        whyApply: m.whyApply,
+        bestApproach: m.bestApproach,
+        timing: m.timing,
+      })),
+      matchedVCs: top20Matches.slice(0, 10).map(m => ({
         investorId: m.investor.id,
         firmName: m.investor.firmName,
-        score: m.score,
-        reasons: m.reasons,
-        detailedReasons: m.detailedReasons,
+        score: Math.round(m.combinedScore || m.score || 0),
+        reasons: m.reasons || [],
       })),
-      matchCount: matches.length,
-      fileName: file.name,
-      analyzedAt: new Date().toISOString(),
     }
 
-    // Smart Match - AI-powered semantic matching (optional, doesn't block analysis)
-    // Uses Google Gemini's text-embedding-004 model
-    let smartMatches: any[] = []
+    let pitchDeckAnalysis
     try {
-      const hasGeminiKey = !!(process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY)
-      
-      if (!hasGeminiKey) {
-        logger.log('[ANALYZE-PITCH-DECK] Smart Match skipped (GEMINI_API_KEY required)')
-      } else {
-        logger.log('[ANALYZE-PITCH-DECK] Running Smart Match with Gemini...')
-        // Build pitch features for embedding
-        const pitchFeatures = {
-          companyName: features.companyName || 'Unknown',
-          oneLineSummary: features.oneLineSummary || '',
-          stage: features.stage || 'Unknown',
-          sectorPrimary: features.sectorFit?.primarySector || '',
-          sectorSecondary: features.sectorFit?.secondarySectors || [],
-          problemStatement: features.problemStatement || '',
-          solutionDescription: features.solutionDescription || '',
-          targetCustomer: {
-            customerType: features.targetCustomer || '',
-            buyerRole: '',
-            companySize: '',
-          },
-          geography: {
-            hqLocation: features.geography || '',
-            markets: [],
-          },
-          businessModel: features.businessModel || '',
-          traction: {
-            revenue: features.tractionMetrics?.revenue || '',
-            users: features.tractionMetrics?.users || '',
-            growthSignal: features.tractionMetrics?.growthRate || '',
-          },
-          keyTechnologies: features.keyTechnologies || [],
-          competitiveMoat: features.competitiveMoat || [],
-          keywords: features.keywords || [],
-        }
-
-        // Generate pitch embedding
-        const pitchEmbedding = await generatePitchEmbedding(pitchFeatures)
-
-        // Get all VCs with embeddings (only those that have embeddings)
-        // Filter for non-null embeddings after fetching (SQLite compatibility)
-        const allInvestors = await db.investor.findMany({
-          where: {
-            verified: true,
-            isPublic: true,
-          },
-          select: {
-            id: true,
-            firmName: true,
-            fundType: true,
-            stages: true,
-            sectors: true,
-            geography: true,
-            geoFocus: true,
-            checkSizeMin: true,
-            checkSizeMax: true,
-            embedding: true,
-          },
-        })
-        
-        // Filter out investors without embeddings
-        const investors = allInvestors.filter(inv => inv.embedding !== null && inv.embedding !== undefined)
-
-        // Prepare VC embeddings
-        const vcEmbeddings: Array<{
-          id: string
-          firmName: string
-          embedding: number[]
-          metadata: any
-        }> = []
-
-        for (const investor of investors) {
-          try {
-            const embedding = JSON.parse(investor.embedding as string)
-            vcEmbeddings.push({
-              id: investor.id,
-              firmName: investor.firmName,
-              embedding,
-              metadata: {
-                stages: parseJSON<string[]>(investor.stages, []),
-                sectors: parseJSON<string[]>(investor.sectors, []),
-                geography: parseJSON<string[]>(investor.geography || investor.geoFocus, []),
-                checkSize:
-                  investor.checkSizeMin && investor.checkSizeMax
-                    ? `$${investor.checkSizeMin}K-$${investor.checkSizeMax}K`
-                    : undefined,
-                fundType: investor.fundType,
-              },
-            })
-          } catch {
-            // Skip if embedding parsing fails
-            continue
-          }
-        }
-
-        // Rank VCs by similarity
-        // Try FAISS first (much faster), fall back to in-memory if unavailable
-        try {
-          smartMatches = await rankVCsForPitch(pitchEmbedding, [], 20, true)
-          logger.log(`[ANALYZE-PITCH-DECK] Smart Match complete with FAISS: ${smartMatches.length} matches`)
-        } catch (faissError) {
-          // Fall back to in-memory ranking
-          if (vcEmbeddings.length > 0) {
-            smartMatches = await rankVCsForPitch(pitchEmbedding, vcEmbeddings, 20, false)
-            logger.log(`[ANALYZE-PITCH-DECK] Smart Match complete (in-memory): ${smartMatches.length} matches from ${vcEmbeddings.length} VCs`)
-          } else {
-            logger.warn('[ANALYZE-PITCH-DECK] No VC embeddings found and FAISS unavailable. Run: npm run generate-vc-embeddings or start FAISS service')
-          }
-        }
-      }
-    } catch (smartMatchError: any) {
-      logger.error('[ANALYZE-PITCH-DECK] Smart Match failed (non-critical):', smartMatchError.message)
-      // Continue without Smart Match if it fails - analysis should still work
+      pitchDeckAnalysis = await db.pitchDeckAnalysis.create({
+        data: {
+          founderId: founder.id,
+          fileName: file.name,
+          fileUrl: savedFilePath || '',
+          fileType: file.type.split('/')[1] || 'pdf',
+          fileSize: file.size,
+          extractedText: deckText.substring(0, 50000), // Store extracted text for training
+          overallScore: features.overallScore || 0,
+          analysisResult: JSON.stringify(analysisData),
+          smartMatchResults: JSON.stringify(top20Matches.slice(0, 10)),
+          founderSnapshot: JSON.stringify(buildFounderSnapshot(founder)),
+        },
+      })
+      logger.log(`[ANALYZE-PITCH-DECK] Saved analysis to database: ${pitchDeckAnalysis.id}`)
+    } catch (saveError: any) {
+      logger.error('[ANALYZE-PITCH-DECK] Failed to save analysis to database:', saveError.message)
+      // Continue anyway - don't fail the request if save fails
     }
 
     // Return results
@@ -457,19 +454,44 @@ export async function POST(request: NextRequest) {
       logger.log('[ANALYZE-PITCH-DECK] Analysis complete, returning results')
     }
     return NextResponse.json({
-      pitchDeckId: `pitch-deck-${Date.now()}`, // Temporary ID
+      pitchDeckId: pitchDeckAnalysis?.id || `pitch-deck-${Date.now()}`,
       analysis: {
         overallScore: features.overallScore,
         strengths: features.strengths,
         weaknesses: features.weaknesses,
         improvements: features.improvements,
-        matchedVCs: matches.slice(0, 20).map(m => ({
+        matchedVCs: top20Matches.map((m, idx) => ({
+          rank: idx + 1,
           investorId: m.investor.id,
           firmName: m.investor.firmName,
-          score: m.score,
-          similarity: m.score, // Add similarity rating for consistency
-          reasons: m.reasons,
-          detailedReasons: m.detailedReasons,
+          score: Math.round(m.combinedScore || m.score || 0),
+          similarity: Math.round(m.combinedScore || m.score || 0),
+          vectorSimilarity: (m.vectorSimilarity ?? 0) * 100,
+          reasons: m.reasons || [],
+          detailedReasons: m.detailedReasons || [],
+          whyApply: m.whyApply,
+          bestApproach: m.bestApproach,
+          timing: m.timing,
+          livePulse: m.livePulse ? {
+            summary: m.livePulse.summary,
+            conflict: m.livePulse.conflict,
+            fromCache: m.livePulse.fromCache,
+            signalStrength: m.livePulse.signalStrength ?? 0,
+          } : null,
+          investor: {
+            id: m.investor.id,
+            name: m.investor.name,
+            firmName: m.investor.firmName,
+            bio: m.investor.bio,
+            logoUrl: m.investor.logoUrl,
+            stages: parseJSON<string[]>(m.investor.stages || '[]', []),
+            sectors: parseJSON<string[]>(m.investor.sectors || '[]', []),
+            checkMin: m.investor.checkMin || m.investor.checkSizeMin,
+            checkMax: m.investor.checkMax || m.investor.checkSizeMax,
+            geoFocus: parseJSON<string[]>(m.investor.geoFocus || '[]', []),
+            thesis: m.investor.thesis,
+            applicationUrl: m.investor.applicationUrl,
+          },
         })),
         sectorFit: features.sectorFit,
         tractionMetrics: features.tractionMetrics,
@@ -477,8 +499,15 @@ export async function POST(request: NextRequest) {
         teamAnalysis: features.teamAnalysis,
         productFit: features.productFit,
       },
-      matchCount: matches.length,
-      smartMatches: smartMatches, // AI-powered semantic matches
+      matchCount: matchedVCs.length,
+      // 🆕 Matching metadata
+      matchingMetadata: {
+        totalInvestors: investors.length,
+        matchesGenerated: matchedVCs.length,
+        top20Selected: true,
+        usedAINativeMatching: true, // Combined intelligent + FAISS matching
+        usedFullFounderContext: !!founderContext,
+      },
     }, {
       headers: { 'Content-Type': 'application/json' },
     })

@@ -455,22 +455,47 @@ export default function MyAnalysesPage() {
                             {(analysis.result.matches || analysis.result.matchedVCs || []).slice(0, 5).map((match: any, i: number) => (
                             <div
                               key={i}
-                              className="flex items-center justify-between p-3 rounded-lg border-2 border-slate-200 bg-gradient-to-r from-white to-slate-50/50 hover:border-primary/40 hover:shadow-sm transition-all"
+                              className="flex flex-col gap-2 p-3 rounded-lg border-2 border-slate-200 bg-gradient-to-r from-white to-slate-50/50 hover:border-primary/40 hover:shadow-sm transition-all"
                             >
-                              <div className="flex-1">
-                                <div className="flex items-center gap-2 mb-1">
-                                  <span className="text-xs font-bold text-primary bg-primary/10 px-2 py-0.5 rounded">
-                                    #{i + 1}
-                                  </span>
-                                  <span className="text-sm font-semibold text-slate-900">{match.firmName || match.investor?.firmName || 'Unknown Firm'}</span>
+                              <div className="flex items-center justify-between">
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2 mb-1 flex-wrap">
+                                    <span className="text-xs font-bold text-primary bg-primary/10 px-2 py-0.5 rounded">
+                                      #{i + 1}
+                                    </span>
+                                    <span className="text-sm font-semibold text-slate-900">{match.firmName || match.investor?.firmName || 'Unknown Firm'}</span>
+                                    {match.livePulse && match.livePulse.signalStrength > 1 && (
+                                      <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-full px-1.5 py-0.5">
+                                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                        Live
+                                      </span>
+                                    )}
+                                    {match.livePulse && match.livePulse.signalStrength <= 1 && (
+                                      <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded-full px-1.5 py-0.5">
+                                        Potentially Inactive
+                                      </span>
+                                    )}
+                                  </div>
+                                  {match.reasons && match.reasons.length > 0 && (
+                                    <p className="text-xs text-slate-600 mt-1.5">
+                                      {match.reasons[0]}
+                                    </p>
+                                  )}
+                                  {match.livePulse?.summary && (match.livePulse.summary.recentPortfolio || match.livePulse.summary.currentHeat || match.livePulse.summary.founderAlignment) && (
+                                    <div className="mt-2 p-2 rounded bg-indigo-50/70 border border-indigo-100 space-y-0.5">
+                                      {match.livePulse.summary.recentPortfolio && (
+                                        <p className="text-xs text-slate-600">{match.livePulse.summary.recentPortfolio}</p>
+                                      )}
+                                      {match.livePulse.summary.currentHeat && (
+                                        <p className="text-xs text-slate-600">{match.livePulse.summary.currentHeat}</p>
+                                      )}
+                                      {match.livePulse.summary.founderAlignment && (
+                                        <p className="text-xs text-slate-600">{match.livePulse.summary.founderAlignment}</p>
+                                      )}
+                                    </div>
+                                  )}
                                 </div>
-                                {match.reasons && match.reasons.length > 0 && (
-                                  <p className="text-xs text-slate-600 mt-1.5">
-                                    {match.reasons[0]}
-                                  </p>
-                                )}
-                              </div>
-                              <div className="flex items-center gap-3">
+                              <div className="flex items-center gap-3 shrink-0">
                                 <Badge 
                                   variant={match.score >= 80 ? "default" : "secondary"} 
                                   className={`text-xs font-semibold ${
@@ -495,6 +520,7 @@ export default function MyAnalysesPage() {
                                     <ExternalLink className="h-4 w-4" />
                                   </Button>
                                 </a>
+                              </div>
                               </div>
                             </div>
                             ))}

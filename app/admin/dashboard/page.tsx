@@ -4,6 +4,7 @@ import { redirect } from "next/navigation"
 import { AdminDashboardClient } from "./admin-dashboard-client"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Users, Building2, Shield, FileCheck, CheckCircle2, Clock } from "lucide-react"
+import { ADMIN_EMAIL } from "@/lib/constants"
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -11,7 +12,7 @@ export const runtime = 'nodejs'
 export default async function AdminDashboardPage() {
   // Check admin access
   const user = await getCurrentUser(false)
-  if (!user || user.email !== 'nohaxjustaura@gmail.com') {
+  if (!user || user.email !== ADMIN_EMAIL) {
     redirect('/')
   }
 
@@ -120,6 +121,9 @@ export default async function AdminDashboardPage() {
             </a>
             <a href="/admin/vcs" className="text-sm text-muted-foreground hover:text-foreground">
               VCs
+            </a>
+            <a href="/admin/training-data" className="text-sm text-muted-foreground hover:text-foreground">
+              Training Data
             </a>
           </div>
         </div>

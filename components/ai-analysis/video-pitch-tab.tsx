@@ -10,6 +10,7 @@ import { Upload, Sparkles, TrendingUp, AlertCircle, CheckCircle, Lightbulb, Targ
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import SmartMatchResults from '@/components/smart-match-results'
+import AnalysisDashboard from '@/components/analysis/AnalysisDashboard'
 
 export function VideoPitchAnalysisTab() {
   const router = useRouter()
@@ -555,65 +556,43 @@ export function VideoPitchAnalysisTab() {
     {/* Results Display */}
     {result && (
       <div id="analysis-results" className="mx-auto max-w-6xl w-full space-y-6">
-            {/* Overall Scores */}
-            <Card className="border-2 border-primary/20">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Sparkles className="h-5 w-5 text-primary" />
-                  Analysis Results
-                </CardTitle>
-                {/* 🆕 Show detected patterns if available */}
-                {result.detectedPatterns && result.detectedPatterns.confidence > 0 && (
-                  <div className="mt-4 p-3 rounded-lg bg-blue-50 border border-blue-200">
-                    <h4 className="text-sm font-semibold mb-2 flex items-center gap-2">
-                      <Target className="h-4 w-4 text-blue-600" />
-                      Detected Patterns
-                    </h4>
-                    <div className="space-y-1 text-xs">
-                      {result.detectedPatterns.vcAffiliations.length > 0 && (
-                        <div>
-                          <span className="font-medium">VC Affiliations:</span>{' '}
-                          {result.detectedPatterns.vcAffiliations.join(', ')}
-                        </div>
-                      )}
-                      {result.detectedPatterns.universitySignals.length > 0 && (
-                        <div>
-                          <span className="font-medium">Universities:</span>{' '}
-                          {result.detectedPatterns.universitySignals.join(', ')}
-                        </div>
-                      )}
-                      {result.detectedPatterns.founderPatterns.length > 0 && (
-                        <div>
-                          <span className="font-medium">Founder Patterns:</span>{' '}
-                          {result.detectedPatterns.founderPatterns.join(', ')}
-                        </div>
-                      )}
-                      <div className="text-muted-foreground mt-2">
-                        Confidence: {result.detectedPatterns.confidence}%
-                      </div>
+            {/* Rubric Analysis Dashboard */}
+            {result.rubricAnalysis ? (
+              <AnalysisDashboard result={result.rubricAnalysis} />
+            ) : (
+              <Card className="border-2 border-primary/20">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Sparkles className="h-5 w-5 text-primary" />
+                    Analysis Results
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="grid md:grid-cols-3 gap-4">
+                    <div className="p-4 rounded-lg bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/20">
+                      <div className="text-sm text-muted-foreground mb-1">Overall Score</div>
+                      <div className="text-3xl font-bold text-primary">{result.overallScore || 0}/100</div>
+                      <div className="text-xs text-muted-foreground mt-1">Combined presentation & content</div>
+                    </div>
+                    <div className="p-4 rounded-lg bg-gradient-to-br from-blue-50 to-blue-100/50 border border-blue-200">
+                      <div className="text-sm text-muted-foreground mb-1">Presentation Score</div>
+                      <div className="text-3xl font-bold text-blue-600">{result.presentationScore || 0}/100</div>
+                      <div className="text-xs text-muted-foreground mt-1">Delivery, clarity, engagement</div>
+                    </div>
+                    <div className="p-4 rounded-lg bg-gradient-to-br from-green-50 to-green-100/50 border border-green-200">
+                      <div className="text-sm text-muted-foreground mb-1">Content Score</div>
+                      <div className="text-3xl font-bold text-green-600">{result.contentScore || 0}/100</div>
+                      <div className="text-xs text-muted-foreground mt-1">Substance, metrics, market fit</div>
                     </div>
                   </div>
-                )}
-              </CardHeader>
-              <CardContent className="space-y-6">
-            {/* Score Cards */}
-            <div className="grid md:grid-cols-3 gap-4">
-              <div className="p-4 rounded-lg bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/20">
-                <div className="text-sm text-muted-foreground mb-1">Overall Score</div>
-                <div className="text-3xl font-bold text-primary">{result.overallScore || 0}/100</div>
-                <div className="text-xs text-muted-foreground mt-1">Combined presentation & content</div>
-              </div>
-              <div className="p-4 rounded-lg bg-gradient-to-br from-blue-50 to-blue-100/50 border border-blue-200">
-                <div className="text-sm text-muted-foreground mb-1">Presentation Score</div>
-                <div className="text-3xl font-bold text-blue-600">{result.presentationScore || 0}/100</div>
-                <div className="text-xs text-muted-foreground mt-1">Delivery, clarity, engagement</div>
-              </div>
-              <div className="p-4 rounded-lg bg-gradient-to-br from-green-50 to-green-100/50 border border-green-200">
-                <div className="text-sm text-muted-foreground mb-1">Content Score</div>
-                <div className="text-3xl font-bold text-green-600">{result.contentScore || 0}/100</div>
-                <div className="text-xs text-muted-foreground mt-1">Substance, metrics, market fit</div>
-              </div>
-            </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Detailed Feedback (only when rubric is not available) */}
+            {!result.rubricAnalysis && (
+            <Card className="border-2 border-primary/20">
+              <CardContent className="space-y-6 pt-6">
 
             {/* Strengths & Weaknesses */}
             <div className="grid md:grid-cols-2 gap-4">
@@ -665,6 +644,10 @@ export function VideoPitchAnalysisTab() {
               </div>
             )}
 
+              </CardContent>
+            </Card>
+            )}
+
             {/* Top VC Recommendations */}
             {result.topVCRecommendations && result.topVCRecommendations.length > 0 && (
               <div className="space-y-4">
@@ -684,10 +667,41 @@ export function VideoPitchAnalysisTab() {
                                 {vc.scoreSymbol} {vc.score}/100
                               </Badge>
                               {vc.priority === 'elite' && <Crown className="h-4 w-4 text-yellow-500" />}
+                              {vc.livePulse && vc.livePulse.signalStrength > 1 && (
+                                <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-full px-2 py-0.5">
+                                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                  Live
+                                </span>
+                              )}
+                              {vc.livePulse && vc.livePulse.signalStrength <= 1 && (
+                                <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded-full px-2 py-0.5">
+                                  Potentially Inactive
+                                </span>
+                              )}
                             </div>
                             <p className="text-sm text-muted-foreground mb-2">{vc.scoreMeaning}</p>
                             <p className="text-sm mb-2">{vc.whyApply}</p>
-                            <div className="text-xs text-muted-foreground space-y-1">
+                            {vc.livePulse && (
+                              <div className="mt-3 p-3 rounded-lg bg-gradient-to-br from-indigo-50 to-blue-50 border border-indigo-200/60 space-y-1.5">
+                                <h5 className="text-xs font-semibold text-indigo-700 flex items-center gap-1.5">
+                                  <TrendingUp className="h-3 w-3" />
+                                  Live VC Intelligence
+                                </h5>
+                                {vc.livePulse.summary?.recentPortfolio && (
+                                  <p className="text-xs text-slate-700">{vc.livePulse.summary.recentPortfolio}</p>
+                                )}
+                                {vc.livePulse.summary?.currentHeat && (
+                                  <p className="text-xs text-slate-700">{vc.livePulse.summary.currentHeat}</p>
+                                )}
+                                {vc.livePulse.summary?.founderAlignment && (
+                                  <p className="text-xs text-slate-700">{vc.livePulse.summary.founderAlignment}</p>
+                                )}
+                                {!vc.livePulse.summary?.recentPortfolio && !vc.livePulse.summary?.currentHeat && !vc.livePulse.summary?.founderAlignment && (
+                                  <p className="text-xs text-slate-600">Enrichment data unavailable for this investor.</p>
+                                )}
+                              </div>
+                            )}
+                            <div className="text-xs text-muted-foreground space-y-1 mt-2">
                               <div><strong>Best Approach:</strong> {vc.bestApproach}</div>
                               <div><strong>Timing:</strong> {vc.timing}</div>
                             </div>
@@ -717,6 +731,17 @@ export function VideoPitchAnalysisTab() {
                             <Badge variant="outline" className="text-xs">
                               {vc.scoreSymbol} {vc.score}
                             </Badge>
+                            {vc.livePulse && vc.livePulse.signalStrength > 1 && (
+                              <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-full px-1.5 py-0.5">
+                                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                Live
+                              </span>
+                            )}
+                            {vc.livePulse && vc.livePulse.signalStrength <= 1 && (
+                              <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded-full px-1.5 py-0.5">
+                                Potentially Inactive
+                              </span>
+                            )}
                             {vc.scoreBreakdown && (
                               <span className="text-xs text-muted-foreground">
                                 (Intelligent: {vc.intelligentScore}, Vector: {(vc.vectorSimilarity * 100).toFixed(0)}%)
@@ -725,6 +750,22 @@ export function VideoPitchAnalysisTab() {
                           </div>
                           {vc.whyApply && (
                             <p className="text-xs text-muted-foreground mt-1">{vc.whyApply}</p>
+                          )}
+                          {vc.livePulse && (
+                            <div className="mt-2 p-2 rounded bg-indigo-50/70 border border-indigo-100 space-y-0.5">
+                              {vc.livePulse.summary?.recentPortfolio && (
+                                <p className="text-xs text-slate-600">{vc.livePulse.summary.recentPortfolio}</p>
+                              )}
+                              {vc.livePulse.summary?.currentHeat && (
+                                <p className="text-xs text-slate-600">{vc.livePulse.summary.currentHeat}</p>
+                              )}
+                              {vc.livePulse.summary?.founderAlignment && (
+                                <p className="text-xs text-slate-600">{vc.livePulse.summary.founderAlignment}</p>
+                              )}
+                              {!vc.livePulse.summary?.recentPortfolio && !vc.livePulse.summary?.currentHeat && !vc.livePulse.summary?.founderAlignment && (
+                                <p className="text-xs text-slate-500">Enrichment data unavailable.</p>
+                              )}
+                            </div>
                           )}
                         </div>
                         <Link href={`/founder/discover?vc=${vc.investorId}`}>
@@ -747,8 +788,6 @@ export function VideoPitchAnalysisTab() {
                 </Button>
               </Link>
             </div>
-          </CardContent>
-        </Card>
       </div>
     )}
     </div>

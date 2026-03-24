@@ -2,7 +2,7 @@ import { logger } from "./logger"
 import { getOpenRouterClient, getModelName, hasOpenRouterKey } from "./openrouter"
 
 // Get AI client - prefers OpenRouter, falls back to OpenAI
-function getAIClient() {
+export function getAIClient() {
   // Prefer OpenRouter if available
   if (hasOpenRouterKey()) {
     const client = getOpenRouterClient()
@@ -254,6 +254,7 @@ Return ONLY valid JSON. Be brutally honest but constructive - founders need trut
         },
       ],
       temperature: 0.4,
+      max_tokens: 4000,
       response_format: { type: "json_object" },
     })
 
@@ -558,7 +559,8 @@ Schema: ${JSON.stringify(schema)}`
           content: prompt,
         },
       ],
-      temperature: 0.05, // Ultra-low temp for maximum precision
+      temperature: 0.05,
+      max_tokens: 4000,
       response_format: { type: "json_object" },
     })
 
@@ -640,6 +642,7 @@ Be concrete and actionable. Use their actual thesis context.`
         },
       ],
       temperature: 0.7,
+      max_tokens: 4000,
     })
 
     const duration = Date.now() - startTime
@@ -787,6 +790,7 @@ Be thorough and specific. Extract actual numbers and metrics when present. Forma
         },
       ],
       temperature: 0.3,
+      max_tokens: 4000,
       response_format: { type: "json_object" },
     })
 
@@ -829,10 +833,20 @@ Be thorough and specific. Extract actual numbers and metrics when present. Forma
 }
 
 // Analyze video pitch transcript - FIXED JSON PARSING 2026-01-17
+export interface VideoPitchFeedback {
+  category: 'presentation' | 'content' | 'credibility' | 'delivery'
+  point: string
+  details?: string
+  impact: 'high' | 'medium' | 'low'
+}
+
 export interface VideoPitchFeatures {
   strengths: string[]
   weaknesses: string[]
   improvements: string[]
+  // 🆕 Detailed positive/negative feedback with categories
+  positiveFeedback: VideoPitchFeedback[]
+  negativeFeedback: VideoPitchFeedback[]
   sectorFit: Record<string, number>
   tractionMetrics: {
     revenue?: number
@@ -865,6 +879,25 @@ export async function analyzeVideoPitch(
   transcript: string,
   founder: any
 ): Promise<VideoPitchFeatures> {
+  // Safe parsing helper for arrays that might be JSON strings, arrays, or comma-separated strings
+  const safeParseArray = (value: any): string[] => {
+    if (!value) return []
+    if (Array.isArray(value)) return value
+    if (typeof value === 'string') {
+      try {
+        const parsed = JSON.parse(value)
+        return Array.isArray(parsed) ? parsed : [value]
+      } catch {
+        // Not valid JSON, treat as comma-separated
+        return value.split(',').map((s: string) => s.trim()).filter(Boolean)
+      }
+    }
+    return []
+  }
+  
+  const founderSectors = safeParseArray(founder.sectors)
+  const founderValueAddNeeds = safeParseArray(founder.valueAddNeeds)
+  
   const prompt = `You are an expert VC analyst specializing in evaluating video pitches. Analyze this video pitch transcript and provide comprehensive feedback.
 
 Video Pitch Transcript:
@@ -872,7 +905,7 @@ ${transcript.substring(0, 20000)}
 
 Founder Context (COMPLETE PROFILE):
 - Stage: ${founder.stage}
-- Sectors: ${JSON.parse(founder.sectors || '[]').join(', ')}
+- Sectors: ${founderSectors.join(', ')}
 - Funding Need: $${founder.fundingNeed}K
 - Location: ${founder.location}
 - Education: ${founder.education || 'Not specified'}
@@ -883,47 +916,76 @@ Founder Context (COMPLETE PROFILE):
 - Traction: Revenue: ${founder.revenue || 'None'}, Users: ${founder.users || 'None'}, Growth: ${founder.growthRate || 'None'}
 - Team Size: ${founder.teamSize || 'Not specified'}
 - Previous Funding: ${founder.prevFunding || 'None'}
-- Value-Add Needs: ${JSON.parse(founder.valueAddNeeds || '[]').join(', ') || 'None'}
+- Value-Add Needs: ${founderValueAddNeeds.join(', ') || 'None'}
 - Bio: ${founder.bio?.substring(0, 300) || 'Not provided'}
 
 Provide a detailed analysis in JSON format with:
 1. strengths: Array of 3-5 key strengths of the pitch (e.g., "Clear value proposition", "Strong presentation skills", "Compelling traction story", "Confident delivery")
 2. weaknesses: Array of 3-5 weaknesses or gaps (e.g., "Unclear business model", "Missing key metrics", "Weak competitive differentiation", "Rambling delivery")
 3. improvements: Array of 5-7 actionable suggestions to improve the pitch (be specific and actionable, focus on both content and delivery)
-4. sectorFit: Object mapping sector names to fit scores (0-100) based on how well the pitch aligns with each sector
-5. tractionMetrics: Object with extracted metrics:
+4. positiveFeedback: Array of 4-6 detailed positive feedback items, each with:
+   - category: One of "presentation" (delivery, speaking), "content" (substance, metrics), "credibility" (team, traction), or "delivery" (pacing, energy)
+   - point: The specific positive point (e.g., "Confident and clear delivery")
+   - details: Optional explanation of why this is positive
+   - impact: "high", "medium", or "low" - how much this helps the pitch
+5. negativeFeedback: Array of 4-6 detailed negative feedback items, each with:
+   - category: One of "presentation", "content", "credibility", or "delivery"
+   - point: The specific area needing improvement (e.g., "Missing revenue metrics")
+   - details: Optional explanation of why this is a problem
+   - impact: "high", "medium", or "low" - how much this hurts the pitch
+6. sectorFit: Object mapping sector names to fit scores (0-100) based on how well the pitch aligns with each sector
+7. tractionMetrics: Object with extracted metrics:
    - revenue: Monthly or annual revenue if mentioned
    - users: User count if mentioned
    - growth: Growth rate (e.g., "40% MoM")
    - mrr: Monthly recurring revenue if mentioned
    - arr: Annual recurring revenue if mentioned
-6. marketAnalysis: Object with:
+8. marketAnalysis: Object with:
    - tam: Total Addressable Market if mentioned
    - sam: Serviceable Addressable Market if mentioned
    - som: Serviceable Obtainable Market if mentioned
    - marketSize: General market size description
-7. teamAnalysis: Object with:
+9. teamAnalysis: Object with:
    - strengths: Array of team strengths mentioned
    - gaps: Array of team gaps or missing roles
-8. productFit: Object with:
+10. productFit: Object with:
    - pmfSignals: Array of product-market fit signals mentioned
    - differentiators: Array of unique differentiators
-9. presentationScore: Presentation quality score (0-100) based on:
-   - Clarity of delivery
-   - Confidence and energy
-   - Pacing and structure
-   - Visual aids (if mentioned)
-   - Engagement level
-10. contentScore: Content quality score (0-100) based on:
-    - Problem clarity
-    - Solution uniqueness
-    - Traction evidence
-    - Market opportunity
-    - Business model clarity
-    - Competitive positioning
-11. overallScore: Overall pitch quality score (0-100) - weighted average of presentationScore (30%) and contentScore (70%)
+11. presentationScore: Presentation quality score (0-100) based on:
+   - Clarity of delivery (can I understand the value prop in 30 seconds?)
+   - Confidence and authentic energy
+   - Pacing and structure (hooks attention early, builds momentum)
+   - Memorability (would I remember this pitch tomorrow?)
+   - Engagement and personality (authentic, not robotic)
+   
+12. contentScore: Content quality score (0-100) based on:
+    - Problem clarity (is the pain point obvious?)
+    - Solution uniqueness (is it clear why this is better?)
+    - Value proposition clarity (can I explain it to someone else?)
+    - Business model understandability (how do they make money?)
+    - Competitive positioning (why them?)
+    - NOTE: Traction metrics are a BONUS, not required. A pitch with no metrics but crystal clear messaging can still score 80+
 
-Be thorough and specific. Extract actual numbers and metrics when present. For presentation score, evaluate delivery quality, pacing, clarity, and engagement. For content score, evaluate the substance, metrics, market analysis, and business model. Format as valid JSON.`
+13. overallScore: Overall pitch quality score (0-100) - CALIBRATION EXAMPLES:
+    - 90-100: Legendary. Would get funded (Dollar Shave Club, DoorDash, Airbnb level)
+    - 80-89: Excellent. Clear value prop, compelling story, would get a meeting
+    - 70-79: Good. Solid pitch that communicates value well
+    - 60-69: Average. Gets the point across but has gaps
+    - Below 60: Needs significant work
+
+IMPORTANT SCORING GUIDANCE:
+- CONTENT IS STILL KING: Problem clarity, solution, market opportunity, business model are the foundation
+- There are TWO paths to an excellent pitch:
+  * Path A (Dollar Shave Club): Personality + humor + crystal clear messaging = 90+
+  * Path B (DoorDash): Clear problem + huge market + solid execution story = 90+
+  * Both paths are equally valid!
+- A dry pitch with EXCELLENT content (clear problem, obvious market, strong traction) should score 85+
+- A funny pitch with WEAK content (no clear value prop, unclear business model) should score lower
+- Personality/memorability is a BONUS (+5-10 points) on top of solid content, NOT a replacement
+- Don't penalize for missing TAM/SAM/SOM if the market opportunity is obvious from context
+- Score based on: "Would a smart VC want to take this meeting?"
+
+Format as valid JSON.`
 
   try {
     const startTime = Date.now()
@@ -938,7 +1000,7 @@ Be thorough and specific. Extract actual numbers and metrics when present. For p
       messages: [
         {
           role: "system",
-          content: "Expert VC analyst. Evaluate video pitches: presentation (delivery, clarity) and content (substance, metrics). You MUST respond with ONLY valid JSON - no markdown, no code blocks, no explanations, no extra text. Start your response with { and end with }.",
+          content: "Expert VC analyst who has seen thousands of pitches. Great pitches come in two forms: (1) Personality-driven like Dollar Shave Club (humor + clarity) OR (2) Substance-driven like DoorDash (clear problem + huge market + execution). BOTH deserve high scores. Content quality (problem/solution/market/business model) is the foundation. Personality/memorability is a bonus, not a replacement. Score based on: Would a smart VC take this meeting? You MUST respond with ONLY valid JSON - no markdown, no code blocks. Start with { and end with }.",
         },
         {
           role: "user",
@@ -946,6 +1008,7 @@ Be thorough and specific. Extract actual numbers and metrics when present. For p
         },
       ],
       temperature: 0.2,
+      max_tokens: 4000,
       ...(model.includes('gpt') ? { response_format: { type: "json_object" } } : {}),
     })
 
@@ -992,6 +1055,12 @@ Be thorough and specific. Extract actual numbers and metrics when present. For p
           'Highlight your team\'s strengths',
           'Discuss market opportunity'
         ],
+        positiveFeedback: [
+          { category: 'presentation', point: 'Video pitch submitted', details: 'Your pitch video was received', impact: 'medium' as const }
+        ],
+        negativeFeedback: [
+          { category: 'content', point: 'Analysis unavailable', details: 'Please try again for detailed feedback', impact: 'low' as const }
+        ],
         sectorFit: {},
         tractionMetrics: {},
         marketAnalysis: {},
@@ -1007,6 +1076,8 @@ Be thorough and specific. Extract actual numbers and metrics when present. For p
       strengths: result.strengths || [],
       weaknesses: result.weaknesses || [],
       improvements: result.improvements || [],
+      positiveFeedback: result.positiveFeedback || [],
+      negativeFeedback: result.negativeFeedback || [],
       sectorFit: result.sectorFit || {},
       tractionMetrics: result.tractionMetrics || {},
       marketAnalysis: result.marketAnalysis || {},
@@ -1028,6 +1099,12 @@ Be thorough and specific. Extract actual numbers and metrics when present. For p
         'Explain your business model',
         'Highlight your team\'s strengths',
         'Discuss market opportunity'
+      ],
+      positiveFeedback: [
+        { category: 'presentation' as const, point: 'Video pitch uploaded', details: 'Your video was successfully received', impact: 'medium' as const }
+      ],
+      negativeFeedback: [
+        { category: 'content' as const, point: 'Analysis unavailable', details: 'Please try uploading again for detailed feedback', impact: 'low' as const }
       ],
       sectorFit: {},
       tractionMetrics: {},

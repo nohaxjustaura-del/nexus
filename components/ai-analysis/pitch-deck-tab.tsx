@@ -435,7 +435,20 @@ export function PitchDeckAnalysisTab() {
                     <CardContent className="pt-6">
                       <div className="flex items-start justify-between mb-4">
                         <div>
-                          <h3 className="text-lg font-semibold">{investor.firmName || 'Unknown VC'}</h3>
+                          <div className="flex items-center gap-2">
+                            <h3 className="text-lg font-semibold">{investor.firmName || 'Unknown VC'}</h3>
+                            {match.livePulse && match.livePulse.signalStrength > 1 && (
+                              <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-full px-2 py-0.5">
+                                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                Live
+                              </span>
+                            )}
+                            {match.livePulse && match.livePulse.signalStrength <= 1 && (
+                              <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded-full px-2 py-0.5">
+                                Potentially Inactive
+                              </span>
+                            )}
+                          </div>
                           <p className="text-sm text-muted-foreground">{investor.fundType} • ${investor.checkMin}K - ${investor.checkMax}K</p>
                         </div>
                         <div className="text-right">
@@ -487,6 +500,24 @@ export function PitchDeckAnalysisTab() {
                           )}
                         </div>
                         
+                        {match.livePulse?.summary && (
+                          <div className="p-3 rounded-lg bg-gradient-to-br from-indigo-50 to-blue-50 border border-indigo-200/60 space-y-1.5">
+                            <h5 className="text-xs font-semibold text-indigo-700 flex items-center gap-1.5">
+                              <TrendingUp className="h-3 w-3" />
+                              Live VC Intelligence
+                            </h5>
+                            {match.livePulse.summary.recentPortfolio && (
+                              <p className="text-xs text-slate-700">{match.livePulse.summary.recentPortfolio}</p>
+                            )}
+                            {match.livePulse.summary.currentHeat && (
+                              <p className="text-xs text-slate-700">{match.livePulse.summary.currentHeat}</p>
+                            )}
+                            {match.livePulse.summary.founderAlignment && (
+                              <p className="text-xs text-slate-700">{match.livePulse.summary.founderAlignment}</p>
+                            )}
+                          </div>
+                        )}
+
                         <div className="flex gap-2 pt-2">
                           <a href={investor.applicationUrl || investor.websiteUrl || `mailto:${investor.email}`} target="_blank" rel="noopener noreferrer" className="flex-1">
                             <Button className="w-full" size="sm">

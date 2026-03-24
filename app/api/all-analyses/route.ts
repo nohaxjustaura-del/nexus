@@ -44,7 +44,7 @@ export async function GET() {
 
     console.log('[API] /api/all-analyses founder found, fetching analyses...')
     // Get all analysis types
-    const [resumeAnalyses, videoPitches] = await Promise.all([
+    const [resumeAnalyses, videoPitches, pitchDeckAnalyses, pitchIdeaAnalyses] = await Promise.all([
       // Resume analyses
       db.resumeAnalysis.findMany({
         where: { founderId: founder.id },
@@ -58,15 +58,23 @@ export async function GET() {
         },
         orderBy: { createdAt: 'desc' },
       }).catch(() => []),
+      // Pitch deck analyses
+      db.pitchDeckAnalysis.findMany({
+        where: { 
+          founderId: founder.id,
+          analysisResult: { not: null },
+        },
+        orderBy: { createdAt: 'desc' },
+      }).catch(() => []),
+      // Pitch idea analyses
+      (db as any).pitchIdeaAnalysis.findMany({
+        where: { 
+          founderId: founder.id,
+          analysisResult: { not: null },
+        },
+        orderBy: { createdAt: 'desc' },
+      }).catch(() => []),
     ])
-    
-    // Pitch deck - just check if URL exists (no separate model)
-    const pitchDeck = founder.pitchDeck ? [{
-      id: 'pitch-deck-1',
-      type: 'pitch-deck',
-      createdAt: founder.updatedAt || founder.createdAt,
-      url: founder.pitchDeck,
-    }] : []
 
     // Format all analyses with equal importance
     const allAnalyses = [
@@ -106,22 +114,66 @@ export async function GET() {
           id: pitch.id,
           type: 'video-pitch',
           createdAt: pitch.createdAt,
-          compatibilityScore: analysisResult?.compatibilityScore || 0,
+          compatibilityScore: analysisResult?.overallScore || 0,
           confidence: analysisResult?.confidence || 85,
           result: analysisResult,
           fileName: pitch.fileName,
         }
       }),
-      // Pitch deck
-      ...(pitchDeck.length > 0 ? pitchDeck.map(deck => ({
-        id: deck.id,
-        type: 'pitch-deck',
-        createdAt: deck.createdAt,
-        compatibilityScore: 0,
-        confidence: 0,
-        result: null,
-        url: deck.url,
-      })) : []),
+      // 🆕 Pitch deck analyses (now stored in database)
+      ...pitchDeckAnalyses.map((analysis: any) => {
+        let analysisResult = null
+        if (analysis.analysisResult) {
+          try {
+            analysisResult = JSON.parse(analysis.analysisResult)
+          } catch (e) {
+            console.warn('Could not parse pitch deck analysis result')
+          }
+        }
+
+        return {
+          id: analysis.id,
+          type: 'pitch-deck',
+          createdAt: analysis.createdAt,
+          compatibilityScore: analysis.overallScore || analysisResult?.overallScore || 0,
+          confidence: 85,
+          result: analysisResult,
+          fileName: analysis.fileName,
+        }
+      }),
+      // Pitch idea analyses
+      ...pitchIdeaAnalyses.map((analysis: any) => {
+        let analysisResult = null
+        if (analysis.analysisResult) {
+          try {
+            analysisResult = JSON.parse(analysis.analysisResult)
+          } catch (e) {
+            console.warn('Could not parse pitch idea analysis result')
+          }
+        }
+        let smartMatchResults = null
+        if (analysis.smartMatchResults) {
+          try {
+            smartMatchResults = JSON.parse(analysis.smartMatchResults)
+          } catch (e) {
+            console.warn('Could not parse pitch idea match results')
+          }
+        }
+
+        return {
+          id: analysis.id,
+          type: 'pitch-idea',
+          createdAt: analysis.createdAt,
+          compatibilityScore: analysisResult?.founderFit || analysisResult?.ycFitScore || 0,
+          confidence: 85,
+          result: {
+            ...analysisResult,
+            matchedVCs: smartMatchResults || [],
+            matchCount: smartMatchResults?.length || 0,
+          },
+          fileName: analysis.ideaText?.substring(0, 60) + (analysis.ideaText?.length > 60 ? '...' : ''),
+        }
+      }),
     ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
 
     console.log(`[API] /api/all-analyses success: ${allAnalyses.length} analyses found`)

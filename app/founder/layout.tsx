@@ -7,6 +7,12 @@ export default function FounderLayout({ children }: { children: React.ReactNode 
   const router = useRouter()
   const pathname = usePathname()
   const [checking, setChecking] = useState(true)
+  const [mounted, setMounted] = useState(false)
+
+  // Set mounted state to prevent hydration mismatch
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   // CRITICAL: Block ALL redirects when on onboarding - do this immediately
   useEffect(() => {
@@ -97,15 +103,15 @@ export default function FounderLayout({ children }: { children: React.ReactNode 
     return () => { cancelled = true }
   }, [router, pathname])
 
-  if (checking) {
+  if (!mounted || checking) {
     return (
-      <div className="min-h-screen flex items-center justify-center text-sm text-muted-foreground">
-        Checking membership...
+      <div suppressHydrationWarning className="min-h-screen flex items-center justify-center text-sm text-muted-foreground">
+        <div suppressHydrationWarning>Loading...</div>
       </div>
     )
   }
 
-  return <>{children}</>
+  return children
 }
 
 

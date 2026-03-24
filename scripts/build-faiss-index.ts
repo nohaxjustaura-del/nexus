@@ -64,9 +64,9 @@ async function main() {
         continue
       }
 
-      // Check embedding dimension (should be 768 for Gemini)
-      if (embedding.length !== 768) {
-        console.log(`⚠️  Skipping ${investor.firmName} - wrong dimension (${embedding.length}, expected 768)`)
+      // Check embedding dimension (should be 1024 for Voyage AI)
+      if (embedding.length !== 1024) {
+        console.log(`⚠️  Skipping ${investor.firmName} - wrong dimension (${embedding.length}, expected 1024)`)
         continue
       }
 

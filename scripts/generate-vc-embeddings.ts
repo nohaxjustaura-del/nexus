@@ -1,11 +1,12 @@
 /**
  * Generate and store embeddings for all VCs in the database
- * Uses Google Gemini's text-embedding-004 model
+ * Uses Voyage AI (voyage-3) — 1024 dimensions
  * Run this script to pre-compute VC embeddings for fast Smart Match
  * 
  * Usage: npm run generate-vc-embeddings
  * 
- * Requirements: GEMINI_API_KEY or GOOGLE_API_KEY in .env.local
+ * Requirements: VOYAGE_API_KEY in .env
+ * Rate limits: 3 RPM, 10K TPM
  */
 
 import { db as prisma } from '../lib/db'
@@ -45,19 +46,26 @@ async function main() {
   let generated = 0
   let skipped = 0
   let errors = 0
+  let apiCalls = 0
 
   for (const investor of investors) {
     try {
-      // Skip if already has embedding (unless you want to regenerate)
+      // Skip if already has a valid 1024-dim embedding
       if (investor.embedding) {
-        console.log(`⏭️  Skipping ${investor.firmName} (already has embedding)`)
-        skipped++
-        continue
+        try {
+          const existing = JSON.parse(investor.embedding as string)
+          if (Array.isArray(existing) && existing.length === 1024) {
+            skipped++
+            continue
+          }
+          console.log(`🔄 Re-generating embedding for ${investor.firmName} (wrong dimension: ${existing.length})`)
+        } catch {
+          console.log(`🔄 Re-generating embedding for ${investor.firmName} (invalid stored embedding)`)
+        }
+      } else {
+        console.log(`🔄 Generating embedding for ${investor.firmName}...`)
       }
 
-      console.log(`🔄 Generating embedding for ${investor.firmName}...`)
-
-      // Build VC profile
       const vcProfile = {
         firmName: investor.firmName,
         fundType: investor.fundType,
@@ -75,25 +83,28 @@ async function main() {
         notableInvestments: parseJSON<string[]>(investor.notableInvestments, []),
       }
 
-      // Generate embedding
       const embedding = await generateVCEmbedding(vcProfile)
+      apiCalls++
 
-      // Store in database
       await prisma.investor.update({
         where: { id: investor.id },
-        data: {
-          embedding: JSON.stringify(embedding),
-        },
+        data: { embedding: JSON.stringify(embedding) },
       })
 
       console.log(`✅ Generated embedding for ${investor.firmName}`)
       generated++
-
-      // Rate limiting - wait 200ms between requests for Gemini
-      await new Promise(resolve => setTimeout(resolve, 200))
     } catch (error: any) {
       console.error(`❌ Error generating embedding for ${investor.firmName}:`, error.message)
       errors++
+      apiCalls++
+    }
+
+    // Rate limiting OUTSIDE try/catch — applies after every API call (success or error)
+    if (apiCalls > 0 && apiCalls % 3 === 0) {
+      console.log(`⏳ Rate-limit pause (60s) after ${apiCalls} API calls...`)
+      await new Promise(resolve => setTimeout(resolve, 60_000))
+    } else if (apiCalls > 0) {
+      await new Promise(resolve => setTimeout(resolve, 500))
     }
   }
 

@@ -232,6 +232,9 @@ export default function OnboardingPage() {
       }
 
       localStorage.removeItem('fm_onboarding_draft')
+      setSaving(false)
+      // Small delay to show success state before redirect
+      await new Promise(resolve => setTimeout(resolve, 1500))
       // Redirect to discover after successful onboarding
       router.push('/founder/discover')
     } catch (error: any) {

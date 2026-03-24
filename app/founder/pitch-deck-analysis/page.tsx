@@ -231,9 +231,14 @@ export default function PitchDeckAnalysisPage() {
         console.error('Error loading credits:', err)
       }
 
-      // SUCCESS - Immediately redirect to results page (replace to prevent back navigation)
-      window.location.replace('/founder/my-analyses')
-      return // Exit immediately
+      // SUCCESS - Show results on this page (scroll to results)
+      console.log('[PITCH-DECK] Analysis complete, showing results...')
+      setTimeout(() => {
+        const resultsElement = document.getElementById('analysis-results')
+        if (resultsElement) {
+          resultsElement.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        }
+      }, 100)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to analyze pitch deck. Please try again.')
     } finally {
@@ -430,7 +435,7 @@ export default function PitchDeckAnalysisPage() {
             </CardContent>
           </Card>
         ) : (
-          <div className="space-y-6">
+          <div id="analysis-results" className="space-y-6">
             {/* Overall Score */}
             <Card>
               <CardHeader>

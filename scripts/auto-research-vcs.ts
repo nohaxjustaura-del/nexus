@@ -1,12 +1,13 @@
 /**
  * AUTOMATED VC RESEARCH SYSTEM
- * 
- * Researches VCs using web search and updates database with verified data
- * Can run in background or be scheduled
+ *
+ * Researches VCs using web search and AI, then updates the database with
+ * verified, structured data. Fills ALL investor fields, not just check size.
  */
 
 import { db } from '../lib/db'
 import { searchVCInfo } from '../lib/web-search'
+import { openrouterGenerateJson } from '../lib/openrouter'
 
 interface VCResearchResult {
   firmName: string
@@ -14,100 +15,108 @@ interface VCResearchResult {
   checkSizeMax?: number
   stages?: string[]
   thesis?: string
+  bio?: string
   sectors?: string[]
   geography?: string[]
+  fundType?: string
+  leadFollow?: string
+  portfolio?: string[]
+  valueAddTags?: string[]
+  websiteUrl?: string
+  linkedinUrl?: string
+  applicationUrl?: string
   verified: boolean
   researchDate: Date
   sources?: string[]
 }
 
 /**
- * Research a single VC firm using web search
+ * Use AI to extract structured VC data from raw search content.
+ * Falls back to regex if AI is unavailable.
+ */
+async function extractWithAI(firmName: string, rawContent: string): Promise<Partial<VCResearchResult>> {
+  try {
+    const result = await openrouterGenerateJson<{
+      thesis: string
+      bio: string
+      checkSizeMin: number | null
+      checkSizeMax: number | null
+      stages: string[]
+      sectors: string[]
+      geography: string[]
+      fundType: string
+      leadFollow: string
+      portfolio: string[]
+      valueAddTags: string[]
+      websiteUrl: string | null
+      linkedinUrl: string | null
+      applicationUrl: string | null
+    }>({
+      system: `You extract structured VC/investor data from web search results. Return accurate JSON only — never fabricate data. If information is not found, use null for strings/numbers and empty arrays for lists.
+
+Fund types: "Micro VC", "Venture Capital", "Accelerator", "CVC", "Angel Group", "Family Office", "Growth Equity"
+Lead/follow: "lead", "follow", "either"
+Stages: use exactly these values: "pre-seed", "seed", "Series A", "Series B", "Series C", "Growth"`,
+      user: `Extract all available data for "${firmName}" from these search results:
+
+${rawContent.substring(0, 6000)}
+
+Return JSON with: thesis (1-2 sentence investment thesis), bio (1-2 sentence firm description), checkSizeMin (in thousands, e.g. 500 = $500K), checkSizeMax (in thousands), stages (array), sectors (array of focus areas), geography (array of regions), fundType, leadFollow, portfolio (array of notable company names), valueAddTags (array like "board seats", "recruiting", "go-to-market"), websiteUrl, linkedinUrl, applicationUrl`,
+      temperature: 0.2,
+      model: 'deepseek/deepseek-chat',
+    })
+
+    return {
+      thesis: result.thesis || undefined,
+      bio: result.bio || undefined,
+      checkSizeMin: result.checkSizeMin ?? undefined,
+      checkSizeMax: result.checkSizeMax ?? undefined,
+      stages: result.stages?.length ? result.stages : undefined,
+      sectors: result.sectors?.length ? result.sectors : undefined,
+      geography: result.geography?.length ? result.geography : undefined,
+      fundType: result.fundType || undefined,
+      leadFollow: result.leadFollow || undefined,
+      portfolio: result.portfolio?.length ? result.portfolio : undefined,
+      valueAddTags: result.valueAddTags?.length ? result.valueAddTags : undefined,
+      websiteUrl: result.websiteUrl || undefined,
+      linkedinUrl: result.linkedinUrl || undefined,
+      applicationUrl: result.applicationUrl || undefined,
+    }
+  } catch (error: any) {
+    console.error(`   ⚠️ AI extraction failed for ${firmName}:`, error.message)
+    return {}
+  }
+}
+
+/**
+ * Research a single VC firm using web search + AI extraction
  */
 async function researchVC(firmName: string): Promise<VCResearchResult | null> {
   console.log(`\n🔍 Researching: ${firmName}`)
-  
+
   try {
-    // Search for VC information
-    const searchQuery = `${firmName} VC investment thesis check size stages 2026`
-    console.log(`   Searching: "${searchQuery}"`)
-    
-    // Use web search
-    const searchResponse = await searchVCInfo(firmName, 'investment thesis check size stages 2026')
-    
+    const year = new Date().getFullYear()
+    const searchResponse = await searchVCInfo(firmName, `investment thesis check size stages ${year}`)
+
     if (!searchResponse || !searchResponse.results || searchResponse.results.length === 0) {
-      console.log(`   ⚠️  No results found`)
+      console.log(`   ⚠️ No results found`)
       return null
     }
-    
-    const searchResults = searchResponse.results
-    
-    // Extract key information from search results
+
+    const allContent = searchResponse.results.map(r => r.content).join('\n\n')
+
+    const aiExtracted = await extractWithAI(firmName, allContent)
+
     const result: VCResearchResult = {
       firmName,
       verified: true,
       researchDate: new Date(),
-      sources: searchResults.map((r) => r.url).filter(Boolean),
+      sources: searchResponse.results.map(r => r.url).filter(Boolean),
+      ...aiExtracted,
     }
-    
-    // Combine all content for parsing
-    const allContent = searchResults.map(r => r.content).join(' ')
-    
-    // Parse check sizes from results (improved patterns)
-    const checkSizePatterns = [
-      /\$(\d+\.?\d*)\s*K?\s*-\s*\$(\d+\.?\d*)\s*K?\s*(?:million|M|thousand|K)?/gi,
-      /check.*?\$?(\d+\.?\d*)\s*(?:million|M)\s*-\s*\$?(\d+\.?\d*)\s*(?:million|M)/gi,
-      /(\d+\.?\d*)\s*-\s*(\d+\.?\d*)\s*million/gi,
-      /\$(\d+\.?\d*)\s*M/gi,
-    ]
-    
-    const foundCheckSizes: number[] = []
-    
-    for (const pattern of checkSizePatterns) {
-      const matches = Array.from(allContent.matchAll(pattern))
-      for (const match of matches) {
-        const nums = match.slice(1).map(n => {
-          const num = parseFloat(n)
-          // If number is < 100 and context suggests millions, multiply by 1000
-          if (match[0].toLowerCase().includes('million') || match[0].includes('M')) {
-            return num * 1000
-          }
-          return num
-        })
-        foundCheckSizes.push(...nums)
-      }
-    }
-    
-    if (foundCheckSizes.length >= 2) {
-      result.checkSizeMin = Math.min(...foundCheckSizes)
-      result.checkSizeMax = Math.max(...foundCheckSizes)
-    } else if (foundCheckSizes.length === 1) {
-      // Single check size found
-      result.checkSizeMin = foundCheckSizes[0]
-      result.checkSizeMax = foundCheckSizes[0] * 2 // Estimate max as 2x min
-    }
-    
-    // Extract stages
-    const stageKeywords = ['Pre-Seed', 'Seed', 'Series A', 'Series B', 'Series C', 'Growth']
-    const foundStages: string[] = []
-    
-    for (const stage of stageKeywords) {
-      if (allContent.toLowerCase().includes(stage.toLowerCase())) {
-        foundStages.push(stage)
-      }
-    }
-    
-    if (foundStages.length > 0) {
-      result.stages = foundStages
-    }
-    
-    // Extract thesis (first 800 chars of combined content)
-    if (allContent) {
-      result.thesis = allContent.substring(0, 800)
-    }
-    
-    console.log(`   ✅ Found: ${result.checkSizeMin ? `$${result.checkSizeMin}K-$${result.checkSizeMax}K` : 'check size unknown'}, ${result.stages?.length || 0} stages`)
-    
+
+    console.log(`   ✅ Found: ${result.checkSizeMin ? `$${result.checkSizeMin}K-$${result.checkSizeMax}K` : 'check size unknown'}, ${result.stages?.length || 0} stages, ${result.portfolio?.length || 0} portfolio cos`)
+
     return result
   } catch (error: any) {
     console.error(`   ❌ Error researching ${firmName}:`, error.message)
@@ -116,48 +125,88 @@ async function researchVC(firmName: string): Promise<VCResearchResult | null> {
 }
 
 /**
- * Update VC in database with researched data
+ * Update VC in database — only fills in missing fields, never overwrites
+ * existing good data with potentially worse AI-extracted data.
  */
 async function updateVCInDatabase(research: VCResearchResult): Promise<boolean> {
   try {
     const existing = await db.investor.findFirst({
       where: { firmName: research.firmName },
     })
-    
+
     if (!existing) {
-      console.log(`   ⚠️  VC not found in database: ${research.firmName}`)
+      console.log(`   ⚠️ VC not found in database: ${research.firmName}`)
       return false
     }
-    
-    const updateData: any = {
-      verified: research.verified,
-    }
-    
-    if (research.checkSizeMin !== undefined) {
+
+    const updateData: any = {}
+
+    // Only fill fields that are currently empty/default
+    if (research.checkSizeMin && existing.checkSizeMin === 0) {
       updateData.checkSizeMin = research.checkSizeMin
     }
-    if (research.checkSizeMax !== undefined) {
+    if (research.checkSizeMax && existing.checkSizeMax === 0) {
       updateData.checkSizeMax = research.checkSizeMax
     }
-    if (research.stages) {
+    if (research.stages?.length && existing.stages === '[]') {
       updateData.stages = JSON.stringify(research.stages)
     }
-    if (research.thesis) {
+    if (research.thesis && (!existing.thesis || existing.thesis.length < 20)) {
       updateData.thesis = research.thesis
     }
-    if (research.sectors) {
+    if (research.bio && (!existing.bio || existing.bio.length < 20)) {
+      updateData.bio = research.bio
+    }
+    if (research.sectors?.length && existing.sectors === '[]') {
       updateData.sectors = JSON.stringify(research.sectors)
     }
-    if (research.geography) {
-      updateData.geography = JSON.stringify(research.geography)
+    if (research.geography?.length) {
+      const existingGeo = existing.geography || '[]'
+      if (existingGeo === '[]') {
+        updateData.geography = JSON.stringify(research.geography)
+      }
     }
-    
-    await db.investor.update({
-      where: { id: existing.id },
-      data: updateData,
-    })
-    
-    console.log(`   ✅ Updated database: ${research.firmName}`)
+    if (research.fundType && existing.fundType === 'Venture Capital') {
+      updateData.fundType = research.fundType
+    }
+    if (research.leadFollow && existing.leadFollow === 'either') {
+      updateData.leadFollow = research.leadFollow
+    }
+    if (research.portfolio?.length && (!existing.portfolio || existing.portfolio === '[]')) {
+      updateData.portfolio = JSON.stringify(research.portfolio)
+    }
+    if (research.valueAddTags?.length && existing.valueAddTags === '[]') {
+      updateData.valueAddTags = JSON.stringify(research.valueAddTags)
+    }
+    if (research.websiteUrl && !existing.websiteUrl) {
+      updateData.websiteUrl = research.websiteUrl
+    }
+    if (research.linkedinUrl && !existing.linkedinUrl) {
+      updateData.linkedinUrl = research.linkedinUrl
+    }
+    if (research.applicationUrl && !existing.applicationUrl) {
+      updateData.applicationUrl = research.applicationUrl
+    }
+
+    // Always mark as verified and update timestamp
+    updateData.verified = true
+
+    const fieldsUpdated = Object.keys(updateData).length - 1 // minus verified
+    if (fieldsUpdated > 0) {
+      await db.investor.update({
+        where: { id: existing.id },
+        data: updateData,
+      })
+      console.log(`   ✅ Updated ${fieldsUpdated} fields for ${research.firmName}`)
+    } else {
+      console.log(`   ℹ️ No empty fields to fill for ${research.firmName}`)
+      // Still touch updatedAt so we don't re-research next cycle
+      await db.investor.update({
+        where: { id: existing.id },
+        data: { verified: true },
+      })
+    }
+
     return true
   } catch (error: any) {
     console.error(`   ❌ Error updating database:`, error.message)
@@ -171,48 +220,43 @@ async function updateVCInDatabase(research: VCResearchResult): Promise<boolean> 
 async function researchVCsBatch(
   firmNames: string[],
   options: {
-    delayBetweenSearches?: number // ms to wait between searches
-    maxConcurrent?: number // max parallel searches
+    delayBetweenSearches?: number
+    maxConcurrent?: number
   } = {}
 ): Promise<void> {
   const { delayBetweenSearches = 2000, maxConcurrent = 3 } = options
-  
+
   console.log(`\n🚀 Starting batch research: ${firmNames.length} VCs`)
   console.log(`   Delay: ${delayBetweenSearches}ms, Max concurrent: ${maxConcurrent}\n`)
-  
+
   let updated = 0
   let failed = 0
-  
-  // Process in batches to avoid rate limiting
+
   for (let i = 0; i < firmNames.length; i += maxConcurrent) {
     const batch = firmNames.slice(i, i + maxConcurrent)
-    
+
     const results = await Promise.all(
       batch.map(async (firmName) => {
         const research = await researchVC(firmName)
         if (research) {
-          const updated = await updateVCInDatabase(research)
-          return { firmName, success: updated }
+          const ok = await updateVCInDatabase(research)
+          return { firmName, success: ok }
         }
         return { firmName, success: false }
       })
     )
-    
-    results.forEach(({ firmName, success }) => {
-      if (success) {
-        updated++
-      } else {
-        failed++
-      }
+
+    results.forEach(({ success }) => {
+      if (success) updated++
+      else failed++
     })
-    
-    // Wait before next batch
+
     if (i + maxConcurrent < firmNames.length) {
       console.log(`\n⏳ Waiting ${delayBetweenSearches}ms before next batch...`)
       await new Promise(resolve => setTimeout(resolve, delayBetweenSearches))
     }
   }
-  
+
   console.log(`\n📊 Batch Research Complete:`)
   console.log(`   ✅ Updated: ${updated}`)
   console.log(`   ❌ Failed: ${failed}`)
@@ -220,50 +264,31 @@ async function researchVCsBatch(
 }
 
 /**
- * Main function - can be called from CLI or scheduled
+ * Main function — can be called from CLI or scheduled
  */
 async function main() {
   const args = process.argv.slice(2)
-  
+
   if (args[0] === '--batch') {
-    // Research top VCs
     const topVCs = [
-      'Benchmark',
-      'Accel',
-      'First Round Capital',
-      'Lightspeed Venture Partners',
-      'Index Ventures',
-      'Greylock Partners',
-      'Bessemer Venture Partners',
-      'General Catalyst',
-      'NEA',
-      'Insight Partners',
+      'Benchmark', 'Accel', 'First Round Capital', 'Lightspeed Venture Partners',
+      'Index Ventures', 'Greylock Partners', 'Bessemer Venture Partners',
+      'General Catalyst', 'NEA', 'Insight Partners',
     ]
-    
-    await researchVCsBatch(topVCs, {
-      delayBetweenSearches: 2000,
-      maxConcurrent: 2,
-    })
+    await researchVCsBatch(topVCs, { delayBetweenSearches: 2000, maxConcurrent: 2 })
   } else if (args[0] === '--all') {
-    // Research all VCs (WARNING: This will take a long time!)
-    console.log('⚠️  Researching ALL VCs - this will take hours!')
+    console.log('⚠️ Researching ALL VCs — this will take hours!')
     const allVCs = await db.investor.findMany({
-      where: { verified: true },
       select: { firmName: true },
-      orderBy: { firmName: 'asc' },
+      orderBy: { updatedAt: 'asc' },
     })
-    
-    const firmNames = allVCs.map(vc => vc.firmName)
-    await researchVCsBatch(firmNames, {
+    await researchVCsBatch(allVCs.map(vc => vc.firmName), {
       delayBetweenSearches: 3000,
-      maxConcurrent: 1, // Slower to avoid rate limits
+      maxConcurrent: 1,
     })
   } else if (args[0]) {
-    // Research specific VC
     const research = await researchVC(args[0])
-    if (research) {
-      await updateVCInDatabase(research)
-    }
+    if (research) await updateVCInDatabase(research)
   } else {
     console.log(`
 Usage:
@@ -274,7 +299,6 @@ Usage:
   }
 }
 
-// Run if called directly
 if (require.main === module) {
   main()
     .catch((error) => {

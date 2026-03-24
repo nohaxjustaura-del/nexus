@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getCurrentUser } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { logger } from '@/lib/logger'
+import { ADMIN_EMAIL } from '@/lib/constants'
 
 export const dynamic = 'force-dynamic'
 
@@ -49,13 +50,35 @@ export async function GET(request: NextRequest) {
       approved = false
     }
 
-    // Treat "verified" as both emailVerified and admin-approved
-    const isVerified = user.emailVerified && approved
+    // Auto-approve admin email - admin should always have full access
+    if (user.email === ADMIN_EMAIL && !approved) {
+      try {
+        await (db as any).$executeRawUnsafe?.(
+          `INSERT OR REPLACE INTO UserApproval (email, status, createdAt, reviewedAt) VALUES (?, 'approved', ?, ?)`,
+          user.email,
+          new Date().toISOString(),
+          new Date().toISOString()
+        )
+        approved = true
+        logger.log('AUTH_CHECK', `Auto-approved admin email: ${user.email}`)
+      } catch (autoApproveErr) {
+        // Even if DB update fails, still grant admin access
+        approved = true
+        logger.warn('AUTH_CHECK', 'Auto-approve DB update failed, granting access anyway')
+      }
+    }
+
+    // Admin always gets full access regardless of emailVerified or approval status
+    const isAdmin = user.email === ADMIN_EMAIL
+    
+    // Treat "verified" as both emailVerified and admin-approved (admin bypasses both)
+    const isVerified = isAdmin || (user.emailVerified && approved)
     
     if (!isVerified) {
       const res = NextResponse.json({
         authenticated: true,
         verified: false, // gate access until both email & approval are complete
+        email: user.email, // Top-level email for easy access
         userEmail: user.email, // Include email for auto-repair
         needsApproval: !approved,
         user: {
@@ -71,6 +94,7 @@ export async function GET(request: NextRequest) {
     const res = NextResponse.json({
       authenticated: true,
       verified: true,
+      email: user.email, // Top-level email for easy access
       userEmail: user.email, // Include email for consistency
       user: {
         id: user.id,

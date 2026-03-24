@@ -47,7 +47,7 @@ export async function GET(request: NextRequest) {
     // Check authentication (optional - remove if you want public access)
     const user = await getCurrentUser()
     // Uncomment below if you want to restrict to admin only
-    // if (!user || user.email !== 'nohaxjustaura@gmail.com') {
+    // if (!user || user.email !== 'adventa.counseling@gmail.com') {
     //   return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     // }
 

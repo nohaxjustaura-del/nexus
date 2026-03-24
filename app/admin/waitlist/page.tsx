@@ -75,7 +75,7 @@ export default async function AdminWaitlistPage() {
         <div className="mb-8">
           <h1 className="mb-2 text-3xl font-bold">Waitlist Signups</h1>
           <p className="text-muted-foreground">
-            All emails will be notified at: <strong>nohaxjustaura@gmail.com</strong>
+            All emails will be notified at: <strong>adventa.counseling@gmail.com</strong>
           </p>
         </div>
 

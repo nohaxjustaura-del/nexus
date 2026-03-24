@@ -1,37 +1,53 @@
 /**
  * ===============================================================================
- * AI-NATIVE MATCHING SYSTEM - Combines Intelligent Matching + FAISS Vector Similarity
+ * AI-NATIVE MATCHING SYSTEM v2 — Surgical Funnel + Live Enrichment
  * ===============================================================================
- * 
- * This system combines:
- * 1. Rule-based intelligent matching (stage, sector, traction signals)
- * 2. FAISS vector similarity (semantic understanding via embeddings)
- * 3. Comprehensive founder context (profile, pitch, video, resume)
- * 4. YC trends analysis (real-time market signals)
- * 
- * Scores are SYMBOLIC and TRANSPARENT - every point has evidence
+ *
+ * FinalScore = (IntelligentScore × 0.4) + (VectorScore × 0.3) + (EnrichmentScore × 0.3)
+ *
+ * Phase 1 — Hard Filter:  Exclude VCs whose stages don't include the founder's stage
+ * Phase 2 — Vector Search: FAISS top-15 by semantic similarity
+ * Phase 3 — Live Enrichment: Exa web search + GPT-4o-mini summary (parallel)
+ * Phase 4 — Re-Scoring:  Conflict penalty (−50), weighted formula, sort top 10
  */
 
 import { Investor } from "@prisma/client"
+import { db } from "./db"
 import { intelligentMatchVCs, EnhancedMatchResult } from "./intelligent-matching"
 import { rankVCsForPitch, generatePitchEmbedding, RankedVC } from "./embeddings"
-import { getComprehensiveFounderContext, buildAIPromptContext, ComprehensiveFounderContext } from "./founder-context"
-import { ResumeFeatures } from "./ai"
+import { getComprehensiveFounderContext, ComprehensiveFounderContext } from "./founder-context"
+import { ResumeFeatures, getAIClient } from "./ai"
+import { getModelName } from "./openrouter"
 import { parseJSON } from "./utils"
 import { logger } from "./logger"
+import { getLiveInvestorPulse, ExaSnippet } from "./exa-service"
+import { generateVCSummary, detectConflict, VCSummary, ConflictResult } from "./enrichment-evaluator"
+
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
+
+export interface LivePulse {
+  summary: VCSummary
+  recentDeals: ExaSnippet[]
+  conflict: ConflictResult
+  fromCache: boolean
+  signalStrength: number
+}
 
 export interface AINativeMatchResult extends EnhancedMatchResult {
   investor: Investor
-  // Combined scores
-  intelligentScore: number // Rule-based score (0-100)
-  vectorSimilarity: number // FAISS/cosine similarity (0-1, converted to 0-100)
-  combinedScore: number // Weighted combination
+  intelligentScore: number
+  vectorSimilarity: number
+  enrichmentScore: number
+  combinedScore: number
   scoreBreakdown: {
     intelligent: { score: number; weight: number; reasons: string[] }
     vector: { score: number; weight: number; explanation: string }
+    enrichment: { score: number; weight: number; conflictPenalty: number }
     ycTrends?: { adjustment: number; insights: string[] }
   }
-  // Rich context
+  livePulse: LivePulse | null
   founderContext: ComprehensiveFounderContext | null
   pitchContext?: {
     transcript?: string
@@ -39,6 +55,10 @@ export interface AINativeMatchResult extends EnhancedMatchResult {
     features?: any
   }
 }
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
 
 /**
  * Detect VC affiliations and founder patterns from transcript using AI
@@ -54,57 +74,11 @@ async function detectVCAffiliations(
   confidence: number
 }> {
   if (!transcript || transcript.length < 50) {
-    return {
-      vcAffiliations: [],
-      universitySignals: [],
-      acceleratorSignals: [],
-      founderPatterns: [],
-      confidence: 0,
-    }
+    return { vcAffiliations: [], universitySignals: [], acceleratorSignals: [], founderPatterns: [], confidence: 0 }
   }
 
   try {
     const client = getAIClient()
-    
-    const detectionPrompt = `You are an expert VC pattern recognition system trained on 15,000+ founder profiles from YC, Sequoia, a16z, and 200+ VCs.
-
-Analyze this pitch transcript and detect:
-1. VC/Accelerator affiliations (YC, Techstars, 500 Global, etc.)
-2. University signals (Stanford, MIT, Berkeley, Harvard, etc.)
-3. Founder patterns (student founder, technical founder, repeat founder, etc.)
-4. Previous funding signals (raised from X, backed by Y, etc.)
-
-Transcript:
-${transcript.substring(0, 5000)}
-
-Founder Profile Context:
-${founderContext ? `
-- Education: ${founderContext.education || 'Not specified'}
-- University: ${founderContext.universityAffiliation || 'Not specified'}
-- Is Student: ${founderContext.isStudent}
-- Age: ${founderContext.age || 'Not specified'}
-- Location: ${founderContext.location}
-- Stage: ${founderContext.stage}
-- Sectors: ${founderContext.sectors.join(', ')}
-- Previous Funding: ${founderContext.prevFunding || 'None'}
-` : 'No profile context available'}
-
-Return JSON with:
-{
-  "vcAffiliations": ["YC", "Techstars", etc.] - detected VC/accelerator affiliations
-  "universitySignals": ["Stanford", "MIT", etc.] - universities mentioned or implied
-  "acceleratorSignals": ["YC", "Techstars", etc.] - accelerator programs mentioned
-  "founderPatterns": ["student founder", "technical founder", "repeat founder", "YC alumni", "Stanford student", etc.]
-  "confidence": 0-100 - how confident you are in the detections
-}
-
-Be thorough - look for:
-- Direct mentions: "YC", "Y Combinator", "Techstars", "Stanford", "MIT"
-- Indirect signals: "batch", "cohort", "accelerator", "raised from", "backed by"
-- Pattern matches: "building while in school" = student founder, "ex-Google" = technical founder
-- University patterns: mentions of campus, dorm, college, university names
-
-Return ONLY valid JSON.`
 
     const completion = await client.chat.completions.create({
       model: getModelName('gpt-4o'),
@@ -115,15 +89,32 @@ Return ONLY valid JSON.`
         },
         {
           role: "user",
-          content: detectionPrompt,
+          content: `Analyze this pitch transcript and detect:
+1. VC/Accelerator affiliations (YC, Techstars, 500 Global, etc.)
+2. University signals (Stanford, MIT, Berkeley, Harvard, etc.)
+3. Founder patterns (student founder, technical founder, repeat founder, etc.)
+
+Transcript:
+${transcript.substring(0, 5000)}
+
+Founder Profile Context:
+${founderContext ? `
+- Education: ${founderContext.education || 'Not specified'}
+- University: ${founderContext.universityAffiliation || 'Not specified'}
+- Is Student: ${founderContext.isStudent}
+- Stage: ${founderContext.stage}
+- Sectors: ${founderContext.sectors.join(', ')}
+` : 'No profile context available'}
+
+Return JSON: {"vcAffiliations":[],"universitySignals":[],"acceleratorSignals":[],"founderPatterns":[],"confidence":0}`,
         },
       ],
       temperature: 0.2,
+      max_tokens: 1000,
       response_format: { type: "json_object" },
     })
 
     const result = JSON.parse(completion.choices[0].message.content || '{}')
-    
     return {
       vcAffiliations: result.vcAffiliations || [],
       universitySignals: result.universitySignals || [],
@@ -132,69 +123,35 @@ Return ONLY valid JSON.`
       confidence: result.confidence || 0,
     }
   } catch (error: any) {
-    logger.warn('[AI-NATIVE-MATCHING] VC affiliation detection failed:', error?.message)
-    return {
-      vcAffiliations: [],
-      universitySignals: [],
-      acceleratorSignals: [],
-      founderPatterns: [],
-      confidence: 0,
-    }
+    logger.warn('[AI-NATIVE] VC affiliation detection failed:', error?.message)
+    return { vcAffiliations: [], universitySignals: [], acceleratorSignals: [], founderPatterns: [], confidence: 0 }
   }
 }
 
-/**
- * Build comprehensive pitch context from ALL available data
- * Now includes ALL founder profile, onboarding, and detected patterns
- */
 function buildComprehensivePitchContext(
   founder: any,
   pitchAnalysis?: any,
   transcript?: string,
   resumeFeatures?: ResumeFeatures,
   founderContext?: ComprehensiveFounderContext | null,
-  detectedPatterns?: {
-    vcAffiliations: string[]
-    universitySignals: string[]
-    acceleratorSignals: string[]
-    founderPatterns: string[]
-  }
+  detectedPatterns?: { vcAffiliations: string[]; universitySignals: string[]; acceleratorSignals: string[]; founderPatterns: string[] }
 ): any {
   const sectors = parseJSON<string[]>(founder.sectors || '[]', [])
   const valueAddNeeds = parseJSON<string[]>(founder.valueAddNeeds || '[]', [])
   const ethicsTags = parseJSON<string[]>(founder.ethicsTags || '[]', [])
   const personalityTags = parseJSON<string[]>(founder.personalityTags || '[]', [])
-  
-  // Build rich context from ALL sources
-  const context = {
-    // Core startup info
+
+  return {
     companyName: founder.startupName || 'Unknown',
     oneLineSummary: pitchAnalysis?.oneLineSummary || founder.bio?.substring(0, 200) || '',
     stage: founder.stage,
     sectorPrimary: sectors[0] || '',
     sectorSecondary: sectors.slice(1),
-    
-    // Problem & Solution (from pitch analysis, bio, or transcript)
     problemStatement: pitchAnalysis?.problemStatement || founder.bio?.substring(0, 500) || transcript?.substring(0, 500) || '',
     solutionDescription: pitchAnalysis?.solutionDescription || founder.businessModel || '',
-    
-    // Customer
-    targetCustomer: {
-      customerType: pitchAnalysis?.targetCustomer || '',
-      buyerRole: '',
-      companySize: '',
-    },
-    
-    // Geography
-    geography: {
-      hqLocation: founder.location,
-      markets: [],
-    },
-    
-    // Business model
+    targetCustomer: { customerType: pitchAnalysis?.targetCustomer || '', buyerRole: '', companySize: '' },
+    geography: { hqLocation: founder.location, markets: [] },
     businessModel: founder.businessModel || pitchAnalysis?.businessModel || '',
-    
-    // Traction (from multiple sources - prioritize actual data)
     traction: {
       revenue: founder.revenue || pitchAnalysis?.tractionMetrics?.revenue || '',
       users: founder.users || pitchAnalysis?.tractionMetrics?.users || '',
@@ -202,50 +159,30 @@ function buildComprehensivePitchContext(
       mrr: pitchAnalysis?.tractionMetrics?.mrr,
       arr: pitchAnalysis?.tractionMetrics?.arr,
     },
-    
-    // Technology & moat
     keyTechnologies: resumeFeatures?.skills?.programming || [],
     competitiveMoat: valueAddNeeds,
-    
-    // 🆕 ENHANCE: Founder background (from onboarding/profile)
     founderBackground: {
       education: founder.education || founderContext?.education || '',
-      university: founderContext?.universityAffiliation || founder.universityAffiliation || '',
-      isStudent: founderContext?.isStudent || founder.isStudent || false,
+      university: founderContext?.universityAffiliation || '',
+      isStudent: founderContext?.isStudent || false,
       age: founder.age || founderContext?.age,
       techBackground: founderContext?.techBackground || false,
-      experienceLevel: founderContext?.experienceLevel || 'early',
       isImmigrant: founderContext?.isImmigrant || false,
       isUnderrepresented: founderContext?.isUnderrepresented || false,
       isVeteran: founderContext?.isVeteran || false,
-      willingToDropOut: founder.willingToDropOut || founderContext?.willingToDropOut || false,
+      willingToDropOut: founder.willingToDropOut || false,
     },
-    
-    // 🆕 ENHANCE: Preferences (from onboarding)
     preferences: {
-      valueAddNeeds: valueAddNeeds,
-      ethicsTags: ethicsTags,
-      personalityTags: personalityTags,
+      valueAddNeeds, ethicsTags, personalityTags,
       geoPreference: founderContext?.geoPreference || '',
       decisionSpeedDays: founderContext?.decisionSpeedDays || '',
       targetOwnershipMax: founderContext?.targetOwnershipMax || '',
       fundTypePreference: founderContext?.fundTypePreference || '',
       leadPreference: founderContext?.leadPreference || '',
     },
-    
-    // 🆕 ENHANCE: Detected patterns (VC affiliations, universities, etc.)
-    detectedPatterns: detectedPatterns || {
-      vcAffiliations: [],
-      universitySignals: [],
-      acceleratorSignals: [],
-      founderPatterns: [],
-    },
-    
-    // Keywords from ALL sources
+    detectedPatterns: detectedPatterns || { vcAffiliations: [], universitySignals: [], acceleratorSignals: [], founderPatterns: [] },
     keywords: [
-      ...sectors,
-      founder.stage,
-      founder.location,
+      ...sectors, founder.stage, founder.location,
       ...(resumeFeatures?.skills?.programming || []),
       ...(resumeFeatures?.skills?.ml || []),
       ...(founderContext?.universityAffiliation ? [founderContext.universityAffiliation] : []),
@@ -253,13 +190,9 @@ function buildComprehensivePitchContext(
       ...(detectedPatterns?.universitySignals || []),
       ...(detectedPatterns?.founderPatterns || []),
     ],
-    
-    // Additional context
-    transcript: transcript?.substring(0, 3000), // Increased to 3000 chars for better embedding
+    transcript: transcript?.substring(0, 3000),
     teamSize: founder.teamSize,
     fundingNeed: founder.fundingNeed,
-    
-    // 🆕 ENHANCE: Additional profile data
     profileRichness: {
       bio: founder.bio || founderContext?.bio || '',
       linkedinUrl: founderContext?.linkedinUrl || '',
@@ -270,17 +203,132 @@ function buildComprehensivePitchContext(
       hoursPerWeek: founderContext?.hoursPerWeek || '',
     },
   }
-  
-  return context
 }
 
 /**
- * AI-Native matching that combines intelligent matching + FAISS vector similarity
- * Uses ALL available founder data for maximum accuracy
+ * Build a comprehensive founder dossier for the enrichment evaluator (Exa + LLM).
+ *
+ * Structured with clear headers so models can parse distinct signals:
+ *   STARTUP / SUMMARY / FOUNDER / TRACTION / ASK
+ */
+function buildPitchText(
+  founder: any,
+  pitchAnalysis?: any,
+  transcript?: string,
+  founderContext?: ComprehensiveFounderContext | null,
+): string {
+  const sectors = parseJSON<string[]>(founder.sectors || '[]', [])
+  const safe = (v: unknown) => (v != null && v !== '' ? String(v) : null)
+
+  // --- STARTUP (core identity) ---
+  const startupLines = [
+    safe(founder.startupName),
+    `Stage: ${founder.stage || 'Unknown'}`,
+    sectors.length > 0 && `Sectors: ${sectors.join(', ')}`,
+    safe(founder.businessModel) && `Model: ${founder.businessModel}`,
+    safe(founder.location || founderContext?.location) &&
+      `Location: ${founder.location || founderContext?.location}`,
+  ].filter(Boolean)
+
+  // --- SUMMARY (the hook — up to 1000 chars) ---
+  const summaryBody =
+    pitchAnalysis?.oneLineSummary ||
+    founder.bio?.substring(0, 1000) ||
+    transcript?.substring(0, 1000) ||
+    ''
+  const summaryLines = [summaryBody]
+  if (pitchAnalysis?.oneLineSummary && transcript) {
+    summaryLines.push(transcript.substring(0, 800))
+  }
+
+  // --- FOUNDER (pedigree & background) ---
+  const founderLines: string[] = []
+  const education = safe(founder.education || founderContext?.education)
+  if (education) founderLines.push(`Education: ${education}`)
+  const university = safe(founderContext?.universityAffiliation)
+  if (university && university !== education) founderLines.push(`University: ${university}`)
+  if (founderContext?.isStudent) founderLines.push('Currently a student founder')
+  if (founderContext?.techBackground) founderLines.push('Technical background')
+  if (founderContext?.isImmigrant) founderLines.push('Immigrant founder')
+  if (founderContext?.isVeteran) founderLines.push('Veteran founder')
+  if (founderContext?.isUnderrepresented) founderLines.push('Underrepresented founder')
+  const cofounders = safe(founderContext?.cofounders)
+  if (cofounders) founderLines.push(`Co-founders: ${cofounders}`)
+  const prevFunding = safe(founderContext?.prevFunding)
+  if (prevFunding && prevFunding !== 'none') {
+    const amt = safe(founderContext?.prevFundingAmount)
+    founderLines.push(`Previous funding: ${prevFunding}${amt ? ` ($${amt})` : ''}`)
+  }
+
+  // --- TRACTION (proof) ---
+  const tractionLines: string[] = []
+  const revenue = safe(founder.revenue || pitchAnalysis?.tractionMetrics?.revenue)
+  if (revenue) tractionLines.push(`Revenue: ${revenue}`)
+  const users = safe(founder.users || pitchAnalysis?.tractionMetrics?.users)
+  if (users) tractionLines.push(`Users: ${users}`)
+  const growth = safe(founder.growthRate || pitchAnalysis?.tractionMetrics?.growth)
+  if (growth) tractionLines.push(`Growth: ${growth}`)
+  const mrr = safe(pitchAnalysis?.tractionMetrics?.mrr)
+  if (mrr) tractionLines.push(`MRR: ${mrr}`)
+  const teamSize = safe(founder.teamSize || founderContext?.teamSize)
+  if (teamSize) tractionLines.push(`Team size: ${teamSize}`)
+
+  // --- ASK (what they need) ---
+  const askLines: string[] = []
+  const fundingNeed = founder.fundingNeed || founderContext?.fundingNeed
+  if (fundingNeed) askLines.push(`Raising: $${fundingNeed}K`)
+  const valueAddNeeds = parseJSON<string[]>(founder.valueAddNeeds || '[]', [])
+  if (valueAddNeeds.length > 0) askLines.push(`Looking for: ${valueAddNeeds.join(', ')}`)
+
+  // --- Assemble with clear headers ---
+  const sections: string[] = []
+  sections.push(`STARTUP: ${startupLines.join('. ')}`)
+  sections.push(`SUMMARY: ${summaryLines.join(' ')}`)
+  if (founderLines.length > 0) sections.push(`FOUNDER: ${founderLines.join('. ')}`)
+  if (tractionLines.length > 0) sections.push(`TRACTION: ${tractionLines.join('. ')}`)
+  if (askLines.length > 0) sections.push(`ASK: ${askLines.join('. ')}`)
+
+  return sections.join('\n')
+}
+
+// ---------------------------------------------------------------------------
+// Stage normalisation — maps founder stages to VC stage labels stored in DB
+// ---------------------------------------------------------------------------
+
+const STAGE_EXPANSION: Record<string, string[]> = {
+  idea: ['pre-seed', 'seed', 'angel', 'pre_seed', 'preseed', 'idea'],
+  mvp: ['pre-seed', 'seed', 'pre_seed', 'preseed', 'mvp'],
+  revenue: ['seed', 'pre-seed', 'pre_seed', 'preseed', 'revenue'],
+  seed: ['seed', 'pre-seed', 'pre_seed', 'preseed'],
+  seriesA: ['seed', 'seriesA', 'series_a', 'series-a', 'series a'],
+}
+
+/**
+ * Build Prisma WHERE conditions for stage filtering.
+ * Because stages is a JSON string in SQLite (e.g. '["pre-seed","seed"]'),
+ * we use `contains: '"seed"'` (with quotes) to get exact element matches
+ * without false positives ('"seed"' won't match inside '"pre-seed"').
+ */
+function buildStageWhereConditions(founderStage: string) {
+  const acceptable = STAGE_EXPANSION[founderStage] || [founderStage]
+  return acceptable.map(stage => ({ stages: { contains: `"${stage}"` } }))
+}
+
+// ---------------------------------------------------------------------------
+// Main entry point
+// ---------------------------------------------------------------------------
+
+/**
+ * Surgical Funnel matching pipeline.
+ *
+ * Phase 1 — Hard filter (Prisma WHERE): stage, visibility, check size
+ * Phase 2 — FAISS top-15
+ * Phase 3 — Live enrichment (Exa + GPT-4o-mini)
+ * Phase 4 — Re-score with conflict penalty, weighted formula, return top 10
  */
 export async function aiNativeMatchVCs(
   founder: any,
-  investors: Investor[],
+  _investors: Investor[],  // kept for backward compat; Phase 1 queries DB directly
   options: {
     pitchAnalysis?: any
     transcript?: string
@@ -289,102 +337,162 @@ export async function aiNativeMatchVCs(
   } = {}
 ): Promise<AINativeMatchResult[]> {
   const { pitchAnalysis, transcript, resumeFeatures, useFAISS = true } = options
-  
-  // 1. Get comprehensive founder context (with error handling)
+  const founderStage = (founder.stage || 'seed').toLowerCase()
+  const fundingNeed = founder.fundingNeed || 0  // in thousands
+
+  // -----------------------------------------------------------------------
+  // Founder context & pattern detection (parallel)
+  // -----------------------------------------------------------------------
+
   let founderContext: ComprehensiveFounderContext | null = null
   try {
     founderContext = await getComprehensiveFounderContext(founder.email)
-    logger.log(`[AI-NATIVE-MATCHING] Loaded founder context: ${founderContext ? 'Yes' : 'No'}`)
-    if (founderContext) {
-      logger.log(`[AI-NATIVE-MATCHING] Context includes: education=${founderContext.education}, university=${founderContext.universityAffiliation}, isStudent=${founderContext.isStudent}, sectors=${founderContext.sectors.length}`)
-    }
-  } catch (contextError: any) {
-    logger.warn('[AI-NATIVE-MATCHING] Failed to get founder context:', contextError?.message)
-    // Continue without context - matching will still work
+    logger.log(`[AI-NATIVE] Loaded founder context: ${!!founderContext}`)
+  } catch (err: any) {
+    logger.warn('[AI-NATIVE] Founder context failed:', err?.message)
   }
-  
-  // 🆕 ENHANCE: Detect VC affiliations and patterns from transcript
-  let detectedPatterns: {
-    vcAffiliations: string[]
-    universitySignals: string[]
-    acceleratorSignals: string[]
-    founderPatterns: string[]
-    confidence: number
-  } = {
-    vcAffiliations: [],
-    universitySignals: [],
-    acceleratorSignals: [],
-    founderPatterns: [],
+
+  let detectedPatterns = {
+    vcAffiliations: [] as string[],
+    universitySignals: [] as string[],
+    acceleratorSignals: [] as string[],
+    founderPatterns: [] as string[],
     confidence: 0,
   }
-  
   if (transcript && transcript.length > 50) {
     try {
       detectedPatterns = await detectVCAffiliations(transcript, founderContext)
-      logger.log(`[AI-NATIVE-MATCHING] Detected patterns:`, {
-        vcAffiliations: detectedPatterns.vcAffiliations,
-        universities: detectedPatterns.universitySignals,
-        patterns: detectedPatterns.founderPatterns,
-        confidence: detectedPatterns.confidence,
-      })
-    } catch (patternError: any) {
-      logger.warn('[AI-NATIVE-MATCHING] Pattern detection failed:', patternError?.message)
+      logger.log('[AI-NATIVE] Detected patterns:', detectedPatterns)
+    } catch (err: any) {
+      logger.warn('[AI-NATIVE] Pattern detection failed:', err?.message)
     }
   }
-  
-  // 2. Build comprehensive pitch context from ALL sources (now includes detected patterns)
+
+  // Build pitch context for embedding
   const pitchContext = buildComprehensivePitchContext(
-    founder,
-    pitchAnalysis,
-    transcript,
-    resumeFeatures,
-    founderContext,
-    detectedPatterns
+    founder, pitchAnalysis, transcript, resumeFeatures, founderContext, detectedPatterns,
   )
-  
-  // 3. Generate pitch embedding for vector similarity
-  let vectorMatches: RankedVC[] = []
-  let pitchEmbedding: number[] | null = null
-  
+
+  // -----------------------------------------------------------------------
+  // PHASE 1 — Hard Filters (Prisma WHERE — rows that fail never reach the UI)
+  //
+  //  HARD FILTER 1  │ Stage       │ VC's stages JSON must contain at least
+  //                 │             │ one stage the founder qualifies for.
+  //                 │             │ A seed-stage founder will NEVER see a
+  //                 │             │ Series-C-only VC.
+  //  ─────────────────────────────────────────────────────────────────────
+  //  HARD FILTER 2  │ Visibility  │ isPublic = true AND discoverable = true.
+  //                 │             │ Hidden / unlisted profiles are excluded.
+  //  ─────────────────────────────────────────────────────────────────────
+  //  HARD FILTER 3a │ Check Size  │ Exclude when the VC's MINIMUM check
+  //                 │ (too small) │ is more than 5× the founder's raise.
+  //  ─────────────────────────────────────────────────────────────────────
+  //  HARD FILTER 3b │ Check Size  │ Exclude when the founder's raise is
+  //                 │ (too big)   │ more than 2× the VC's MAXIMUM check.
+  //                 │             │ VCs with 0/null check sizes are NOT
+  //                 │             │ excluded — unknown data is not a
+  //                 │             │ reason to block.
+  // -----------------------------------------------------------------------
+
+  const stageConditions = buildStageWhereConditions(founderStage)
+
+  const checkSizeExclusions: any[] = []
+  if (fundingNeed > 0) {
+    // 3a: VC's minimum is way above founder's raise
+    checkSizeExclusions.push({
+      AND: [
+        { checkSizeMin: { gt: 0 } },
+        { checkSizeMin: { gt: fundingNeed * 5 } },
+      ],
+    })
+    // 3b: Founder needs more than 2× the VC's maximum check
+    checkSizeExclusions.push({
+      AND: [
+        { checkSizeMax: { gt: 0 } },
+        { checkSizeMax: { lt: Math.round(fundingNeed / 2) } },
+      ],
+    })
+  }
+
+  let stageFiltered: Investor[]
   try {
-    pitchEmbedding = await generatePitchEmbedding(pitchContext)
-    
-    // Try FAISS first (much faster)
+    stageFiltered = await db.investor.findMany({
+      where: {
+        // HARD FILTER 2 — Visibility
+        isPublic: true,
+        discoverable: true,
+        // HARD FILTER 1 — Stage
+        OR: stageConditions,
+        // HARD FILTER 3 — Check size (exclude bad fits)
+        NOT: checkSizeExclusions.length > 0
+          ? { OR: checkSizeExclusions }
+          : undefined,
+      },
+    })
+    logger.log(`[AI-NATIVE] Phase 1 — Hard filters (Prisma WHERE): ${stageFiltered.length} VCs passed (stage=${founderStage}, fundingNeed=${fundingNeed}K)`)
+    logger.log(`[AI-NATIVE]   Filter breakdown: stage=${stageConditions.length} stage variants, visibility=public+discoverable, checkSize=${checkSizeExclusions.length > 0 ? 'active' : 'skipped (no fundingNeed)'}`)
+  } catch (dbErr: any) {
+    logger.error('[AI-NATIVE] Prisma hard-filter query failed, falling back to passed-in investors:', dbErr?.message)
+    stageFiltered = _investors
+  }
+
+  if (stageFiltered.length === 0) {
+    logger.warn('[AI-NATIVE] No VCs passed hard filters — falling back to visibility-only query')
+    stageFiltered = await db.investor.findMany({
+      where: { isPublic: true, discoverable: true },
+    })
+  }
+
+  // -----------------------------------------------------------------------
+  // PHASE 2 — Vector Search: FAISS top-15 from stage-filtered set
+  // -----------------------------------------------------------------------
+
+  const stageFilteredIds = new Set(stageFiltered.map(vc => vc.id))
+  let vectorMatches: RankedVC[] = []
+
+  try {
+    const pitchEmbedding = await generatePitchEmbedding(pitchContext)
+
     if (useFAISS) {
       try {
-        vectorMatches = await rankVCsForPitch(pitchEmbedding, [], 50, true)
-        logger.log('[AI-NATIVE-MATCHING] FAISS vector matching successful')
-      } catch (faissError: any) {
-        logger.warn('[AI-NATIVE-MATCHING] FAISS failed, using intelligent matching only:', faissError.message)
+        // Ask FAISS for more than 20 so we can intersect with stage-filtered set
+        const faissResults = await rankVCsForPitch(pitchEmbedding, [], 50, true)
+        vectorMatches = faissResults.filter(r => stageFilteredIds.has(r.id)).slice(0, 15)
+        logger.log(`[AI-NATIVE] Phase 2 — FAISS: ${faissResults.length} results, ${vectorMatches.length} after stage filter`)
+      } catch (faissErr: any) {
+        logger.warn('[AI-NATIVE] FAISS failed, falling back to stage-filtered set:', faissErr?.message)
       }
     }
-  } catch (embeddingError: any) {
-    logger.warn('[AI-NATIVE-MATCHING] Embedding generation failed:', embeddingError.message)
+  } catch (embErr: any) {
+    logger.warn('[AI-NATIVE] Embedding generation failed:', embErr?.message)
   }
-  
-  // 4. Intelligent rule-based matching with ENHANCED founder data
+
+  const topIds = new Set(vectorMatches.map(v => v.id))
+  let candidateInvestors: Investor[]
+
+  if (topIds.size >= 5) {
+    candidateInvestors = stageFiltered.filter(vc => topIds.has(vc.id))
+  } else {
+    logger.log('[AI-NATIVE] FAISS returned <5, using top 15 stage-filtered VCs')
+    candidateInvestors = stageFiltered.slice(0, 15)
+  }
+
+  // -----------------------------------------------------------------------
+  // Intelligent matching (rule-based) — run on candidates
+  // -----------------------------------------------------------------------
+
   const resumeLikeFeatures: ResumeFeatures = resumeFeatures || {
     basics: {},
-    education: founderContext?.education ? [{
-      school: founderContext.education,
-      degree: '',
-      field: '',
-    }] : [],
+    education: founderContext?.education ? [{ school: founderContext.education, degree: '', field: '' }] : [],
     experience: [],
-    skills: {
-      programming: [],
-      ml: [],
-      gtm: [],
-      domain: [],
-    },
+    skills: { programming: [], ml: [], gtm: [], domain: [] },
     traction: {
       revenue: founder.revenue || founderContext?.revenue,
       users: founder.users || founderContext?.users,
       growth: founder.growthRate || founderContext?.growthRate,
     },
   }
-  
-  // 🆕 ENHANCE: Build enriched founder data with ALL profile factors
+
   const enrichedFounderData = {
     ...founder,
     sectors: parseJSON<string[]>(founder.sectors || '[]', []),
@@ -393,7 +501,6 @@ export async function aiNativeMatchVCs(
     users: founder.users || founderContext?.users,
     growthRate: founder.growthRate || founderContext?.growthRate,
     teamSize: founder.teamSize || founderContext?.teamSize,
-    // 🆕 Add ALL onboarding/profile factors
     education: founder.education || founderContext?.education || '',
     universityAffiliation: founder.universityAffiliation || founderContext?.universityAffiliation || '',
     isStudent: founder.isStudent || founderContext?.isStudent || false,
@@ -402,234 +509,213 @@ export async function aiNativeMatchVCs(
     isUnderrepresented: founderContext?.isUnderrepresented || false,
     isVeteran: founderContext?.isVeteran || false,
     techBackground: founderContext?.techBackground || false,
-    experienceLevel: founderContext?.experienceLevel || 'early',
     valueAddNeeds: parseJSON<string[]>(founder.valueAddNeeds || '[]', []),
     ethicsTags: parseJSON<string[]>(founder.ethicsTags || '[]', []),
     personalityTags: parseJSON<string[]>(founder.personalityTags || '[]', []),
     bio: founder.bio || founderContext?.bio || '',
     prevFunding: founderContext?.prevFunding || '',
     prevFundingAmount: founderContext?.prevFundingAmount || '',
-    // 🆕 Add detected patterns
     detectedVCAffiliations: detectedPatterns.vcAffiliations,
     detectedUniversities: detectedPatterns.universitySignals,
     detectedFounderPatterns: detectedPatterns.founderPatterns,
   }
-  
-  let intelligentMatches: EnhancedMatchResult[] = []
+
+  let intelligentMatches: (EnhancedMatchResult & { investor: Investor })[] = []
   try {
-    intelligentMatches = await intelligentMatchVCs(
-      resumeLikeFeatures,
-      enrichedFounderData,
-      investors
-    )
-    logger.log(`[AI-NATIVE-MATCHING] Intelligent matching completed: ${intelligentMatches.length} matches`)
-  } catch (intelligentError: any) {
-    logger.error('[AI-NATIVE-MATCHING] Intelligent matching failed:', intelligentError)
-    logger.error('[AI-NATIVE-MATCHING] Intelligent error stack:', intelligentError?.stack)
-    // Return empty array - will result in zero scores but won't crash
-    intelligentMatches = []
+    intelligentMatches = await intelligentMatchVCs(resumeLikeFeatures, enrichedFounderData, candidateInvestors)
+    logger.log(`[AI-NATIVE] Intelligent matching: ${intelligentMatches.length} scored`)
+  } catch (err: any) {
+    logger.error('[AI-NATIVE] Intelligent matching failed:', err)
   }
-  
-  // 5. Combine scores with transparency + pattern-based boosts
-  const combinedMatches = investors.map(investor => {
-    if (!investor || !investor.id) {
-      logger.warn('[AI-NATIVE-MATCHING] Invalid investor in list, skipping')
-      return null
+
+  // -----------------------------------------------------------------------
+  // PHASE 3 — Live Enrichment (Exa + GPT-4o-mini) — parallel for all candidates
+  // -----------------------------------------------------------------------
+
+  const pitchText = buildPitchText(founder, pitchAnalysis, transcript, founderContext)
+  const primarySector = parseJSON<string[]>(founder.sectors || '[]', [])[0] || 'technology'
+
+  logger.log(`[AI-NATIVE] Phase 3 — Enriching ${candidateInvestors.length} VCs via Exa (batched, 5/sec)...`)
+
+  const EXA_BATCH_SIZE = 5
+  const EXA_BATCH_DELAY_MS = 1200
+
+  const enrichmentMap = new Map<string, LivePulse>()
+
+  for (let i = 0; i < candidateInvestors.length; i += EXA_BATCH_SIZE) {
+    const batch = candidateInvestors.slice(i, i + EXA_BATCH_SIZE)
+
+    if (i > 0) {
+      await new Promise(r => setTimeout(r, EXA_BATCH_DELAY_MS))
     }
-    
-    // Find intelligent match
+
+    const batchResults = await Promise.allSettled(
+      batch.map(async (vc): Promise<{ id: string; pulse: LivePulse }> => {
+        try {
+          const pulse = await getLiveInvestorPulse(vc.firmName, primarySector, vc.id, vc.fundType || 'Venture Capital')
+
+          const vcFundType = vc.fundType || 'Venture Capital'
+          const [summary, conflict] = await Promise.all([
+            generateVCSummary(vc.firmName, pulse.recentDeals, pulse.thoughtLeadership, pitchText, vcFundType),
+            detectConflict(vc.firmName, pulse.recentDeals, pitchText, vcFundType),
+          ])
+
+          return {
+            id: vc.id,
+            pulse: { summary, recentDeals: pulse.recentDeals, conflict, fromCache: pulse.fromCache, signalStrength: pulse.signalStrength },
+          }
+        } catch (err: any) {
+          logger.warn(`[AI-NATIVE] Enrichment failed for ${vc.firmName}:`, err?.message)
+          return {
+            id: vc.id,
+            pulse: {
+              summary: {
+                recentPortfolio: `Could not retrieve recent portfolio for ${vc.firmName}.`,
+                currentHeat: 'Enrichment data unavailable.',
+                founderAlignment: 'Enrichment data unavailable.',
+              },
+              recentDeals: [],
+              conflict: { isConflict: false, competitorNames: [], reasoning: 'Enrichment unavailable.' },
+              fromCache: false,
+              signalStrength: 0,
+            },
+          }
+        }
+      })
+    )
+
+    for (const result of batchResults) {
+      if (result.status === 'fulfilled') {
+        enrichmentMap.set(result.value.id, result.value.pulse)
+      }
+    }
+
+    logger.log(`[AI-NATIVE] Exa batch ${Math.floor(i / EXA_BATCH_SIZE) + 1}/${Math.ceil(candidateInvestors.length / EXA_BATCH_SIZE)} complete`)
+  }
+
+  logger.log(`[AI-NATIVE] Phase 3 complete — ${enrichmentMap.size}/${candidateInvestors.length} enriched`)
+
+  for (const vc of candidateInvestors) {
+    const pulse = enrichmentMap.get(vc.id)
+    if (pulse) {
+      logger.log(`[AI-NATIVE] 📋 ${vc.firmName} | Signal: ${pulse.signalStrength} | Portfolio: ${pulse.summary.recentPortfolio} | Heat: ${pulse.summary.currentHeat} | Alignment: ${pulse.summary.founderAlignment}`)
+    } else {
+      logger.log(`[AI-NATIVE] 📋 ${vc.firmName} | No enrichment data`)
+    }
+  }
+
+  // -----------------------------------------------------------------------
+  // PHASE 4 — Re-Scoring with weighted formula
+  //
+  // FinalScore = (IntelligentScore × 0.4) + (VectorScore × 0.3) + (EnrichmentScore × 0.3)
+  //
+  // EnrichmentScore starts at 50 (neutral) and adjusts:
+  //   +25 if recent deals found
+  //   +15 if thought leadership found
+  //   +10 if summary indicates alignment with founder
+  //   −50 if direct conflict detected
+  // -----------------------------------------------------------------------
+
+  const scoredMatches: AINativeMatchResult[] = candidateInvestors.map(investor => {
     const intelligentMatch = intelligentMatches.find(m => m?.investor?.id === investor.id)
     const intelligentScore = intelligentMatch?.score || 0
-    
-    // Find vector similarity match
+
     const vectorMatch = vectorMatches.find(m => m?.id === investor.id)
-    const vectorSimilarity = (vectorMatch?.similarity ?? 0) || 0
-    const vectorScore = Math.round(vectorSimilarity * 100) // Convert 0-1 to 0-100
-    
-    // 🆕 ENHANCE: Pattern-based score adjustments
-    let patternBoost = 0
-    const patternReasons: string[] = []
-    const investorName = investor.firmName.toLowerCase()
-    const investorThesis = (investor.thesis || '').toLowerCase()
-    const sectors = parseJSON<string[]>(investor.sectors || '[]', [])
-    
-    // Boost for detected VC affiliations
-    if (detectedPatterns.vcAffiliations.length > 0) {
-      // Check if investor is mentioned in affiliations
-      for (const affiliation of detectedPatterns.vcAffiliations) {
-        const affLower = affiliation.toLowerCase()
-        if (investorName.includes(affLower) || affLower.includes(investorName) || 
-            investorThesis.includes(affLower)) {
-          patternBoost += 15
-          patternReasons.push(`Founder has ${affiliation} affiliation`)
-        }
+    const vectorSimilarity = vectorMatch?.similarity ?? 0
+    const vectorScore = Math.round(vectorSimilarity * 100)
+
+    const pulse = enrichmentMap.get(investor.id) ?? null
+
+    // --- Enrichment score ---
+    let enrichmentScore = 50 // neutral baseline
+    let conflictPenalty = 0
+
+    if (pulse) {
+      // Low signal = potentially inactive VC — strong penalty so they don't rank #1
+      if (pulse.signalStrength === 0) {
+        enrichmentScore -= 35
+      } else if (pulse.signalStrength <= 1) {
+        enrichmentScore -= 20
+      }
+
+      if (pulse.recentDeals.length > 0) enrichmentScore += 25
+      if (pulse.summary.currentHeat && !pulse.summary.currentHeat.includes('unavailable')) enrichmentScore += 15
+      if (pulse.summary.founderAlignment && !pulse.summary.founderAlignment.includes('unavailable')) enrichmentScore += 10
+      if (pulse.conflict.isConflict) {
+        conflictPenalty = 50
+        enrichmentScore -= conflictPenalty
       }
     }
-    
-    // Boost for university matches
-    if (detectedPatterns.universitySignals.length > 0 || founderContext?.universityAffiliation) {
-      const universities = [
-        ...detectedPatterns.universitySignals,
-        founderContext?.universityAffiliation || '',
-      ].filter(Boolean)
-      
-      for (const uni of universities) {
-        const uniLower = uni.toLowerCase()
-        // Stanford/Berkeley/MIT students often match with student-focused VCs
-        if (uniLower.includes('stanford') || uniLower.includes('berkeley') || 
-            uniLower.includes('mit') || uniLower.includes('harvard')) {
-          // Boost for student-focused VCs
-          if (investorName.includes('dorm room') || investorName.includes('1517') || 
-              investorName.includes('neo') || investorName.includes('thiel')) {
-            patternBoost += 10
-            patternReasons.push(`${uni} student matches student-focused VC`)
-          }
-          // Boost for elite VCs that value top universities
-          if (investorName.includes('sequoia') || investorName.includes('a16z') || 
-              investorName.includes('benchmark') || investorName.includes('accel')) {
-            patternBoost += 5
-            patternReasons.push(`Elite university (${uni}) matches top-tier VC`)
-          }
-        }
-      }
-    }
-    
-    // Boost for founder pattern matches
-    if (detectedPatterns.founderPatterns.length > 0) {
-      for (const pattern of detectedPatterns.founderPatterns) {
-        const patternLower = pattern.toLowerCase()
-        
-        // Student founder patterns
-        if (patternLower.includes('student')) {
-          if (investorName.includes('dorm room') || investorName.includes('1517') || 
-              investorName.includes('neo')) {
-            patternBoost += 12
-            patternReasons.push('Student founder pattern matches student VC')
-          }
-        }
-        
-        // Technical founder patterns
-        if (patternLower.includes('technical')) {
-          if (sectors.some(s => s.toLowerCase().includes('devtools') || 
-                             s.toLowerCase().includes('ai') || 
-                             s.toLowerCase().includes('ml'))) {
-            patternBoost += 8
-            patternReasons.push('Technical founder matches tech-focused VC')
-          }
-        }
-        
-        // YC alumni pattern
-        if (patternLower.includes('yc') || patternLower.includes('y combinator')) {
-          // YC alumni often get follow-on funding from top VCs
-          if (investorName.includes('sequoia') || investorName.includes('a16z') || 
-              investorName.includes('lightspeed') || investorName.includes('index')) {
-            patternBoost += 10
-            patternReasons.push('YC alumni pattern matches top-tier VC')
-          }
-        }
-      }
-    }
-    
-    // Weighted combination (60% intelligent, 40% vector) + pattern boost
-    const intelligentWeight = 0.6
-    const vectorWeight = 0.4
-    
-    const baseCombinedScore = Math.round(
-      intelligentScore * intelligentWeight + 
-      vectorScore * vectorWeight
+
+    enrichmentScore = Math.max(0, Math.min(100, enrichmentScore))
+
+    const combinedScore = Math.round(
+      intelligentScore * 0.4 +
+      vectorScore * 0.3 +
+      enrichmentScore * 0.3
     )
-    
-    // Apply pattern boost (capped at 100)
-    const combinedScore = Math.min(100, baseCombinedScore + patternBoost)
-    
-    // Build transparent score breakdown
+
     const scoreBreakdown = {
       intelligent: {
         score: intelligentScore,
-        weight: intelligentWeight,
+        weight: 0.4,
         reasons: intelligentMatch?.reasons || [],
       },
       vector: {
         score: vectorScore,
-        weight: vectorWeight,
-        explanation: vectorMatch 
-          ? `Semantic similarity: ${(vectorSimilarity * 100).toFixed(1)}% match based on pitch content, thesis alignment, and investment patterns`
+        weight: 0.3,
+        explanation: vectorMatch
+          ? `Semantic similarity: ${(vectorSimilarity * 100).toFixed(1)}%`
           : 'Vector similarity unavailable',
+      },
+      enrichment: {
+        score: enrichmentScore,
+        weight: 0.3,
+        conflictPenalty,
       },
       ycTrends: intelligentMatch?.ycTrends ? {
         adjustment: intelligentMatch.ycTrends.scoreAdjustment || 0,
-        insights: intelligentMatch.ycTrends.insights || [],
-      } : undefined,
-      patternBoost: patternBoost > 0 ? {
-        boost: patternBoost,
-        reasons: patternReasons,
-        detectedPatterns: detectedPatterns,
+        insights: intelligentMatch.ycTrends.insights?.map(i => typeof i === 'string' ? i : i.description || '') || [],
       } : undefined,
     }
-    
+
     return {
       investorId: investor.id,
       score: combinedScore,
-      confidence: Math.min(95, Math.max(50, combinedScore)), // Confidence based on score
+      confidence: Math.min(95, Math.max(50, combinedScore)),
       reasons: [
         ...(intelligentMatch?.reasons || []),
-        vectorMatch ? `High semantic similarity (${(vectorSimilarity * 100).toFixed(1)}%)` : '',
+        vectorMatch ? `Semantic similarity: ${(vectorSimilarity * 100).toFixed(1)}%` : '',
+        pulse?.conflict.isConflict ? `⚠️ Portfolio conflict: ${pulse.conflict.competitorNames.join(', ')}` : '',
       ].filter(Boolean),
       suggestions: intelligentMatch?.suggestions || [],
       detailedReasons: intelligentMatch?.detailedReasons || [],
       strengths: intelligentMatch?.strengths || [],
       weaknesses: intelligentMatch?.weaknesses || [],
       investor,
-      // Combined scores
       intelligentScore,
-      vectorSimilarity: vectorSimilarity,
+      vectorSimilarity,
+      enrichmentScore,
       combinedScore,
       scoreBreakdown,
-      // Rich context
+      livePulse: pulse,
       founderContext,
       pitchContext: transcript || pitchAnalysis ? {
         transcript: transcript?.substring(0, 1000) || '',
         analysis: pitchAnalysis || {},
         features: pitchContext || {},
       } : undefined,
-      // 🆕 Detected patterns
-      detectedPatterns: detectedPatterns.confidence > 0 ? detectedPatterns : undefined,
     } as AINativeMatchResult
   })
-  
-  // Filter out any null matches
-  const validMatches = combinedMatches.filter((match): match is AINativeMatchResult => match !== null)
-  
-  // 6. Sort by combined score (descending)
-  validMatches.sort((a, b) => b.combinedScore - a.combinedScore)
-  
-  // 7. Add symbolic score explanations
-  return validMatches.map(match => {
-    // Add symbolic score interpretation
-    let scoreSymbol = '⭐'
-    let scoreMeaning = ''
-    
-    if (match.combinedScore >= 90) {
-      scoreSymbol = '🏆'
-      scoreMeaning = 'Elite match - Top tier VCs (Sequoia, Benchmark, a16z) would take meeting'
-    } else if (match.combinedScore >= 80) {
-      scoreSymbol = '⭐️⭐️⭐️'
-      scoreMeaning = 'Excellent match - Strong fit with top VCs (Lightspeed, Index, Greylock)'
-    } else if (match.combinedScore >= 70) {
-      scoreSymbol = '⭐️⭐️'
-      scoreMeaning = 'Strong match - Good fit for seed VCs (Uncork, Homebrew, Initialized)'
-    } else if (match.combinedScore >= 60) {
-      scoreSymbol = '⭐️'
-      scoreMeaning = 'Good match - Suitable for micro-VCs and accelerators (YC, Techstars)'
-    } else {
-      scoreSymbol = '💡'
-      scoreMeaning = 'Moderate match - Build more traction before approaching'
-    }
-    
-    return {
-      ...match,
-      scoreSymbol,
-      scoreMeaning,
-    }
-  })
+
+  // -----------------------------------------------------------------------
+  // Final Sort — top 10 by combinedScore
+  // -----------------------------------------------------------------------
+
+  scoredMatches.sort((a, b) => b.combinedScore - a.combinedScore)
+  const top10 = scoredMatches.slice(0, 10)
+
+  logger.log(`[AI-NATIVE] Final — Top 10 scores: ${top10.map(m => `${m.investor.firmName}=${m.combinedScore}`).join(', ')}`)
+
+  return top10
 }

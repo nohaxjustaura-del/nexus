@@ -2,107 +2,121 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { 
-  Heart,
   GraduationCap,
   CheckCircle,
   XCircle,
   Users,
-  MessageSquare,
   TrendingUp,
   Lightbulb,
-  ExternalLink,
   Download,
   ArrowLeft
 } from "lucide-react"
 import Link from "next/link"
 
-export default function CrashCoursePage({ params }: { params: { id: string } }) {
-  // Mock crash course data
+export default function CrashCoursePage() {
   const course = {
-    investor: {
-      firmName: 'AI Ventures',
-      name: 'Sarah Chen',
-      stage: 'Seed',
-      sectors: ['AI/ML', 'SaaS'],
-      checkSize: '$100K-$500K',
-      applicationUrl: 'https://aiventures.com/apply',
-    },
     content: {
       whatTheyValue: [
         {
-          title: 'Technical founder with AI/ML expertise',
-          description: 'Sarah prioritizes founders who deeply understand the technology. Show ML papers, OSS contributions, or previous AI projects.',
+          title: 'Clear problem-solution fit',
+          description: 'VCs invest in solutions to real, painful problems. Clearly articulate the problem, who experiences it, and why existing solutions fail.',
         },
         {
-          title: 'Defensible data moat',
-          description: 'Explain your proprietary dataset, data flywheel, or unique data access that competitors can\'t replicate.',
+          title: 'Traction and proof points',
+          description: 'Early metrics matter: revenue, users, retention, growth rate, or signed LOIs. Show momentum and product-market fit signals.',
         },
         {
-          title: 'Product-led traction',
-          description: 'Early usage metrics matter more than revenue. Show DAU, retention, or API calls if B2B.',
+          title: 'Strong founding team',
+          description: 'Demonstrate why your team is uniquely positioned to solve this problem. Highlight relevant experience, technical expertise, or domain knowledge.',
+        },
+        {
+          title: 'Large addressable market',
+          description: 'Show a clear path to building a venture-scale business. Use bottoms-up market calculations, not just top-down TAM estimates.',
         },
       ],
       pitchStructure: [
-        { section: 'Problem', time: '2 min', focus: 'Why now? What changed in the market?' },
-        { section: 'Solution', time: '3 min', focus: 'Demo the AI capability. Show, don\'t tell.' },
-        { section: 'Traction', time: '4 min', focus: 'Model performance metrics, users, retention cohorts' },
-        { section: 'Market', time: '3 min', focus: 'TAM + your wedge into the market' },
-        { section: 'Team', time: '2 min', focus: 'Why you? Technical credibility' },
-        { section: 'Ask', time: '2 min', focus: '$500K seed for 18-month runway' },
+        { section: 'Problem', time: '2 min', focus: 'Make the pain tangible. Why does this matter now?' },
+        { section: 'Solution', time: '3 min', focus: 'Show your product. Demo beats slides every time.' },
+        { section: 'Traction', time: '4 min', focus: 'Key metrics, growth trajectory, customer testimonials' },
+        { section: 'Market', time: '3 min', focus: 'Market size + your go-to-market wedge strategy' },
+        { section: 'Team', time: '2 min', focus: 'Why you? What makes you the right team for this?' },
+        { section: 'Ask', time: '2 min', focus: 'How much you\'re raising and what milestones it unlocks' },
       ],
       questions: [
         {
-          question: 'What\'s your model\'s performance vs baselines?',
-          why: 'Sarah wants to see quantitative evidence your AI is better/faster/cheaper',
-          answer: 'Prepare: benchmark table, latency metrics, cost per query',
+          question: 'What\'s your customer acquisition strategy?',
+          why: 'VCs want to understand how you\'ll scale beyond early adopters',
+          answer: 'Prepare: CAC/LTV ratios, marketing channels tested, sales funnel metrics',
         },
         {
-          question: 'How do you prevent someone from replicating this with GPT-4?',
-          why: 'Testing defensibility - is it just wrapper tech?',
-          answer: 'Emphasize: proprietary data, fine-tuning, domain-specific evals',
+          question: 'How are you different from competitors?',
+          why: 'Testing if you understand the competitive landscape',
+          answer: 'Emphasize: unique value prop, unfair advantages, why customers choose you',
         },
         {
-          question: 'What\'s your data strategy?',
-          why: 'AI moats often come from data, not just models',
-          answer: 'Explain: data sources, flywheel effect, exclusivity',
+          question: 'What are your unit economics?',
+          why: 'Can this business be profitable at scale?',
+          answer: 'Show: gross margins, contribution margins, path to profitability',
         },
         {
-          question: 'Show me your retention cohorts',
-          why: 'Early product stickiness predicts PMF',
-          answer: 'Have ready: weekly retention curves, power user stats',
+          question: 'Why is now the right time for this?',
+          why: 'VCs look for market timing and catalysts',
+          answer: 'Explain: recent tech shifts, regulatory changes, or behavior changes',
         },
         {
-          question: 'Who are your design partners?',
-          why: 'Wants to see you\'re co-building with real users',
-          answer: 'Name 2-3 companies testing your product + feedback loops',
+          question: 'What keeps you up at night?',
+          why: 'Assessing self-awareness and risk management',
+          answer: 'Be honest about top 1-2 risks and your mitigation plans',
         },
       ],
       redFlags: [
-        'Saying "we use ChatGPT API" without differentiation',
-        'No clear path to proprietary data or model improvement',
-        'Vague about technical implementation details',
-        'Unrealistic timelines for model development',
+        'No clear answer on how you make money',
+        'Dismissing competitors or saying "we have no competition"',
+        'Unrealistic financial projections or market size claims',
+        'Lack of customer validation or user feedback',
+        'Founder conflicts or unclear equity splits',
       ],
       warmIntros: [
         {
           path: 'Portfolio founders',
-          details: 'Sarah invested in DataMind (AI analytics) and VectorDB Co. Reach out to those founders for intros.',
+          details: 'Research the VC\'s portfolio and reach out to founders they\'ve backed. Ask for advice first, intro second.',
         },
         {
-          path: 'AI/ML conferences',
-          details: 'Sarah often attends NeurIPS, ICML. Get a booth or speaking slot.',
+          path: 'Industry events & conferences',
+          details: 'Attend sector-specific conferences where your target VCs speak or sponsor. Engage meaningfully.',
         },
         {
-          path: 'Mutual angels',
-          details: 'Connect with micro-VCs who co-invest with AI Ventures.',
+          path: 'Mutual connections',
+          details: 'Use LinkedIn to find shared connections. Angels, advisors, and other founders can make strong intros.',
+        },
+        {
+          path: 'Accelerator programs',
+          details: 'Y Combinator, Techstars, and other accelerators provide direct access to top VCs through demo days.',
         },
       ],
       proofPoints: [
-        'Model benchmarks: Accuracy, latency, cost vs GPT-4/Claude',
-        'Evaluation metrics: Domain-specific test sets',
-        'Inference costs: $/1000 queries and optimization trajectory',
-        'Data flywheel: How usage improves your model',
-        'Security: Data privacy, PII handling, audit trail',
+        'Revenue metrics: MRR/ARR, growth rate, customer count',
+        'Product metrics: DAU/MAU, retention curves, engagement',
+        'Customer validation: Testimonials, case studies, design partners',
+        'Team credentials: Previous exits, domain expertise, technical background',
+        'Competitive moat: Network effects, data advantages, IP, or brand',
+      ],
+      resources: [
+        {
+          title: 'Y Combinator\'s How to Pitch',
+          description: 'The gold standard for startup pitching from the world\'s top accelerator',
+          url: 'https://www.ycombinator.com/library/6q-how-to-pitch-your-startup',
+        },
+        {
+          title: 'Sequoia\'s Writing a Business Plan',
+          description: 'Framework used by one of the most successful VC firms',
+          url: 'https://www.sequoiacap.com/article/writing-a-business-plan/',
+        },
+        {
+          title: 'First Round Review',
+          description: 'In-depth articles on fundraising, growth, and building startups',
+          url: 'https://review.firstround.com/',
+        },
       ],
     },
   }
@@ -122,23 +136,24 @@ export default function CrashCoursePage({ params }: { params: { id: string } }) 
             Download PDF
           </Button>
         </div>
+
         {/* Hero */}
         <div className="mb-12 text-center">
           <Badge className="mb-4" variant="secondary">
             <GraduationCap className="mr-1 h-3 w-3" />
-            Crash Course
+            Fundraising Crash Course
           </Badge>
           <h1 className="mb-4 text-4xl font-bold">
-            How to Pitch {course.investor.firmName}
+            How to Pitch VCs Successfully
           </h1>
           <p className="text-lg text-muted-foreground">
-            Tailored guide for {course.investor.name} · {course.investor.stage} · {course.investor.sectors.join(', ')}
+            A comprehensive guide to crafting winning investor pitches
           </p>
         </div>
 
         {/* What They Value */}
         <section className="mb-12">
-          <h2 className="mb-6 text-2xl font-bold">1. What They Value Most</h2>
+          <h2 className="mb-6 text-2xl font-bold">1. What VCs Value Most</h2>
           <div className="space-y-4">
             {course.content.whatTheyValue.map((item, i) => (
               <Card key={i}>
@@ -180,7 +195,7 @@ export default function CrashCoursePage({ params }: { params: { id: string } }) 
 
         {/* Questions */}
         <section className="mb-12">
-          <h2 className="mb-6 text-2xl font-bold">3. Five Questions They'll Ask</h2>
+          <h2 className="mb-6 text-2xl font-bold">3. Common Questions VCs Ask</h2>
           <div className="space-y-4">
             {course.content.questions.map((q, i) => (
               <Card key={i}>
@@ -225,7 +240,7 @@ export default function CrashCoursePage({ params }: { params: { id: string } }) 
 
         {/* Warm Intros */}
         <section className="mb-12">
-          <h2 className="mb-6 text-2xl font-bold">5. How to Get a Warm Intro</h2>
+          <h2 className="mb-6 text-2xl font-bold">5. How to Get Warm Intros</h2>
           <div className="space-y-4">
             {course.content.warmIntros.map((intro, i) => (
               <Card key={i}>
@@ -247,12 +262,7 @@ export default function CrashCoursePage({ params }: { params: { id: string } }) 
         <section className="mb-12">
           <h2 className="mb-6 text-2xl font-bold">6. Proof Points to Emphasize</h2>
           <Card>
-            <CardHeader>
-              <CardDescription>
-                For {course.investor.sectors[0]} at {course.investor.stage} stage
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
+            <CardContent className="pt-6">
               <ul className="space-y-2">
                 {course.content.proofPoints.map((point, i) => (
                   <li key={i} className="flex items-start gap-3 text-sm">
@@ -265,24 +275,51 @@ export default function CrashCoursePage({ params }: { params: { id: string } }) 
           </Card>
         </section>
 
+        {/* Resources */}
+        <section className="mb-12">
+          <h2 className="mb-6 text-2xl font-bold">7. Additional Resources</h2>
+          <div className="space-y-4">
+            {course.content.resources.map((resource, i) => (
+              <Card key={i}>
+                <CardHeader>
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <Lightbulb className="h-5 w-5 text-primary" />
+                    {resource.title}
+                  </CardTitle>
+                  <CardDescription>{resource.description}</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <a 
+                    href={resource.url} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-sm text-primary hover:underline"
+                  >
+                    {resource.url}
+                  </a>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </section>
+
         {/* CTA */}
         <Card className="border-primary/50 bg-primary/5">
           <CardContent className="p-8 text-center">
-            <h3 className="mb-2 text-xl font-bold">Ready to Apply?</h3>
+            <h3 className="mb-2 text-xl font-bold">Ready to Start Pitching?</h3>
             <p className="mb-6 text-sm text-muted-foreground">
-              You've got the insider knowledge. Now craft your perfect pitch.
+              Use this framework to craft your perfect pitch and find the right VCs for your startup.
             </p>
             <div className="flex justify-center gap-4">
-              <a href={course.investor.applicationUrl} target="_blank" rel="noopener noreferrer">
-                <Button size="lg">
-                  Apply to {course.investor.firmName}
-                  <ExternalLink className="ml-2 h-4 w-4" />
-                </Button>
-              </a>
               <Link href="/founder/matches">
+                <Button size="lg">
+                  <TrendingUp className="mr-2 h-4 w-4" />
+                  Find Your Matches
+                </Button>
+              </Link>
+              <Link href="/founder/discover">
                 <Button size="lg" variant="outline">
-                  <ArrowLeft className="mr-2 h-4 w-4" />
-                  Back to Matches
+                  Browse All VCs
                 </Button>
               </Link>
             </div>
@@ -292,7 +329,3 @@ export default function CrashCoursePage({ params }: { params: { id: string } }) 
     </div>
   )
 }
-
-
-
-

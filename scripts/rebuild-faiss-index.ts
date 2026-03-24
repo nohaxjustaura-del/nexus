@@ -1,10 +1,11 @@
 /**
- * Rebuild FAISS index with current embedding model (768 dimensions)
+ * Rebuild FAISS index with current embedding model (1024 dimensions, Voyage AI)
  * This script:
- * 1. Generates embeddings for all VCs using current model
+ * 1. Generates embeddings for all VCs using Voyage AI voyage-3
  * 2. Builds FAISS index from those embeddings
  * 
  * Usage: npm run rebuild-faiss-index
+ * Rate limits: 3 RPM, 10K TPM
  */
 
 import { db } from '../lib/db'
@@ -15,14 +16,14 @@ import { join } from 'path'
 import { execSync } from 'child_process'
 
 async function main() {
-  console.log('🚀 Rebuilding FAISS index with 768-dimensional embeddings...\n')
+  console.log('🚀 Rebuilding FAISS index with 1024-dimensional embeddings (Voyage AI)...\n')
+  console.log('⚠️  Voyage AI free tier: 3 req/min — this will take a while for large datasets\n')
 
-  // Get all verified VCs (limit to first 200 for faster testing, remove limit for full rebuild)
+  // Get all verified VCs
   const investors = await db.investor.findMany({
     where: {
       verified: true,
     },
-    take: 200, // Limit for faster testing - remove this line for full rebuild
     select: {
       id: true,
       firmName: true,
@@ -54,13 +55,14 @@ async function main() {
 
   console.log('🔄 Generating embeddings for all VCs...\n')
 
+  let apiCalls = 0
+
   for (let i = 0; i < investors.length; i++) {
     const investor = investors[i]
     
     try {
       console.log(`[${i + 1}/${investors.length}] Generating embedding for ${investor.firmName}...`)
 
-      // Build VC profile
       const vcProfile = {
         firmName: investor.firmName,
         fundType: investor.fundType,
@@ -78,21 +80,18 @@ async function main() {
         notableInvestments: parseJSON<string[]>(investor.notableInvestments, []),
       }
 
-      // Generate embedding
       const embedding = await generateVCEmbedding(vcProfile)
+      apiCalls++
 
-      // Verify dimension
-      if (embedding.length !== 768) {
-        console.log(`⚠️  Warning: ${investor.firmName} has dimension ${embedding.length}, expected 768`)
+      if (embedding.length !== 1024) {
+        console.log(`⚠️  Warning: ${investor.firmName} has dimension ${embedding.length}, expected 1024`)
         continue
       }
 
       embeddings.push(embedding)
 
-      // Build embedding text for reference
       const embeddingText = buildVCEmbeddingText(vcProfile)
 
-      // Build VC data entry
       const vcEntry = {
         id: investor.id,
         firm_name: investor.firmName,
@@ -111,13 +110,17 @@ async function main() {
       }
 
       vcData.push(vcEntry)
-
-      // Rate limiting - wait 200ms between requests
-      if (i < investors.length - 1) {
-        await new Promise(resolve => setTimeout(resolve, 200))
-      }
     } catch (error: any) {
       console.error(`❌ Error processing ${investor.firmName}:`, error.message)
+      apiCalls++
+    }
+
+    // Rate limiting OUTSIDE try/catch — applies after every API call
+    if (apiCalls > 0 && apiCalls % 3 === 0) {
+      console.log(`⏳ Rate-limit pause (60s) after ${apiCalls} API calls...`)
+      await new Promise(resolve => setTimeout(resolve, 60_000))
+    } else if (apiCalls > 0) {
+      await new Promise(resolve => setTimeout(resolve, 500))
     }
   }
 
@@ -126,7 +129,7 @@ async function main() {
     return
   }
 
-  console.log(`\n✅ Generated ${embeddings.length} embeddings (768 dimensions each)\n`)
+  console.log(`\n✅ Generated ${embeddings.length} embeddings (1024 dimensions each)\n`)
 
   // Write JSONL file for FAISS service
   const jsonlPath = join(process.cwd(), 'faiss-data', 'vcs_embedding_inputs_trimmed.json')
@@ -149,7 +152,7 @@ async function main() {
       stdio: 'inherit'
     })
     console.log('\n✅ FAISS index rebuilt successfully!')
-    console.log('   The index now uses 768-dimensional embeddings (Gemini text-embedding-004)')
+    console.log('   The index now uses 1024-dimensional embeddings (Voyage AI voyage-3)')
     console.log('   Restart the FAISS service to use the new index')
   } catch (error: any) {
     console.error('\n❌ Error building FAISS index:', error.message)

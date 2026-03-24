@@ -71,17 +71,13 @@ export default function SignUpPage() {
         return
       }
 
-      // Success! Show code in dev mode if provided
+      // Success! Show appropriate message
       if (data.code) {
-        // Show code in a nicer way
-        setTimeout(() => {
-          alert(`🔐 Verification Code (Dev Mode - No Email Service)\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\nYour code is: ${data.code}\n\nThis code will expire in 10 minutes.\n\n📧 To receive emails:\n   1. Get API key from https://resend.com\n   2. Add RESEND_API_KEY to .env file\n   3. Restart your dev server\n\n💡 For now, check your terminal/console for the code.\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`)
-        }, 100)
+        // Dev mode - show code in alert
+        alert(`🔐 Verification Code (Dev Mode)\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\nYour code is: ${data.code}\n\nThis code will expire in 10 minutes.\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`)
       } else {
-        // Email was sent successfully
-        setTimeout(() => {
-          alert(`✅ Verification code sent!\n\nCheck your email inbox for the code.\n\n(If you don't see it, check your spam folder.)`)
-        }, 100)
+        // Production - email was sent
+        alert(`✅ Verification code sent!\n\nCheck your email inbox for the code.\n\n(If you don't see it, check your spam folder.)`)
       }
 
       // Redirect to verification page with email and return URL

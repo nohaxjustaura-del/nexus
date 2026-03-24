@@ -62,6 +62,14 @@ export default async function MatchesPage({
               analysisResult: { not: null },
             },
           },
+          // 🆕 Include pitch deck analyses
+          pitchDeckAnalyses: {
+            orderBy: { createdAt: 'desc' },
+            take: 1,
+            where: {
+              analysisResult: { not: null },
+            },
+          },
         },
         })
       } catch (dbError) {
@@ -104,8 +112,16 @@ export default async function MatchesPage({
           })
         }
         
-        // Note: Pitch deck is just a URL, doesn't have analysis results yet
-        // So we don't include it in the matches check
+        // 🆕 Add pitch deck analyses
+        if (founder && Array.isArray((founder as any).pitchDeckAnalyses)) {
+          (founder as any).pitchDeckAnalyses.forEach((analysis: any) => {
+            allAnalyses.push({
+              type: 'pitch-deck',
+              createdAt: analysis.createdAt,
+              data: analysis,
+            })
+          })
+        }
       }
       
       // Sort by most recent and get the latest
@@ -129,8 +145,21 @@ export default async function MatchesPage({
         } else if (latest.type === 'video' && latest.data.analysisResult) {
           try {
             const result = JSON.parse(latest.data.analysisResult)
-            if (result.matches && Array.isArray(result.matches)) {
-              topMatches = result.matches.slice(0, 20)
+            // Video pitch stores matches as "matchedVCs" not "matches"
+            const matchesArray = result.matches || result.matchedVCs || []
+            if (Array.isArray(matchesArray) && matchesArray.length > 0) {
+              topMatches = matchesArray.slice(0, 20)
+            }
+          } catch (e) {
+            // Failed to parse - continue without matches
+          }
+        } else if (latest.type === 'pitch-deck' && latest.data.analysisResult) {
+          try {
+            const result = JSON.parse(latest.data.analysisResult)
+            // Pitch deck stores matches as "matches" or "matchedVCs"
+            const matchesArray = result.matches || result.matchedVCs || []
+            if (Array.isArray(matchesArray) && matchesArray.length > 0) {
+              topMatches = matchesArray.slice(0, 20)
             }
           } catch (e) {
             // Failed to parse - continue without matches

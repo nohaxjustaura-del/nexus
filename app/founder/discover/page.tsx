@@ -3,6 +3,7 @@ import { getCurrentUser } from "@/lib/auth"
 import { Card, CardContent } from "@/components/ui/card"
 import { parseJSON } from "@/lib/utils"
 import Link from "next/link"
+import { redirect } from "next/navigation"
 import DiscoverClient from "./discover-client"
 
 export const dynamic = "force-dynamic"
@@ -88,7 +89,17 @@ export default async function DiscoverPage({
           })(),
           db.founder.findUnique({
             where: { email: user.email },
-            select: { name: true, stage: true, sectors: true, location: true, gender: true, willingToDropOut: true, resumeAnalyses: { select: { id: true }, take: 1 } },
+            select: { 
+              name: true, 
+              stage: true, 
+              sectors: true, 
+              location: true, 
+              gender: true, 
+              willingToDropOut: true, 
+              resumeAnalyses: { select: { id: true }, take: 1 },
+              videoPitches: { select: { id: true }, take: 1 },
+              pitchDeckAnalyses: { select: { id: true }, take: 1 }
+            },
           }).catch(() => null),
           // Check if FounderPrefs table exists before querying
           (async () => {
@@ -164,7 +175,11 @@ export default async function DiscoverPage({
       // Set gender and resume analysis from founder query
       if (founder) {
         founderGender = founder.gender || null
-        hasResumeAnalysis = Array.isArray(founder.resumeAnalyses) && founder.resumeAnalyses.length > 0
+        // Check if user has done ANY analysis (resume, video pitch, or pitch deck)
+        hasResumeAnalysis = 
+          (Array.isArray(founder.resumeAnalyses) && founder.resumeAnalyses.length > 0) ||
+          (Array.isArray((founder as any).videoPitches) && (founder as any).videoPitches.length > 0) ||
+          (Array.isArray((founder as any).pitchDeckAnalyses) && (founder as any).pitchDeckAnalyses.length > 0)
       }
     }
   } catch (error) {
@@ -264,11 +279,31 @@ export default async function DiscoverPage({
     })
   }
 
-  // Stage filter
+  // Stage filter - with mapping for founder stages to VC investment stages
   if (effectiveParams.stage) {
+    // Map founder stages to VC-compatible stage names
+    // Founders select: idea, mvp, revenue, seed, seriesA
+    // VCs list: Pre-Seed, Seed, Series A, Series B, Growth, etc.
+    const stageMapping: Record<string, string[]> = {
+      'idea': ['pre-seed', 'seed', 'angel'],
+      'mvp': ['pre-seed', 'seed'],
+      'revenue': ['seed', 'series a', 'pre-seed'],
+      'pre-seed': ['pre-seed', 'seed', 'angel'],
+      'seed': ['seed', 'pre-seed', 'series a'],
+      'seriesa': ['series a', 'seed', 'series b'],
+      'series a': ['series a', 'seed', 'series b'],
+      'seriesb': ['series b', 'series a', 'growth'],
+      'series b': ['series b', 'series a', 'growth'],
+      'growth': ['growth', 'series b', 'series c'],
+    }
+    
+    const founderStage = String(effectiveParams.stage).toLowerCase().replace(/\s+/g, '')
+    const matchStages = stageMapping[founderStage] || stageMapping[String(effectiveParams.stage).toLowerCase()] || [String(effectiveParams.stage).toLowerCase()]
+    
     filteredInvestors = filteredInvestors.filter(inv => {
       const stages = parseJSON<string[]>(inv.stages, [])
-      return stages.some(s => s.toLowerCase().includes(String(effectiveParams.stage).toLowerCase()))
+      if (stages.length === 0) return true // Include investors with no stage specified
+      return stages.some(s => matchStages.some(ms => s.toLowerCase().includes(ms)))
     })
   }
 
@@ -302,31 +337,35 @@ export default async function DiscoverPage({
     })
   }
 
-  // Advanced filters
-  // Geographic restriction
-  if (effectiveParams.geographicRestriction) {
+  // Advanced filters - ONLY apply geo/lead/speed filters if explicitly in URL params
+  // (not from user defaults, which are too aggressive for the tailored view)
+  // Geographic restriction - only if user explicitly set it in URL
+  if (searchParams.geographicRestriction || (effectiveParams.geographicRestriction && viewAll)) {
+    const geoRestriction = searchParams.geographicRestriction || effectiveParams.geographicRestriction
     filteredInvestors = filteredInvestors.filter(inv => {
       const geoFocus = parseJSON<string[]>(inv.geoFocus, [])
-      if (effectiveParams.geographicRestriction === 'us-only') {
-        return geoFocus.some(g => g.toLowerCase().includes('us') || g.toLowerCase().includes('united states'))
+      if (geoFocus.length === 0) return true // Include investors with no geo specified
+      if (geoRestriction === 'us-only') {
+        return geoFocus.some(g => g.toLowerCase().includes('us') || g.toLowerCase().includes('united states') || g.toLowerCase().includes('north america') || g.toLowerCase().includes('global'))
       }
-      if (effectiveParams.geographicRestriction === 'remote-ok') {
+      if (geoRestriction === 'remote-ok') {
         return geoFocus.length === 0 || geoFocus.some(g => g.toLowerCase().includes('global') || g.toLowerCase().includes('remote'))
       }
       return true
     })
   }
 
-  // Lead/Follow filter
-  if (effectiveParams.willLead) {
+  // Lead/Follow filter - only if user explicitly set it in URL
+  if (searchParams.willLead) {
     filteredInvestors = filteredInvestors.filter(inv => {
-      if (effectiveParams.willLead === 'never') {
+      if (!inv.leadFollow) return true // Include investors with no lead/follow preference
+      if (searchParams.willLead === 'never') {
         return inv.leadFollow === 'follow'
       }
-      if (effectiveParams.willLead === 'usually') {
+      if (searchParams.willLead === 'usually') {
         return inv.leadFollow === 'lead'
       }
-      if (effectiveParams.willLead === 'sometimes') {
+      if (searchParams.willLead === 'sometimes') {
         return inv.leadFollow === 'either' || inv.leadFollow === 'lead'
       }
       return true
@@ -374,6 +413,37 @@ export default async function DiscoverPage({
       if (maxOwnership !== null) return vcMin <= maxOwnership
       return true
     })
+  }
+
+  // SAFETY: If filters are too aggressive and resulted in < 5 investors,
+  // relax the sector filter (keep stage filter which is more important)
+  if (!viewAll && !searchParams.sector && filteredInvestors.length < 5) {
+    // Re-filter from sorted investors with only stage filter
+    filteredInvestors = sortedInvestors
+    
+    // Re-apply stage filter only
+    if (effectiveParams.stage) {
+      const stageMapping: Record<string, string[]> = {
+        'idea': ['pre-seed', 'seed', 'angel'],
+        'mvp': ['pre-seed', 'seed'],
+        'revenue': ['seed', 'series a', 'pre-seed'],
+        'pre-seed': ['pre-seed', 'seed', 'angel'],
+        'seed': ['seed', 'pre-seed', 'series a'],
+        'seriesa': ['series a', 'seed', 'series b'],
+        'series a': ['series a', 'seed', 'series b'],
+        'seriesb': ['series b', 'series a', 'growth'],
+        'series b': ['series b', 'series a', 'growth'],
+        'growth': ['growth', 'series b', 'series c'],
+      }
+      const founderStage = String(effectiveParams.stage).toLowerCase().replace(/\s+/g, '')
+      const matchStages = stageMapping[founderStage] || stageMapping[String(effectiveParams.stage).toLowerCase()] || [String(effectiveParams.stage).toLowerCase()]
+      
+      filteredInvestors = filteredInvestors.filter(inv => {
+        const stages = parseJSON<string[]>(inv.stages, [])
+        if (stages.length === 0) return true
+        return stages.some(s => matchStages.some(ms => s.toLowerCase().includes(ms)))
+      })
+    }
   }
 
   // Gender-based filtering for diversity-focused VCs

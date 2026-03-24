@@ -23,43 +23,40 @@ interface InvestorProfileModalProps {
   isOpen: boolean
   onClose: () => void
   profileComplete: boolean
+  isBookmarked?: boolean
+  onBookmarkChange?: (investorId: string, isBookmarked: boolean) => void
 }
 
 export function InvestorProfileModal({ 
   investor, 
   isOpen, 
   onClose, 
-  profileComplete 
+  profileComplete,
+  isBookmarked: isBookmarkedProp = false,
+  onBookmarkChange
 }: InvestorProfileModalProps) {
   const [mounted, setMounted] = useState(false)
-  const [isBookmarked, setIsBookmarked] = useState(false)
+  const [isBookmarked, setIsBookmarked] = useState(isBookmarkedProp)
 
   useEffect(() => {
     setMounted(true)
   }, [])
 
+  // Sync with parent prop
+  useEffect(() => {
+    setIsBookmarked(isBookmarkedProp)
+  }, [isBookmarkedProp])
+
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden'
-      
-      // Check bookmark status
-      if (investor?.id) {
-        fetch(`/api/bookmarks?investorId=${investor.id}`, { credentials: 'include' })
-          .then(res => res.json())
-          .then(data => {
-            if (data.bookmarks) {
-              setIsBookmarked(data.bookmarks.some((b: any) => b.investor.id === investor.id))
-            }
-          })
-          .catch(() => {})
-      }
     } else {
       document.body.style.overflow = 'unset'
     }
     return () => {
       document.body.style.overflow = 'unset'
     }
-  }, [isOpen, investor?.id])
+  }, [isOpen])
 
   if (!mounted || !isOpen || !investor) return null
 
@@ -140,6 +137,9 @@ export function InvestorProfileModal({
 
       const data = await response.json()
       setIsBookmarked(data.bookmarked)
+      if (onBookmarkChange) {
+        onBookmarkChange(investor.id, data.bookmarked)
+      }
       toast.success(data.bookmarked ? 'Bookmarked!' : 'Bookmark removed')
     } catch (error) {
       toast.error('Failed to update bookmark')

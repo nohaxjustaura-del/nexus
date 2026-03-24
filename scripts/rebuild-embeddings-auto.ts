@@ -3,8 +3,8 @@
 /**
  * AUTOMATED EMBEDDINGS REBUILD
  * 
- * Regenerates embeddings for all investors for semantic search
- * Called automatically by background worker
+ * Regenerates embeddings for all investors for semantic search (Voyage AI voyage-3).
+ * Called automatically by background worker. Uses same lib/embeddings.ts as FAISS rebuild.
  */
 
 import { db } from '../lib/db'
@@ -28,9 +28,18 @@ async function generateEmbeddings(): Promise<number> {
   return new Promise((resolve, reject) => {
     const scriptPath = path.join(__dirname, 'generate-vc-embeddings.ts')
     
+    // Use shell: true for Windows compatibility (finds npx.cmd)
+    // Add Node.js to PATH if not already there
+    const nodePath = process.platform === 'win32' ? 'C:\\Program Files\\nodejs' : ''
+    const envPath = nodePath && !process.env.PATH?.includes(nodePath) 
+      ? `${process.env.PATH};${nodePath}` 
+      : process.env.PATH
+    
     const child = spawn('npx', ['tsx', scriptPath], {
       cwd: path.join(__dirname, '..'),
       stdio: 'inherit',
+      shell: true,
+      env: { ...process.env, PATH: envPath },
     })
     
     child.on('exit', (code) => {
@@ -48,17 +57,25 @@ async function generateEmbeddings(): Promise<number> {
 }
 
 /**
- * Build FAISS index from embeddings
+ * Build FAISS index from DB embeddings (uses rebuild-faiss-index.ts which
+ * reads directly from the database, keeping FAISS in sync with stored data)
  */
 async function buildFAISSIndex(): Promise<void> {
-  logger.info('EMBEDDINGS', '🔧 Building FAISS index...')
+  logger.info('EMBEDDINGS', '🔧 Building FAISS index from database...')
   
   return new Promise((resolve, reject) => {
-    const scriptPath = path.join(__dirname, 'rebuild-faiss-fast.ts')
+    const scriptPath = path.join(__dirname, 'rebuild-faiss-index.ts')
+    
+    const nodePath = process.platform === 'win32' ? 'C:\\Program Files\\nodejs' : ''
+    const envPath = nodePath && !process.env.PATH?.includes(nodePath) 
+      ? `${process.env.PATH};${nodePath}` 
+      : process.env.PATH
     
     const child = spawn('npx', ['tsx', scriptPath], {
       cwd: path.join(__dirname, '..'),
       stdio: 'inherit',
+      shell: true,
+      env: { ...process.env, PATH: envPath },
     })
     
     child.on('exit', (code) => {

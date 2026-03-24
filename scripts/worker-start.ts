@@ -6,7 +6,7 @@
  * Starts the automated background worker for real-time data updates
  */
 
-import { startWorker } from '../lib/background-worker'
+import { startWorker, gracefulShutdown } from '../lib/background-worker'
 import { logger } from '../lib/logger'
 
 async function main() {
@@ -19,17 +19,6 @@ async function main() {
   
   logger.info('SCRIPT', '✅ Worker started successfully')
   logger.info('SCRIPT', '💡 Press Ctrl+C to stop the worker')
-  
-  // Keep process alive
-  process.on('SIGTERM', () => {
-    logger.info('SCRIPT', '📥 Received SIGTERM, shutting down...')
-    process.exit(0)
-  })
-  
-  process.on('SIGINT', () => {
-    logger.info('SCRIPT', '📥 Received SIGINT, shutting down...')
-    process.exit(0)
-  })
 }
 
 main().catch((error) => {

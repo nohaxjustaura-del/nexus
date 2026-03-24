@@ -35,12 +35,24 @@ interface DiscoverClientProps {
 
 export default function DiscoverClient({ investors, profileComplete }: DiscoverClientProps) {
   const [mounted, setMounted] = useState(false)
+  const [bookmarkedIds, setBookmarkedIds] = useState<Set<string>>(new Set())
   
   // Ensure investors is always an array
   const safeInvestors = Array.isArray(investors) ? investors : []
 
   useEffect(() => {
     setMounted(true)
+    
+    // Fetch all bookmarks once
+    fetch('/api/bookmarks', { credentials: 'include' })
+      .then(res => res.json())
+      .then(data => {
+        if (data.bookmarks) {
+          const ids = new Set(data.bookmarks.map((b: any) => b.investor.id))
+          setBookmarkedIds(ids)
+        }
+      })
+      .catch(() => {})
   }, [])
 
   if (!mounted) {
@@ -87,7 +99,19 @@ export default function DiscoverClient({ investors, profileComplete }: DiscoverC
       {safeInvestors.length > 0 ? (
         <VCCardsGrid 
           investors={safeInvestors} 
-          profileComplete={profileComplete} 
+          profileComplete={profileComplete}
+          bookmarkedIds={bookmarkedIds}
+          onBookmarkChange={(investorId: string, isBookmarked: boolean) => {
+            setBookmarkedIds(prev => {
+              const next = new Set(prev)
+              if (isBookmarked) {
+                next.add(investorId)
+              } else {
+                next.delete(investorId)
+              }
+              return next
+            })
+          }}
         />
       ) : (
         <div className="text-center py-12 text-slate-600">

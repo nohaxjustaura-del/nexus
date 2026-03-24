@@ -29,9 +29,11 @@ interface Investor {
 interface VCCardsGridProps {
   investors: Investor[]
   profileComplete: boolean
+  bookmarkedIds?: Set<string>
+  onBookmarkChange?: (investorId: string, isBookmarked: boolean) => void
 }
 
-function VCCardsGrid({ investors, profileComplete }: VCCardsGridProps) {
+function VCCardsGrid({ investors, profileComplete, bookmarkedIds, onBookmarkChange }: VCCardsGridProps) {
   // Guard against invalid investors array
   if (!investors || !Array.isArray(investors)) {
     return null
@@ -244,6 +246,8 @@ function VCCardsGrid({ investors, profileComplete }: VCCardsGridProps) {
               description={truncatedDescription || fullDescription || 'No description available.'}
               fullDescription={fullDescription || truncatedDescription || 'No description available.'}
               applicationLink={applicationLink}
+              isBookmarked={bookmarkedIds?.has(investor.id) || false}
+              onBookmarkChange={onBookmarkChange}
             />
           )
         } catch (error) {

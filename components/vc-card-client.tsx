@@ -17,6 +17,8 @@ interface VCCardClientProps {
   description: string
   fullDescription: string
   applicationLink: string | null
+  isBookmarked?: boolean
+  onBookmarkChange?: (investorId: string, isBookmarked: boolean) => void
 }
 
 export function VCCardClient({ 
@@ -25,24 +27,17 @@ export function VCCardClient({
   isYC, 
   description, 
   fullDescription,
-  applicationLink 
+  applicationLink,
+  isBookmarked: isBookmarkedProp,
+  onBookmarkChange
 }: VCCardClientProps) {
   const [isModalOpen, setIsModalOpen] = useState(false)
-  const [isBookmarked, setIsBookmarked] = useState(false)
+  const [isBookmarked, setIsBookmarked] = useState(isBookmarkedProp || false)
 
-  // Check if bookmarked
+  // Update local state when prop changes
   useEffect(() => {
-    if (investor?.id) {
-      fetch(`/api/bookmarks?investorId=${investor.id}`, { credentials: 'include' })
-        .then(res => res.json())
-        .then(data => {
-          if (data.bookmarks) {
-            setIsBookmarked(data.bookmarks.some((b: any) => b.investor.id === investor.id))
-          }
-        })
-        .catch(() => {})
-    }
-  }, [investor?.id])
+    setIsBookmarked(isBookmarkedProp || false)
+  }, [isBookmarkedProp])
 
   const handleBookmark = async (e: React.MouseEvent) => {
     e.stopPropagation()
@@ -55,8 +50,15 @@ export function VCCardClient({
       })
 
       const data = await response.json()
-      setIsBookmarked(data.bookmarked)
-      toast.success(data.bookmarked ? 'Bookmarked!' : 'Bookmark removed')
+      const newBookmarkState = data.bookmarked
+      setIsBookmarked(newBookmarkState)
+      
+      // Notify parent component
+      if (onBookmarkChange) {
+        onBookmarkChange(investor.id, newBookmarkState)
+      }
+      
+      toast.success(newBookmarkState ? 'Bookmarked!' : 'Bookmark removed')
     } catch (error) {
       toast.error('Failed to update bookmark')
     }
@@ -338,6 +340,13 @@ export function VCCardClient({
           isOpen={isModalOpen}
           onClose={() => setIsModalOpen(false)}
           profileComplete={profileComplete}
+          isBookmarked={isBookmarked}
+          onBookmarkChange={(investorId: string, newState: boolean) => {
+            setIsBookmarked(newState)
+            if (onBookmarkChange) {
+              onBookmarkChange(investorId, newState)
+            }
+          }}
         />
       )}
     </>

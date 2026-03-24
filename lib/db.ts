@@ -5,42 +5,14 @@ const globalForPrisma = globalThis as unknown as {
 }
 
 // Optimize Prisma for SQLite performance
+// Only log errors to reduce terminal noise (set DEBUG_DB=true for verbose logging)
 export const db = globalForPrisma.prisma ?? new PrismaClient({
-  log: process.env.NODE_ENV === 'development' ? ['error', 'warn', 'query'] : ['error'],
+  log: process.env.DEBUG_DB === 'true' 
+    ? ['error', 'warn', 'query'] 
+    : ['error'],
 })
 
 if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = db
-
-// Add logging wrapper for database operations (only in development)
-if (process.env.NODE_ENV === 'development') {
-  const originalInvestorFindMany = db.investor.findMany.bind(db.investor)
-  // @ts-ignore - Overriding Prisma method for logging
-  db.investor.findMany = async function(...args: Parameters<typeof originalInvestorFindMany>) {
-    try {
-      console.log('[DB] investor.findMany called')
-      const result = await originalInvestorFindMany(...args)
-      console.log(`[DB] investor.findMany success: ${result.length} results`)
-      return result
-    } catch (error: unknown) {
-      console.error('[DB] investor.findMany error:', error instanceof Error ? error.message : error)
-      throw error
-    }
-  }
-
-  const originalFounderFindUnique = db.founder.findUnique.bind(db.founder)
-  // @ts-ignore - Overriding Prisma method for logging
-  db.founder.findUnique = async function(...args: Parameters<typeof originalFounderFindUnique>) {
-    try {
-      console.log('[DB] founder.findUnique called')
-      const result = await originalFounderFindUnique(...args)
-      console.log(`[DB] founder.findUnique success: ${result ? 'found' : 'not found'}`)
-      return result
-    } catch (error: unknown) {
-      console.error('[DB] founder.findUnique error:', error instanceof Error ? error.message : error)
-      throw error
-    }
-  }
-}
 
 // Optimize SQLite connection for better performance (run once on startup)
 // Wrapped in try-catch to prevent errors during initialization

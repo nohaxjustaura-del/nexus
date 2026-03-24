@@ -399,7 +399,14 @@ export async function intelligentMatchVCs(
       users: founderData.users,
       growthRate: founderData.growthRate,
       teamSize: founderData.teamSize || 1,
-      skills: features.skills || [],
+      skills: Array.isArray(features.skills)
+        ? features.skills
+        : [
+            ...(features.skills?.programming || []),
+            ...(features.skills?.ml || []),
+            ...(features.skills?.gtm || []),
+            ...(features.skills?.domain || []),
+          ],
       background: features.experiences?.[0] || '',
     })
   } catch (error) {
@@ -407,6 +414,15 @@ export async function intelligentMatchVCs(
     ycTrendsResult = { insights: [], scoreAdjustment: 0, hotSectorMatches: [], emergingPatternMatches: [] }
   }
 
+  // 🆕 DEMOGRAPHIC FILTERING: Extract founder demographics
+  const founderGender = founderData.gender?.toLowerCase() || ''
+  const founderIsStudent = founderData.isStudent || context.isStudent || false
+  const founderUniversity = founderData.education || founderData.universityAffiliation || ''
+  const founderIsUnderrepresented = founderData.isUnderrepresented || founderData.isImmigrant || false
+  const founderIsWoman = founderGender === 'female' || founderGender === 'woman'
+  const founderIsNonBinary = founderGender === 'non-binary'
+  const founderIsMale = founderGender === 'male' || founderGender === 'man'
+  
   // Calculate matches for all investors with EVIDENCE
   let matches = investors.map(investor => {
     const baseMatch = calculateBaseMatch(founderData, investor)
@@ -427,6 +443,67 @@ export async function intelligentMatchVCs(
       weaknesses: [] as string[],
       investor,
     }
+  })
+  
+  // 🆕 DEMOGRAPHIC FILTERING: Remove incompatible VCs based on hard requirements
+  matches = matches.filter(match => {
+    const firmName = match.investor.firmName.toLowerCase()
+    const ethicsTags = parseJSON<string[]>(match.investor.ethicsTags, []).map(t => t.toLowerCase())
+    const thesis = (match.investor.thesis || '').toLowerCase()
+    const bio = (match.investor.bio || '').toLowerCase()
+    
+    // Check for women-only funds
+    const isWomenOnly = 
+      firmName.includes('female founders fund') ||
+      firmName.includes('bbg ventures') ||
+      firmName.includes('backstage capital') || // Women/POC/LGBTQ+ only
+      firmName.includes('fearless fund') || // Women of color only
+      firmName.includes('cartier women') ||
+      firmName.includes('tory burch') ||
+      firmName.includes('xfactor ventures') ||
+      ethicsTags.some(tag => tag.includes('women-led') || tag.includes('female founders')) ||
+      thesis.includes('women-led') || thesis.includes('female founder') ||
+      bio.includes('investing only in') && bio.includes('women')
+    
+    if (isWomenOnly && founderIsMale) {
+      return false // Filter out women-only funds for male founders
+    }
+    
+    // Check for student-only funds
+    const isStudentOnly = 
+      firmName.includes('dorm room fund') ||
+      firmName.includes('rough draft ventures') ||
+      firmName.includes('rice business plan') ||
+      firmName.includes('hillside ventures') ||
+      ethicsTags.some(tag => tag.includes('student founders') || tag.includes('student only')) ||
+      thesis.includes('student founders only') ||
+      bio.includes('student founders') && bio.includes('only')
+    
+    if (isStudentOnly && !founderIsStudent) {
+      return false // Filter out student-only funds for non-students
+    }
+    
+    // Check for university-specific funds
+    const universitySpecificFunds: Record<string, string[]> = {
+      'stanford': ['startx', 'stanford', 'cardinal ventures'],
+      'berkeley': ['house fund', 'skydeck', 'berkeley'],
+      'harvard': ['harvard innovation', 'hbs'],
+      'mit': ['mit sandbox', 'e14 fund'],
+      'yale': ['yale ventures'],
+      'princeton': ['princeton innovation'],
+    }
+    
+    for (const [uni, fundNames] of Object.entries(universitySpecificFunds)) {
+      const isUniversityFund = fundNames.some(name => firmName.includes(name))
+      if (isUniversityFund && !founderUniversity.toLowerCase().includes(uni)) {
+        // Check if fund explicitly requires affiliation
+        if (bio.includes('-only') || bio.includes('exclusively') || thesis.includes('alumni only')) {
+          return false // Filter out university-specific funds for non-alumni
+        }
+      }
+    }
+    
+    return true // Keep all other VCs
   })
 
   // Apply intelligent boosting based on resume analysis
@@ -531,24 +608,74 @@ export async function intelligentMatchVCs(
       'Backstage Capital', 'Harlem Capital', 'Kapor Capital', 'Female Founders Fund',
       'BBG Ventures', 'Chingona Ventures', 'The Artemis Fund', 'Gaingels',
       'Visible Hands', 'Black Ambition', 'Morgan Stanley Inclusive', 'AWS Impact',
-      'Cartier Women'
+      'Cartier Women', 'XFactor Ventures', 'Tory Burch', 'Fearless Fund'
     ]
     const isDiversityVC = diversityVCs.some(vc => firmName.includes(vc))
     
-    // Check if founder is underrepresented (from founderData or gender)
-    const gender = founderData.gender?.toLowerCase()
+    // 🆕 ENHANCED: Use proper founder demographics from onboarding
+    const gender = founderGender
     const isImmigrant = founderData.isImmigrant || founderData.needsImmigrationSupport
-    const isUnderrepresented = founderData.isUnderrepresented || 
-      founderData.gender === 'female' || 
-      founderData.gender === 'non-binary' ||
-      (gender === 'female' || gender === 'non-binary') ||
-      founderData.isImmigrant ||
-      founderData.ethnicity ||
-      (founderData.gender && founderData.gender !== 'male')
+    const isUnderrepresented = founderIsUnderrepresented || 
+      founderIsWoman || 
+      founderIsNonBinary ||
+      isImmigrant ||
+      founderData.ethnicity
     
+    // WOMEN-FOCUSED VCs: Strong boost for women founders
+    if (founderIsWoman) {
+      const womenFocusedVCs = [
+        'Female Founders Fund', 'BBG Ventures', 'XFactor Ventures', 
+        'Cartier Women', 'Tory Burch', 'Fearless Fund', 'Backstage Capital',
+        'Chingona Ventures'
+      ]
+      if (womenFocusedVCs.some(vc => firmName.includes(vc))) {
+        boost += 35
+        match.reasons.push('👩‍💼 PERFECT MATCH: Women-focused investor - strong alignment with your background')
+        match.confidence = Math.min(95, match.confidence + 15)
+      }
+    }
+    
+    // UNDERREPRESENTED FOUNDERS: Boost diversity-focused VCs
     if (isUnderrepresented && isDiversityVC) {
-      boost += 20
-      match.reasons.push('🌈 Diversity-focused investor - perfect match for your background')
+      boost += 25
+      match.reasons.push('🌈 Diversity-focused investor - strong support for underrepresented founders')
+      match.confidence = Math.min(92, match.confidence + 10)
+    }
+    
+    // UNIVERSITY-SPECIFIC BOOSTS
+    if (founderUniversity) {
+      const uniLower = founderUniversity.toLowerCase()
+      
+      if (uniLower.includes('stanford') && (firmName.includes('StartX') || firmName.includes('Cardinal'))) {
+        boost += 40
+        match.reasons.push('🎓 STANFORD MATCH: Stanford-specific investor - perfect fit for Stanford founders')
+        match.confidence = 95
+      }
+      
+      if (uniLower.includes('berkeley') || uniLower.includes('cal')) {
+        if (firmName.includes('SkyDeck')) {
+          boost += 40
+          match.reasons.push('🎓 BERKELEY MATCH: SkyDeck accelerator for Cal founders')
+          match.confidence = 95
+        }
+        if (firmName.includes('House Fund')) {
+          boost += 40
+          match.reasons.push('🎓 BERKELEY MATCH: The House Fund exclusively backs Cal founders')
+          match.confidence = 95
+        }
+      }
+      
+      if (uniLower.includes('harvard') && firmName.includes('Harvard')) {
+        boost += 35
+        match.reasons.push('🎓 HARVARD MATCH: Harvard-affiliated investor')
+        match.confidence = 92
+      }
+      
+      if (uniLower.includes('mit') && (firmName.includes('MIT') || firmName.includes('E14'))) {
+        boost += 35
+        match.reasons.push('🎓 MIT MATCH: MIT-affiliated investor')
+        match.confidence = 92
+      }
     }
     
     // Boost immigrant-focused VCs

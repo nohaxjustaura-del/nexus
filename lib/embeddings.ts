@@ -1,26 +1,46 @@
 /**
  * Embedding utilities for semantic matching between pitches and VCs
- * Uses Google Gemini's embedding API (text-embedding-004)
+ * Uses Voyage AI embedding API (voyage-3)
+ *
+ * voyage-3: 1024 dimensions, 200M free tokens for new accounts.
+ * Rate limits: 3 RPM, 10K TPM — callers must respect these.
+ * API: POST https://api.voyageai.com/v1/embeddings
  */
 
-import { GoogleGenerativeAI } from '@google/generative-ai'
+const EMBEDDING_MODEL = 'voyage-3'
+const EMBEDDING_DIMENSIONS = 1024
 
-// Gemini embedding model
-const EMBEDDING_MODEL = 'text-embedding-004' // Latest Gemini embedding model
-const EMBEDDING_DIMENSIONS = 768 // Gemini's embedding dimension
-
-// Lazy-load Gemini client
-let geminiClient: GoogleGenerativeAI | null = null
-
-function getGeminiClient(): GoogleGenerativeAI {
-  if (!geminiClient) {
-    const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY
-    if (!apiKey) {
-      throw new Error('GEMINI_API_KEY or GOOGLE_API_KEY is required for Smart Match')
-    }
-    geminiClient = new GoogleGenerativeAI(apiKey)
+function getApiKey(): string {
+  const apiKey = process.env.VOYAGE_API_KEY
+  if (!apiKey) {
+    throw new Error('VOYAGE_API_KEY is required for Smart Match embeddings. Get one at https://dash.voyageai.com/')
   }
-  return geminiClient
+  return apiKey
+}
+
+async function callEmbedAPI(text: string): Promise<number[]> {
+  const apiKey = getApiKey()
+
+  const res = await fetch('https://api.voyageai.com/v1/embeddings', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      input: [text],
+      model: EMBEDDING_MODEL,
+      input_type: 'document',
+    }),
+  })
+
+  if (!res.ok) {
+    const err = await res.text()
+    throw new Error(`Voyage AI embedding error (${res.status}): ${err}`)
+  }
+
+  const data = await res.json()
+  return data.data[0].embedding as number[]
 }
 
 // ============================================================================
@@ -174,16 +194,11 @@ ${safe(pitch.keywords)}`)
 }
 
 /**
- * Generate embedding vector for a pitch using Gemini
+ * Generate embedding vector for a pitch using Voyage AI
  */
 export async function generatePitchEmbedding(pitch: PitchFeatures): Promise<number[]> {
   const embeddingText = buildPitchEmbeddingText(pitch)
-  const client = getGeminiClient()
-  
-  const model = client.getGenerativeModel({ model: EMBEDDING_MODEL })
-  const result = await model.embedContent(embeddingText)
-  
-  return result.embedding.values
+  return callEmbedAPI(embeddingText)
 }
 
 // ============================================================================
@@ -260,16 +275,11 @@ ${vc.notableInvestments.slice(0, 10).join(', ')}`)
 }
 
 /**
- * Generate embedding vector for a VC using Gemini
+ * Generate embedding vector for a VC using Voyage AI
  */
 export async function generateVCEmbedding(vc: VCProfile): Promise<number[]> {
   const embeddingText = buildVCEmbeddingText(vc)
-  const client = getGeminiClient()
-  
-  const model = client.getGenerativeModel({ model: EMBEDDING_MODEL })
-  const result = await model.embedContent(embeddingText)
-  
-  return result.embedding.values
+  return callEmbedAPI(embeddingText)
 }
 
 // ============================================================================
@@ -404,29 +414,53 @@ export async function rankVCsForPitch(
 // ============================================================================
 
 /**
- * Generate embeddings for multiple texts in batch
- * Gemini supports batch requests
+ * Generate embeddings for multiple texts in batch.
+ * Voyage AI rate limits: 3 RPM, 10K TPM. We send batches of 3
+ * with a 60-second pause between batches.
  */
 export async function generateBatchEmbeddings(texts: string[]): Promise<number[][]> {
-  const client = getGeminiClient()
-  const model = client.getGenerativeModel({ model: EMBEDDING_MODEL })
-  
+  const apiKey = getApiKey()
+  const BATCH_SIZE = 3
+  const BATCH_DELAY_MS = 60_000
+
   const embeddings: number[][] = []
-  
-  // Process in batches to avoid rate limits
-  const BATCH_SIZE = 100
+
   for (let i = 0; i < texts.length; i += BATCH_SIZE) {
-    const batch = texts.slice(i, i + BATCH_SIZE)
-    
-    // Process batch sequentially (Gemini doesn't have true batch API yet)
-    for (const text of batch) {
-      const result = await model.embedContent(text)
-      embeddings.push(result.embedding.values)
-      
-      // Small delay to avoid rate limiting
-      await new Promise(resolve => setTimeout(resolve, 100))
+    if (i > 0) {
+      console.log(`[EMBEDDINGS] Rate-limit pause (${BATCH_DELAY_MS / 1000}s) before batch ${Math.floor(i / BATCH_SIZE) + 1}...`)
+      await new Promise(resolve => setTimeout(resolve, BATCH_DELAY_MS))
     }
+
+    const batch = texts.slice(i, i + BATCH_SIZE)
+
+    const res = await fetch('https://api.voyageai.com/v1/embeddings', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        input: batch,
+        model: EMBEDDING_MODEL,
+        input_type: 'document',
+      }),
+    })
+
+    if (!res.ok) {
+      const err = await res.text()
+      throw new Error(`Voyage AI embedding error (${res.status}): ${err}`)
+    }
+
+    const data = await res.json()
+    for (const item of data.data) {
+      embeddings.push(item.embedding as number[])
+    }
+
+    console.log(`[EMBEDDINGS] Batch ${Math.floor(i / BATCH_SIZE) + 1}/${Math.ceil(texts.length / BATCH_SIZE)} done (${embeddings.length}/${texts.length})`)
   }
 
   return embeddings
 }
+
+/** Exported so scripts and other modules can access the configured dimensions */
+export { EMBEDDING_DIMENSIONS }

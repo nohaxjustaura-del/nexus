@@ -48,6 +48,7 @@
     "@types/pdfkit": "^0.17.4",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.0",
+    "exa-js": "^2.7.0",
     "framer-motion": "^11.0.5",
     "jose": "^6.1.1",
     "jsonwebtoken": "^9.0.2",

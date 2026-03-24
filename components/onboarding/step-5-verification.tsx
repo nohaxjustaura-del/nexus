@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { ArrowLeft, Rocket, Loader2 } from "lucide-react"
+import { ArrowLeft, Rocket, Loader2, CheckCircle, Upload } from "lucide-react"
+import { useState } from "react"
 
 interface Step5VerificationProps {
   idFile: File | null
@@ -29,6 +30,8 @@ export function Step5Verification({
   setStep, 
   handleSubmit 
 }: Step5VerificationProps) {
+  const [submitted, setSubmitted] = useState(false)
+
   return (
     <Card>
       <CardHeader>
@@ -43,7 +46,7 @@ export function Step5Verification({
             type="file"
             accept=".png,.jpg,.jpeg,.pdf"
             onChange={(e) => setIdFile(e.target.files && e.target.files[0] ? e.target.files[0] : null)}
-            disabled={idUploading || saving}
+            disabled={idUploading || saving || idUploaded}
           />
           {idUploaded && (
             <p className="text-sm text-green-600">✅ ID uploaded successfully</p>
@@ -52,13 +55,13 @@ export function Step5Verification({
         </div>
 
         <div className="flex gap-2">
-          <Button variant="outline" onClick={() => setStep(4)} className="flex-1 gap-2" disabled={idUploading || saving}>
+          <Button variant="outline" onClick={() => setStep(4)} className="flex-1 gap-2" disabled={idUploading || saving || submitted}>
             <ArrowLeft className="h-4 w-4" />
             Back
           </Button>
           <Button
-            className="flex-1"
-            disabled={!idFile || idUploading}
+            className={`flex-1 ${idUploaded ? 'bg-green-600 hover:bg-green-600' : ''}`}
+            disabled={!idFile || idUploading || idUploaded}
             onClick={async () => {
               if (!idFile) return
               setIdUploading(true)
@@ -85,8 +88,16 @@ export function Step5Verification({
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 Uploading...
               </>
+            ) : idUploaded ? (
+              <>
+                <CheckCircle className="mr-2 h-4 w-4" />
+                ID Uploaded
+              </>
             ) : (
-              'Upload ID'
+              <>
+                <Upload className="mr-2 h-4 w-4" />
+                Upload ID
+              </>
             )}
           </Button>
         </div>
@@ -98,16 +109,26 @@ export function Step5Verification({
                 alert('Please upload your ID before continuing.')
                 return
               }
-              await handleSubmit()
+              try {
+                await handleSubmit()
+                setSubmitted(true)
+              } catch (e) {
+                // Error handled in handleSubmit
+              }
             }} 
-            className="w-full" 
+            className={`w-full ${submitted ? 'bg-green-600 hover:bg-green-600' : ''}`}
             size="lg"
-            disabled={saving || !idUploaded}
+            disabled={saving || !idUploaded || submitted}
           >
             {saving ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Saving...
+                Submitting...
+              </>
+            ) : submitted ? (
+              <>
+                <CheckCircle className="mr-2 h-4 w-4" />
+                Application Submitted!
               </>
             ) : (
               <>
@@ -121,5 +142,3 @@ export function Step5Verification({
     </Card>
   )
 }
-
-

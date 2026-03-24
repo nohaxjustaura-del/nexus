@@ -34,9 +34,8 @@ export function getOpenRouterClient(): OpenAI | null {
 export function getModelName(model: string = 'gpt-4o'): string {
   // If using OpenRouter, prioritize FREE models
   if (process.env.OPENROUTER_API_KEY) {
-    // Default to free DeepSeek for gpt-4o requests (excellent quality, 100% free)
     if (model === 'gpt-4o') {
-      return 'deepseek/deepseek-chat' // FREE and fast!
+      return 'openai/gpt-4o-mini'
     }
     
     // Prioritize Gemini free tier if GEMINI_API_KEY is set
@@ -46,9 +45,8 @@ export function getModelName(model: string = 'gpt-4o'): string {
       }
     }
     
-    // For specific models, add provider prefix if not present
     if (!model.includes('/')) {
-      return `deepseek/${model}` // Default to DeepSeek
+      return 'openai/gpt-4o-mini'
     }
     return model
   }

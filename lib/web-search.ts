@@ -102,9 +102,10 @@ export async function searchWeb(
  * Search for VC/founder information with real-time data
  */
 export async function searchVCInfo(firmName: string, additionalContext?: string): Promise<WebSearchResponse> {
+  const year = new Date().getFullYear()
   const query = additionalContext
     ? `${firmName} ${additionalContext} investment thesis recent deals portfolio`
-    : `${firmName} VC investment thesis recent deals portfolio 2024 2025`
+    : `${firmName} VC investment thesis recent deals portfolio ${year - 1} ${year}`
 
   return searchWeb(query, 5, 'advanced')
 }
@@ -124,7 +125,8 @@ export async function searchFounderInfo(
   if (sector) {
     query += ` ${sector} startup founder`
   }
-  query += ' background experience achievements 2024 2025'
+  const year = new Date().getFullYear()
+  query += ` background experience achievements ${year - 1} ${year}`
 
   return searchWeb(query, 5, 'advanced')
 }
@@ -133,7 +135,8 @@ export async function searchFounderInfo(
  * Search for sector/trend information
  */
 export async function searchSectorTrends(sector: string): Promise<WebSearchResponse> {
-  const query = `${sector} startup trends market analysis 2024 2025 VC investment`
+  const year = new Date().getFullYear()
+  const query = `${sector} startup trends market analysis ${year - 1} ${year} VC investment`
   return searchWeb(query, 5, 'advanced')
 }
 

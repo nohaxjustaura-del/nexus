@@ -10,6 +10,9 @@ import { generatePitchEmbedding, rankVCsForPitch } from '@/lib/embeddings'
 import { parseJSON } from '@/lib/utils'
 import { logger } from '@/lib/logger'
 import { rateLimitMiddleware, RATE_LIMITS } from '@/lib/rate-limit'
+import { saveFileToDisk, buildFounderSnapshot } from '@/lib/file-storage'
+import { getDeepMarketContext } from '@/lib/market-intelligence'
+import { runUniversalAnalysis, type FounderDossier } from '@/lib/universal-analysis-engine'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -206,6 +209,7 @@ export async function POST(request: NextRequest) {
     // Transcribe video using Deepgram or OpenAI Whisper
     let transcript: string
     let transcriptText: string
+    let savedFilePath = '' // Path to the saved video file on disk
     
     try {
       logger.log('[ANALYZE-VIDEO-PITCH] Starting video transcription...')
@@ -215,6 +219,14 @@ export async function POST(request: NextRequest) {
       const arrayBuffer = await file.arrayBuffer()
       const buffer = Buffer.from(arrayBuffer)
       logger.log('[ANALYZE-VIDEO-PITCH] Buffer size:', buffer.length)
+
+      // Save video file to local disk for training data
+      try {
+        savedFilePath = await saveFileToDisk(buffer, 'videos', founder.id, file.name)
+        logger.log(`[ANALYZE-VIDEO-PITCH] File saved to: ${savedFilePath}`)
+      } catch (saveErr: any) {
+        logger.error('[ANALYZE-VIDEO-PITCH] Failed to save file to disk (non-critical):', saveErr.message)
+      }
       
       // Try Deepgram first (if key available), then fall back to OpenAI Whisper
       const deepgramKey = process.env.DEEPGRAM_API_KEY
@@ -438,11 +450,12 @@ export async function POST(request: NextRequest) {
     // AI Analysis (existing flow) - now uses ALL founder profile data
     let pitchAnalysis: any
     let enhancedFounder: any = founder // Default to founder, will be enhanced below
+    let founderContext: any = null
     
     try {
       // Get comprehensive founder context for analysis
       const { getComprehensiveFounderContext } = await import('@/lib/founder-context')
-      const founderContext = await getComprehensiveFounderContext(founder.email)
+      founderContext = await getComprehensiveFounderContext(founder.email)
       
       // Enhance founder object with all context data
       enhancedFounder = {
@@ -665,22 +678,70 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // -----------------------------------------------------------------------
+    // UNIVERSAL ANALYSIS ENGINE — rubric scoring with Exa market intelligence
+    // -----------------------------------------------------------------------
+    let rubricAnalysis: any = null
+    try {
+      const sectors = parseJSON<string[]>(founder.sectors || '[]', [])
+      const domain = sectors[0] || pitchAnalysis?.sectorFit?.primarySector || 'technology'
+      const problem = pitchAnalysis?.problemStatement || pitchAnalysis?.oneLineSummary || founder.bio?.substring(0, 300) || ''
+
+      logger.log('[ANALYZE-VIDEO-PITCH] Running Market Intelligence + Universal Analysis Engine...')
+
+      const marketContext = await getDeepMarketContext(domain, problem)
+
+      const dossier: FounderDossier = {
+        startup: founder.startupName || 'Unknown',
+        stage: founder.stage || 'seed',
+        sectors,
+        location: founder.location || founderContext?.location,
+        businessModel: founder.businessModel || pitchAnalysis?.businessModel,
+        summary: pitchAnalysis?.oneLineSummary || founder.bio?.substring(0, 1000) || '',
+        transcript: transcriptText?.substring(0, 1500),
+        education: founder.education || founderContext?.education,
+        university: founderContext?.universityAffiliation,
+        isStudent: founderContext?.isStudent,
+        techBackground: founderContext?.techBackground,
+        isImmigrant: founderContext?.isImmigrant,
+        isVeteran: founderContext?.isVeteran,
+        isUnderrepresented: founderContext?.isUnderrepresented,
+        cofounders: founderContext?.cofounders,
+        prevFunding: founderContext?.prevFunding,
+        revenue: founder.revenue || pitchAnalysis?.tractionMetrics?.revenue,
+        users: founder.users || pitchAnalysis?.tractionMetrics?.users,
+        growth: founder.growthRate || pitchAnalysis?.tractionMetrics?.growth,
+        mrr: pitchAnalysis?.tractionMetrics?.mrr,
+        teamSize: founder.teamSize || founderContext?.teamSize,
+        fundingNeed: founder.fundingNeed || founderContext?.fundingNeed,
+        valueAddNeeds: parseJSON<string[]>(founder.valueAddNeeds || '[]', []),
+      }
+
+      rubricAnalysis = await runUniversalAnalysis(dossier, 'VIDEO', marketContext)
+      logger.log('[ANALYZE-VIDEO-PITCH] Universal Analysis Engine completed successfully')
+    } catch (rubricError: any) {
+      logger.error('[ANALYZE-VIDEO-PITCH] Universal Analysis Engine failed (non-critical):', rubricError?.message)
+    }
+
     // Save video pitch analysis
     // Store all analysis data in the analysisResult JSON field
     const videoPitch = await (db as any).videoPitch.create({
       data: {
         founderId: founder.id,
         fileName: file.name,
-        fileUrl: '', // In production, upload to S3/storage and save URL
+        fileUrl: savedFilePath || '', // Local disk path to the saved video file
         fileType: file.type.split('/')[1] || 'mp4',
         fileSize: file.size,
         transcript: transcript,
         transcriptText: transcriptText.substring(0, 50000), // Limit text storage
+        founderSnapshot: JSON.stringify(buildFounderSnapshot(founder)),
         analysisResult: JSON.stringify({
           features: pitchAnalysis,
           strengths: pitchAnalysis.strengths || [],
           weaknesses: pitchAnalysis.weaknesses || [],
           improvements: pitchAnalysis.improvements || [],
+          positiveFeedback: pitchAnalysis.positiveFeedback || [],
+          negativeFeedback: pitchAnalysis.negativeFeedback || [],
           sectorFit: pitchAnalysis.sectorFit || {},
           tractionMetrics: pitchAnalysis.tractionMetrics || {},
           marketAnalysis: pitchAnalysis.marketAnalysis || {},
@@ -689,21 +750,51 @@ export async function POST(request: NextRequest) {
           presentationScore: pitchAnalysis.presentationScore || null,
           contentScore: pitchAnalysis.contentScore || null,
           overallScore: pitchAnalysis.overallScore || null,
+          // Save as both "matches" (for matches page) and "matchedVCs" (legacy)
+          matches: matchedVCs.slice(0, 20).map(m => ({
+            investorId: m.investor.id,
+            investor: {
+              id: m.investor.id,
+              firmName: m.investor.firmName,
+              name: m.investor.name,
+              fundType: m.investor.fundType,
+              stages: parseJSON<string[]>(m.investor.stages || '[]', []),
+              sectors: parseJSON<string[]>(m.investor.sectors || '[]', []),
+              checkMin: m.investor.checkMin || m.investor.checkSizeMin,
+              checkMax: m.investor.checkMax || m.investor.checkSizeMax,
+              thesis: m.investor.thesis,
+              applicationUrl: m.investor.applicationUrl,
+              websiteUrl: m.investor.websiteUrl,
+              valueAddTags: parseJSON<string[]>(m.investor.valueAddTags || '[]', []),
+            },
+            score: Math.round(m.combinedScore || m.score || 0),
+            confidence: m.confidence || 85,
+            reasons: m.reasons || [],
+            suggestions: m.suggestions || [],
+            whyApply: m.whyApply,
+            bestApproach: m.bestApproach,
+            timing: m.timing,
+            livePulse: m.livePulse ? { summary: m.livePulse.summary, signalStrength: m.livePulse.signalStrength ?? 0 } : null,
+          })),
           matchedVCs: matchedVCs.slice(0, 10).map(m => ({
             investorId: m.investor.id,
-            score: m.score,
+            firmName: m.investor.firmName,
+            score: Math.round(m.combinedScore || m.score || 0),
             reasons: m.reasons,
             whyApply: m.whyApply,
             bestApproach: m.bestApproach,
             timing: m.timing,
+            livePulse: m.livePulse ? { summary: m.livePulse.summary, signalStrength: m.livePulse.signalStrength ?? 0 } : null,
           })),
           topVCRecommendations: matchedVCs.slice(0, 5).map(m => ({
             investorId: m.investor.id,
             firmName: m.investor.firmName,
+            score: Math.round(m.combinedScore || m.score || 0),
             whyApply: m.whyApply,
             bestApproach: m.bestApproach,
             timing: m.timing,
-            priority: m.score >= 85 ? 'high' : m.score >= 70 ? 'medium' : 'low',
+            priority: (m.combinedScore || m.score || 0) >= 85 ? 'high' : (m.combinedScore || m.score || 0) >= 70 ? 'medium' : 'low',
+            livePulse: m.livePulse ? { summary: m.livePulse.summary, signalStrength: m.livePulse.signalStrength ?? 0 } : null,
           })),
         }),
         smartMatchResults: JSON.stringify(matchedVCs.slice(0, 10)),
@@ -741,13 +832,16 @@ export async function POST(request: NextRequest) {
         strengths: pitchAnalysis.strengths || [],
         weaknesses: pitchAnalysis.weaknesses || [],
         improvements: pitchAnalysis.improvements || [],
+        // 🆕 Detailed positive and negative feedback with categories
+        positiveFeedback: pitchAnalysis.positiveFeedback || [],
+        negativeFeedback: pitchAnalysis.negativeFeedback || [],
         matchedVCs: matchedVCs.slice(0, 20).map(m => ({
           investorId: m.investor.id,
           firmName: m.investor.firmName,
           score: m.combinedScore || m.score || 0,
           intelligentScore: m.intelligentScore || m.score || 0,
           vectorSimilarity: m.vectorSimilarity || 0,
-          similarity: m.vectorSimilarity || 0, // Vector similarity (0-1)
+          similarity: m.vectorSimilarity || 0,
           reasons: m.reasons || [],
           whyApply: m.whyApply || '',
           bestApproach: m.bestApproach || '',
@@ -756,7 +850,13 @@ export async function POST(request: NextRequest) {
           scoreBreakdown: m.scoreBreakdown || null,
           scoreSymbol: m.scoreSymbol || '⭐',
           scoreMeaning: m.scoreMeaning || '',
-          detectedPatterns: m.detectedPatterns || null, // 🆕 Include detected patterns
+          detectedPatterns: m.detectedPatterns || null,
+          livePulse: m.livePulse ? {
+            summary: m.livePulse.summary,
+            conflict: m.livePulse.conflict,
+            fromCache: m.livePulse.fromCache,
+            signalStrength: m.livePulse.signalStrength ?? 0,
+          } : null,
           investor: {
             id: m.investor.id,
             firmName: m.investor.firmName,
@@ -775,6 +875,12 @@ export async function POST(request: NextRequest) {
           priority: (m.combinedScore || m.score || 0) >= 90 ? 'elite' : (m.combinedScore || m.score || 0) >= 80 ? 'high' : (m.combinedScore || m.score || 0) >= 70 ? 'medium' : 'low',
           scoreSymbol: m.scoreSymbol || '⭐',
           scoreMeaning: m.scoreMeaning || '',
+          livePulse: m.livePulse ? {
+            summary: m.livePulse.summary,
+            conflict: m.livePulse.conflict,
+            fromCache: m.livePulse.fromCache,
+            signalStrength: m.livePulse.signalStrength ?? 0,
+          } : null,
         })),
         sectorFit: pitchAnalysis.sectorFit || {},
         tractionMetrics: pitchAnalysis.tractionMetrics || {},
@@ -784,6 +890,7 @@ export async function POST(request: NextRequest) {
         transcript: transcriptText.substring(0, 5000), // Include transcript for display
         // 🆕 Include detected patterns from matching
         detectedPatterns: matchedVCs[0]?.detectedPatterns || null,
+        rubricAnalysis: rubricAnalysis || null,
       },
     }, {
       headers: { 'Content-Type': 'application/json' },

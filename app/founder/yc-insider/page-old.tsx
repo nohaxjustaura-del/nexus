@@ -47,7 +47,8 @@ export default function YCInsiderPage() {
   }, [])
 
   const handlePurchase = async (itemId: string, cost: number) => {
-    if (credits < cost) {
+    // Skip credit check for premium users (they have unlimited credits shown as MAX_SAFE_INTEGER)
+    if (!isPremium && credits < cost) {
       alert('Not enough credits. Please purchase more credits.')
       return
     }
@@ -63,14 +64,10 @@ export default function YCInsiderPage() {
       
       if (res.ok) {
         const data = await res.json()
+        // Update credits (will be MAX_SAFE_INTEGER for admin/premium)
         setCredits(data.remainingCredits)
-        setPurchases([...purchases, itemId])
-        // Reload credits to get updated purchases
-        const creditsRes = await fetch('/api/user/credits', { credentials: 'include' })
-        if (creditsRes.ok) {
-          const creditsData = await creditsRes.json()
-          setPurchases(creditsData.purchases || [])
-        }
+        // Add the new purchase to local state (no need to refetch)
+        setPurchases(prev => prev.includes(itemId) ? prev : [...prev, itemId])
         alert('Purchase successful! You can now access this material.')
       } else {
         const errorData = await res.json().catch(() => ({}))

@@ -1,18 +1,17 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Upload, Sparkles, TrendingUp, AlertCircle, CheckCircle, Lightbulb, Target, ExternalLink, FileText, Crown } from "lucide-react"
+import { Upload, Sparkles, TrendingUp, AlertCircle, CheckCircle, Lightbulb, Target, ExternalLink, FileText, Crown, Mic, Loader2 } from "lucide-react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
 import SmartMatchResults from '@/components/smart-match-results'
+import AnalysisDashboard from '@/components/analysis/AnalysisDashboard'
 
 export function PitchIdeaAnalysisTab() {
-  const router = useRouter()
   const [ideaText, setIdeaText] = useState('')
   const [ideaFile, setIdeaFile] = useState<File | null>(null)
   const [inputMode, setInputMode] = useState<'text' | 'file'>('text')
@@ -22,6 +21,177 @@ export function PitchIdeaAnalysisTab() {
   const [credits, setCredits] = useState<{ credits: number; isPremium: boolean } | null>(null)
   const [requestingFeedback, setRequestingFeedback] = useState(false)
   const PITCH_IDEA_CREDIT_COST = 15
+
+  // ---- Voice recording state ----
+  const [isRecording, setIsRecording] = useState(false)
+  const [isTranscribing, setIsTranscribing] = useState(false)
+  const [voiceRecordingId, setVoiceRecordingId] = useState<string | null>(null)
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null)
+  const audioChunksRef = useRef<Blob[]>([])
+  const streamRef = useRef<MediaStream | null>(null)
+  const baseTextRef = useRef('')
+  const mimeTypeRef = useRef('audio/webm')
+  const isStoppingRef = useRef(false)
+  const transcriptionInFlightRef = useRef(false)
+  const recordingStartTimeRef = useRef(0)
+
+  // Keep a ref to the latest ideaText so callbacks always see current value
+  const ideaTextRef = useRef(ideaText)
+  useEffect(() => { ideaTextRef.current = ideaText }, [ideaText])
+
+  // Clean up on unmount
+  useEffect(() => {
+    return () => {
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop())
+      }
+    }
+  }, [])
+
+  // Send accumulated audio for interim (live) transcription
+  const sendInterimTranscription = useCallback(async (chunks: Blob[], mime: string) => {
+    if (transcriptionInFlightRef.current || isStoppingRef.current) return
+    const audioBlob = new Blob(chunks, { type: mime })
+    if (audioBlob.size < 1000) return
+
+    transcriptionInFlightRef.current = true
+    try {
+      const formData = new FormData()
+      const ext = mime.includes('webm') ? 'webm' : 'ogg'
+      formData.append('audio', audioBlob, `voice-chunk.${ext}`)
+
+      const resp = await fetch('/api/transcribe?interim=true', {
+        method: 'POST',
+        body: formData,
+        credentials: 'include',
+      })
+
+      if (resp.ok && !isStoppingRef.current) {
+        const data = await resp.json()
+        if (data.transcript) {
+          const base = baseTextRef.current
+          const sep = base.trim() ? '\n\n' : ''
+          setIdeaText(base + sep + data.transcript)
+        }
+      }
+    } catch {
+      // Silently fail for interim — next chunk will retry
+    } finally {
+      transcriptionInFlightRef.current = false
+    }
+  }, [])
+
+  const startRecording = useCallback(async () => {
+    try {
+      setError(null)
+      isStoppingRef.current = false
+      baseTextRef.current = ideaTextRef.current
+      recordingStartTimeRef.current = Date.now()
+
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      streamRef.current = stream
+
+      const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+        ? 'audio/webm;codecs=opus'
+        : MediaRecorder.isTypeSupported('audio/webm')
+          ? 'audio/webm'
+          : 'audio/ogg'
+      mimeTypeRef.current = mimeType
+
+      const mediaRecorder = new MediaRecorder(stream, { mimeType })
+      mediaRecorderRef.current = mediaRecorder
+      audioChunksRef.current = []
+
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          audioChunksRef.current.push(event.data)
+        }
+        // Fire interim transcription with all accumulated chunks
+        if (!isStoppingRef.current) {
+          const snapshot = [...audioChunksRef.current]
+          sendInterimTranscription(snapshot, mimeType)
+        }
+      }
+
+      mediaRecorder.onstop = () => {
+        stream.getTracks().forEach(track => track.stop())
+        streamRef.current = null
+      }
+
+      // Collect data every 3.5 seconds for live transcription feel
+      mediaRecorder.start(3500)
+      setIsRecording(true)
+    } catch (err: any) {
+      if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+        setError('Microphone access denied. Please allow microphone access in your browser settings and try again.')
+      } else if (err.name === 'NotFoundError') {
+        setError('No microphone found. Please connect a microphone and try again.')
+      } else {
+        setError('Could not start recording: ' + (err.message || 'Unknown error'))
+      }
+    }
+  }, [sendInterimTranscription])
+
+  const stopRecording = useCallback(async () => {
+    isStoppingRef.current = true
+
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      mediaRecorderRef.current.stop()
+    }
+    setIsRecording(false)
+
+    // Brief delay so the final ondataavailable fires
+    await new Promise(resolve => setTimeout(resolve, 500))
+
+    // Send final full audio for definitive transcription + DB save
+    if (audioChunksRef.current.length > 0) {
+      setIsTranscribing(true)
+      try {
+        const audioBlob = new Blob(audioChunksRef.current, { type: mimeTypeRef.current })
+        if (audioBlob.size < 1000) {
+          setIsTranscribing(false)
+          return
+        }
+
+        const durationSec = Math.round((Date.now() - recordingStartTimeRef.current) / 1000)
+        const formData = new FormData()
+        const ext = mimeTypeRef.current.includes('webm') ? 'webm' : 'ogg'
+        formData.append('audio', audioBlob, `voice-pitch-idea.${ext}`)
+        formData.append('duration', String(durationSec))
+
+        const resp = await fetch('/api/transcribe', {
+          method: 'POST',
+          body: formData,
+          credentials: 'include',
+        })
+
+        if (resp.ok) {
+          const data = await resp.json()
+          if (data.transcript) {
+            const base = baseTextRef.current
+            const sep = base.trim() ? '\n\n' : ''
+            setIdeaText(base + sep + data.transcript)
+            setVoiceRecordingId(data.voiceRecordingId || null)
+          }
+        } else {
+          const data = await resp.json().catch(() => ({}))
+          throw new Error(data.message || data.error || 'Transcription failed')
+        }
+      } catch (err: any) {
+        setError(err.message || 'Failed to transcribe audio. Please try again.')
+      } finally {
+        setIsTranscribing(false)
+      }
+    }
+  }, [])
+
+  const toggleRecording = useCallback(() => {
+    if (isRecording) {
+      stopRecording()
+    } else {
+      startRecording()
+    }
+  }, [isRecording, startRecording, stopRecording])
 
   useEffect(() => {
     fetch('/api/user/credits', { credentials: 'include' })
@@ -66,6 +236,11 @@ export function PitchIdeaAnalysisTab() {
         formData.append('file', ideaFile)
       } else {
         formData.append('idea', ideaText)
+      }
+      
+      // If a voice recording was used, link it to this analysis
+      if (voiceRecordingId) {
+        formData.append('voiceRecordingId', voiceRecordingId)
       }
       
       const response = await fetch('/api/analyze-pitch-idea', {
@@ -115,10 +290,6 @@ export function PitchIdeaAnalysisTab() {
         const creditsData = await creditsRes.json()
         setCredits(creditsData)
       }
-
-      // SUCCESS - Immediately redirect to results page (replace to prevent back navigation)
-      window.location.replace('/founder/my-analyses')
-      return // Exit immediately
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to analyze pitch idea. Please try again.')
     } finally {
@@ -235,12 +406,18 @@ export function PitchIdeaAnalysisTab() {
           </Card>
         )}
 
+        {/* Rubric Analysis Dashboard */}
+        {analysis.rubricAnalysis && (
+          <AnalysisDashboard result={analysis.rubricAnalysis} />
+        )}
+
         {/* Smart Match Results */}
         {result.smartMatches && result.smartMatches.length > 0 && (
           <SmartMatchResults matches={result.smartMatches} />
         )}
 
-        {/* Analysis Results */}
+        {/* Analysis Results (fallback when no rubric) */}
+        {!analysis.rubricAnalysis && (
         <div className="grid md:grid-cols-3 gap-4">
           {analysis.strengths && analysis.strengths.length > 0 && (
             <Card className="border-2 border-green-200 bg-green-50/30">
@@ -296,6 +473,7 @@ export function PitchIdeaAnalysisTab() {
             </Card>
           )}
         </div>
+        )}
 
         {/* VC Matches */}
         {matches.length > 0 && (
@@ -356,6 +534,17 @@ export function PitchIdeaAnalysisTab() {
                             <Badge variant="outline" className={`text-xs font-semibold ${scoreBadge.color}`}>
                               {scoreBadge.text}
                             </Badge>
+                            {match.livePulse && match.livePulse.signalStrength > 1 && (
+                              <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-full px-2 py-0.5">
+                                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                Live
+                              </span>
+                            )}
+                            {match.livePulse && match.livePulse.signalStrength <= 1 && (
+                              <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded-full px-2 py-0.5">
+                                Potentially Inactive
+                              </span>
+                            )}
                           </div>
                           <p className="text-sm text-muted-foreground mb-1">
                             {investor.fundType || 'VC'} • ${investor.checkMin || 0}K - ${investor.checkMax || 0}K
@@ -431,6 +620,24 @@ export function PitchIdeaAnalysisTab() {
                           )}
                         </div>
                         
+                        {match.livePulse?.summary && (
+                          <div className="p-3 rounded-lg bg-gradient-to-br from-indigo-50 to-blue-50 border border-indigo-200/60 space-y-1.5">
+                            <h5 className="text-xs font-semibold text-indigo-700 flex items-center gap-1.5">
+                              <TrendingUp className="h-3 w-3" />
+                              Live VC Intelligence
+                            </h5>
+                            {match.livePulse.summary.recentPortfolio && (
+                              <p className="text-xs text-slate-700">{match.livePulse.summary.recentPortfolio}</p>
+                            )}
+                            {match.livePulse.summary.currentHeat && (
+                              <p className="text-xs text-slate-700">{match.livePulse.summary.currentHeat}</p>
+                            )}
+                            {match.livePulse.summary.founderAlignment && (
+                              <p className="text-xs text-slate-700">{match.livePulse.summary.founderAlignment}</p>
+                            )}
+                          </div>
+                        )}
+
                         <div className="flex gap-2 pt-2">
                           <a 
                             href={investor.applicationUrl || investor.websiteUrl || `mailto:${investor.email}`} 
@@ -553,7 +760,36 @@ export function PitchIdeaAnalysisTab() {
           {/* Text Input */}
           {inputMode === 'text' && (
             <div className="space-y-2">
-              <Label htmlFor="idea">Your Pitch Idea or Product Concept *</Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="idea">Your Pitch Idea or Product Concept *</Label>
+                <div className="flex items-center gap-2">
+                  {isTranscribing && (
+                    <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                      Finalizing...
+                    </span>
+                  )}
+                  {voiceRecordingId && !isRecording && !isTranscribing && (
+                    <span className="text-xs text-green-600 flex items-center gap-1">
+                      <CheckCircle className="h-3 w-3" />
+                      Saved
+                    </span>
+                  )}
+                  <button
+                    type="button"
+                    onClick={toggleRecording}
+                    disabled={analyzing || isTranscribing}
+                    className={`p-2 rounded-full transition-all duration-300 ${
+                      isRecording
+                        ? 'bg-primary text-white shadow-lg shadow-primary/40 scale-110'
+                        : 'bg-slate-100 hover:bg-primary/10 text-slate-500 hover:text-primary'
+                    } disabled:opacity-50 disabled:cursor-not-allowed`}
+                    title={isRecording ? 'Click to stop' : 'Click to speak your idea'}
+                  >
+                    <Mic className={`h-4 w-4 ${isRecording ? 'animate-pulse' : ''}`} />
+                  </button>
+                </div>
+              </div>
               <textarea
                 id="idea"
                 value={ideaText}
@@ -561,8 +797,12 @@ export function PitchIdeaAnalysisTab() {
                   setIdeaText(e.target.value)
                   setError(null)
                 }}
-                placeholder="Describe your startup idea, product concept, or pitch. What problem are you solving? Who is your target market? What makes your solution unique?"
-                className="flex min-h-[200px] w-full rounded-xl border-2 border-slate-300 focus:border-primary bg-background px-4 py-3 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 transition-all"
+                placeholder="Describe your startup idea, product concept, or pitch. What problem are you solving? Who is your target market? What makes your solution unique?&#10;&#10;💡 Tip: Click the mic button to dictate your idea using your voice."
+                className={`flex min-h-[200px] w-full rounded-xl border-2 ${
+                  isRecording
+                    ? 'border-primary/50 bg-primary/[0.02]'
+                    : 'border-slate-300 focus:border-primary bg-background'
+                } px-4 py-3 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 transition-all`}
                 required
                 disabled={analyzing}
               />

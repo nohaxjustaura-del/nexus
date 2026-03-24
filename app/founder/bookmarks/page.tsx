@@ -1,3 +1,6 @@
+'use client'
+
+import { useEffect, useState } from 'react'
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -6,49 +9,90 @@ import {
   DollarSign,
   TrendingUp,
   Building2,
-  MapPin,
   Trash2,
   MessageSquare,
-  Target
+  Target,
+  Loader2
 } from "lucide-react"
 import Link from "next/link"
 
+interface Bookmark {
+  id: string
+  notes: string | null
+  createdAt: string
+  investor: {
+    id: string
+    firmName: string
+    name: string
+    checkMin: number
+    checkMax: number
+    stages: string
+    sectors: string
+    applicationUrl: string | null
+    websiteUrl: string | null
+  }
+}
+
 export default function BookmarksPage() {
-  // Mock data - in real app this would come from database
-  const bookmarks = [
-    {
-      id: '1',
-      investor: {
-        firmName: 'AI Ventures',
-        name: 'Sarah Chen',
-        checkMin: 100,
-        checkMax: 500,
-        stages: ['Pre-Seed', 'Seed'],
-        sectors: ['AI/ML', 'SaaS'],
-        geoFocus: ['Global'],
-        applicationUrl: 'https://aiventures.com/apply',
-      },
-      notes: 'Met at conference. Seems interested in our AI approach.',
-      matchScore: 92,
-      createdAt: '2024-01-15',
-    },
-    {
-      id: '2',
-      investor: {
-        firmName: 'Fintech First',
-        name: 'Jessica Martinez',
-        checkMin: 500,
-        checkMax: 3000,
-        stages: ['Seed', 'Series A'],
-        sectors: ['Fintech', 'SaaS'],
-        geoFocus: ['US', 'Global'],
-        applicationUrl: 'https://fintechfirst.com/apply',
-      },
-      notes: 'High check size, but great banking connections',
-      matchScore: 85,
-      createdAt: '2024-01-14',
-    },
-  ]
+  const [loading, setLoading] = useState<boolean>(true)
+  const [bookmarks, setBookmarks] = useState<Bookmark[]>([])
+  const [deleting, setDeleting] = useState<string | null>(null)
+
+  useEffect(() => {
+    async function fetchBookmarks() {
+      try {
+        const res = await fetch('/api/bookmarks', { credentials: 'include' })
+        if (res.ok) {
+          const data = await res.json()
+          setBookmarks(data.bookmarks || [])
+        }
+      } catch (e) {
+        console.error('Failed to fetch bookmarks:', e)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchBookmarks()
+  }, [])
+
+  const handleDelete = async (investorId: string, bookmarkId: string) => {
+    if (!confirm('Remove this bookmark?')) return
+    
+    setDeleting(bookmarkId)
+    try {
+      const res = await fetch('/api/bookmarks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ investorId })
+      })
+      
+      if (res.ok) {
+        setBookmarks(prev => prev.filter(b => b.id !== bookmarkId))
+      }
+    } catch (e) {
+      alert('Failed to remove bookmark')
+    } finally {
+      setDeleting(null)
+    }
+  }
+
+  // Parse JSON strings for stages and sectors
+  const parseJsonArray = (str: string): string[] => {
+    try {
+      return JSON.parse(str)
+    } catch {
+      return []
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -113,6 +157,9 @@ export default function BookmarksPage() {
           <div className="grid gap-4 md:grid-cols-2">
             {bookmarks.map((bookmark) => {
               const { investor } = bookmark
+              const stages = parseJsonArray(investor.stages)
+              const sectors = parseJsonArray(investor.sectors)
+              
               return (
                 <Card key={bookmark.id} className="flex flex-col">
                   <CardHeader>
@@ -121,9 +168,6 @@ export default function BookmarksPage() {
                         <CardTitle className="mb-1">{investor.firmName}</CardTitle>
                         <p className="text-sm text-muted-foreground">{investor.name}</p>
                       </div>
-                      <Badge variant="secondary" className="shrink-0">
-                        {bookmark.matchScore}% Match
-                      </Badge>
                     </div>
                   </CardHeader>
 
@@ -137,36 +181,32 @@ export default function BookmarksPage() {
                     </div>
 
                     {/* Stages */}
-                    <div className="flex items-center gap-2 text-sm">
-                      <TrendingUp className="h-4 w-4 text-muted-foreground" />
-                      <div className="flex flex-wrap gap-1">
-                        {investor.stages.map((stage) => (
-                          <Badge key={stage} variant="outline" className="text-xs">
-                            {stage}
-                          </Badge>
-                        ))}
+                    {stages.length > 0 && (
+                      <div className="flex items-center gap-2 text-sm">
+                        <TrendingUp className="h-4 w-4 text-muted-foreground" />
+                        <div className="flex flex-wrap gap-1">
+                          {stages.map((stage) => (
+                            <Badge key={stage} variant="outline" className="text-xs">
+                              {stage}
+                            </Badge>
+                          ))}
+                        </div>
                       </div>
-                    </div>
+                    )}
 
                     {/* Sectors */}
-                    <div className="flex items-center gap-2 text-sm">
-                      <Building2 className="h-4 w-4 text-muted-foreground" />
-                      <div className="flex flex-wrap gap-1">
-                        {investor.sectors.map((sector) => (
-                          <Badge key={sector} variant="outline" className="text-xs">
-                            {sector}
-                          </Badge>
-                        ))}
+                    {sectors.length > 0 && (
+                      <div className="flex items-center gap-2 text-sm">
+                        <Building2 className="h-4 w-4 text-muted-foreground" />
+                        <div className="flex flex-wrap gap-1">
+                          {sectors.map((sector) => (
+                            <Badge key={sector} variant="outline" className="text-xs">
+                              {sector}
+                            </Badge>
+                          ))}
+                        </div>
                       </div>
-                    </div>
-
-                    {/* Geography */}
-                    <div className="flex items-center gap-2 text-sm">
-                      <MapPin className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-muted-foreground">
-                        {investor.geoFocus.join(', ')}
-                      </span>
-                    </div>
+                    )}
 
                     {/* Notes */}
                     {bookmark.notes && (
@@ -181,17 +221,33 @@ export default function BookmarksPage() {
                   </CardContent>
 
                   <CardFooter className="flex gap-2">
-                    <a href={investor.applicationUrl} target="_blank" rel="noopener noreferrer" className="flex-1">
-                      <Button className="w-full" size="sm">
-                        Apply
-                        <ExternalLink className="ml-2 h-4 w-4" />
-                      </Button>
-                    </a>
-                    <Button variant="outline" size="sm">
-                      Edit Notes
-                    </Button>
-                    <Button variant="ghost" size="sm">
-                      <Trash2 className="h-4 w-4 text-destructive" />
+                    {investor.applicationUrl && (
+                      <a href={investor.applicationUrl} target="_blank" rel="noopener noreferrer" className="flex-1">
+                        <Button className="w-full" size="sm">
+                          Apply
+                          <ExternalLink className="ml-2 h-4 w-4" />
+                        </Button>
+                      </a>
+                    )}
+                    {investor.websiteUrl && !investor.applicationUrl && (
+                      <a href={investor.websiteUrl} target="_blank" rel="noopener noreferrer" className="flex-1">
+                        <Button className="w-full" size="sm" variant="outline">
+                          Visit Website
+                          <ExternalLink className="ml-2 h-4 w-4" />
+                        </Button>
+                      </a>
+                    )}
+                    <Button 
+                      variant="ghost" 
+                      size="sm"
+                      disabled={deleting === bookmark.id}
+                      onClick={() => handleDelete(investor.id, bookmark.id)}
+                    >
+                      {deleting === bookmark.id ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      )}
                     </Button>
                   </CardFooter>
                 </Card>

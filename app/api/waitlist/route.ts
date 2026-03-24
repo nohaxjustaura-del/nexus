@@ -62,7 +62,7 @@ async function sendAdminNotification(
   source?: string,
   userType?: string
 ) {
-  const adminEmail = 'nohaxjustaura@gmail.com'
+  const adminEmail = 'adventa.counseling@gmail.com'
   
   // In production, use Resend or similar:
   // const resend = new Resend(process.env.RESEND_API_KEY)

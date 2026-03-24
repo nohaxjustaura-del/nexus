@@ -15,6 +15,7 @@ model Founder {
   education        String?
   gender           String? // male, female, non-binary, prefer-not-to-say
   willingToDropOut Boolean @default(false)
+  marketingOptIn   Boolean @default(false) // Opt-in for marketing emails
 
   // Profile enhancements
   bio           String? // Founder and startup bio
@@ -61,6 +62,15 @@ model Founder {
 
   // Video pitches
   videoPitches VideoPitch[]
+  
+  // Pitch deck analyses
+  pitchDeckAnalyses PitchDeckAnalysis[]
+
+  // Pitch idea analyses
+  pitchIdeaAnalyses PitchIdeaAnalysis[]
+
+  // Voice recordings (speech-to-text for pitch ideas)
+  voiceRecordings VoiceRecording[]
 
   bookmarks    Bookmark[]
   applications Application[]
@@ -169,6 +179,7 @@ model Investor {
   savedSearches        SavedSearch[] // userId matches Investor id
   reportsMade          Report[]             @relation("ReportsMade")
   reportsReceived      Report[]             @relation("ReportsReceived")
+  enrichmentCache      VCEnrichmentCache?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -317,6 +328,7 @@ model VideoPitch {
   transcriptText String?
   analysisResult String? // JSON
   smartMatchResults String? // JSON array of ranked VCs
+  founderSnapshot String? // JSON snapshot of founder profile at submission time
 
   reviews VideoPitchReview[]
 
@@ -353,6 +365,72 @@ model VideoPitchReview {
   @@index([videoPitchId])
   @@index([reviewerId])
   @@index([status])
+}
+
+// Pitch Deck Analysis results (similar to VideoPitch)
+model PitchDeckAnalysis {
+  id        String  @id @default(cuid())
+  founderId String
+  founder   Founder @relation(fields: [founderId], references: [id], onDelete: Cascade)
+
+  fileName       String
+  fileUrl        String?
+  fileType       String?
+  fileSize       Int?
+  extractedText  String? // Full text extracted from the PDF/PPTX
+  
+  // Analysis results
+  overallScore      Float?
+  analysisResult    String? // JSON - full analysis data
+  smartMatchResults String? // JSON array of ranked VCs with scores
+  founderSnapshot   String? // JSON snapshot of founder profile at submission time
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([founderId])
+}
+
+// Pitch Idea Analysis results (text-based pitch analysis)
+model PitchIdeaAnalysis {
+  id        String  @id @default(cuid())
+  founderId String
+  founder   Founder @relation(fields: [founderId], references: [id], onDelete: Cascade)
+
+  ideaText          String  // The full pitch idea text submitted by the founder
+  analysisResult    String? // JSON - full AI analysis data
+  smartMatchResults String? // JSON array of ranked VCs with scores
+  founderSnapshot   String? // JSON snapshot of founder profile at submission time
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([founderId])
+}
+
+// Voice recordings from pitch idea speech-to-text
+model VoiceRecording {
+  id        String  @id @default(cuid())
+  founderId String
+  founder   Founder @relation(fields: [founderId], references: [id], onDelete: Cascade)
+
+  fileName        String   // Original file name
+  fileUrl         String?  // Saved file path on disk
+  fileType        String?  // MIME type (audio/webm, audio/wav, etc.)
+  fileSize        Int?     // Size in bytes
+  durationSeconds Float?   // Duration of the recording in seconds
+  transcript      String?  // Full transcribed text from Whisper
+  language        String?  // Detected language
+  founderSnapshot String?  // JSON snapshot of founder profile at submission time
+
+  // Link to the pitch idea analysis that used this recording (optional)
+  pitchIdeaAnalysisId String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([founderId])
+  @@index([createdAt])
 }
 
 model User {
@@ -921,4 +999,18 @@ model Analysis {
   
   @@index([profileId])
   @@index([createdAt])
+}
+
+// Cached enrichment data from Exa web search for VC scoring
+model VCEnrichmentCache {
+  id          String   @id @default(cuid())
+  investorId  String   @unique
+  investor    Investor @relation(fields: [investorId], references: [id], onDelete: Cascade)
+  snapshot    String   // 3-sentence summary of the VC's current activity
+  recentDeals String   @default("[]") // JSON array of recent deals/investments
+  lastUpdated DateTime @default(now())
+  isConflict  Boolean  @default(false) // Flag if conflicting info was found
+
+  @@index([investorId])
+  @@index([lastUpdated])
 }

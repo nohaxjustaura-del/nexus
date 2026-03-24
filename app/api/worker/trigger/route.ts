@@ -1,115 +1,105 @@
 /**
  * WORKER TRIGGER API ENDPOINT
- * 
- * Manually trigger specific background jobs
+ *
+ * Manually trigger specific background jobs (admin only)
  */
 
 import { NextRequest, NextResponse } from 'next/server'
 import { getCurrentUser } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { researchVCsBatch } from '@/scripts/auto-research-vcs'
-import { fetchLatestYCBatch, updateTrendsWithNewBatch } from '@/lib/yc-trends'
-import { openrouterGenerateJson } from '@/lib/openrouter'
+import { getLiveInvestorPulse } from '@/lib/exa-service'
 import { logger } from '@/lib/logger'
+import { ADMIN_EMAIL } from '@/lib/constants'
 
 export const dynamic = 'force-dynamic'
 
 export async function POST(request: NextRequest) {
   try {
-    // Check admin access
     const user = await getCurrentUser(false)
-    if (!user || user.email !== 'nohaxjustaura@gmail.com') {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
+    if (!user || user.email !== ADMIN_EMAIL) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
-    
+
     const { jobType, params } = await request.json()
-    
+
     logger.info('API', `🎯 Triggering job: ${jobType}`)
-    
+
     let result: any = null
-    
+
     switch (jobType) {
-      case 'vc-research':
-        // Research specific VCs or top VCs
+      case 'vc-research': {
         const vcsToResearch = params?.vcs || [
-          'Sequoia Capital',
-          'Andreessen Horowitz',
-          'Benchmark',
-          'Accel',
-          'Y Combinator',
+          'Sequoia Capital', 'Andreessen Horowitz', 'Benchmark',
+          'Accel', 'Y Combinator',
         ]
-        
         await researchVCsBatch(vcsToResearch, {
           delayBetweenSearches: 2000,
           maxConcurrent: 2,
         })
-        
         result = { updated: vcsToResearch.length }
         break
-        
-      case 'yc-trends':
-        // Fetch and analyze latest YC batch
-        const now = new Date()
-        const year = now.getFullYear()
-        const month = now.getMonth() + 1
-        const batch = month >= 1 && month <= 5 
-          ? `W${year.toString().slice(2)}` 
-          : `S${year.toString().slice(2)}`
-        
-        const companies = await fetchLatestYCBatch(batch)
-        await updateTrendsWithNewBatch(batch, companies)
-        
-        result = { batch, companies: companies.length }
-        break
-        
-      case 'market-trends':
-        // AI-powered market analysis
-        const currentDate = new Date().toISOString().split('T')[0]
-        
-        const analysis = await openrouterGenerateJson({
-          system: 'You are a VC market analyst. Return valid JSON.',
-          user: `Analyze current startup/VC market trends as of ${currentDate}. Include hot sectors, funding climate, and key signals VCs want.`,
-          temperature: 0.3,
-          model: 'meta-llama/llama-3.3-70b-instruct',
+      }
+
+      case 'exa-enrichment': {
+        const limit = params?.limit || 10
+        const vcs = await db.investor.findMany({
+          where: { isPublic: true, discoverable: true },
+          select: { id: true, firmName: true, sectors: true },
+          take: limit,
+          orderBy: { updatedAt: 'desc' },
         })
-        
-        result = analysis
+
+        let enriched = 0
+        for (const vc of vcs) {
+          try {
+            let sectors: string[] = []
+            try { sectors = JSON.parse(vc.sectors || '[]') } catch { /* ignore */ }
+            await getLiveInvestorPulse(vc.firmName, sectors[0] || 'technology', vc.id)
+            enriched++
+            await new Promise(resolve => setTimeout(resolve, 2000))
+          } catch { /* skip */ }
+        }
+
+        result = { total: vcs.length, enriched }
         break
-        
-      case 'data-validation':
-        // Check data quality
+      }
+
+      case 'data-validation': {
         const issues: string[] = []
-        
+
         const missingThesis = await db.investor.count({
           where: { OR: [{ thesis: null }, { thesis: '' }] },
         })
         if (missingThesis > 0) issues.push(`${missingThesis} VCs missing thesis`)
-        
-        const invalidCheckSizes = await db.investor.count({
-          where: { OR: [{ checkSizeMin: 0 }, { checkSizeMax: 0 }] },
+
+        const zeroCheckSize = await db.investor.count({
+          where: { checkSizeMin: 0, checkSizeMax: 0 },
         })
-        if (invalidCheckSizes > 0) issues.push(`${invalidCheckSizes} VCs with invalid check sizes`)
-        
+        if (zeroCheckSize > 0) issues.push(`${zeroCheckSize} VCs with unknown check sizes`)
+
+        const noEmbedding = await db.investor.count({
+          where: { OR: [{ embedding: null }, { embedding: '' }] },
+        })
+        if (noEmbedding > 0) issues.push(`${noEmbedding} VCs missing embeddings`)
+
+        const noStages = await db.investor.count({ where: { stages: '[]' } })
+        if (noStages > 0) issues.push(`${noStages} VCs with empty stages`)
+
         result = { issues: issues.length, details: issues }
         break
-        
+      }
+
       default:
         return NextResponse.json(
-          { error: `Unknown job type: ${jobType}` },
+          { error: `Unknown job type: ${jobType}. Valid types: vc-research, exa-enrichment, data-validation` },
           { status: 400 }
         )
     }
-    
+
     logger.info('API', `✅ Job completed: ${jobType}`)
-    
-    return NextResponse.json({
-      success: true,
-      jobType,
-      result,
-    })
+
+    return NextResponse.json({ success: true, jobType, result })
   } catch (error: any) {
     logger.error('API', 'Job failed:', error.message)
     return NextResponse.json(

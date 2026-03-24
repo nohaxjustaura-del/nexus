@@ -11,12 +11,20 @@ const path = require('path')
 console.log('🚀 Starting Background Worker...')
 console.log('📋 This will keep all data updated automatically\n')
 
+// Add Node.js to PATH if not already there (Windows fix)
+const nodePath = process.platform === 'win32' ? 'C:\\Program Files\\nodejs' : ''
+const envPath = nodePath && !process.env.PATH?.includes(nodePath) 
+  ? `${process.env.PATH};${nodePath}` 
+  : process.env.PATH
+
 // Run the TypeScript worker using tsx
 const worker = spawn('npx', ['tsx', 'scripts/worker-start.ts'], {
   cwd: __dirname,
   stdio: 'inherit',
+  shell: true, // Required for Windows to find npx.cmd
   env: {
     ...process.env,
+    PATH: envPath,
     NODE_ENV: process.env.NODE_ENV || 'production'
   }
 })

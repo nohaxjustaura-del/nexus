@@ -4,7 +4,7 @@
  */
 
 // Admin Configuration
-export const ADMIN_EMAIL = 'nohaxjustaura@gmail.com'
+export const ADMIN_EMAIL = 'adventa.counseling@gmail.com'
 
 // Credit Costs for AI Analysis Features
 export const CREDIT_COSTS = {

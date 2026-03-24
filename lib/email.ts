@@ -19,17 +19,32 @@ This code will expire in 10 minutes.
   }
 
   try {
+    console.log(`📧 Sending verification email to: ${email}`)
     const { data, error } = await resend.emails.send({
-      from: process.env.RESEND_FROM_EMAIL || 'FounderMatch <onboarding@resend.dev>',
+      from: 'FounderMatch <onboarding@resend.dev>',
       to: email,
       subject: 'Your FounderMatch Verification Code',
-      html: `<p>Your verification code is <strong>${code}</strong></p>`,
-      text: `Your verification code is ${code}`,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <h2 style="color: #6366f1;">FounderMatch Verification</h2>
+          <p>Your verification code is:</p>
+          <div style="background: #f3f4f6; padding: 20px; text-align: center; font-size: 32px; font-weight: bold; letter-spacing: 8px; margin: 20px 0; border-radius: 8px;">
+            ${code}
+          </div>
+          <p style="color: #666;">This code will expire in 10 minutes.</p>
+          <p style="color: #999; font-size: 12px;">If you didn't request this code, you can safely ignore this email.</p>
+        </div>
+      `,
+      text: `Your FounderMatch verification code is: ${code}\n\nThis code will expire in 10 minutes.`,
     })
-    if (error) return { success: false, error }
+    if (error) {
+      console.error('❌ Resend API error:', error)
+      return { success: false, error }
+    }
+    console.log('✅ Email sent successfully:', data?.id)
     return { success: true, data }
   } catch (error) {
-    console.error('Email send error:', error)
+    console.error('❌ Email send error:', error)
     return { success: false, error }
   }
 }
@@ -56,7 +71,7 @@ ${plain}
 
   try {
     const { data, error } = await resend.emails.send({
-      from: process.env.RESEND_FROM_EMAIL || 'FounderMatch <onboarding@resend.dev>',
+      from: 'FounderMatch <onboarding@resend.dev>',
       to: toEmail,
       subject,
       text: plain,
@@ -94,7 +109,7 @@ ${plain}
 
   try {
     const { data, error } = await resend.emails.send({
-      from: process.env.RESEND_FROM_EMAIL || 'FounderMatch <onboarding@resend.dev>',
+      from: 'FounderMatch <onboarding@resend.dev>',
       to: toEmail,
       subject,
       text: plain,
@@ -139,7 +154,7 @@ ${plain}
 
   try {
     const { data, error } = await resend.emails.send({
-      from: process.env.RESEND_FROM_EMAIL || 'FounderMatch <onboarding@resend.dev>',
+      from: 'FounderMatch <onboarding@resend.dev>',
       to: toEmail,
       subject: subj,
       text: plain,

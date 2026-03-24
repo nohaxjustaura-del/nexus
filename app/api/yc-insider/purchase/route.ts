@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { getCurrentUser } from '@/lib/auth'
+import { ADMIN_EMAIL } from '@/lib/constants'
 
 export async function POST(request: NextRequest) {
   try {
@@ -20,7 +21,7 @@ export async function POST(request: NextRequest) {
     // Get user's current credits
     let userCredits = await (db as any).userCredits.findUnique({
       where: { userId: user.id },
-      select: { credits: true, purchases: true }
+      select: { credits: true, purchases: true, isPremium: true }
     })
 
     // Create credits record if doesn't exist
@@ -35,13 +36,35 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    const currentCredits = userCredits.credits || 0
     const currentPurchases = userCredits.purchases ? JSON.parse(userCredits.purchases as string) : []
 
     // Check if already purchased
     if (currentPurchases.includes(itemId)) {
       return NextResponse.json({ error: 'Item already purchased' }, { status: 400 })
     }
+
+    // Admin and premium users get free access - just record the purchase without deducting credits
+    const isAdmin = user.email === ADMIN_EMAIL
+    const isPremium = userCredits.isPremium || isAdmin
+
+    if (isPremium) {
+      // Just add to purchases without deducting credits
+      const newPurchases = [...currentPurchases, itemId]
+      await (db as any).userCredits.update({
+        where: { userId: user.id },
+        data: {
+          purchases: JSON.stringify(newPurchases)
+        }
+      })
+
+      return NextResponse.json({
+        success: true,
+        remainingCredits: isAdmin ? Number.MAX_SAFE_INTEGER : userCredits.credits,
+        itemId
+      })
+    }
+
+    const currentCredits = userCredits.credits || 0
 
     // Check if user has enough credits
     if (currentCredits < cost) {

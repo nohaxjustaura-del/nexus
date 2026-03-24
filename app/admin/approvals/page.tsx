@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { ADMIN_EMAIL } from '@/lib/constants'
 
 type Approval = {
   id: string
@@ -27,7 +28,8 @@ export default function AdminApprovalsPage() {
       try {
         // Basic admin gate (client-side): let server still enforce permissions
         const auth = await fetch('/api/auth/check', { credentials: 'include', headers: { 'Cache-Control': 'no-store' } }).then(r => r.json()).catch(() => ({}))
-        if (auth?.email && auth.email !== 'nohaxjustaura@gmail.com') {
+        const userEmail = auth?.userEmail || auth?.user?.email || auth?.email
+        if (!userEmail || userEmail !== ADMIN_EMAIL) {
           router.replace('/')
           return
         }

@@ -1,18 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { getCurrentUser } from '@/lib/auth'
-import { intelligentMatchVCs } from '@/lib/intelligent-matching'
+import { aiNativeMatchVCs } from '@/lib/ai-native-matching'
 import { logger } from '@/lib/logger'
 import { validatePitchIdea } from '@/lib/content-validator'
 import { ADMIN_EMAIL, CREDIT_COSTS } from '@/lib/constants'
 import { rateLimitMiddleware, RATE_LIMITS } from '@/lib/rate-limit'
-import { generatePitchEmbedding, rankVCsForPitch } from '@/lib/embeddings'
 import { parseJSON } from '@/lib/utils'
 import { getComprehensiveFounderContext, buildAIPromptContext } from '@/lib/founder-context'
 import { analyzeAgainstYCTrends, getCurrentYCTrends } from '@/lib/yc-trends'
 import { generateBatchMatchRationale } from '@/lib/ai-match-rationale'
 import { hasOpenRouterKey, openrouterGenerateJson } from '@/lib/openrouter'
 import { getPersonalizedVCRecommendations } from '@/lib/predictive-matching'
+import { buildFounderSnapshot } from '@/lib/file-storage'
+import { getDeepMarketContext } from '@/lib/market-intelligence'
+import { runUniversalAnalysis, type FounderDossier } from '@/lib/universal-analysis-engine'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -77,12 +79,15 @@ export async function POST(request: NextRequest) {
     const contentType = request.headers.get('content-type') || ''
     let idea = ''
 
+    let voiceRecordingId: string | null = null
+
     if (contentType.includes('multipart/form-data')) {
       // FormData - could be file upload or text field
       try {
         const formData = await request.formData()
         const file = formData.get('file') as File | null
         const ideaField = formData.get('idea') as string | null
+        voiceRecordingId = (formData.get('voiceRecordingId') as string) || null
         
         if (file && file.size > 0) {
           // File upload
@@ -345,197 +350,94 @@ Be specific and actionable.`
         }
       }
 
-      // Match with VCs based on founder profile and idea
-      const founderData = {
-        stage: founder.stage || 'Pre-Seed',
-        sectors: JSON.parse(founder.sectors || '[]'),
-        location: founder.location || 'US',
-        education: founder.education || '',
-        startupName: founder.startupName || '',
-      }
-
-      // 🚀 OPTIMIZED: Use cached investors (10x faster)
+      // 🆕 AI-NATIVE MATCHING: Combined intelligent + vector matching (same as Video Pitch)
+      // Uses 60% intelligent matching + 40% FAISS vector similarity + pattern boosts
       const { getCachedInvestors } = await import('@/lib/investor-cache')
       const investors = await getCachedInvestors()
-
-      // 🆕 Use comprehensive founder context for better matching
-      const fullFounderData = founderContext
-        ? {
-            ...founderContext,
-            ...founderData,
-          }
-        : {
-            ...founderData,
-            age: founder.age,
-            education: founder.education,
-            isStudent: false,
-            gender: founder.gender,
-            willingToDropOut: founder.willingToDropOut,
-            businessModel: founder.businessModel,
-            fundingNeed: founder.fundingNeed,
-            revenue: founder.revenue,
-            users: founder.users,
-            growthRate: founder.growthRate,
-            teamSize: founder.teamSize,
-            ethicsTags: parseJSON<string[]>(founder.ethicsTags, []),
-            personalityTags: parseJSON<string[]>(founder.personalityTags, []),
-            valueAddNeeds: parseJSON<string[]>(founder.valueAddNeeds, []),
-          }
-
-      const matches = await intelligentMatchVCs(
-        {
-          basics: {
-            name: founder.name,
-            email: founder.email,
-          },
-          skills: {
-            programming: founderContext?.techBackground ? ['Technical'] : [],
-            ml: founderContext?.sectors?.some((s) => s.toLowerCase().includes('ai')) ? ['AI/ML'] : [],
-            gtm: [],
-            domain: founderContext?.bio ? [founderContext.bio.substring(0, 100)] : [],
-          },
-          experience: founderContext?.experienceLevel
-            ? [
-                {
-                  title: founderContext.experienceLevel,
-                  org: 'Previous Experience',
-                },
-              ]
-            : [],
-          education: founder.education
-            ? [
-                {
-                  school: founder.education,
-                },
-              ]
-            : [],
-          projects: [],
-        },
-        fullFounderData,
-        investors
-      )
-
-      // Smart Match - AI-powered semantic matching (optional, doesn't block analysis)
-      // Uses Google Gemini's text-embedding-004 model
-      let smartMatches: any[] = []
-      try {
-        const hasGeminiKey = !!(process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY)
-
-        if (!hasGeminiKey) {
-          logger.log('[ANALYZE-PITCH-IDEA] Smart Match skipped (GEMINI_API_KEY required)')
-        } else {
-          logger.log('[ANALYZE-PITCH-IDEA] Running Smart Match with Gemini...')
-
-          // Build pitch features for embedding
-          const pitchFeatures = {
-            companyName: analysis.companyName || 'Unknown',
-            oneLineSummary: analysis.oneLineSummary || '',
-            stage: analysis.stage || 'Unknown',
-            sectorPrimary: analysis.sectorFit?.primarySector || '',
-            sectorSecondary: analysis.sectorFit?.secondarySectors || [],
-            problemStatement: analysis.problemStatement || '',
-            solutionDescription: analysis.solutionDescription || '',
-            targetCustomer: {
-              customerType: analysis.targetCustomer || '',
-              buyerRole: '',
-              companySize: '',
-            },
-            geography: {
-              hqLocation: analysis.geography || '',
-              markets: [],
-            },
-            businessModel: analysis.businessModel || '',
-            traction: {
-              revenue: analysis.tractionMetrics?.revenue || '',
-              users: analysis.tractionMetrics?.users || '',
-              growthSignal: analysis.tractionMetrics?.growthRate || '',
-            },
-            keyTechnologies: analysis.keyTechnologies || [],
-            competitiveMoat: analysis.competitiveMoat || [],
-            keywords: analysis.keywords || [],
-          }
-
-          // Generate pitch embedding
-          const pitchEmbedding = await generatePitchEmbedding(pitchFeatures)
-
-          // Get all VCs with embeddings
-          // Filter for non-null embeddings after fetching (SQLite compatibility)
-          const allInvestors = await db.investor.findMany({
-            where: {
-              verified: true,
-              isPublic: true,
-            },
-            select: {
-              id: true,
-              firmName: true,
-              fundType: true,
-              stages: true,
-              sectors: true,
-              geography: true,
-              geoFocus: true,
-              checkSizeMin: true,
-              checkSizeMax: true,
-              embedding: true,
-            },
-          })
-
-          // Filter out investors without embeddings
-          const investorsWithEmbeddings = allInvestors.filter((inv) => inv.embedding !== null && inv.embedding !== undefined)
-
-          // Prepare VC embeddings
-          const vcEmbeddings = investorsWithEmbeddings
-            .map((investor) => {
-              try {
-                return {
-                  id: investor.id,
-                  firmName: investor.firmName,
-                  embedding: JSON.parse(investor.embedding as string),
-                  metadata: {
-                    stages: parseJSON<string[]>(investor.stages, []),
-                    sectors: parseJSON<string[]>(investor.sectors, []),
-                    geography: parseJSON<string[]>(investor.geography || investor.geoFocus, []),
-                    checkSize:
-                      investor.checkSizeMin && investor.checkSizeMax
-                        ? `$${investor.checkSizeMin}K-$${investor.checkSizeMax}K`
-                        : undefined,
-                    fundType: investor.fundType,
-                  },
-                }
-              } catch {
-                return null
-              }
-            })
-            .filter(Boolean) as any[]
-
-          // Rank VCs by similarity
-          // Try FAISS first (much faster), fall back to in-memory if unavailable
-          try {
-            smartMatches = await rankVCsForPitch(pitchEmbedding, [], 20, true)
-            logger.log(`[ANALYZE-PITCH-IDEA] Smart Match complete with FAISS: ${smartMatches.length} matches`)
-          } catch (faissError) {
-            // Fall back to in-memory ranking
-            if (vcEmbeddings.length > 0) {
-              smartMatches = await rankVCsForPitch(pitchEmbedding, vcEmbeddings, 20, false)
-              logger.log(
-                `[ANALYZE-PITCH-IDEA] Smart Match complete (in-memory): ${smartMatches.length} matches from ${vcEmbeddings.length} VCs`
-              )
-            } else {
-              logger.warn(
-                '[ANALYZE-PITCH-IDEA] No VC embeddings found and FAISS unavailable. Run: npm run generate-vc-embeddings or start FAISS service'
-              )
-            }
-          }
-        }
-      } catch (smartMatchError: any) {
-        logger.error('[ANALYZE-PITCH-IDEA] Smart Match failed (non-critical):', smartMatchError.message)
-        // Continue without Smart Match if it fails
+      
+      // Build enhanced founder data with all profile context
+      const enhancedFounder = {
+        ...founder,
+        ...founderContext,
+        sectors: parseJSON<string[]>(founder.sectors || '[]', []),
       }
+      
+      logger.log('[ANALYZE-PITCH-IDEA] Starting AI-native matching with FAISS...')
+      logger.log(`[ANALYZE-PITCH-IDEA] Pitch idea length: ${idea.length} characters`)
+      
+      // Use aiNativeMatchVCs which combines:
+      // 1. Rule-based intelligent matching (stage, sector, traction)
+      // 2. FAISS vector similarity (semantic understanding)
+      // 3. Pattern detection (university, accelerator, VC affiliations)
+      // 4. Comprehensive founder context
+      let matchedVCs = await aiNativeMatchVCs(
+        enhancedFounder,
+        investors,
+        {
+          pitchAnalysis: analysis,
+          transcript: idea, // Use the pitch idea text as "transcript" for pattern detection
+          resumeFeatures: undefined,
+          useFAISS: true,
+        }
+      )
+      
+      logger.log(`[ANALYZE-PITCH-IDEA] AI-native matching completed: ${matchedVCs.length} matches found`)
+      
+      // Enhance matches with application recommendations based on combined scores
+      matchedVCs = matchedVCs.map(match => {
+        const vc = match.investor
+        const sectors = parseJSON<string[]>(vc.sectors || '[]', [])
+        const founderSectors = parseJSON<string[]>(founder.sectors || '[]', [])
+        const sectorMatch = sectors.some((s: string) => 
+          founderSectors.some((fs: string) => 
+            fs.toLowerCase().includes(s.toLowerCase()) || 
+            s.toLowerCase().includes(fs.toLowerCase())
+          )
+        )
+
+        // Generate application recommendations based on COMBINED score
+        const score = match.combinedScore || match.score || 0
+        const vectorSim = (match.vectorSimilarity ?? 0) || 0
+
+        let whyApply = `Strong ${sectorMatch ? 'sector' : 'stage'} fit with ${vc.firmName}'s investment thesis.`
+        let bestApproach = 'Warm introduction preferred'
+        let timing = 'Apply within 2-4 weeks'
+
+        if (score >= 90) {
+          whyApply = `🏆 Elite match! ${vc.firmName} actively invests in ${sectors.slice(0, 2).join(' and ')} at ${founder.stage} stage. Your pitch shows ${(vectorSim * 100).toFixed(0)}% semantic alignment with their thesis.`
+          bestApproach = 'Warm introduction through portfolio founder or mutual connection'
+          timing = 'Apply immediately - high priority match'
+        } else if (score >= 80) {
+          whyApply = `⭐️⭐️⭐️ Excellent match! ${vc.firmName} invests in ${sectors[0]} and your stage aligns. ${(vectorSim * 100).toFixed(0)}% semantic similarity indicates strong fit.`
+          bestApproach = 'Warm introduction or personalized cold email with specific thesis alignment'
+          timing = 'Apply within 1 week - strong match'
+        } else if (score >= 70) {
+          whyApply = `⭐️⭐️ Strong match with ${vc.firmName}. They invest in ${sectors[0]} and your stage aligns. ${(vectorSim * 100).toFixed(0)}% semantic similarity.`
+          bestApproach = 'Warm introduction or personalized cold email with specific thesis alignment'
+          timing = 'Apply within 1-2 weeks'
+        } else if (score >= 60) {
+          whyApply = `⭐️ Good match. ${vc.firmName} may be interested given your sector and traction. ${(vectorSim * 100).toFixed(0)}% semantic similarity.`
+          bestApproach = 'Personalized cold email highlighting specific alignment points'
+          timing = 'Apply within 2-4 weeks'
+        } else {
+          whyApply = `💡 Moderate fit. ${vc.firmName} may consider your pitch. Build more traction for stronger match.`
+          bestApproach = 'Personalized cold email highlighting specific alignment points'
+          timing = 'Apply when you have stronger traction metrics'
+        }
+
+        return {
+          ...match,
+          whyApply,
+          bestApproach,
+          timing,
+        }
+      })
 
       // 🆕 AI-NATIVE: Get current YC trends
       const currentTrends = getCurrentYCTrends()
 
       // 🆕 🚀 ULTRA-SPECIFIC AI RATIONALE: Generate hyper-personalized "Why This Match?" for top 20
-      const top20Matches = matches.slice(0, 20)
+      const top20Matches = matchedVCs.slice(0, 20)
       let aiRationales: string[] = []
       try {
         logger.log('[ANALYZE-PITCH-IDEA] Generating ultra-specific AI match rationales...')
@@ -570,18 +472,18 @@ Be specific and actionable.`
             // VC context (ENRICHED)
             vcName: m.investor.name,
             vcFirmName: m.investor.firmName,
-            vcStages: parseJSON<string[]>(m.investor.stages, []),
-            vcSectors: parseJSON<string[]>(m.investor.sectors, []),
-            vcCheckMin: m.investor.checkMin,
-            vcCheckMax: m.investor.checkMax,
+            vcStages: parseJSON<string[]>(m.investor.stages || '[]', []),
+            vcSectors: parseJSON<string[]>(m.investor.sectors || '[]', []),
+            vcCheckMin: m.investor.checkMin || m.investor.checkSizeMin,
+            vcCheckMax: m.investor.checkMax || m.investor.checkSizeMax,
             vcThesis: m.investor.thesis || undefined,
             vcSpecialFocus: detectSpecialFocus(m.investor.firmName, m.investor.bio || undefined, m.investor.thesis || undefined),
-            vcPortfolio: parseJSON<string[]>(m.investor.portfolio, []).slice(0, 5), // Recent investments
+            vcPortfolio: parseJSON<string[]>(m.investor.portfolio || '[]', []).slice(0, 5), // Recent investments
             vcBatch: getCurrentYCTrends().batch, // Current YC batch context
             
-            // Match metadata
-            matchScore: Math.round(m.score),
-            matchReasons: m.reasons,
+            // Match metadata - use combinedScore from AI-native matching
+            matchScore: Math.round(m.combinedScore || m.score || 0),
+            matchReasons: m.reasons || [],
           }))
         )
         
@@ -594,6 +496,7 @@ Be specific and actionable.`
       const top20WithRationale = top20Matches.map((m, index) => {
         // Inject AI rationale as the first \"reason\" bullet so the UI shows it directly
         const aiReason = aiRationales[index]
+        const matchReasons = m.reasons || []
         
         // Validate AI reason before injecting (prevent "undefined" strings)
         const validAiReason = aiReason && 
@@ -603,8 +506,12 @@ Be specific and actionable.`
                              !aiReason.toLowerCase().includes('undefined')
         
         const combinedReasons = validAiReason
-          ? [aiReason, ...m.reasons]
-          : m.reasons
+          ? [aiReason, ...matchReasons]
+          : matchReasons
+        
+        // Get combined score from AI-native matching
+        const matchScore = Math.round(m.combinedScore || m.score || 0)
+        const vectorSim = (m.vectorSimilarity ?? 0) * 100
       
         return {
         rank: index + 1,
@@ -614,22 +521,31 @@ Be specific and actionable.`
           firmName: m.investor.firmName,
           bio: m.investor.bio,
           logoUrl: m.investor.logoUrl,
-          stages: parseJSON<string[]>(m.investor.stages, []),
-          sectors: parseJSON<string[]>(m.investor.sectors, []),
-          checkMin: m.investor.checkMin,
-          checkMax: m.investor.checkMax,
-          geoFocus: parseJSON<string[]>(m.investor.geoFocus, []),
+          stages: parseJSON<string[]>(m.investor.stages || '[]', []),
+          sectors: parseJSON<string[]>(m.investor.sectors || '[]', []),
+          checkMin: m.investor.checkMin || m.investor.checkSizeMin,
+          checkMax: m.investor.checkMax || m.investor.checkSizeMax,
+          geoFocus: parseJSON<string[]>(m.investor.geoFocus || '[]', []),
           thesis: m.investor.thesis,
           applicationUrl: m.investor.applicationUrl,
         },
-        score: Math.round(m.score),
-        similarity: Math.round(m.score),
-        confidence: m.confidence,
-        // 🆕 First bullet is AI-written explanation that connects founder + pitch + VC
+        score: matchScore,
+        similarity: matchScore,
+        vectorSimilarity: vectorSim,
+        confidence: m.confidence || 0.85,
         reasons: combinedReasons.slice(0, 5),
-        suggestions: m.suggestions.slice(0, 3), // Top 3 suggestions
+        suggestions: (m.suggestions || []).slice(0, 3),
+        whyApply: m.whyApply,
+        bestApproach: m.bestApproach,
+        timing: m.timing,
+        livePulse: m.livePulse ? {
+          summary: m.livePulse.summary,
+          conflict: m.livePulse.conflict,
+          fromCache: m.livePulse.fromCache,
+          signalStrength: m.livePulse.signalStrength ?? 0,
+        } : null,
         detailedRationale: {
-          summary: aiReason || combinedReasons[0] || 'Good potential match', // 🆕 AI-generated rationale
+          summary: aiReason || combinedReasons[0] || 'Good potential match',
           matchFactors: {
             stage: combinedReasons.some((r) => r.toLowerCase().includes('stage')) ? 'Match' : 'Partial',
             sector: combinedReasons.some((r) => r.toLowerCase().includes('sector')) ? 'Match' : 'Partial',
@@ -638,7 +554,7 @@ Be specific and actionable.`
             founderFit: combinedReasons.some((r) => r.includes('FIT') || r.includes('PERFECT')) ? 'Excellent' : 'Good',
           },
           whyThisVC: combinedReasons.filter((r) => r.includes('✓') || r.includes('🎓') || r.includes('⭐')).join(' | '),
-          nextSteps: m.suggestions.length > 0 ? m.suggestions[0] : 'Research this VC and prepare targeted outreach',
+          nextSteps: (m.suggestions || []).length > 0 ? m.suggestions[0] : 'Research this VC and prepare targeted outreach',
         },
         ycTrends: m.ycTrends,
       }})
@@ -648,8 +564,8 @@ Be specific and actionable.`
       try {
         logger.log('[ANALYZE-PITCH-IDEA] Applying predictive matching...')
         
-        // Convert to format expected by predictive matching
-        const baseMatches = top20Matches.slice(0, 20)
+        // Convert to format expected by predictive matching - use matchedVCs
+        const baseMatches = matchedVCs.slice(0, 20)
         const reranked = await getPersonalizedVCRecommendations(
           founder.id,
           baseMatches,
@@ -657,30 +573,37 @@ Be specific and actionable.`
         )
         
         // Re-apply the rich rationale data to the reranked results
-        personalizedMatches = reranked.map(rm => {
+        personalizedMatches = reranked.map((rm, idx) => {
           // Find the original match with rationale
           const original = top20WithRationale.find(m => m.investor.id === rm.investor.id)
-          return original || {
-            rank: top20WithRationale.length + 1,
+          if (original) {
+            return { ...original, rank: idx + 1 }
+          }
+          return {
+            rank: idx + 1,
             investor: {
               id: rm.investor.id,
               name: rm.investor.name,
               firmName: rm.investor.firmName,
               bio: rm.investor.bio,
               logoUrl: rm.investor.logoUrl,
-              stages: parseJSON<string[]>(rm.investor.stages, []),
-              sectors: parseJSON<string[]>(rm.investor.sectors, []),
-              checkMin: rm.investor.checkMin,
-              checkMax: rm.investor.checkMax,
-              geoFocus: parseJSON<string[]>(rm.investor.geoFocus, []),
+              stages: parseJSON<string[]>(rm.investor.stages || '[]', []),
+              sectors: parseJSON<string[]>(rm.investor.sectors || '[]', []),
+              checkMin: rm.investor.checkMin || rm.investor.checkSizeMin,
+              checkMax: rm.investor.checkMax || rm.investor.checkSizeMax,
+              geoFocus: parseJSON<string[]>(rm.investor.geoFocus || '[]', []),
               thesis: rm.investor.thesis,
               applicationUrl: rm.investor.applicationUrl,
             },
-            score: Math.round(rm.personalizedScore || rm.score),
-            similarity: Math.round(rm.personalizedScore || rm.score),
+            score: Math.round(rm.personalizedScore || rm.combinedScore || rm.score || 0),
+            similarity: Math.round(rm.personalizedScore || rm.combinedScore || rm.score || 0),
+            vectorSimilarity: (rm.vectorSimilarity ?? 0) * 100,
             confidence: 0.85,
             reasons: [rm.reason || 'Recommended based on your preferences'],
             suggestions: [],
+            whyApply: rm.whyApply,
+            bestApproach: rm.bestApproach,
+            timing: rm.timing,
             detailedRationale: {
               summary: rm.reason || 'Recommended based on your preferences',
               matchFactors: { stage: 'Match', sector: 'Match', geography: 'Match', checkSize: 'Match', founderFit: 'Good' },
@@ -697,11 +620,87 @@ Be specific and actionable.`
         // Keep original matches if predictive fails
       }
 
+      // -----------------------------------------------------------------------
+      // UNIVERSAL ANALYSIS ENGINE — rubric scoring with Exa market intelligence
+      // -----------------------------------------------------------------------
+      let rubricAnalysis: any = null
+      try {
+        const sectors = parseJSON<string[]>(founder.sectors || '[]', [])
+        const domain = sectors[0] || analysis?.sectorFit?.primarySector || 'technology'
+        const problem = analysis?.marketFit || idea.substring(0, 300)
+
+        logger.log('[ANALYZE-PITCH-IDEA] Running Market Intelligence + Universal Analysis Engine...')
+
+        const marketContext = await getDeepMarketContext(domain, problem)
+
+        const dossier: FounderDossier = {
+          startup: founder.startupName || 'Unknown',
+          stage: founder.stage || 'seed',
+          sectors,
+          location: founder.location || founderContext?.location,
+          businessModel: founder.businessModel || analysis?.businessModel,
+          summary: idea.substring(0, 1500),
+          transcript: undefined,
+          education: founder.education || founderContext?.education,
+          university: founderContext?.universityAffiliation,
+          isStudent: founderContext?.isStudent,
+          techBackground: founderContext?.techBackground,
+          isImmigrant: founderContext?.isImmigrant,
+          isVeteran: founderContext?.isVeteran,
+          isUnderrepresented: founderContext?.isUnderrepresented,
+          cofounders: founderContext?.cofounders,
+          prevFunding: founderContext?.prevFunding,
+          revenue: founder.revenue || analysis?.tractionMetrics?.revenue,
+          users: founder.users || analysis?.tractionMetrics?.users,
+          growth: founder.growthRate || analysis?.tractionMetrics?.growth,
+          mrr: analysis?.tractionMetrics?.mrr,
+          teamSize: founder.teamSize || founderContext?.teamSize,
+          fundingNeed: founder.fundingNeed || founderContext?.fundingNeed,
+          valueAddNeeds: parseJSON<string[]>(founder.valueAddNeeds || '[]', []),
+        }
+
+        rubricAnalysis = await runUniversalAnalysis(dossier, 'IDEA', marketContext)
+        logger.log('[ANALYZE-PITCH-IDEA] Universal Analysis Engine completed successfully')
+      } catch (rubricError: any) {
+        logger.error('[ANALYZE-PITCH-IDEA] Universal Analysis Engine failed (non-critical):', rubricError?.message)
+      }
+
+      // Save pitch idea analysis to database for training data
+      let pitchIdeaRecord: any = null
+      try {
+        pitchIdeaRecord = await (db as any).pitchIdeaAnalysis.create({
+          data: {
+            founderId: founder.id,
+            ideaText: idea.substring(0, 50000), // Store the full pitch idea text
+            analysisResult: JSON.stringify(analysis),
+            smartMatchResults: JSON.stringify(personalizedMatches.slice(0, 10)),
+            founderSnapshot: JSON.stringify(buildFounderSnapshot(founder)),
+          },
+        })
+        logger.log(`[ANALYZE-PITCH-IDEA] Saved analysis to database: ${pitchIdeaRecord.id}`)
+
+        // Link voice recording to this pitch idea analysis if one was used
+        if (voiceRecordingId) {
+          try {
+            await (db as any).voiceRecording.update({
+              where: { id: voiceRecordingId },
+              data: { pitchIdeaAnalysisId: pitchIdeaRecord.id },
+            })
+            logger.log(`[ANALYZE-PITCH-IDEA] Linked voice recording ${voiceRecordingId} to analysis`)
+          } catch (linkErr: any) {
+            logger.error('[ANALYZE-PITCH-IDEA] Failed to link voice recording (non-critical):', linkErr.message)
+          }
+        }
+      } catch (saveError: any) {
+        logger.error('[ANALYZE-PITCH-IDEA] Failed to save analysis to database (non-critical):', saveError.message)
+      }
+
       return NextResponse.json(
         {
-          id: `analysis_${Date.now()}`,
+          id: pitchIdeaRecord?.id || `analysis_${Date.now()}`,
           analysis: {
             ...analysis,
+            rubricAnalysis: rubricAnalysis || null,
             founderContext: founderContext
               ? {
                   stage: founderContext.stage,
@@ -711,9 +710,9 @@ Be specific and actionable.`
                 }
               : undefined,
           },
-          matches: personalizedMatches, // 🆕 Now personalized based on founder interactions
-          matchCount: matches.length,
-          smartMatches: smartMatches, // AI-powered semantic matches (top 20)
+          matches: personalizedMatches, // 🆕 Now personalized based on founder interactions + AI-native matching
+          matchCount: matchedVCs.length,
+          // 🆕 AI-native matching combines intelligent + vector matching (no separate smartMatches needed)
           ycTrends: {
             current: currentTrends,
             personalInsights: ycTrendsAnalysis?.insights || [],
@@ -722,10 +721,10 @@ Be specific and actionable.`
           },
           matchingMetadata: {
             totalInvestors: investors.length,
-            matchesGenerated: matches.length,
+            matchesGenerated: matchedVCs.length,
             top20Selected: true,
             includedYCTrends: !!ycTrendsAnalysis,
-            includedSmartMatch: smartMatches.length > 0,
+            usedAINativeMatching: true, // 🆕 Combined intelligent + FAISS matching
             usedFullFounderContext: !!founderContext,
           },
         },
@@ -783,13 +782,15 @@ Be specific and actionable.`
 // GET endpoint for testing/debugging
 export async function GET(request: NextRequest) {
   try {
+    const hasGemini = !!(process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY)
     return NextResponse.json(
       { 
         status: 'ok',
         message: 'Pitch idea analysis endpoint is working',
         timestamp: new Date().toISOString(),
-        hasGemini: hasGeminiKey(),
-        hasOpenAI: !!(process.env.OPENROUTER_API_KEY || process.env.OPENAI_API_KEY),
+        hasGemini,
+        hasOpenRouter: hasOpenRouterKey(),
+        usesAINativeMatching: true, // Combined intelligent + FAISS matching
       },
       { 
         headers: { 'Content-Type': 'application/json' },

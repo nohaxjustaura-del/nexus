@@ -6,7 +6,7 @@
 import { db as prisma } from '../lib/db'
 
 async function main() {
-  const email = process.argv[2] || 'nohaxjustaura@gmail.com'
+  const email = process.argv[2] || 'adventa.counseling@gmail.com'
   const amount = parseInt(process.argv[3] || '10000', 10)
 
   console.log(`\n🎁 Giving ${amount} credits to ${email}...\n`)
