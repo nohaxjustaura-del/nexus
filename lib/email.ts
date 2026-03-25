@@ -55,6 +55,141 @@ This code will expire in 10 minutes.
   }
 }
 
+export async function sendMagicLinkEmail(
+  email: string,
+  {
+    magicLink,
+    otp,
+    isNew = false,
+  }: { magicLink: string; otp: string; isNew?: boolean }
+) {
+  const subject = isNew
+    ? `Verify your ${BRAND_NAME} account`
+    : `Sign in to ${BRAND_NAME}`
+
+  const headline = isNew ? 'Confirm your email address' : 'Sign in to your account'
+  const intro = isNew
+    ? `Click the button below to verify your email and activate your ${BRAND_NAME} account.`
+    : `Click the button below to sign in to your ${BRAND_NAME} account instantly — no password needed.`
+
+  if (!process.env.RESEND_API_KEY) {
+    console.log(`
+📧 Magic Link Email (Development Mode)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+To: ${email}
+Subject: ${subject}
+
+${intro}
+
+Magic link: ${magicLink}
+
+Or enter this 6-digit code on the verify page: ${otp}
+
+This link and code expire in 1 hour.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    `)
+    return { success: true }
+  }
+
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>${subject}</title>
+</head>
+<body style="margin:0;padding:0;background:#f5f5f0;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f5f0;padding:40px 0;">
+    <tr>
+      <td align="center">
+        <table width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;">
+          <!-- Header -->
+          <tr>
+            <td align="center" style="padding-bottom:24px;">
+              <span style="font-size:22px;font-weight:700;color:#0f172a;letter-spacing:-0.5px;">${BRAND_NAME}</span>
+            </td>
+          </tr>
+          <!-- Card -->
+          <tr>
+            <td style="background:#ffffff;border-radius:16px;padding:48px 40px;box-shadow:0 1px 3px rgba(0,0,0,0.08);">
+              <h1 style="margin:0 0 12px;font-size:24px;font-weight:700;color:#0f172a;letter-spacing:-0.3px;">${headline}</h1>
+              <p style="margin:0 0 32px;font-size:15px;color:#64748b;line-height:1.6;">${intro}</p>
+              <!-- CTA button -->
+              <table cellpadding="0" cellspacing="0" style="margin-bottom:32px;">
+                <tr>
+                  <td style="border-radius:10px;background:#2563eb;">
+                    <a href="${magicLink}"
+                       target="_blank"
+                       style="display:inline-block;padding:14px 32px;font-size:15px;font-weight:600;color:#ffffff;text-decoration:none;border-radius:10px;letter-spacing:0.1px;">
+                      ${isNew ? 'Verify my email' : 'Sign in to ' + BRAND_NAME}
+                    </a>
+                  </td>
+                </tr>
+              </table>
+              <!-- Divider -->
+              <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:28px;">
+                <tr>
+                  <td style="border-top:1px solid #e2e8f0;"></td>
+                  <td style="padding:0 16px;font-size:12px;color:#94a3b8;white-space:nowrap;">or enter the code below</td>
+                  <td style="border-top:1px solid #e2e8f0;"></td>
+                </tr>
+              </table>
+              <!-- OTP code -->
+              <p style="margin:0 0 8px;font-size:13px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:0.8px;">6-digit verification code</p>
+              <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:20px;text-align:center;margin-bottom:28px;">
+                <span style="font-size:36px;font-weight:700;color:#0f172a;letter-spacing:14px;">${otp}</span>
+              </div>
+              <p style="margin:0 0 4px;font-size:13px;color:#94a3b8;line-height:1.5;">This link and code expire in <strong>1 hour</strong>. If you didn't request this, you can safely ignore this email.</p>
+            </td>
+          </tr>
+          <!-- Footer -->
+          <tr>
+            <td align="center" style="padding-top:24px;">
+              <p style="margin:0;font-size:12px;color:#94a3b8;">&copy; ${new Date().getFullYear()} ${BRAND_NAME}. All rights reserved.</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`
+
+  const text = `${headline}
+
+${intro}
+
+Sign-in link (click to authenticate instantly):
+${magicLink}
+
+Or enter this 6-digit code on the verify page:
+${otp}
+
+This link and code expire in 1 hour. If you didn't request this, you can safely ignore this email.
+
+— The ${BRAND_NAME} team`
+
+  try {
+    console.log(`📧 Sending magic-link email to: ${email}`)
+    const { data, error } = await resend.emails.send({
+      from: emailFromHeader(),
+      to: email,
+      subject,
+      html,
+      text,
+    })
+    if (error) {
+      console.error('❌ Resend API error (magic link):', error)
+      return { success: false, error }
+    }
+    console.log('✅ Magic-link email sent successfully:', data?.id)
+    return { success: true, data }
+  } catch (error) {
+    console.error('❌ Magic-link email send error:', error)
+    return { success: false, error }
+  }
+}
+
 export async function sendVCClaimReceipt(toEmail: string, name: string, firmName: string) {
   const subject = `Your VC application is under review — ${BRAND_NAME}`
   const plain = `Hi ${name || 'there'},

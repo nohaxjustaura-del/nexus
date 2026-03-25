@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseAuthRouteClient } from '@/lib/supabase/route-handler'
-import { otpErrorResponse } from '@/lib/supabase/otp-errors'
+import { createSupabaseAdminClient } from '@/lib/supabase/admin'
+import { getSiteUrl } from '@/lib/site-url'
+import { sendMagicLinkEmail } from '@/lib/email'
 
 export const dynamic = 'force-dynamic'
 
@@ -14,39 +16,76 @@ export async function POST(request: NextRequest) {
 
     const normalizedEmail = email.toLowerCase().trim()
 
-    const { supabase, applyAuthCookies } = createSupabaseAuthRouteClient(request)
+    const siteUrl = getSiteUrl(request)
+    const callbackUrl = `${siteUrl}/api/auth/callback?next=${encodeURIComponent('/founder/onboarding')}`
 
-    // No emailRedirectTo — forces 6-digit OTP code email, avoiding PKCE
-    // code-verifier cookie issues with magic links.
-    const { error } = await supabase.auth.signInWithOtp({
+    const adminClient = createSupabaseAdminClient()
+
+    const { data: linkData, error: linkError } = await adminClient.auth.admin.generateLink({
+      type: 'invite',
       email: normalizedEmail,
       options: {
-        shouldCreateUser: true,
+        redirectTo: callbackUrl,
         data: {
           user_type: userType || 'founder',
         },
       },
     })
 
-    if (error) {
-      if (error.message?.includes('already registered') || error.status === 422) {
+    if (linkError) {
+      console.error('Signup generateLink error:', linkError)
+
+      if (
+        linkError.message?.toLowerCase().includes('already registered') ||
+        linkError.message?.toLowerCase().includes('user already registered') ||
+        (linkError as any).status === 422
+      ) {
         return NextResponse.json(
           {
-            error: 'An account with this email may already exist',
+            error: 'An account with this email already exists.',
             existingAccount: true,
             message: 'Try logging in instead.',
           },
           { status: 400 }
         )
       }
-      console.error('Supabase signup OTP error:', error)
-      const { status, body } = otpErrorResponse(error.message)
-      return NextResponse.json(body, { status })
+
+      return NextResponse.json(
+        { error: 'Failed to create verification link. Please try again.' },
+        { status: 500 }
+      )
     }
+
+    const magicLink = linkData.properties?.action_link
+    const otp = linkData.properties?.email_otp
+
+    if (!magicLink || !otp) {
+      console.error('Signup generateLink: missing action_link or email_otp', linkData.properties)
+      return NextResponse.json(
+        { error: 'Failed to generate sign-in link. Please try again.' },
+        { status: 500 }
+      )
+    }
+
+    const emailResult = await sendMagicLinkEmail(normalizedEmail, {
+      magicLink,
+      otp,
+      isNew: true,
+    })
+
+    if (!emailResult.success) {
+      console.error('Signup email send failed:', emailResult.error)
+      return NextResponse.json(
+        { error: 'Failed to send verification email. Please try again.' },
+        { status: 500 }
+      )
+    }
+
+    const { applyAuthCookies } = createSupabaseAuthRouteClient(request)
 
     const res = NextResponse.json({
       success: true,
-      message: 'Verification code sent to your email',
+      message: 'Verification email sent. Check your inbox for a sign-in link or 6-digit code.',
       email: normalizedEmail,
     })
     applyAuthCookies(res)

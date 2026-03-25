@@ -17,17 +17,11 @@ export async function POST(request: NextRequest) {
 
     const { supabase, applyAuthCookies } = createSupabaseAuthRouteClient(request)
 
-    // #region agent log
-    fetch('http://127.0.0.1:7471/ingest/0f685c44-f6c8-4b99-b23e-84e0cc9d4f08',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'2f72c9'},body:JSON.stringify({sessionId:'2f72c9',location:'app/api/auth/verify/route.ts:20',message:'verifyOtp called',data:{email:normalizedEmail,tokenLength:token.length},timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
     const { data, error } = await supabase.auth.verifyOtp({
       email: normalizedEmail,
       token,
       type: 'email',
     })
-    // #region agent log
-    fetch('http://127.0.0.1:7471/ingest/0f685c44-f6c8-4b99-b23e-84e0cc9d4f08',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'2f72c9'},body:JSON.stringify({sessionId:'2f72c9',location:'app/api/auth/verify/route.ts:28',message:'verifyOtp result',data:{hasError:!!error,errorMsg:error?.message||null,hasUser:!!data?.user,userId:data?.user?.id||null},timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
 
     if (error || !data.user) {
       return NextResponse.json(

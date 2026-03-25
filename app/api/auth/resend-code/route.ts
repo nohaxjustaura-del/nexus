@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseAuthRouteClient } from '@/lib/supabase/route-handler'
-import { otpErrorResponse } from '@/lib/supabase/otp-errors'
+import { createSupabaseAdminClient } from '@/lib/supabase/admin'
+import { getSiteUrl } from '@/lib/site-url'
+import { sendMagicLinkEmail } from '@/lib/email'
+import { db } from '@/lib/db'
 
 export const dynamic = 'force-dynamic'
 
@@ -13,24 +16,68 @@ export async function POST(request: NextRequest) {
     }
 
     const normalizedEmail = email.toLowerCase().trim()
-    const { supabase, applyAuthCookies } = createSupabaseAuthRouteClient(request)
 
-    // No emailRedirectTo — forces 6-digit OTP code email.
-    const { error } = await supabase.auth.signInWithOtp({
-      email: normalizedEmail,
-      options: {
-        shouldCreateUser: true,
-      },
+    const siteUrl = getSiteUrl(request)
+    const callbackUrl = `${siteUrl}/api/auth/callback?next=${encodeURIComponent('/founder/onboarding')}`
+
+    const adminClient = createSupabaseAdminClient()
+
+    // Determine whether the user already exists in Supabase so we pick the
+    // correct link type. Use the Prisma User table as a fast proxy.
+    const existingUser = await db.user.findUnique({ where: { email: normalizedEmail } })
+
+    const generateResult = existingUser
+      ? await adminClient.auth.admin.generateLink({
+          type: 'magiclink',
+          email: normalizedEmail,
+          options: { redirectTo: callbackUrl },
+        })
+      : await adminClient.auth.admin.generateLink({
+          type: 'invite',
+          email: normalizedEmail,
+          options: { redirectTo: callbackUrl },
+        })
+
+    const { data: linkData, error: linkError } = generateResult
+
+    if (linkError) {
+      console.error('Resend-code generateLink error:', linkError)
+      return NextResponse.json(
+        { error: 'Failed to generate a new sign-in link. Please try again.' },
+        { status: 500 }
+      )
+    }
+
+    const magicLink = linkData.properties?.action_link
+    const otp = linkData.properties?.email_otp
+
+    if (!magicLink || !otp) {
+      console.error('Resend-code generateLink: missing action_link or email_otp', linkData.properties)
+      return NextResponse.json(
+        { error: 'Failed to generate sign-in link. Please try again.' },
+        { status: 500 }
+      )
+    }
+
+    const emailResult = await sendMagicLinkEmail(normalizedEmail, {
+      magicLink,
+      otp,
+      isNew: !existingUser,
     })
 
-    if (error) {
-      const { status, body } = otpErrorResponse(error.message)
-      return NextResponse.json(body, { status })
+    if (!emailResult.success) {
+      console.error('Resend-code email send failed:', emailResult.error)
+      return NextResponse.json(
+        { error: 'Failed to send email. Please try again.' },
+        { status: 500 }
+      )
     }
+
+    const { applyAuthCookies } = createSupabaseAuthRouteClient(request)
 
     const res = NextResponse.json({
       success: true,
-      message: 'New verification code sent to your email',
+      message: 'New sign-in email sent. Check your inbox for a link or 6-digit code.',
     })
     applyAuthCookies(res)
     return res

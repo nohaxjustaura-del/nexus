@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseAuthRouteClient } from '@/lib/supabase/route-handler'
 import { createSupabaseAdminClient } from '@/lib/supabase/admin'
 import { syncPrismaUserFromAuth } from '@/lib/auth'
-import { otpErrorResponse } from '@/lib/supabase/otp-errors'
+import { getSiteUrl } from '@/lib/site-url'
+import { sendMagicLinkEmail } from '@/lib/email'
 import { ADMIN_EMAIL } from '@/lib/constants'
 
 export const dynamic = 'force-dynamic'
@@ -18,12 +19,13 @@ export async function POST(request: NextRequest) {
     const normalizedEmail = email.toLowerCase().trim()
 
     const { supabase, applyAuthCookies } = createSupabaseAuthRouteClient(request)
+    const adminClient = createSupabaseAdminClient()
 
-    // Admin bypass: skip OTP email and auto-authenticate
+    // Admin bypass: generate link, verify OTP server-side, and return an
+    // already-authenticated session so the admin never needs to check email.
     if (normalizedEmail === ADMIN_EMAIL.toLowerCase()) {
       try {
-        const adminSupabase = createSupabaseAdminClient()
-        const { data: linkData, error: linkError } = await adminSupabase.auth.admin.generateLink({
+        const { data: linkData, error: linkError } = await adminClient.auth.admin.generateLink({
           type: 'magiclink',
           email: normalizedEmail,
         })
@@ -66,41 +68,61 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // No emailRedirectTo — Supabase sends a 6-digit OTP code email instead of a
-    // magic link. This avoids the PKCE code-verifier cookie issue where the
-    // code verifier set during login isn't present when the link is clicked from
-    // an email client.
-    // #region agent log
-    fetch('http://127.0.0.1:7471/ingest/0f685c44-f6c8-4b99-b23e-84e0cc9d4f08',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'2f72c9'},body:JSON.stringify({sessionId:'2f72c9',location:'app/api/auth/login/route.ts:23',message:'signInWithOtp called WITHOUT emailRedirectTo',data:{email:normalizedEmail,hasEmailRedirectTo:false},timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
-    const { error } = await supabase.auth.signInWithOtp({
+    // Regular users: generate a magic link + OTP via Supabase Admin API
+    // and send the email ourselves through Resend.
+    const siteUrl = getSiteUrl(request)
+    const callbackUrl = `${siteUrl}/api/auth/callback?next=${encodeURIComponent('/founder/onboarding')}`
+
+    const { data: linkData, error: linkError } = await adminClient.auth.admin.generateLink({
+      type: 'magiclink',
       email: normalizedEmail,
       options: {
-        shouldCreateUser: false,
+        redirectTo: callbackUrl,
       },
     })
-    // #region agent log
-    fetch('http://127.0.0.1:7471/ingest/0f685c44-f6c8-4b99-b23e-84e0cc9d4f08',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'2f72c9'},body:JSON.stringify({sessionId:'2f72c9',location:'app/api/auth/login/route.ts:31',message:'signInWithOtp result',data:{hasError:!!error,errorMsg:error?.message||null},timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
 
-    if (error) {
-      console.error('Supabase login OTP error:', error)
+    if (linkError) {
+      console.error('Login generateLink error:', linkError)
       const notFound =
-        error.message?.toLowerCase().includes('signups not allowed') ||
-        error.message?.toLowerCase().includes('user not found')
+        linkError.message?.toLowerCase().includes('user not found') ||
+        linkError.message?.toLowerCase().includes('invalid user') ||
+        (linkError as any).status === 404
       if (notFound) {
         return NextResponse.json(
           { error: 'No account found with this email. Please sign up first.' },
           { status: 404 }
         )
       }
-      const { status, body } = otpErrorResponse(error.message)
-      return NextResponse.json(body, { status })
+      return NextResponse.json(
+        { error: 'Failed to create sign-in link. Please try again.' },
+        { status: 500 }
+      )
+    }
+
+    const magicLink = linkData.properties?.action_link
+    const otp = linkData.properties?.email_otp
+
+    if (!magicLink || !otp) {
+      console.error('Login generateLink: missing action_link or email_otp', linkData.properties)
+      return NextResponse.json(
+        { error: 'Failed to generate sign-in link. Please try again.' },
+        { status: 500 }
+      )
+    }
+
+    const emailResult = await sendMagicLinkEmail(normalizedEmail, { magicLink, otp, isNew: false })
+
+    if (!emailResult.success) {
+      console.error('Login email send failed:', emailResult.error)
+      return NextResponse.json(
+        { error: 'Failed to send sign-in email. Please try again.' },
+        { status: 500 }
+      )
     }
 
     const res = NextResponse.json({
       success: true,
-      message: 'Verification code sent to your email',
+      message: 'Sign-in email sent. Check your inbox for a link or 6-digit code.',
       email: normalizedEmail,
     })
     applyAuthCookies(res)

@@ -73,15 +73,6 @@ export default function SignUpPage() {
         return
       }
 
-      // Success! Show appropriate message
-      if (data.code) {
-        // Dev mode - show code in alert
-        alert(`🔐 Verification Code (Dev Mode)\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\nYour code is: ${data.code}\n\nThis code will expire in 10 minutes.\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`)
-      } else {
-        // Production - email was sent
-        alert(`✅ Verification code sent!\n\nCheck your email inbox for the code.\n\n(If you don't see it, check your spam folder.)`)
-      }
-
       const resolvedEmail = (data.email || trimmedEmail).toLowerCase().trim()
       try {
         sessionStorage.setItem(CLIENT_STORAGE.PENDING_VERIFY_EMAIL, resolvedEmail)
