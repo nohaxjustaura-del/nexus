@@ -107,8 +107,6 @@ export async function POST(request: NextRequest) {
       where: { email: user.email },
       data: {
         name: data.name || existingInvestor.name,
-        phone: data.phone !== undefined ? data.phone : (existingInvestor as any).phone,
-        marketingOptIn: data.marketingOptIn !== undefined ? !!data.marketingOptIn : ((existingInvestor as any).marketingOptIn ?? false),
         firmName: data.firmName || existingInvestor.firmName,
         checkMin: data.checkMin ? parseInt(data.checkMin) : existingInvestor.checkMin,
         checkMax: data.checkMax ? parseInt(data.checkMax) : existingInvestor.checkMax,

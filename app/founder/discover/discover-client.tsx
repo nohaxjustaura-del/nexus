@@ -48,7 +48,9 @@ export default function DiscoverClient({ investors, profileComplete }: DiscoverC
       .then(res => res.json())
       .then(data => {
         if (data.bookmarks) {
-          const ids = new Set(data.bookmarks.map((b: any) => b.investor.id))
+          const ids = new Set<string>(
+            (data.bookmarks as { investor: { id: string } }[]).map((b) => b.investor.id)
+          )
           setBookmarkedIds(ids)
         }
       })

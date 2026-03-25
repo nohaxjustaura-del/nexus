@@ -407,7 +407,9 @@ export async function intelligentMatchVCs(
             ...(features.skills?.gtm || []),
             ...(features.skills?.domain || []),
           ],
-      background: features.experiences?.[0] || '',
+      background: features.experience?.[0]
+        ? `${features.experience[0].title} at ${features.experience[0].org}`
+        : '',
     })
   } catch (error) {
     console.log('[INTELLIGENT-MATCHING] YC trends analysis failed (non-critical):', error)
@@ -442,6 +444,7 @@ export async function intelligentMatchVCs(
       strengths: [] as string[],
       weaknesses: [] as string[],
       investor,
+      ycTrends: undefined as EnhancedMatchResult['ycTrends'],
     }
   })
   

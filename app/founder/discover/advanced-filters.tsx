@@ -4,8 +4,10 @@ import { useState, useEffect } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
-import { Select } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
+
+const filterSelectClass =
+  "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
 import { ChevronDown, ChevronUp, Filter } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 
@@ -164,7 +166,7 @@ export function AdvancedFilters({ onApply }: { onApply: (filters: any) => void }
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             <div>
               <Label htmlFor="relocationRequired">Relocation Required?</Label>
-              <Select
+              <select className={filterSelectClass}
                 id="relocationRequired"
                 value={filters.relocationRequired}
                 onChange={(e) => handleChange('relocationRequired', e.target.value)}
@@ -173,11 +175,11 @@ export function AdvancedFilters({ onApply }: { onApply: (filters: any) => void }
                 <option value="yes">Yes</option>
                 <option value="no">No</option>
                 <option value="flexible">Flexible</option>
-              </Select>
+              </select>
             </div>
             <div>
               <Label htmlFor="dropOutRequired">Must Drop Out/Quit Job?</Label>
-              <Select
+              <select className={filterSelectClass}
                 id="dropOutRequired"
                 value={filters.dropOutRequired}
                 onChange={(e) => handleChange('dropOutRequired', e.target.value)}
@@ -186,11 +188,11 @@ export function AdvancedFilters({ onApply }: { onApply: (filters: any) => void }
                 <option value="required">Required</option>
                 <option value="soft">Soft Pressure</option>
                 <option value="no">No</option>
-              </Select>
+              </select>
             </div>
             <div>
               <Label htmlFor="timeCommitment">Time Commitment</Label>
-              <Select
+              <select className={filterSelectClass}
                 id="timeCommitment"
                 value={filters.timeCommitment}
                 onChange={(e) => handleChange('timeCommitment', e.target.value)}
@@ -199,11 +201,11 @@ export function AdvancedFilters({ onApply }: { onApply: (filters: any) => void }
                 <option value="fulltime">Full-time Only</option>
                 <option value="parttime">Part-time OK</option>
                 <option value="evening">Evening-friendly</option>
-              </Select>
+              </select>
             </div>
             <div>
               <Label htmlFor="geographicRestriction">Geographic Restriction</Label>
-              <Select
+              <select className={filterSelectClass}
                 id="geographicRestriction"
                 value={filters.geographicRestriction}
                 onChange={(e) => handleChange('geographicRestriction', e.target.value)}
@@ -212,11 +214,11 @@ export function AdvancedFilters({ onApply }: { onApply: (filters: any) => void }
                 <option value="must-be-city">Must be in X city</option>
                 <option value="us-only">US Only</option>
                 <option value="remote-ok">Remote OK</option>
-              </Select>
+              </select>
             </div>
             <div>
               <Label htmlFor="visaSupport">Visa Support Available?</Label>
-              <Select
+              <select className={filterSelectClass}
                 id="visaSupport"
                 value={filters.visaSupport}
                 onChange={(e) => handleChange('visaSupport', e.target.value)}
@@ -225,7 +227,7 @@ export function AdvancedFilters({ onApply }: { onApply: (filters: any) => void }
                 <option value="none">None</option>
                 <option value="letters">Letters Only</option>
                 <option value="full">Full Counsel</option>
-              </Select>
+              </select>
             </div>
           </div>
         </div>
@@ -236,7 +238,7 @@ export function AdvancedFilters({ onApply }: { onApply: (filters: any) => void }
           <div className="grid gap-4 md:grid-cols-2">
             <div>
               <Label htmlFor="soloFoundersAccepted">Solo Founders Accepted?</Label>
-              <Select
+              <select className={filterSelectClass}
                 id="soloFoundersAccepted"
                 value={filters.soloFoundersAccepted}
                 onChange={(e) => handleChange('soloFoundersAccepted', e.target.value)}
@@ -245,11 +247,11 @@ export function AdvancedFilters({ onApply }: { onApply: (filters: any) => void }
                 <option value="no">No</option>
                 <option value="discouraged">Yes but Discouraged</option>
                 <option value="welcome">Explicitly Welcome</option>
-              </Select>
+              </select>
             </div>
             <div>
               <Label htmlFor="teamComposition">Team Composition Requirements</Label>
-              <Select
+              <select className={filterSelectClass}
                 id="teamComposition"
                 value={filters.teamComposition}
                 onChange={(e) => handleChange('teamComposition', e.target.value)}
@@ -257,7 +259,7 @@ export function AdvancedFilters({ onApply }: { onApply: (filters: any) => void }
                 <option value="">Any</option>
                 <option value="tech-business">Tech + Business Required</option>
                 <option value="flexible">Flexible</option>
-              </Select>
+              </select>
             </div>
           </div>
         </div>
@@ -268,7 +270,7 @@ export function AdvancedFilters({ onApply }: { onApply: (filters: any) => void }
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             <div>
               <Label htmlFor="stageMatch">Stage Match</Label>
-              <Select
+              <select className={filterSelectClass}
                 id="stageMatch"
                 value={filters.stageMatch}
                 onChange={(e) => handleChange('stageMatch', e.target.value)}
@@ -277,11 +279,11 @@ export function AdvancedFilters({ onApply }: { onApply: (filters: any) => void }
                 <option value="idea-only">Idea Only</option>
                 <option value="mvp-required">MVP Required</option>
                 <option value="revenue-needed">Revenue Traction Needed</option>
-              </Select>
+              </select>
             </div>
             <div>
               <Label htmlFor="sectorRestrictions">Sector Restrictions</Label>
-              <Select
+              <select className={filterSelectClass}
                 id="sectorRestrictions"
                 value={filters.sectorRestrictions}
                 onChange={(e) => handleChange('sectorRestrictions', e.target.value)}
@@ -291,11 +293,11 @@ export function AdvancedFilters({ onApply }: { onApply: (filters: any) => void }
                 <option value="no-crypto">No Crypto</option>
                 <option value="regulated-ok">Regulated OK</option>
                 <option value="open">Open</option>
-              </Select>
+              </select>
             </div>
             <div>
               <Label htmlFor="entityRequirements">Entity Requirements</Label>
-              <Select
+              <select className={filterSelectClass}
                 id="entityRequirements"
                 value={filters.entityRequirements}
                 onChange={(e) => handleChange('entityRequirements', e.target.value)}
@@ -303,11 +305,11 @@ export function AdvancedFilters({ onApply }: { onApply: (filters: any) => void }
                 <option value="">Any</option>
                 <option value="delaware-corp">Delaware C-Corp Only</option>
                 <option value="non-us-ok">Non-US OK</option>
-              </Select>
+              </select>
             </div>
             <div>
               <Label htmlFor="openSourceFriendly">Open Source Friendly?</Label>
-              <Select
+              <select className={filterSelectClass}
                 id="openSourceFriendly"
                 value={filters.openSourceFriendly}
                 onChange={(e) => handleChange('openSourceFriendly', e.target.value)}
@@ -316,11 +318,11 @@ export function AdvancedFilters({ onApply }: { onApply: (filters: any) => void }
                 <option value="no">No</option>
                 <option value="with-conditions">With Conditions</option>
                 <option value="yes">Yes</option>
-              </Select>
+              </select>
             </div>
             <div>
               <Label htmlFor="hardwareTolerance">Hardware Tolerance</Label>
-              <Select
+              <select className={filterSelectClass}
                 id="hardwareTolerance"
                 value={filters.hardwareTolerance}
                 onChange={(e) => handleChange('hardwareTolerance', e.target.value)}
@@ -328,7 +330,7 @@ export function AdvancedFilters({ onApply }: { onApply: (filters: any) => void }
                 <option value="">Any</option>
                 <option value="software-only">Software Only</option>
                 <option value="ok-long-cycles">OK with Long Cycles</option>
-              </Select>
+              </select>
             </div>
           </div>
         </div>
@@ -339,7 +341,7 @@ export function AdvancedFilters({ onApply }: { onApply: (filters: any) => void }
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             <div>
               <Label htmlFor="willLead">Will They Lead Your Round?</Label>
-              <Select
+              <select className={filterSelectClass}
                 id="willLead"
                 value={filters.willLead}
                 onChange={(e) => handleChange('willLead', e.target.value)}
@@ -348,7 +350,7 @@ export function AdvancedFilters({ onApply }: { onApply: (filters: any) => void }
                 <option value="never">Never</option>
                 <option value="sometimes">Sometimes</option>
                 <option value="usually">Usually</option>
-              </Select>
+              </select>
             </div>
             <div>
               <Label htmlFor="targetOwnershipMin">Target Ownership Min (%)</Label>
@@ -372,7 +374,7 @@ export function AdvancedFilters({ onApply }: { onApply: (filters: any) => void }
             </div>
             <div>
               <Label htmlFor="documentType">Document Type</Label>
-              <Select
+              <select className={filterSelectClass}
                 id="documentType"
                 value={filters.documentType}
                 onChange={(e) => handleChange('documentType', e.target.value)}
@@ -381,7 +383,7 @@ export function AdvancedFilters({ onApply }: { onApply: (filters: any) => void }
                 <option value="post-money-safe">Post-money SAFE</option>
                 <option value="pre-money-safe">Pre-money SAFE</option>
                 <option value="priced-round">Priced Round</option>
-              </Select>
+              </select>
             </div>
           </div>
         </div>
@@ -392,7 +394,7 @@ export function AdvancedFilters({ onApply }: { onApply: (filters: any) => void }
           <div className="grid gap-4 md:grid-cols-3">
             <div>
               <Label htmlFor="programFees">Program Fees</Label>
-              <Select
+              <select className={filterSelectClass}
                 id="programFees"
                 value={filters.programFees}
                 onChange={(e) => handleChange('programFees', e.target.value)}
@@ -401,11 +403,11 @@ export function AdvancedFilters({ onApply }: { onApply: (filters: any) => void }
                 <option value="0">$0</option>
                 <option value="has-fees">Has Fees</option>
                 <option value="equity">Equity %</option>
-              </Select>
+              </select>
             </div>
             <div>
               <Label htmlFor="equityForPerks">Equity for Perks?</Label>
-              <Select
+              <select className={filterSelectClass}
                 id="equityForPerks"
                 value={filters.equityForPerks}
                 onChange={(e) => handleChange('equityForPerks', e.target.value)}
@@ -413,11 +415,11 @@ export function AdvancedFilters({ onApply }: { onApply: (filters: any) => void }
                 <option value="">Any</option>
                 <option value="no">No</option>
                 <option value="yes">Yes</option>
-              </Select>
+              </select>
             </div>
             <div>
               <Label htmlFor="mfnOrSideLetters">MFN or Side Letters</Label>
-              <Select
+              <select className={filterSelectClass}
                 id="mfnOrSideLetters"
                 value={filters.mfnOrSideLetters}
                 onChange={(e) => handleChange('mfnOrSideLetters', e.target.value)}
@@ -425,7 +427,7 @@ export function AdvancedFilters({ onApply }: { onApply: (filters: any) => void }
                 <option value="">Any</option>
                 <option value="standard">Standard</option>
                 <option value="custom-restrictions">Custom Restrictions</option>
-              </Select>
+              </select>
             </div>
           </div>
         </div>
@@ -436,7 +438,7 @@ export function AdvancedFilters({ onApply }: { onApply: (filters: any) => void }
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             <div>
               <Label htmlFor="proRataRights">Pro-rata Rights</Label>
-              <Select
+              <select className={filterSelectClass}
                 id="proRataRights"
                 value={filters.proRataRights}
                 onChange={(e) => handleChange('proRataRights', e.target.value)}
@@ -446,7 +448,7 @@ export function AdvancedFilters({ onApply }: { onApply: (filters: any) => void }
                 <option value="discretionary">Discretionary</option>
                 <option value="guaranteed">Guaranteed</option>
                 <option value="super">Super Pro-rata</option>
-              </Select>
+              </select>
             </div>
             <div>
               <Label htmlFor="followOnRate">Historical Follow-on Rate (%)</Label>
@@ -460,7 +462,7 @@ export function AdvancedFilters({ onApply }: { onApply: (filters: any) => void }
             </div>
             <div>
               <Label htmlFor="reserveFund">Reserve Fund Available?</Label>
-              <Select
+              <select className={filterSelectClass}
                 id="reserveFund"
                 value={filters.reserveFund}
                 onChange={(e) => handleChange('reserveFund', e.target.value)}
@@ -468,11 +470,11 @@ export function AdvancedFilters({ onApply }: { onApply: (filters: any) => void }
                 <option value="">Any</option>
                 <option value="no">No</option>
                 <option value="yes">Yes</option>
-              </Select>
+              </select>
             </div>
             <div>
               <Label htmlFor="bridgeTrackRecord">Bridge Track Record</Label>
-              <Select
+              <select className={filterSelectClass}
                 id="bridgeTrackRecord"
                 value={filters.bridgeTrackRecord}
                 onChange={(e) => handleChange('bridgeTrackRecord', e.target.value)}
@@ -481,7 +483,7 @@ export function AdvancedFilters({ onApply }: { onApply: (filters: any) => void }
                 <option value="punitive">Punitive</option>
                 <option value="fair">Fair</option>
                 <option value="generous">Generous</option>
-              </Select>
+              </select>
             </div>
           </div>
         </div>
@@ -492,7 +494,7 @@ export function AdvancedFilters({ onApply }: { onApply: (filters: any) => void }
           <div className="grid gap-4 md:grid-cols-3">
             <div>
               <Label htmlFor="boardSeatAtSeed">Board Seat at Seed?</Label>
-              <Select
+              <select className={filterSelectClass}
                 id="boardSeatAtSeed"
                 value={filters.boardSeatAtSeed}
                 onChange={(e) => handleChange('boardSeatAtSeed', e.target.value)}
@@ -501,11 +503,11 @@ export function AdvancedFilters({ onApply }: { onApply: (filters: any) => void }
                 <option value="always">Always</option>
                 <option value="sometimes">Sometimes</option>
                 <option value="never">Never</option>
-              </Select>
+              </select>
             </div>
             <div>
               <Label htmlFor="observerRights">Observer Rights</Label>
-              <Select
+              <select className={filterSelectClass}
                 id="observerRights"
                 value={filters.observerRights}
                 onChange={(e) => handleChange('observerRights', e.target.value)}
@@ -514,11 +516,11 @@ export function AdvancedFilters({ onApply }: { onApply: (filters: any) => void }
                 <option value="standard">Standard</option>
                 <option value="with-veto">With Veto</option>
                 <option value="none">None</option>
-              </Select>
+              </select>
             </div>
             <div>
               <Label htmlFor="founderVestingReset">Founder Vesting Reset Required?</Label>
-              <Select
+              <select className={filterSelectClass}
                 id="founderVestingReset"
                 value={filters.founderVestingReset}
                 onChange={(e) => handleChange('founderVestingReset', e.target.value)}
@@ -527,7 +529,7 @@ export function AdvancedFilters({ onApply }: { onApply: (filters: any) => void }
                 <option value="yes">Yes</option>
                 <option value="no">No</option>
                 <option value="negotiable">Negotiable</option>
-              </Select>
+              </select>
             </div>
           </div>
         </div>
@@ -538,7 +540,7 @@ export function AdvancedFilters({ onApply }: { onApply: (filters: any) => void }
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             <div>
               <Label htmlFor="applicationType">Application Type</Label>
-              <Select
+              <select className={filterSelectClass}
                 id="applicationType"
                 value={filters.applicationType}
                 onChange={(e) => handleChange('applicationType', e.target.value)}
@@ -547,7 +549,7 @@ export function AdvancedFilters({ onApply }: { onApply: (filters: any) => void }
                 <option value="cold-ok">Cold OK</option>
                 <option value="warm-intro">Warm Intro Preferred</option>
                 <option value="invite-only">Invite-only</option>
-              </Select>
+              </select>
             </div>
             <div>
               <Label htmlFor="decisionSpeed">Decision Speed (days)</Label>
@@ -561,7 +563,7 @@ export function AdvancedFilters({ onApply }: { onApply: (filters: any) => void }
             </div>
             <div>
               <Label htmlFor="interviewFormat">Interview Format</Label>
-              <Select
+              <select className={filterSelectClass}
                 id="interviewFormat"
                 value={filters.interviewFormat}
                 onChange={(e) => handleChange('interviewFormat', e.target.value)}
@@ -570,11 +572,11 @@ export function AdvancedFilters({ onApply }: { onApply: (filters: any) => void }
                 <option value="quick-screen">Quick Screen</option>
                 <option value="technical">Technical Deep-dive</option>
                 <option value="build-test">Build Test</option>
-              </Select>
+              </select>
             </div>
             <div>
               <Label htmlFor="canStayInStealth">Can Stay in Stealth?</Label>
-              <Select
+              <select className={filterSelectClass}
                 id="canStayInStealth"
                 value={filters.canStayInStealth}
                 onChange={(e) => handleChange('canStayInStealth', e.target.value)}
@@ -582,7 +584,7 @@ export function AdvancedFilters({ onApply }: { onApply: (filters: any) => void }
                 <option value="">Any</option>
                 <option value="must-demo">Must do Demo Day</option>
                 <option value="private-intros">Private Intros OK</option>
-              </Select>
+              </select>
             </div>
           </div>
         </div>
@@ -593,7 +595,7 @@ export function AdvancedFilters({ onApply }: { onApply: (filters: any) => void }
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             <div>
               <Label htmlFor="customerIntros">Customer Intros</Label>
-              <Select
+              <select className={filterSelectClass}
                 id="customerIntros"
                 value={filters.customerIntros}
                 onChange={(e) => handleChange('customerIntros', e.target.value)}
@@ -602,11 +604,11 @@ export function AdvancedFilters({ onApply }: { onApply: (filters: any) => void }
                 <option value="enterprise">Enterprise Design Partners</option>
                 <option value="consumer">Consumer Channels</option>
                 <option value="none">None</option>
-              </Select>
+              </select>
             </div>
             <div>
               <Label htmlFor="salesPlaybookSupport">Sales Playbook Support</Label>
-              <Select
+              <select className={filterSelectClass}
                 id="salesPlaybookSupport"
                 value={filters.salesPlaybookSupport}
                 onChange={(e) => handleChange('salesPlaybookSupport', e.target.value)}
@@ -615,11 +617,11 @@ export function AdvancedFilters({ onApply }: { onApply: (filters: any) => void }
                 <option value="generic">Generic</option>
                 <option value="vertical">Vertical-specific</option>
                 <option value="hands-on">Hands-on</option>
-              </Select>
+              </select>
             </div>
             <div>
               <Label htmlFor="recruitingHelp">Recruiting Help</Label>
-              <Select
+              <select className={filterSelectClass}
                 id="recruitingHelp"
                 value={filters.recruitingHelp}
                 onChange={(e) => handleChange('recruitingHelp', e.target.value)}
@@ -628,11 +630,11 @@ export function AdvancedFilters({ onApply }: { onApply: (filters: any) => void }
                 <option value="intro-network">Intro Network</option>
                 <option value="in-house">In-house Recruiter</option>
                 <option value="job-board">Job Board Access</option>
-              </Select>
+              </select>
             </div>
             <div>
               <Label htmlFor="technicalResources">Technical Resources</Label>
-              <Select
+              <select className={filterSelectClass}
                 id="technicalResources"
                 value={filters.technicalResources}
                 onChange={(e) => handleChange('technicalResources', e.target.value)}
@@ -641,11 +643,11 @@ export function AdvancedFilters({ onApply }: { onApply: (filters: any) => void }
                 <option value="cloud-credits">Cloud Credits</option>
                 <option value="staff-eng">Staff Eng Hours</option>
                 <option value="ml-infra">ML Infrastructure</option>
-              </Select>
+              </select>
             </div>
             <div>
               <Label htmlFor="operationalSupport">Operational Support</Label>
-              <Select
+              <select className={filterSelectClass}
                 id="operationalSupport"
                 value={filters.operationalSupport}
                 onChange={(e) => handleChange('operationalSupport', e.target.value)}
@@ -654,11 +656,11 @@ export function AdvancedFilters({ onApply }: { onApply: (filters: any) => void }
                 <option value="pricing">Pricing</option>
                 <option value="soc2">SOC2</option>
                 <option value="legal-intros">Legal Intros</option>
-              </Select>
+              </select>
             </div>
             <div>
               <Label htmlFor="regulatoryExpertise">Regulatory Expertise</Label>
-              <Select
+              <select className={filterSelectClass}
                 id="regulatoryExpertise"
                 value={filters.regulatoryExpertise}
                 onChange={(e) => handleChange('regulatoryExpertise', e.target.value)}
@@ -668,11 +670,11 @@ export function AdvancedFilters({ onApply }: { onApply: (filters: any) => void }
                 <option value="healthcare">Healthcare</option>
                 <option value="defense">Defense</option>
                 <option value="crypto">Crypto Counsel</option>
-              </Select>
+              </select>
             </div>
             <div>
               <Label htmlFor="gpuComputeAccess">GPU/Compute Access</Label>
-              <Select
+              <select className={filterSelectClass}
                 id="gpuComputeAccess"
                 value={filters.gpuComputeAccess}
                 onChange={(e) => handleChange('gpuComputeAccess', e.target.value)}
@@ -681,11 +683,11 @@ export function AdvancedFilters({ onApply }: { onApply: (filters: any) => void }
                 <option value="real-allocation">Real Allocation</option>
                 <option value="just-credits">Just Credits</option>
                 <option value="none">None</option>
-              </Select>
+              </select>
             </div>
             <div>
               <Label htmlFor="tokenPolicy">Token Policy</Label>
-              <Select
+              <select className={filterSelectClass}
                 id="tokenPolicy"
                 value={filters.tokenPolicy}
                 onChange={(e) => handleChange('tokenPolicy', e.target.value)}
@@ -694,7 +696,7 @@ export function AdvancedFilters({ onApply }: { onApply: (filters: any) => void }
                 <option value="equity-only">Equity Only</option>
                 <option value="dual-structure">Dual Structure OK</option>
                 <option value="warrants">Warrants</option>
-              </Select>
+              </select>
             </div>
           </div>
         </div>
@@ -705,7 +707,7 @@ export function AdvancedFilters({ onApply }: { onApply: (filters: any) => void }
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             <div>
               <Label htmlFor="schoolIPPolicy">School IP Policy Guidance?</Label>
-              <Select
+              <select className={filterSelectClass}
                 id="schoolIPPolicy"
                 value={filters.schoolIPPolicy}
                 onChange={(e) => handleChange('schoolIPPolicy', e.target.value)}
@@ -714,11 +716,11 @@ export function AdvancedFilters({ onApply }: { onApply: (filters: any) => void }
                 <option value="no">No</option>
                 <option value="generic">Generic</option>
                 <option value="school-specific">School-specific Help</option>
-              </Select>
+              </select>
             </div>
             <div>
               <Label htmlFor="loaWrittenPolicies">LOA Written Policies?</Label>
-              <Select
+              <select className={filterSelectClass}
                 id="loaWrittenPolicies"
                 value={filters.loaWrittenPolicies}
                 onChange={(e) => handleChange('loaWrittenPolicies', e.target.value)}
@@ -726,11 +728,11 @@ export function AdvancedFilters({ onApply }: { onApply: (filters: any) => void }
                 <option value="">Any</option>
                 <option value="no">No</option>
                 <option value="yes">Leave Process Documented</option>
-              </Select>
+              </select>
             </div>
             <div>
               <Label htmlFor="examFlexibility">Exam Flexibility?</Label>
-              <Select
+              <select className={filterSelectClass}
                 id="examFlexibility"
                 value={filters.examFlexibility}
                 onChange={(e) => handleChange('examFlexibility', e.target.value)}
@@ -738,11 +740,11 @@ export function AdvancedFilters({ onApply }: { onApply: (filters: any) => void }
                 <option value="">Any</option>
                 <option value="rigid">Rigid Schedule</option>
                 <option value="accommodating">Accommodating</option>
-              </Select>
+              </select>
             </div>
             <div>
               <Label htmlFor="financialAidImpact">Financial Aid Impact?</Label>
-              <Select
+              <select className={filterSelectClass}
                 id="financialAidImpact"
                 value={filters.financialAidImpact}
                 onChange={(e) => handleChange('financialAidImpact', e.target.value)}
@@ -750,7 +752,7 @@ export function AdvancedFilters({ onApply }: { onApply: (filters: any) => void }
                 <option value="">Any</option>
                 <option value="could-affect">Could Affect Scholarships</option>
                 <option value="cleared">Cleared</option>
-              </Select>
+              </select>
             </div>
           </div>
         </div>

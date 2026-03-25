@@ -63,7 +63,12 @@ function truncateToSentences(text: string, maxSentences: number): string {
 }
 
 function cleanResults(
-  results: Array<{ title?: string; url?: string; publishedDate?: string; text?: string }>
+  results: Array<{
+    title?: string | null
+    url?: string | null
+    publishedDate?: string | null
+    text?: string | null
+  }>
 ): MarketSearchResult[] {
   return results
     .filter((r) => r.title && r.text)

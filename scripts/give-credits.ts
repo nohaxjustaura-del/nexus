@@ -23,9 +23,13 @@ async function main() {
       data: {
         email,
         name: email.split('@')[0],
-        stage: 'Pre-Seed',
+        stage: 'idea',
         sectors: '[]',
         location: 'US',
+        fundingNeed: 0,
+        ethicsTags: '[]',
+        personalityTags: '[]',
+        valueAddNeeds: '[]',
       },
       select: { id: true, name: true, email: true },
     })

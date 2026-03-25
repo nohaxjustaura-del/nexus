@@ -92,7 +92,7 @@ export async function getPersonalizedVCRecommendations(
     
     // 1. INTERACTION HISTORY: Boost VCs similar to ones founder engaged with
     const interactionBoost = calculateInteractionBoost(
-      match.investor.id,
+      match.investor,
       founderInteractions
     )
     personalizedScore += interactionBoost
@@ -181,22 +181,25 @@ function getFounderInteractions(founderId: string): InteractionEvent[] {
  * Calculate boost based on founder's past interactions
  */
 function calculateInteractionBoost(
-  investorId: string,
+  investor: Investor,
   interactions: InteractionEvent[]
 ): number {
   if (interactions.length === 0) return 0
-  
-  // Find VCs founder interacted with
-  const interactedVCs = new Set(interactions.map(i => i.investorId))
-  
-  // If already interacted with this VC, big boost
-  if (interactedVCs.has(investorId)) {
+
+  const interactedVCs = new Set(interactions.map((i) => i.investorId))
+
+  if (interactedVCs.has(investor.id)) {
     return 10
   }
-  
-  // Check if similar to VCs founder liked (by sector/stage)
-  const similarityScore = calculateVCSimilarity(vc, founderInteractions)
-  return similarityScore
+
+  const byInvestor = new Map<string, InteractionType[]>()
+  for (const e of interactions) {
+    const list = byInvestor.get(e.investorId) ?? []
+    list.push(e.type)
+    byInvestor.set(e.investorId, list)
+  }
+
+  return calculateVCSimilarity(investor, byInvestor)
 }
 
 /**
@@ -220,6 +223,14 @@ const SIMILARITY_WEIGHTS: SimilarityWeights = {
   stageOverlap: 0.3,        // 30% weight
   checkSizeProximity: 0.2,  // 20% weight
   geoOverlap: 0.1,          // 10% weight
+}
+
+const INTERACTION_WEIGHTS: Record<InteractionType, number> = {
+  [InteractionType.VIEW]: 1,
+  [InteractionType.BOOKMARK]: 3,
+  [InteractionType.APPLICATION]: 5,
+  [InteractionType.RESPONSE]: 10,
+  [InteractionType.MEETING]: 15,
 }
 
 /**

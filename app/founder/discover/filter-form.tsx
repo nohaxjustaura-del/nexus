@@ -3,8 +3,10 @@
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
-import { Select } from "@/components/ui/select"
 import { AdvancedFilters } from "./advanced-filters"
+
+const filterSelectClass =
+  "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
 
 const SECTORS = [
   'AI/ML', 'SaaS', 'Fintech', 'Healthcare', 'Climate Tech', 'Consumer',
@@ -86,8 +88,9 @@ export function FilterForm() {
       <div className="grid gap-4 md:grid-cols-5">
         <div>
           <Label htmlFor="fundType">Type</Label>
-          <Select 
-            id="fundType" 
+          <select
+            className={filterSelectClass}
+            id="fundType"
             name="fundType"
             defaultValue={searchParams.get('fundType') || ''}
           >
@@ -96,12 +99,13 @@ export function FilterForm() {
                 {type.label}
               </option>
             ))}
-          </Select>
+          </select>
         </div>
         <div>
           <Label htmlFor="sector">Sector</Label>
-          <Select 
-            id="sector" 
+          <select
+            className={filterSelectClass}
+            id="sector"
             name="sector"
             defaultValue={searchParams.get('sector') || ''}
           >
@@ -111,12 +115,13 @@ export function FilterForm() {
                 {sector}
               </option>
             ))}
-          </Select>
+          </select>
         </div>
         <div>
           <Label htmlFor="stage">Stage</Label>
-          <Select 
-            id="stage" 
+          <select
+            className={filterSelectClass}
+            id="stage"
             name="stage"
             defaultValue={searchParams.get('stage') || ''}
           >
@@ -126,12 +131,13 @@ export function FilterForm() {
                 {stage}
               </option>
             ))}
-          </Select>
+          </select>
         </div>
         <div>
           <Label htmlFor="min">Min Check ($K)</Label>
-          <Select 
-            id="min" 
+          <select
+            className={filterSelectClass}
+            id="min"
             name="min"
             defaultValue={searchParams.get('min') || ''}
           >
@@ -140,12 +146,13 @@ export function FilterForm() {
                 {amount.label}
               </option>
             ))}
-          </Select>
+          </select>
         </div>
         <div>
           <Label htmlFor="max">Max Check ($K)</Label>
-          <Select 
-            id="max" 
+          <select
+            className={filterSelectClass}
+            id="max"
             name="max"
             defaultValue={searchParams.get('max') || ''}
           >
@@ -154,7 +161,7 @@ export function FilterForm() {
                 {amount.label}
               </option>
             ))}
-          </Select>
+          </select>
         </div>
       </div>
       <Button type="submit" className="mt-4">Apply Filters</Button>

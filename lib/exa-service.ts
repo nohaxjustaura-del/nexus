@@ -38,7 +38,11 @@ function truncateToSentences(text: string, max: number): string {
 }
 
 function cleanResults(
-  results: Array<{ title?: string; publishedDate?: string; text?: string }>
+  results: Array<{
+    title?: string | null
+    publishedDate?: string | null
+    text?: string | null
+  }>
 ): ExaSnippet[] {
   return results
     .filter((r) => r.title)

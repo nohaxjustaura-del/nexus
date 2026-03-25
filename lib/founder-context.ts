@@ -126,15 +126,16 @@ export async function getComprehensiveFounderContext(
     if (founder.revenue && founder.revenue > 50000) experienceLevel = 'experienced'
     if (founder.teamSize && founder.teamSize > 10) experienceLevel = 'experienced'
     
-    // 🆕 ENHANCE: Detect student status from education
-    const isStudent = founder.isStudent || 
-      (founder.education && (
+    // 🆕 ENHANCE: Detect student status from prefs + education text (Founder has no isStudent column)
+    const isStudentFromEducation =
+      !!(founder.education && (
         founder.education.toLowerCase().includes('student') ||
         founder.education.toLowerCase().includes('studying') ||
         founder.education.toLowerCase().includes('enrolled') ||
-        founder.education.toLowerCase().includes('berkeley') && !founder.education.toLowerCase().includes('alumni')
-      )) ||
-      false
+        (founder.education.toLowerCase().includes('berkeley') &&
+          !founder.education.toLowerCase().includes('alumni'))
+      ))
+    const isStudent = prefs?.isStudent || isStudentFromEducation
     
     // Detect tech background
     const techBackground = 
@@ -151,16 +152,17 @@ export async function getComprehensiveFounderContext(
       ) ||
       false
     
-    // 🆕 ENHANCE: Detect university from education
-    const university = founder.universityAffiliation || 
+    // 🆕 ENHANCE: Detect university hint from education string
+    const university =
       (founder.education && (
         founder.education.toLowerCase().includes('berkeley') ||
         founder.education.toLowerCase().includes('uc berkeley') ||
         founder.education.toLowerCase().includes('stanford') ||
         founder.education.toLowerCase().includes('mit') ||
         founder.education.toLowerCase().includes('harvard')
-      ) ? founder.education : '') ||
-      ''
+      )
+        ? founder.education
+        : '') || ''
     
     // Detect strong traction
     const hasStrongTraction = 
@@ -180,7 +182,7 @@ export async function getComprehensiveFounderContext(
       education: founder.education || undefined,
       
       // Background
-      isStudent: prefs?.isStudent || isStudent || false, // Use detected student status
+      isStudent,
       willingToDropOut: founder.willingToDropOut,
       isImmigrant: prefs?.isImmigrant || false,
       isUnderrepresented: prefs?.isUnderrepresented || false,

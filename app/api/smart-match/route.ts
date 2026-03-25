@@ -190,8 +190,8 @@ async function generateVCEmbeddingForInvestor(investor: {
   leadFollow: string
   thesis: string | null
   valueAddTags: string
-  portfolio: string
-  notableInvestments: string
+  portfolio: string | null
+  notableInvestments: string | null
 }): Promise<number[]> {
   const vcProfile = {
     firmName: investor.firmName,
@@ -202,14 +202,14 @@ async function generateVCEmbeddingForInvestor(investor: {
     checkSizeMin: investor.checkSizeMin,
     checkSizeMax: investor.checkSizeMax,
     leadFollow: investor.leadFollow,
-    thesis: investor.thesis,
+    thesis: investor.thesis ?? undefined,
     valueAddTags: parseJSON<string[]>(investor.valueAddTags, []),
-    portfolio: parseJSON<unknown[]>(investor.portfolio, [])
+    portfolio: parseJSON<unknown[]>(investor.portfolio ?? '[]', [])
       .map((p: unknown) =>
         typeof p === 'string' ? p : (p as { name?: string }).name || (p as { company?: string }).company
       )
       .filter((s): s is string => typeof s === 'string' && s.length > 0),
-    notableInvestments: parseJSON<string[]>(investor.notableInvestments, []),
+    notableInvestments: parseJSON<string[]>(investor.notableInvestments ?? '[]', []),
   }
 
   return generateVCEmbedding(vcProfile)

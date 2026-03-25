@@ -69,7 +69,7 @@ export async function searchWeb(
       searchDepth,
       maxResults,
       includeAnswer: true,
-      includeRawContent: true,
+      includeRawContent: 'text',
       includeImages: false,
     })
 

@@ -165,13 +165,14 @@ function isFillerDescription(description: string | null | undefined): boolean {
   }
   
   // Check if description lacks specific details (no firm name, no portfolio, no numbers, no specific sectors)
-  const hasSpecificDetails = 
-    desc.match(/\d+/) || // Has numbers
+  const hasSpecificDetails = Boolean(
+    desc.match(/\d+/) ||
     desc.toLowerCase().includes('portfolio') ||
     desc.toLowerCase().includes('notable') ||
     desc.toLowerCase().includes('backed') ||
     desc.toLowerCase().includes('invested') ||
-    desc.length > 200 // Long enough to be detailed
+    desc.length > 200
+  )
   
   if (!hasSpecificDetails && desc.length < 100) {
     return true
@@ -190,7 +191,7 @@ function isUniqueDescription(description: string | null | undefined, firmName: s
   // Must contain firm name or be very specific
   const containsFirmName = desc.includes(firm)
   const hasPortfolio = desc.includes('portfolio') || desc.includes('notable') || desc.includes('backed')
-  const hasSpecificDetails = desc.match(/\d+/) || desc.length > 150
+  const hasSpecificDetails = Boolean(desc.match(/\d+/) || desc.length > 150)
   const hasUniqueValue = desc.includes('known for') || desc.includes('specializes') || desc.includes('focuses')
   
   return containsFirmName || (hasPortfolio && hasSpecificDetails) || (hasUniqueValue && hasSpecificDetails)

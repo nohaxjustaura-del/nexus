@@ -616,7 +616,8 @@ function generateBetterDescription(investor: any): string | null {
   // If we have specific portfolio companies or notable investments, use those
   if (notableInvestments && notableInvestments.length > 0) {
     const companies = notableInvestments.slice(0, 3).join(', ')
-    return `${investor.firmName} has backed notable companies including ${companies}. ${generateContextualDescription(investor, sectors, stages, valueAdd, geoFocus)}`
+    const ctx = generateContextualDescription(investor, sectors, stages, valueAdd, geoFocus)
+    return `${investor.firmName} has backed notable companies including ${companies}.${ctx ? ` ${ctx}` : ''}`
   }
   
   if (portfolio && Array.isArray(portfolio) && portfolio.length > 0) {
@@ -627,7 +628,8 @@ function generateBetterDescription(investor: any): string | null {
     }).filter(Boolean).join(', ')
     
     if (companies) {
-      return `${investor.firmName} portfolio includes ${companies}. ${generateContextualDescription(investor, sectors, stages, valueAdd, geoFocus)}`
+      const ctx = generateContextualDescription(investor, sectors, stages, valueAdd, geoFocus)
+      return `${investor.firmName} portfolio includes ${companies}.${ctx ? ` ${ctx}` : ''}`
     }
   }
   
@@ -641,7 +643,7 @@ function generateContextualDescription(
   stages: string[],
   valueAdd: string[],
   geoFocus: string[]
-): string {
+): string | null {
   const parts: string[] = []
   
   // Fund type

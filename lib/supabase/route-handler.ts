@@ -21,7 +21,7 @@ export function createSupabaseAuthRouteClient(request: NextRequest) {
       getAll() {
         return request.cookies.getAll()
       },
-      setAll(cookiesToSet) {
+      setAll(cookiesToSet: { name: string; value: string; options: CookieOptions }[]) {
         cookiesToSet.forEach(({ name, value, options }) => {
           jar.push({ name, value, options })
         })

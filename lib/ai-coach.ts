@@ -670,9 +670,8 @@ export class AIFundCoach {
    */
   private static async findMatchingInvestors(profile: StartupProfile): Promise<InvestorMatch[]> {
     // Import Prisma client dynamically to avoid issues
-    const { PrismaClient } = await import('@prisma/client');
-    const { db } = await import('./db'); // Use singleton
-    
+    const { db } = await import('./db');
+
     try {
       // Determine search criteria from profile
       const targetStage = this.mapStageToInvestorStage(profile.stage);
@@ -681,7 +680,7 @@ export class AIFundCoach {
       const targetGeography = this.extractGeography(profile.location);
       
       // Fetch all investors and score them
-      const allInvestors = await prisma.investor.findMany();
+      const allInvestors = await db.investor.findMany();
       
       const scoredInvestors: InvestorMatch[] = allInvestors
         .map(investor => {
@@ -726,13 +725,10 @@ export class AIFundCoach {
         .filter(match => match.matchScore >= 40) // Only show decent matches
         .sort((a, b) => b.matchScore - a.matchScore)
         .slice(0, 25); // Top 25 matches
-      
-      await prisma.$disconnect();
+
       return scoredInvestors;
-      
     } catch (error) {
       console.error('Error fetching investors:', error);
-      await prisma.$disconnect();
       return [];
     }
   }
