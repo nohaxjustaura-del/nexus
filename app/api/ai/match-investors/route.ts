@@ -1,9 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getCurrentUser } from '@/lib/auth'
+import { getUserFromRequest } from '@/lib/auth'
 import { db } from '@/lib/db'
 import OpenAI from 'openai'
 import { FUND_COACH_SYSTEM_PROMPT } from '@/lib/ai-prompts'
 import { getOpenRouterClient, getModelName } from '@/lib/openrouter'
+
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
 
 // Get AI client - supports both OpenRouter and OpenAI
 function getAIClient(): OpenAI | null {
@@ -24,7 +27,7 @@ function getAIClient(): OpenAI | null {
 
 export async function POST(request: NextRequest) {
   try {
-    const user = await getCurrentUser()
+    const user = await getUserFromRequest(request)
     
     if (!user?.id) {
       return NextResponse.json({ error: 'Unauthorized. Please sign in first.' }, { status: 401 })

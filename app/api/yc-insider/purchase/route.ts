@@ -3,6 +3,10 @@ import { db } from '@/lib/db'
 import { getCurrentUser } from '@/lib/auth'
 import { ADMIN_EMAIL } from '@/lib/constants'
 
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
+
 export async function POST(request: NextRequest) {
   try {
     const user = await getCurrentUser()

@@ -7,6 +7,9 @@ import {
   generateVCEmbedding,
   type RankedVC,
 } from '@/lib/embeddings'
+
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
 import { parseJSON } from '@/lib/utils'
 import { ADMIN_EMAIL } from '@/lib/constants'
 

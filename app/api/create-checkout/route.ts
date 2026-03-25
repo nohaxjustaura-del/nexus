@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import { stripe, CREDIT_PACKAGES } from '@/lib/stripe'
 import { getCurrentUser } from '@/lib/auth'
 
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
+
 export async function POST(request: NextRequest) {
   try {
     // Get current user

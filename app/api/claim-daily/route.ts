@@ -3,6 +3,10 @@ import { db } from '@/lib/db'
 import { getCurrentUser } from '@/lib/auth'
 import { logger } from '@/lib/logger'
 
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
+
 // Claim cooldown: 12 hours in milliseconds
 const CLAIM_COOLDOWN_MS = 12 * 60 * 60 * 1000
 
