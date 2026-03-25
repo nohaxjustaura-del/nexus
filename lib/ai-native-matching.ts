@@ -54,6 +54,10 @@ export interface AINativeMatchResult extends EnhancedMatchResult {
     analysis?: any
     features?: any
   }
+  /** Optional outreach hints when intelligent layer provides them */
+  whyApply?: string
+  bestApproach?: string
+  timing?: string
 }
 
 // ---------------------------------------------------------------------------

@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
     logger.error('DEBUG', 'Error message test (this is intentional)')
     
     const duration = Date.now() - startTime
-    logger.performance('DEBUG_ENDPOINT', duration)
+    logger.perf('DEBUG_ENDPOINT', startTime)
     
     return NextResponse.json({
       status: 'ok',

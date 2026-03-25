@@ -15,6 +15,7 @@
     "db:studio": "prisma studio",
     "db:generate": "prisma generate",
     "db:import-vcs-csv": "tsx scripts/import-csv-to-db.ts",
+    "db:import-vcs-embeddings-jsonl": "tsx scripts/import-vcs-embeddings-jsonl-to-db.ts",
     "add-vcs": "tsx scripts/extract-and-add-vcs.ts",
     "improve-vc-descriptions": "tsx scripts/improve-vc-descriptions.ts",
     "generate-vc-embeddings": "tsx scripts/generate-vc-embeddings.ts",

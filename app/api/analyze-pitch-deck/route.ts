@@ -256,7 +256,7 @@ export async function POST(request: NextRequest) {
     try {
       const validation = await validatePitchDeck(deckText)
       if (!validation.isValid) {
-        const missingElements = []
+        const missingElements: string[] = []
         const pitchDeckIndicators = [
           { pattern: /problem\s+statement/i, name: 'Problem Statement' },
           { pattern: /solution/i, name: 'Solution' },
