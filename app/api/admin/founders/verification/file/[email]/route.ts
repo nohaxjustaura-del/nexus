@@ -25,12 +25,13 @@ export async function GET(
     const { buffer, contentType } = await downloadStorageObject(row.url)
     const fileName = row.url.split('/').pop() || 'id-document'
 
-    return new NextResponse(buffer, {
+    const body = new Uint8Array(buffer)
+    return new NextResponse(body, {
       status: 200,
       headers: {
         'Content-Type': contentType || 'application/octet-stream',
         'Content-Disposition': `attachment; filename="${fileName}"`,
-        'Content-Length': String(buffer.length),
+        'Content-Length': String(body.byteLength),
         'Cache-Control': 'no-store',
       },
     })

@@ -166,8 +166,18 @@ export default async function AdminDashboardPage() {
         {/* All Pending Items */}
         {stats.total > 0 ? (
           <AdminDashboardClient
-            userApprovals={userApprovals}
-            founderVerifications={founderVerifications}
+            userApprovals={userApprovals.map((u) => ({
+              email: u.email,
+              status: u.status,
+              createdAt: u.createdAt.toISOString(),
+              reviewedAt: u.reviewedAt?.toISOString(),
+            }))}
+            founderVerifications={founderVerifications.map((f) => ({
+              email: f.email,
+              url: f.url ?? undefined,
+              status: f.status,
+              submittedAt: f.submittedAt.toISOString(),
+            }))}
             vcClaims={vcClaims.map(c => ({
               ...c,
               createdAt: c.createdAt.toISOString(),
