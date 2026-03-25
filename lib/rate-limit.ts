@@ -87,6 +87,11 @@ export async function checkRateLimit(
   request: NextRequest,
   options: RateLimitOptions
 ): Promise<{ allowed: boolean; remaining: number; resetAt: number } | null> {
+  // Bypass all rate limiting when DISABLE_RATE_LIMIT=true (e.g. during local debugging)
+  if (process.env.DISABLE_RATE_LIMIT === 'true') {
+    return { allowed: true, remaining: options.limit, resetAt: Date.now() + options.windowMs }
+  }
+
   const { limit, windowMs, identifier, skipAdmin = true } = options
 
   try {
@@ -191,11 +196,6 @@ export const RATE_LIMITS = {
     limit: 10,
     windowMs: 60 * 1000, // 1 minute
     identifier: 'ai-analysis',
-  },
-  AUTH: {
-    limit: 5,
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    identifier: 'auth',
   },
   GENERAL_API: {
     limit: 100,

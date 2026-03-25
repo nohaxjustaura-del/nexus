@@ -7,7 +7,6 @@ import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { CheckCircle, Loader2, ArrowLeft, Mail } from 'lucide-react'
 import Link from 'next/link'
-import { useOtpCooldown } from '@/lib/use-otp-cooldown'
 import { BRAND_NAME } from '@/lib/brand'
 import { CLIENT_STORAGE } from '@/lib/client-storage-keys'
 
@@ -64,8 +63,6 @@ export default function VerifyPage() {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
   const inputRefs = useRef<(HTMLInputElement | null)[]>([])
-  const { secondsLeft: resendCooldownLeft, start: startResendCooldown, active: resendCooldownActive } =
-    useOtpCooldown()
 
   useEffect(() => {
     // Prefer code boxes when email already known (e.g. from ?email=); otherwise user starts at email field.
@@ -246,13 +243,6 @@ export default function VerifyPage() {
 
       if (!response.ok) {
         setError(data.error || 'Failed to resend code')
-        const retrySec =
-          typeof data.retryAfterSeconds === 'number'
-            ? data.retryAfterSeconds
-            : response.status === 429
-              ? 60
-              : 0
-        if (retrySec > 0) startResendCooldown(retrySec)
         setResending(false)
         return
       }
@@ -412,7 +402,7 @@ export default function VerifyPage() {
                     type="button"
                     variant="ghost"
                     onClick={handleResend}
-                    disabled={resending || resendCooldownActive || !email.trim().includes('@')}
+                    disabled={resending || !email.trim().includes('@')}
                     className="text-sm"
                   >
                     {resending ? (
@@ -420,8 +410,6 @@ export default function VerifyPage() {
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                         Sending...
                       </>
-                    ) : resendCooldownActive ? (
-                      `Wait ${resendCooldownLeft}s to resend`
                     ) : (
                       'Resend Code'
                     )}

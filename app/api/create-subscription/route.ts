@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { stripe, PREMIUM_SUBSCRIPTION } from '@/lib/stripe'
 import { getCurrentUser } from '@/lib/auth'
+import { getSiteUrl } from '@/lib/site-url'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -55,8 +56,8 @@ export async function POST(request: NextRequest) {
       },
       customer: customerId,
       customer_email: !customerId ? user.email : undefined,
-      success_url: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/pricing?success=true&premium=true`,
-      cancel_url: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/pricing?canceled=true`,
+      success_url: `${getSiteUrl(request)}/pricing?success=true&premium=true`,
+      cancel_url: `${getSiteUrl(request)}/pricing?canceled=true`,
       subscription_data: {
         metadata: {
           userId: user.id || user.email,

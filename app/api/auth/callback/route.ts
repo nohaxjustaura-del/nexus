@@ -20,8 +20,14 @@ export async function GET(request: NextRequest) {
 
   const requestUrl = new URL(request.url)
   const code = requestUrl.searchParams.get('code')
+  const errorParam = requestUrl.searchParams.get('error')
+  const errorDesc = requestUrl.searchParams.get('error_description')
   const nextPath = requestUrl.searchParams.get('next') || '/founder/onboarding'
   const safeNext = nextPath.startsWith('/') ? nextPath : '/'
+
+  // #region agent log
+  fetch('http://127.0.0.1:7471/ingest/0f685c44-f6c8-4b99-b23e-84e0cc9d4f08',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'2f72c9'},body:JSON.stringify({sessionId:'2f72c9',location:'app/api/auth/callback/route.ts:22',message:'callback GET hit',data:{hasCode:!!code,codePrefix:code?.slice(0,8)||null,errorParam,errorDesc,fullSearch:requestUrl.search,cookies:request.cookies.getAll().map(c=>c.name)},timestamp:Date.now()})}).catch(()=>{});
+  // #endregion
 
   if (!code) {
     return NextResponse.redirect(new URL('/verify?error=missing_code', request.url))

@@ -7,7 +7,6 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/com
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Mail, Loader2 } from 'lucide-react'
-import { useOtpCooldown } from '@/lib/use-otp-cooldown'
 import { CLIENT_STORAGE } from '@/lib/client-storage-keys'
 
 export default function SignUpPage() {
@@ -18,7 +17,6 @@ export default function SignUpPage() {
   const [userType, setUserType] = useState<'founder' | 'investor' | 'mentor'>('founder')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const { secondsLeft: cooldownLeft, start: startCooldown, active: cooldownActive } = useOtpCooldown()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -70,13 +68,6 @@ export default function SignUpPage() {
           }, 100)
         } else {
           setError(errorMsg)
-          const retrySec =
-            typeof data.retryAfterSeconds === 'number'
-              ? data.retryAfterSeconds
-              : response.status === 429
-                ? 60
-                : 0
-          if (retrySec > 0) startCooldown(retrySec)
         }
         setLoading(false)
         return
@@ -198,8 +189,6 @@ export default function SignUpPage() {
                   <Loader2 className="mr-2 h-5 w-5 animate-spin" />
                   Sending Code...
                 </>
-              ) : cooldownActive ? (
-                <>Wait {cooldownLeft}s to send again</>
               ) : (
                 <>
                   Send Verification Code

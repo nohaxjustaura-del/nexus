@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseAuthRouteClient } from '@/lib/supabase/route-handler'
-import { getSiteUrl } from '@/lib/site-url'
 import { otpErrorResponse } from '@/lib/supabase/otp-errors'
 
 export const dynamic = 'force-dynamic'
@@ -16,14 +15,11 @@ export async function POST(request: NextRequest) {
     const normalizedEmail = email.toLowerCase().trim()
     const { supabase, applyAuthCookies } = createSupabaseAuthRouteClient(request)
 
-    const siteUrl = getSiteUrl(request)
-    const emailRedirectTo = `${siteUrl}/api/auth/callback?next=${encodeURIComponent('/founder/onboarding')}`
-
+    // No emailRedirectTo — forces 6-digit OTP code email.
     const { error } = await supabase.auth.signInWithOtp({
       email: normalizedEmail,
       options: {
         shouldCreateUser: true,
-        emailRedirectTo,
       },
     })
 

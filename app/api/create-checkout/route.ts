@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { stripe, CREDIT_PACKAGES } from '@/lib/stripe'
 import { getCurrentUser } from '@/lib/auth'
+import { getSiteUrl } from '@/lib/site-url'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -48,8 +49,8 @@ export async function POST(request: NextRequest) {
         packageType,
       },
       customer_email: user.email,
-      success_url: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/pricing?success=true&credits=${creditPackage.credits}`,
-      cancel_url: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/pricing?canceled=true`,
+      success_url: `${getSiteUrl(request)}/pricing?success=true&credits=${creditPackage.credits}`,
+      cancel_url: `${getSiteUrl(request)}/pricing?canceled=true`,
     })
 
     return NextResponse.json({ sessionId: session.id, url: session.url })

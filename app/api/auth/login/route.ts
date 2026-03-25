@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseAuthRouteClient } from '@/lib/supabase/route-handler'
-import { getSiteUrl } from '@/lib/site-url'
-import { isSupabaseOtpRateLimited, otpErrorResponse } from '@/lib/supabase/otp-errors'
+import { createSupabaseAdminClient } from '@/lib/supabase/admin'
+import { syncPrismaUserFromAuth } from '@/lib/auth'
+import { otpErrorResponse } from '@/lib/supabase/otp-errors'
+import { ADMIN_EMAIL } from '@/lib/constants'
 
 export const dynamic = 'force-dynamic'
 
@@ -17,40 +19,75 @@ export async function POST(request: NextRequest) {
 
     const { supabase, applyAuthCookies } = createSupabaseAuthRouteClient(request)
 
-    const siteUrl = getSiteUrl(request)
-    const emailRedirectTo = `${siteUrl}/api/auth/callback?next=${encodeURIComponent('/account')}`
+    // Admin bypass: skip OTP email and auto-authenticate
+    if (normalizedEmail === ADMIN_EMAIL.toLowerCase()) {
+      try {
+        const adminSupabase = createSupabaseAdminClient()
+        const { data: linkData, error: linkError } = await adminSupabase.auth.admin.generateLink({
+          type: 'magiclink',
+          email: normalizedEmail,
+        })
 
+        if (linkError || !linkData) {
+          console.error('Admin bypass generateLink error:', linkError)
+          return NextResponse.json({ error: 'Admin login failed' }, { status: 500 })
+        }
+
+        const otp = linkData.properties?.email_otp
+        if (!otp) {
+          return NextResponse.json({ error: 'Admin login failed: no OTP generated' }, { status: 500 })
+        }
+
+        const { data: verifyData, error: verifyError } = await supabase.auth.verifyOtp({
+          email: normalizedEmail,
+          token: otp,
+          type: 'email',
+        })
+
+        if (verifyError || !verifyData.user) {
+          console.error('Admin bypass verifyOtp error:', verifyError)
+          return NextResponse.json({ error: 'Admin login verification failed' }, { status: 500 })
+        }
+
+        const user = await syncPrismaUserFromAuth(verifyData.user)
+
+        const res = NextResponse.json({
+          success: true,
+          adminBypass: true,
+          user: user
+            ? { id: user.id, email: user.email, emailVerified: user.emailVerified, userType: user.userType }
+            : null,
+        })
+        applyAuthCookies(res)
+        return res
+      } catch (adminErr: any) {
+        console.error('Admin bypass error:', adminErr)
+        return NextResponse.json({ error: 'Admin login failed' }, { status: 500 })
+      }
+    }
+
+    // No emailRedirectTo — Supabase sends a 6-digit OTP code email instead of a
+    // magic link. This avoids the PKCE code-verifier cookie issue where the
+    // code verifier set during login isn't present when the link is clicked from
+    // an email client.
+    // #region agent log
+    fetch('http://127.0.0.1:7471/ingest/0f685c44-f6c8-4b99-b23e-84e0cc9d4f08',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'2f72c9'},body:JSON.stringify({sessionId:'2f72c9',location:'app/api/auth/login/route.ts:23',message:'signInWithOtp called WITHOUT emailRedirectTo',data:{email:normalizedEmail,hasEmailRedirectTo:false},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
     const { error } = await supabase.auth.signInWithOtp({
       email: normalizedEmail,
       options: {
         shouldCreateUser: false,
-        emailRedirectTo,
       },
     })
+    // #region agent log
+    fetch('http://127.0.0.1:7471/ingest/0f685c44-f6c8-4b99-b23e-84e0cc9d4f08',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'2f72c9'},body:JSON.stringify({sessionId:'2f72c9',location:'app/api/auth/login/route.ts:31',message:'signInWithOtp result',data:{hasError:!!error,errorMsg:error?.message||null},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
 
     if (error) {
       console.error('Supabase login OTP error:', error)
       const notFound =
         error.message?.toLowerCase().includes('signups not allowed') ||
         error.message?.toLowerCase().includes('user not found')
-      // #region agent log
-      fetch('http://127.0.0.1:7464/ingest/8942f439-d0f1-43ea-9e6d-5d7995eef824', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '531446' },
-        body: JSON.stringify({
-          sessionId: '531446',
-          runId: 'pre-fix',
-          hypothesisId: 'H1',
-          location: 'app/api/auth/login/route.ts:error',
-          message: 'login OTP error branch',
-          data: {
-            notFound,
-            rateLimited: isSupabaseOtpRateLimited(error.message),
-          },
-          timestamp: Date.now(),
-        }),
-      }).catch(() => {})
-      // #endregion
       if (notFound) {
         return NextResponse.json(
           { error: 'No account found with this email. Please sign up first.' },

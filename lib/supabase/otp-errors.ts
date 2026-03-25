@@ -25,12 +25,10 @@ export function mapSupabaseOtpError(raw: string | undefined): string {
 
 /** JSON body + status for route handlers (non–user-not-found cases). */
 export function otpErrorResponse(raw: string | undefined): { status: number; body: Record<string, unknown> } {
-  const rateLimited = isSupabaseOtpRateLimited(raw)
   return {
-    status: rateLimited ? 429 : 400,
+    status: 400,
     body: {
       error: mapSupabaseOtpError(raw),
-      ...(rateLimited ? { retryAfterSeconds: 60 } : {}),
     },
   }
 }
