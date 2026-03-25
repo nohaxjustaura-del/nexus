@@ -1,24 +1,31 @@
 import React from "react"
 import type { Metadata } from "next"
-import { Inter } from "next/font/google"
+import { DM_Sans, Outfit } from "next/font/google"
 import "./globals.css"
 import { cn } from "@/lib/utils"
 import { SessionKeeper } from "@/components/session-keeper"
 import { NavAuth } from "@/components/nav-auth"
 import { ProtectedNavLink } from "@/components/protected-nav-link"
 import Link from "next/link"
-import { Heart } from "lucide-react"
+import { Orbit } from "lucide-react"
 import { MobileNav } from "@/components/ui/mobile-nav"
 import { getSiteUrl } from "@/lib/site-url"
 import { BRAND_DEFAULT_TITLE, BRAND_NAME, BRAND_TITLE_TEMPLATE } from "@/lib/brand"
 
 const siteUrl = getSiteUrl()
 
-const inter = Inter({ 
+const dmSans = DM_Sans({
   subsets: ["latin"],
-  display: 'swap',
+  display: "swap",
   preload: true,
-  variable: '--font-inter'
+  variable: "--font-sans",
+})
+
+const outfit = Outfit({
+  subsets: ["latin"],
+  display: "swap",
+  preload: true,
+  variable: "--font-heading",
 })
 
 export const metadata: Metadata = {
@@ -90,8 +97,8 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" className="scroll-smooth">
-      <body className={cn(inter.className, "min-h-screen bg-background antialiased")} suppressHydrationWarning>
+    <html lang="en" className={cn("scroll-smooth", dmSans.variable, outfit.variable)}>
+      <body className={cn("min-h-screen bg-background font-sans antialiased")} suppressHydrationWarning>
         <SessionKeeper />
         
         {/* Skip to main content - Accessibility */}
@@ -102,20 +109,23 @@ export default function RootLayout({
           Skip to main content
         </a>
 
-        {/* Global Header - Clean & Simple */}
-        <header className="border-b border-slate-200/60 bg-white sticky top-0 z-50 no-print shadow-sm">
-          <div className="container mx-auto max-w-7xl flex h-16 items-center justify-between px-4 sm:px-6">
-            <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity group">
-              <Heart className="h-6 w-6 text-primary" />
-              <span className="text-xl font-semibold text-slate-900">{BRAND_NAME}</span>
+        <header className="sticky top-0 z-50 no-print border-b border-border/80 bg-background/75 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60">
+          <div className="container mx-auto max-w-7xl flex h-14 sm:h-16 items-center justify-between px-4 sm:px-6">
+            <Link
+              href="/"
+              className="flex items-center gap-2.5 rounded-lg -ml-1 px-1 py-0.5 hover:bg-foreground/[0.03] transition-colors group"
+            >
+              <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm ring-1 ring-primary/20">
+                <Orbit className="h-5 w-5" strokeWidth={2} aria-hidden />
+              </span>
+              <span className="font-heading text-lg font-semibold tracking-tight text-foreground">{BRAND_NAME}</span>
             </Link>
-            
-            {/* Desktop Navigation */}
-            <nav className="hidden lg:flex items-center gap-1 text-sm" role="navigation" aria-label="Main navigation" suppressHydrationWarning>
-              <ProtectedNavLink href="/founder/discover" className="text-slate-700 hover:text-slate-900 px-3 py-2 rounded-md transition-colors font-medium">Discover</ProtectedNavLink>
-              <ProtectedNavLink href="/founder/ai-analysis" className="text-slate-700 hover:text-slate-900 px-3 py-2 rounded-md transition-colors font-medium">AI Analysis</ProtectedNavLink>
-              <ProtectedNavLink href="/pricing" publicRoute className="text-slate-700 hover:text-slate-900 px-3 py-2 rounded-md transition-colors font-medium">Pricing</ProtectedNavLink>
-              <div className="ml-2 pl-2 border-l border-slate-200" suppressHydrationWarning>
+
+            <nav className="hidden lg:flex items-center gap-0.5 text-sm" role="navigation" aria-label="Main navigation" suppressHydrationWarning>
+              <ProtectedNavLink href="/founder/discover" className="text-muted-foreground hover:text-foreground px-3 py-2 rounded-md transition-colors font-medium">Discover</ProtectedNavLink>
+              <ProtectedNavLink href="/founder/ai-analysis" className="text-muted-foreground hover:text-foreground px-3 py-2 rounded-md transition-colors font-medium">AI Analysis</ProtectedNavLink>
+              <ProtectedNavLink href="/pricing" publicRoute className="text-muted-foreground hover:text-foreground px-3 py-2 rounded-md transition-colors font-medium">Pricing</ProtectedNavLink>
+              <div className="ml-3 pl-3 border-l border-border" suppressHydrationWarning>
                 <NavAuth />
               </div>
             </nav>
@@ -137,31 +147,30 @@ export default function RootLayout({
           {children}
         </main>
         {/* Global Footer - Clean & Modern */}
-        <footer className="mt-auto border-t border-slate-100 py-12 no-print bg-slate-50/50" role="contentinfo">
+        <footer className="mt-auto border-t border-border py-14 no-print bg-muted/30" role="contentinfo">
           <div className="container mx-auto max-w-6xl px-4">
-            {/* Navigation Links */}
-            <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-3 mb-8">
-              <Link href="/privacy" className="text-sm text-slate-600 hover:text-slate-900 transition-colors">Privacy</Link>
-              <Link href="/terms" className="text-sm text-slate-600 hover:text-slate-900 transition-colors">Terms</Link>
-              <Link href="/about" className="text-sm text-slate-600 hover:text-slate-900 transition-colors">About</Link>
-              <Link href="/verification-notice" className="text-sm text-slate-600 hover:text-slate-900 transition-colors">Verification</Link>
-              <Link href="/security" className="text-sm text-slate-600 hover:text-slate-900 transition-colors">Security</Link>
-              <Link href="/contact" className="text-sm text-slate-600 hover:text-slate-900 transition-colors">Contact</Link>
+            <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-2 mb-10">
+              <Link href="/privacy" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Privacy</Link>
+              <Link href="/terms" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Terms</Link>
+              <Link href="/about" className="text-sm text-muted-foreground hover:text-foreground transition-colors">About</Link>
+              <Link href="/verification-notice" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Verification</Link>
+              <Link href="/security" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Security</Link>
+              <Link href="/contact" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Contact</Link>
             </div>
-            
-            {/* Brand and Copyright */}
-            <div className="flex flex-col items-center gap-3 mb-4">
-              <div className="flex items-center gap-2">
-                <Heart className="h-5 w-5 text-primary" />
-                <span className="font-semibold text-slate-900">{BRAND_NAME}</span>
+
+            <div className="flex flex-col items-center gap-4 mb-6">
+              <div className="flex items-center gap-2.5">
+                <span className="flex h-8 w-8 items-center justify-center rounded-md bg-primary/10 text-primary">
+                  <Orbit className="h-4 w-4" strokeWidth={2} />
+                </span>
+                <span className="font-heading font-semibold text-foreground">{BRAND_NAME}</span>
               </div>
-              <p className="text-sm text-slate-600">
-                © 2025 {BRAND_NAME}. Made with <span className="text-red-500">❤️</span> for founders.
+              <p className="text-sm text-muted-foreground">
+                © {new Date().getFullYear()} {BRAND_NAME}. Built for founders.
               </p>
             </div>
-            
-            {/* Disclaimer */}
-            <p className="text-center text-xs text-slate-500 max-w-2xl mx-auto leading-relaxed">
+
+            <p className="text-center text-xs text-muted-foreground/90 max-w-xl mx-auto leading-relaxed">
               {BRAND_NAME} provides information and tools only. We do not broker, solicit, or advise on securities.
             </p>
           </div>
