@@ -27,7 +27,7 @@ export default function AboutPage() {
         {/* Hero Section */}
         <div className="text-center mb-12">
           <h1 className="text-4xl md:text-5xl font-bold mb-4 bg-gradient-to-r from-primary via-blue-600 to-purple-600 bg-clip-text text-transparent">
-            About FounderMatch
+            About NEXUS
           </h1>
           <p className="text-xl text-slate-600 max-w-3xl mx-auto leading-relaxed">
             AI-powered platform connecting founders with compatible VCs, angels, and mentors. 
@@ -45,7 +45,7 @@ export default function AboutPage() {
           </CardHeader>
           <CardContent>
             <p className="text-slate-700 leading-relaxed text-lg">
-              FounderMatch democratizes access to venture capital by using intelligent AI matching algorithms 
+              NEXUS democratizes access to venture capital by using intelligent AI matching algorithms 
               to connect founders with the right investors for their stage, sector, vision, and working style. 
               We eliminate the guesswork and cold outreach, replacing it with evidence-based matching that 
               actually works.
@@ -300,7 +300,7 @@ export default function AboutPage() {
             Ready to Find Your Perfect Investor?
           </h2>
           <p className="text-slate-600 mb-8 max-w-2xl mx-auto">
-            Join thousands of founders who are using FounderMatch to connect with the right investors 
+            Join thousands of founders who are using NEXUS to connect with the right investors 
             and accelerate their fundraising journey.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">

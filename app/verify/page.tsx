@@ -1,30 +1,81 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { CheckCircle, Loader2, ArrowLeft, Mail } from 'lucide-react'
 import Link from 'next/link'
+import { useOtpCooldown } from '@/lib/use-otp-cooldown'
+import { BRAND_NAME } from '@/lib/brand'
+import { CLIENT_STORAGE } from '@/lib/client-storage-keys'
+
+const VERIFY_EMAIL_KEY = CLIENT_STORAGE.PENDING_VERIFY_EMAIL
+const VERIFY_EMAIL_KEY_LEGACY = CLIENT_STORAGE.PENDING_VERIFY_EMAIL_LEGACY
+const USER_EMAIL_KEY = CLIENT_STORAGE.USER_EMAIL
+const USER_EMAIL_KEY_LEGACY = CLIENT_STORAGE.USER_EMAIL_LEGACY
+const LOGGED_IN_KEY = CLIENT_STORAGE.LOGGED_IN
+const LOGGED_IN_KEY_LEGACY = CLIENT_STORAGE.LOGGED_IN_LEGACY
 
 export default function VerifyPage() {
-  const router = useRouter()
   const searchParams = useSearchParams()
-  const email = searchParams.get('email') || ''
+  const paramEmail = (searchParams.get('email') || '').trim()
+  const authError = searchParams.get('error') || ''
   const redirectUrl = searchParams.get('redirect') || ''
-  
+
+  /** Email used for verify + resend (may be typed on this page if link had no ?email=). */
+  const [email, setEmail] = useState('')
+
+  useEffect(() => {
+    if (paramEmail) {
+      setEmail(paramEmail)
+      try {
+        sessionStorage.setItem(VERIFY_EMAIL_KEY, paramEmail)
+      } catch {
+        /* ignore */
+      }
+      return
+    }
+    try {
+      const fromSession = sessionStorage.getItem(VERIFY_EMAIL_KEY)?.trim()
+      if (fromSession) {
+        setEmail(fromSession)
+        return
+      }
+    } catch {
+      /* ignore */
+    }
+    try {
+      const fromLocal =
+        localStorage.getItem(USER_EMAIL_KEY)?.trim() ||
+        localStorage.getItem(USER_EMAIL_KEY_LEGACY)?.trim()
+      if (fromLocal?.includes('@')) {
+        setEmail(fromLocal)
+      }
+    } catch {
+      /* ignore */
+    }
+  }, [paramEmail])
+
   const [code, setCode] = useState(['', '', '', '', '', ''])
   const [loading, setLoading] = useState(false)
   const [resending, setResending] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
   const inputRefs = useRef<(HTMLInputElement | null)[]>([])
+  const { secondsLeft: resendCooldownLeft, start: startResendCooldown, active: resendCooldownActive } =
+    useOtpCooldown()
 
   useEffect(() => {
-    // Focus first input on mount
-    inputRefs.current[0]?.focus()
-  }, [])
+    // Prefer code boxes when email already known (e.g. from ?email=); otherwise user starts at email field.
+    const t = window.setTimeout(() => {
+      if (paramEmail) {
+        inputRefs.current[0]?.focus()
+      }
+    }, 0)
+    return () => window.clearTimeout(t)
+  }, [paramEmail])
 
   const handleCodeChange = (index: number, value: string) => {
     if (value.length > 1) {
@@ -88,10 +139,22 @@ export default function VerifyPage() {
 
   const handleVerify = async (verificationCode?: string) => {
     const codeToVerify = verificationCode || code.join('')
-    
+    const normalizedEmail = email.trim().toLowerCase()
+
+    if (!normalizedEmail || !normalizedEmail.includes('@')) {
+      setError('Enter the email address you used to sign up or log in.')
+      return
+    }
+
     if (codeToVerify.length !== 6) {
       setError('Please enter the complete 6-digit code')
       return
+    }
+
+    try {
+      sessionStorage.setItem(VERIFY_EMAIL_KEY, normalizedEmail)
+    } catch {
+      /* ignore */
     }
 
     setError('')
@@ -104,7 +167,7 @@ export default function VerifyPage() {
           'Content-Type': 'application/json',
         },
         credentials: 'include', // Important: Include cookies
-        body: JSON.stringify({ email, code: codeToVerify }),
+        body: JSON.stringify({ email: normalizedEmail, code: codeToVerify }),
       })
 
       const data = await response.json()
@@ -119,115 +182,34 @@ export default function VerifyPage() {
       }
 
       setSuccess(true)
-      
-      // Store session info in localStorage as backup
+
       if (data.user) {
         try {
-          localStorage.setItem('fm_user_email', data.user.email || '')
-          localStorage.setItem('fm_logged_in', 'true')
-        } catch (e) {
-          // localStorage might not be available, that's okay
+          localStorage.setItem(USER_EMAIL_KEY, data.user.email || '')
+          localStorage.setItem(LOGGED_IN_KEY, 'true')
+          localStorage.removeItem(USER_EMAIL_KEY_LEGACY)
+          localStorage.removeItem(LOGGED_IN_KEY_LEGACY)
+        } catch {
+          /* ignore */
         }
       }
-      
-      // Check if founder profile exists before redirecting
+
       let targetUrl = redirectUrl
-      
+
       if (!targetUrl) {
         if (data.user?.userType === 'investor') {
           targetUrl = '/vc/dashboard'
         } else if (data.user?.userType === 'mentor') {
           targetUrl = '/'
         } else {
-          // For founders, ALWAYS redirect to onboarding first (required during signup)
-          // They must complete onboarding before accessing other features
           targetUrl = '/founder/onboarding'
         }
       }
-      
-      // Wait a moment for cookie to be set, then verify it's working
-      setTimeout(async () => {
-        let retries = 0
-        const maxRetries = 10 // Increased retries
-        
-        const checkAndRedirect = async () => {
-          try {
-            // First check debug endpoint to see cookie status
-            const debugResponse = await fetch('/api/auth/debug', {
-              method: 'GET',
-              credentials: 'include',
-            })
-            
-            const debugData = await debugResponse.json()
-            
-            // Then check auth status
-            const checkResponse = await fetch('/api/auth/check', {
-              method: 'GET',
-              credentials: 'include',
-            })
-            
-            if (!checkResponse.ok) {
-              throw new Error('Auth check failed')
-            }
-            
-            const checkData = await checkResponse.json()
-            
-            // If cookie exists and user is authenticated and verified, redirect
-            if (debugData.hasCookie && checkData.authenticated && checkData.verified) {
-              // Cookie is set and verified - safe to redirect
-              console.log('✅ Cookie verified, redirecting to:', targetUrl)
-              // Use window.location for full page reload to ensure cookie is read
-              window.location.href = targetUrl
-              return
-            }
-            
-            // If we have a cookie but verification check failed, try fixing session
-            if (debugData.hasCookie && (!checkData.verified || !checkData.authenticated)) {
-              console.log('🔧 Cookie exists but not verified, attempting auto-fix...')
-              try {
-                const fixResponse = await fetch('/api/auth/fix-session', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ email: data.user?.email || email }),
-                  credentials: 'include',
-                })
-                const fixData = await fixResponse.json()
-                if (fixData.success) {
-                  console.log('✅ Session fixed, redirecting...')
-                  window.location.href = targetUrl
-                  return
-                }
-              } catch (fixError) {
-                console.error('Fix failed:', fixError)
-              }
-            }
-            
-            // Retry if not ready yet
-            if (retries < maxRetries) {
-              retries++
-              console.log(`⏳ Cookie not ready yet, retry ${retries}/${maxRetries}...`)
-              setTimeout(checkAndRedirect, 500) // Increased delay
-            } else {
-              // Max retries reached, redirect anyway (middleware will handle it)
-              console.warn('⚠️ Cookie verification timed out, redirecting anyway')
-              window.location.href = targetUrl
-            }
-          } catch (err) {
-            console.error('Cookie check error:', err)
-            if (retries < maxRetries) {
-              retries++
-              setTimeout(checkAndRedirect, 500)
-            } else {
-              // Fallback: redirect anyway - middleware will auto-fix
-              console.warn('⚠️ Redirecting despite error - middleware will handle')
-              window.location.href = targetUrl
-            }
-          }
-        }
-        
-        // Start checking immediately
-        checkAndRedirect()
-      }, 500) // Reduced initial wait
+
+      // Session cookies were set on this response; full navigation loads them reliably.
+      setTimeout(() => {
+        window.location.assign(targetUrl)
+      }, 250)
     } catch (err) {
       setError('Failed to verify code. Please try again.')
       setLoading(false)
@@ -235,6 +217,18 @@ export default function VerifyPage() {
   }
 
   const handleResend = async () => {
+    const normalizedEmail = email.trim().toLowerCase()
+    if (!normalizedEmail || !normalizedEmail.includes('@')) {
+      setError('Enter your email above, then tap Resend Code.')
+      return
+    }
+
+    try {
+      sessionStorage.setItem(VERIFY_EMAIL_KEY, normalizedEmail)
+    } catch {
+      /* ignore */
+    }
+
     setResending(true)
     setError('')
 
@@ -244,13 +238,21 @@ export default function VerifyPage() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ email }),
+        credentials: 'include',
+        body: JSON.stringify({ email: normalizedEmail }),
       })
 
       const data = await response.json()
 
       if (!response.ok) {
         setError(data.error || 'Failed to resend code')
+        const retrySec =
+          typeof data.retryAfterSeconds === 'number'
+            ? data.retryAfterSeconds
+            : response.status === 429
+              ? 60
+              : 0
+        if (retrySec > 0) startResendCooldown(retrySec)
         setResending(false)
         return
       }
@@ -265,24 +267,6 @@ export default function VerifyPage() {
     } finally {
       setResending(false)
     }
-  }
-
-  if (!email) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 via-white to-blue-50 p-4">
-        <Card className="w-full max-w-md">
-          <CardContent className="pt-6">
-            <p className="text-center text-muted-foreground">
-              No email provided. Please start from the{' '}
-              <Link href="/signup" className="text-primary underline">
-                sign up page
-              </Link>
-              .
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-    )
   }
 
   return (
@@ -308,10 +292,12 @@ export default function VerifyPage() {
               </div>
               <CardTitle className="text-2xl font-bold">Verify Your Email</CardTitle>
               <CardDescription>
-                We sent a 6-digit code to <strong>{email}</strong>
+                We sent a sign-in email to <strong>{email}</strong> with a <strong>6-digit code</strong> and/or a
+                one-tap link. If you do not see a code, check spam or use the link in the email (it opens this site and
+                signs you in).
                 <br />
                 <span className="text-sm text-muted-foreground mt-2 block">
-                  You must verify your email to access FounderMatch features
+                  You must verify your email to access {BRAND_NAME}
                 </span>
               </CardDescription>
             </>
@@ -320,6 +306,22 @@ export default function VerifyPage() {
         <CardContent>
           {!success ? (
             <>
+              {(authError === 'callback' || authError === 'missing_code') && (
+                <div className="mb-4 p-3 text-sm text-amber-900 bg-amber-50 border border-amber-200 rounded-md">
+                  {authError === 'missing_code' ? (
+                    <>
+                      The sign-in link did not include a valid token (often wrong redirect URL in Supabase, or an
+                      expired link). Enter your <strong>email</strong> below, then the <strong>6-digit code</strong> from
+                      the email, or use <strong>Resend Code</strong>.
+                    </>
+                  ) : (
+                    <>
+                      The email link could not complete sign-in. Enter your <strong>email</strong> and the{' '}
+                      <strong>6-digit code</strong> from that message, or tap <strong>Resend Code</strong>.
+                    </>
+                  )}
+                </div>
+              )}
               <form
                 onSubmit={(e) => {
                   e.preventDefault()
@@ -327,6 +329,28 @@ export default function VerifyPage() {
                 }}
                 className="space-y-6"
               >
+                <div className="space-y-2">
+                  <label htmlFor="verify-email" className="text-sm font-medium block">
+                    Email address
+                  </label>
+                  <Input
+                    id="verify-email"
+                    type="email"
+                    autoComplete="email"
+                    placeholder="you@example.com"
+                    value={email}
+                    onChange={(e) => {
+                      setEmail(e.target.value)
+                      setError('')
+                    }}
+                    disabled={loading}
+                    className="w-full"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Same device as sign up? We try to pre-fill this. Otherwise type the email that received the code.
+                  </p>
+                </div>
+
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-center block">
                     Enter Verification Code
@@ -364,7 +388,11 @@ export default function VerifyPage() {
                 <Button
                   type="submit"
                   className="w-full"
-                  disabled={loading || code.some(d => d === '')}
+                  disabled={
+                    loading ||
+                    !email.trim().includes('@') ||
+                    code.some(d => d === '')
+                  }
                 >
                   {loading ? (
                     <>
@@ -384,7 +412,7 @@ export default function VerifyPage() {
                     type="button"
                     variant="ghost"
                     onClick={handleResend}
-                    disabled={resending}
+                    disabled={resending || resendCooldownActive || !email.trim().includes('@')}
                     className="text-sm"
                   >
                     {resending ? (
@@ -392,6 +420,8 @@ export default function VerifyPage() {
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                         Sending...
                       </>
+                    ) : resendCooldownActive ? (
+                      `Wait ${resendCooldownLeft}s to resend`
                     ) : (
                       'Resend Code'
                     )}

@@ -1,10 +1,11 @@
 import { ImageResponse } from 'next/og'
+import { BRAND_DEFAULT_TITLE, BRAND_NAME } from '@/lib/brand'
 
 // Route segment config
 export const runtime = 'edge'
 
 // Image metadata
-export const alt = 'FounderMatch - Find Your Perfect Investor'
+export const alt = BRAND_DEFAULT_TITLE
 export const size = {
   width: 1200,
   height: 630,
@@ -56,7 +57,7 @@ export default async function OGImage() {
               color: 'white',
             }}
           >
-            FounderMatch
+            {BRAND_NAME}
           </div>
         </div>
         <div

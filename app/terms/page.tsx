@@ -4,7 +4,7 @@ export default function TermsPage() {
       <div className="container mx-auto max-w-3xl px-4 py-14">
         <h1 className="mb-4 text-3xl font-bold">Terms of Service</h1>
         <p className="text-muted-foreground">
-          FounderMatch provides information and tools only. We do not give investment advice,
+          NEXUS provides information and tools only. We do not give investment advice,
           solicit investments, or broker transactions. By using the site you agree to these Terms.
           We reserve the right to modify these terms at any time.
         </p>

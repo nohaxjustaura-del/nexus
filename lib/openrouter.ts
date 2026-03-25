@@ -1,4 +1,5 @@
 import OpenAI from "openai"
+import { getSiteUrl } from '@/lib/site-url'
 
 /**
  * Get OpenRouter client - a unified API for accessing multiple LLM providers
@@ -17,8 +18,8 @@ export function getOpenRouterClient(): OpenAI | null {
       apiKey: apiKey,
       baseURL: 'https://openrouter.ai/api/v1',
       defaultHeaders: {
-        'HTTP-Referer': process.env.OPENROUTER_REFERER_URL || 'https://foundermatch.com',
-        'X-Title': 'FounderMatch - AI Analysis',
+        'HTTP-Referer': process.env.OPENROUTER_REFERER_URL || getSiteUrl(),
+        'X-Title': 'NEXUS — AI analysis',
       },
     })
   } catch (error) {

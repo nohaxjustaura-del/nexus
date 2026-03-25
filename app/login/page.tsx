@@ -1,12 +1,14 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Mail, Loader2, ArrowLeft } from 'lucide-react'
+import { useOtpCooldown } from '@/lib/use-otp-cooldown'
+import { CLIENT_STORAGE } from '@/lib/client-storage-keys'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -15,6 +17,7 @@ export default function LoginPage() {
   const [email, setEmail] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const { secondsLeft: cooldownLeft, start: startCooldown, active: cooldownActive } = useOtpCooldown()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -35,6 +38,7 @@ export default function LoginPage() {
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include',
         body: JSON.stringify({ email: trimmedEmail }),
       })
 
@@ -50,8 +54,33 @@ export default function LoginPage() {
       const data = await response.json()
 
       if (!response.ok) {
+        // #region agent log
+        fetch('http://127.0.0.1:7464/ingest/8942f439-d0f1-43ea-9e6d-5d7995eef824', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '531446' },
+          body: JSON.stringify({
+            sessionId: '531446',
+            runId: 'pre-fix',
+            hypothesisId: 'H2',
+            location: 'app/login/page.tsx:!ok',
+            message: 'login client error response',
+            data: {
+              httpStatus: response.status,
+              hasRetryAfter: typeof data.retryAfterSeconds === 'number',
+            },
+            timestamp: Date.now(),
+          }),
+        }).catch(() => {})
+        // #endregion
         const errorMsg = data.error || data.message || 'Something went wrong'
         setError(errorMsg)
+        const retrySec =
+          typeof data.retryAfterSeconds === 'number'
+            ? data.retryAfterSeconds
+            : response.status === 429
+              ? 60
+              : 0
+        if (retrySec > 0) startCooldown(retrySec)
         setLoading(false)
         return
       }
@@ -65,8 +94,14 @@ export default function LoginPage() {
         alert(`✅ Verification code sent!\n\nCheck your email inbox for the code.\n\n(If you don't see it, check your spam folder.)`)
       }
 
-      // Redirect to verification page with email and return URL
-      const verifyUrl = `/verify?email=${encodeURIComponent(data.email || email)}${redirectUrl ? `&redirect=${encodeURIComponent(redirectUrl)}` : ''}`
+      const resolvedEmail = (data.email || trimmedEmail).toLowerCase().trim()
+      try {
+        sessionStorage.setItem(CLIENT_STORAGE.PENDING_VERIFY_EMAIL, resolvedEmail)
+      } catch {
+        /* ignore */
+      }
+
+      const verifyUrl = `/verify?email=${encodeURIComponent(resolvedEmail)}${redirectUrl ? `&redirect=${encodeURIComponent(redirectUrl)}` : ''}`
       router.push(verifyUrl)
     } catch (err: any) {
       console.error('Login error:', err)
@@ -122,13 +157,15 @@ export default function LoginPage() {
             <Button
               type="submit"
               className="w-full"
-              disabled={loading || !email.trim()}
+              disabled={loading || cooldownActive || !email.trim()}
             >
               {loading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Sending Code...
                 </>
+              ) : cooldownActive ? (
+                <>Wait {cooldownLeft}s to send again</>
               ) : (
                 <>
                   Send Verification Code

@@ -419,7 +419,7 @@ export default function VCGuidePage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-sm">
-              <strong>Every score on FounderMatch is backed by evidence.</strong> We match these sector-specific 
+              <strong>Every score on NEXUS is backed by evidence.</strong> We match these sector-specific 
               proof points against your resume to tell you exactly where you're strong and where to improve.
             </p>
             <p className="text-sm">

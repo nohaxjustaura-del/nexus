@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useLayoutEffect, useState } from 'react'
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
@@ -20,6 +20,16 @@ export default function Home() {
   const router = useRouter()
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null)
   const [mounted, setMounted] = useState(false)
+
+  // Supabase falls back to Site URL root when /auth/callback is not in Redirect URLs,
+  // producing http://localhost:3000/?code=... — forward to the real callback route.
+  useLayoutEffect(() => {
+    if (typeof window === 'undefined') return
+    const code = new URLSearchParams(window.location.search).get('code')
+    if (code) {
+      router.replace(`/api/auth/callback${window.location.search}`)
+    }
+  }, [router])
 
   useEffect(() => {
     setMounted(true)

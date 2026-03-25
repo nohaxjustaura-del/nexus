@@ -68,7 +68,7 @@ async function sendAdminNotification(
   // In production, use Resend or similar:
   // const resend = new Resend(process.env.RESEND_API_KEY)
   // await resend.emails.send({
-  //   from: 'FounderMatch <noreply@foundermatch.com>',
+  //   from: 'NEXUS <noreply@nexus.app>',
   //   to: adminEmail,
   //   subject: `New Waitlist Signup: ${userEmail}`,
   //   html: `

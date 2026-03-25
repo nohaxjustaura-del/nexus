@@ -7,7 +7,7 @@ export default function UnderReviewPage() {
         <div className="rounded-lg border bg-card p-10 text-center shadow-sm">
           <h1 className="mb-3 text-3xl font-bold">Your signup is under review</h1>
           <p className="text-muted-foreground">
-            Thanks for applying to FounderMatch. We’re verifying your information and will email you
+            Thanks for applying to NEXUS. We’re verifying your information and will email you
             as soon as your account is approved. While you wait, browsing is limited.
           </p>
           <div className="mt-8 space-x-3">

@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseAuthRouteClient } from '@/lib/supabase/route-handler'
+import { getSiteUrl } from '@/lib/site-url'
+import { otpErrorResponse } from '@/lib/supabase/otp-errors'
 
 export const dynamic = 'force-dynamic'
 
@@ -15,10 +17,14 @@ export async function POST(request: NextRequest) {
 
     const { supabase, applyAuthCookies } = createSupabaseAuthRouteClient(request)
 
+    const siteUrl = getSiteUrl(request)
+    const emailRedirectTo = `${siteUrl}/api/auth/callback?next=${encodeURIComponent('/founder/onboarding')}`
+
     const { error } = await supabase.auth.signInWithOtp({
       email: normalizedEmail,
       options: {
         shouldCreateUser: true,
+        emailRedirectTo,
         data: {
           user_type: userType || 'founder',
         },
@@ -37,10 +43,8 @@ export async function POST(request: NextRequest) {
         )
       }
       console.error('Supabase signup OTP error:', error)
-      return NextResponse.json(
-        { error: error.message || 'Failed to send verification code' },
-        { status: 400 }
-      )
+      const { status, body } = otpErrorResponse(error.message)
+      return NextResponse.json(body, { status })
     }
 
     const res = NextResponse.json({

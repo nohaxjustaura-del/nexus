@@ -8,6 +8,9 @@
 const fs = require('fs')
 const path = require('path')
 
+// Load .env so env var checks reflect actual values (next build loads .env after this script)
+try { require('dotenv').config({ path: path.join(__dirname, '..', '.env') }) } catch (_) {}
+
 console.log('🚀 Running pre-build optimizations...\n')
 
 // 1. Clean up old build artifacts
@@ -28,7 +31,7 @@ const requiredEnvVars = [
   'NEXT_PUBLIC_SUPABASE_URL',
   'NEXT_PUBLIC_SUPABASE_ANON_KEY',
   'SUPABASE_SERVICE_ROLE_KEY',
-  'OPENAI_API_KEY',
+  'OPENROUTER_API_KEY',
 ]
 
 const missingVars = requiredEnvVars.filter(varName => !process.env[varName])

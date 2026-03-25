@@ -461,7 +461,7 @@ export async function fetchLatestYCBatch(batch: string): Promise<YCCompany[]> {
     const response = await fetch(`https://api.ycombinator.com/v0.1/companies?batch=${batch}`, {
       headers: {
         'Accept': 'application/json',
-        'User-Agent': 'FounderMatch-AI-System/1.0'
+        'User-Agent': 'NEXUS-AI-System/1.0'
       },
       // Timeout after 10 seconds
       signal: AbortSignal.timeout(10000)
@@ -512,7 +512,7 @@ async function scrapeYCBatch(batch: string): Promise<YCCompany[]> {
     const url = `https://www.ycombinator.com/companies?batch=${batch}`
     const response = await fetch(url, {
       headers: {
-        'User-Agent': 'Mozilla/5.0 (compatible; FounderMatch/1.0)',
+        'User-Agent': 'Mozilla/5.0 (compatible; NEXUS/1.0)',
       },
       signal: AbortSignal.timeout(15000)
     })

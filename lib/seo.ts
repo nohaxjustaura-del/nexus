@@ -1,4 +1,6 @@
 import { Metadata } from 'next'
+import { getSiteUrl } from '@/lib/site-url'
+import { BRAND_DEFAULT_TITLE, BRAND_NAME } from '@/lib/brand'
 
 interface SEOProps {
   title?: string
@@ -9,11 +11,13 @@ interface SEOProps {
   noindex?: boolean
 }
 
+const siteUrl = getSiteUrl()
+
 const defaultMetadata = {
-  title: 'FounderMatch - Find Your Perfect Investor',
+  title: BRAND_DEFAULT_TITLE,
   description: 'AI-powered platform connecting founders with compatible VCs, angels, and mentors. Evidence-based matching by stage, sector, vision, and working style.',
   image: '/og-image.png',
-  url: 'https://foundermatch.com',
+  url: siteUrl,
 }
 
 export function generateSEO({
@@ -25,7 +29,7 @@ export function generateSEO({
   noindex = false,
 }: SEOProps = {}): Metadata {
   const metadata: Metadata = {
-    title: title ? `${title} | FounderMatch` : defaultMetadata.title,
+    title: title ? `${title} | ${BRAND_NAME}` : defaultMetadata.title,
     description: description || defaultMetadata.description,
     openGraph: {
       type,
@@ -40,7 +44,7 @@ export function generateSEO({
         },
       ],
       url: url || defaultMetadata.url,
-      siteName: 'FounderMatch',
+      siteName: BRAND_NAME,
       locale: 'en_US',
     },
     twitter: {
@@ -69,10 +73,10 @@ export function generateOrganizationSchema() {
   return {
     '@context': 'https://schema.org',
     '@type': 'Organization',
-    name: 'FounderMatch',
+    name: BRAND_NAME,
     description: 'AI-powered platform connecting founders with compatible VCs',
-    url: 'https://foundermatch.com',
-    logo: 'https://foundermatch.com/logo.png',
+    url: siteUrl,
+    logo: `${siteUrl}/logo.png`,
     sameAs: [
       // Add social media URLs here
     ],
@@ -83,12 +87,12 @@ export function generateWebsiteSchema() {
   return {
     '@context': 'https://schema.org',
     '@type': 'WebSite',
-    name: 'FounderMatch',
-    url: 'https://foundermatch.com',
+    name: BRAND_NAME,
+    url: siteUrl,
     description: 'AI-powered platform connecting founders with compatible VCs',
     potentialAction: {
       '@type': 'SearchAction',
-      target: 'https://foundermatch.com/search?q={search_term_string}',
+      target: `${siteUrl}/search?q={search_term_string}`,
       'query-input': 'required name=search_term_string',
     },
   }

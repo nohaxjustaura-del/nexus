@@ -1,5 +1,5 @@
 // Service Worker for PWA capabilities
-const CACHE_NAME = 'foundermatch-v1'
+const CACHE_NAME = 'nexus-v1'
 const urlsToCache = [
   '/',
   '/favicon.ico',

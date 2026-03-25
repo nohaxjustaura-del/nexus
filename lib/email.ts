@@ -1,6 +1,12 @@
 import { Resend } from 'resend'
+import { BRAND_NAME } from '@/lib/brand'
+import { getSiteUrl } from '@/lib/site-url'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
+
+function emailFromHeader(): string {
+  return process.env.RESEND_FROM_EMAIL || `${BRAND_NAME} <onboarding@resend.dev>`
+}
 
 export async function sendVerificationCode(email: string, code: string) {
   if (!process.env.RESEND_API_KEY) {
@@ -8,7 +14,7 @@ export async function sendVerificationCode(email: string, code: string) {
 📧 Verification Code Email (Development Mode)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 To: ${email}
-Subject: Your FounderMatch Verification Code
+Subject: Your ${BRAND_NAME} verification code
 
 Your verification code is: ${code}
 
@@ -21,12 +27,12 @@ This code will expire in 10 minutes.
   try {
     console.log(`📧 Sending verification email to: ${email}`)
     const { data, error } = await resend.emails.send({
-      from: 'FounderMatch <onboarding@resend.dev>',
+      from: emailFromHeader(),
       to: email,
-      subject: 'Your FounderMatch Verification Code',
+      subject: `Your ${BRAND_NAME} verification code`,
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-          <h2 style="color: #6366f1;">FounderMatch Verification</h2>
+          <h2 style="color: #6366f1;">${BRAND_NAME} verification</h2>
           <p>Your verification code is:</p>
           <div style="background: #f3f4f6; padding: 20px; text-align: center; font-size: 32px; font-weight: bold; letter-spacing: 8px; margin: 20px 0; border-radius: 8px;">
             ${code}
@@ -35,7 +41,7 @@ This code will expire in 10 minutes.
           <p style="color: #999; font-size: 12px;">If you didn't request this code, you can safely ignore this email.</p>
         </div>
       `,
-      text: `Your FounderMatch verification code is: ${code}\n\nThis code will expire in 10 minutes.`,
+      text: `Your ${BRAND_NAME} verification code is: ${code}\n\nThis code will expire in 10 minutes.`,
     })
     if (error) {
       console.error('❌ Resend API error:', error)
@@ -50,7 +56,7 @@ This code will expire in 10 minutes.
 }
 
 export async function sendVCClaimReceipt(toEmail: string, name: string, firmName: string) {
-  const subject = 'Your VC application is under review — FounderMatch'
+  const subject = `Your VC application is under review — ${BRAND_NAME}`
   const plain = `Hi ${name || 'there'},
 
 Thanks for submitting your VC profile for ${firmName}.
@@ -71,7 +77,7 @@ ${plain}
 
   try {
     const { data, error } = await resend.emails.send({
-      from: 'FounderMatch <onboarding@resend.dev>',
+      from: emailFromHeader(),
       to: toEmail,
       subject,
       text: plain,
@@ -86,10 +92,10 @@ ${plain}
 }
 
 export async function sendFounderApplicationReceipt(toEmail: string, name?: string) {
-  const subject = 'Your Founder application is under review — FounderMatch'
+  const subject = `Your Founder application is under review — ${BRAND_NAME}`
   const plain = `Hi ${name || 'there'},
 
-Thanks for creating your FounderMatch profile. We received your information and ID.
+Thanks for creating your ${BRAND_NAME} profile. We received your information and ID.
 Our team will review your account within 24 hours and notify you once approved.
 
 If you didn’t request this, you can ignore this email.`
@@ -109,7 +115,7 @@ ${plain}
 
   try {
     const { data, error } = await resend.emails.send({
-      from: 'FounderMatch <onboarding@resend.dev>',
+      from: emailFromHeader(),
       to: toEmail,
       subject,
       text: plain,
@@ -124,20 +130,21 @@ ${plain}
 }
 
 export async function sendUserApprovalStatus(toEmail: string, status: 'approved' | 'rejected') {
+  const base = getSiteUrl()
   const subj =
     status === 'approved'
-      ? 'Your FounderMatch account is approved'
-      : 'Your FounderMatch application status'
+      ? `Your ${BRAND_NAME} account is approved`
+      : `Your ${BRAND_NAME} application status`
   const plain =
     status === 'approved'
       ? `Hi there,
 
-Good news — your FounderMatch account has been approved. You now have full access to analysis tools and investor outreach.
+Good news — your ${BRAND_NAME} account has been approved. You now have full access to analysis tools and investor outreach.
 
-You can sign in and continue here: https://localhost:3000/founder/discover`
+You can sign in and continue here: ${base}/founder/discover`
       : `Hi there,
 
-Your FounderMatch application was not approved at this time. You may reply to this email with any additional information.`
+Your ${BRAND_NAME} application was not approved at this time. You may reply to this email with any additional information.`
 
   if (!process.env.RESEND_API_KEY) {
     console.log(`
@@ -154,7 +161,7 @@ ${plain}
 
   try {
     const { data, error } = await resend.emails.send({
-      from: 'FounderMatch <onboarding@resend.dev>',
+      from: emailFromHeader(),
       to: toEmail,
       subject: subj,
       text: plain,

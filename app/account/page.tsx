@@ -124,6 +124,10 @@ export default async function AccountPage() {
     </div>
   )
   } catch (error) {
+    const err = error as { digest?: string; message?: string }
+    if (typeof err?.digest === 'string' && err.digest.startsWith('NEXT_REDIRECT')) {
+      throw error
+    }
     console.error('Account page error:', error)
     redirect('/login?redirect=/account')
   }

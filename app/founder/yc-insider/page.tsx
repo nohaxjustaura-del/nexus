@@ -195,14 +195,14 @@ export default function YCInsiderPage() {
                     <div className="flex gap-2">
                       {/* @ts-ignore */}
                       <Button asChild size="sm" variant="outline" disabled={!isPremium}>
-                        <Link href={isPremium ? 'mailto:support@foundermatch.local?subject=Question%20for%20William' : '#'}>
+                        <Link href={isPremium ? 'mailto:support@nexus.local?subject=Question%20for%20William' : '#'}>
                           <MessageSquare className="h-3 w-3 mr-1.5" />
                           Ask
                         </Link>
                       </Button>
                       {/* @ts-ignore */}
                       <Button asChild size="sm" variant="ghost" disabled={!isPremium}>
-                        <Link href={isPremium ? 'mailto:support@foundermatch.local?subject=Book%20Session' : '#'}>
+                        <Link href={isPremium ? 'mailto:support@nexus.local?subject=Book%20Session' : '#'}>
                           <Calendar className="h-3 w-3 mr-1.5" />
                           Book
                         </Link>
@@ -236,14 +236,14 @@ export default function YCInsiderPage() {
                     <div className="flex gap-2">
                       {/* @ts-ignore */}
                       <Button asChild size="sm" variant="outline" disabled={!isPremium}>
-                        <Link href={isPremium ? 'mailto:support@foundermatch.local?subject=Question%20for%20Inigo' : '#'}>
+                        <Link href={isPremium ? 'mailto:support@nexus.local?subject=Question%20for%20Inigo' : '#'}>
                           <MessageSquare className="h-3 w-3 mr-1.5" />
                           Ask
                         </Link>
                       </Button>
                       {/* @ts-ignore */}
                       <Button asChild size="sm" variant="ghost" disabled={!isPremium}>
-                        <Link href={isPremium ? 'mailto:support@foundermatch.local?subject=Book%20Session' : '#'}>
+                        <Link href={isPremium ? 'mailto:support@nexus.local?subject=Book%20Session' : '#'}>
                           <Calendar className="h-3 w-3 mr-1.5" />
                           Book
                         </Link>

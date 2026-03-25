@@ -8,6 +8,7 @@ import { Step1BasicInfo } from "@/components/onboarding/step-1-basic-info"
 import { Step2StartupDetails } from "@/components/onboarding/step-2-startup-details"
 import { Step3Preferences } from "@/components/onboarding/step-3-preferences"
 import { Step5Verification } from "@/components/onboarding/step-5-verification"
+import { CLIENT_STORAGE } from '@/lib/client-storage-keys'
 
 type OnboardingFormData = {
   name: string
@@ -116,7 +117,9 @@ export default function OnboardingPage() {
             }))
           } else {
             try {
-              const draft = localStorage.getItem('fm_onboarding_draft')
+              const draft =
+                localStorage.getItem(CLIENT_STORAGE.ONBOARDING_DRAFT) ||
+                localStorage.getItem(CLIENT_STORAGE.ONBOARDING_DRAFT_LEGACY)
               if (draft) {
                 const parsed = JSON.parse(draft)
                 setFormData(prev => ({ ...prev, ...parsed }))
@@ -138,7 +141,7 @@ export default function OnboardingPage() {
   // Autosave draft
   useEffect(() => {
     const t = setTimeout(() => {
-      try { localStorage.setItem('fm_onboarding_draft', JSON.stringify(formData)) } catch {}
+      try { localStorage.setItem(CLIENT_STORAGE.ONBOARDING_DRAFT, JSON.stringify(formData)) } catch {}
     }, 400)
     return () => clearTimeout(t)
   }, [formData])
@@ -231,7 +234,8 @@ export default function OnboardingPage() {
         throw new Error(data?.message || data?.error || 'Failed to save profile')
       }
 
-      localStorage.removeItem('fm_onboarding_draft')
+      localStorage.removeItem(CLIENT_STORAGE.ONBOARDING_DRAFT)
+      localStorage.removeItem(CLIENT_STORAGE.ONBOARDING_DRAFT_LEGACY)
       setSaving(false)
       // Small delay to show success state before redirect
       await new Promise(resolve => setTimeout(resolve, 1500))
@@ -265,7 +269,7 @@ export default function OnboardingPage() {
             <button
               className="text-sm underline underline-offset-4 hover:text-primary transition-colors"
               onClick={() => {
-                try { localStorage.setItem('fm_onboarding_draft', JSON.stringify(formData)) } catch {}
+                try { localStorage.setItem(CLIENT_STORAGE.ONBOARDING_DRAFT, JSON.stringify(formData)) } catch {}
                 router.push('/')
               }}
             >

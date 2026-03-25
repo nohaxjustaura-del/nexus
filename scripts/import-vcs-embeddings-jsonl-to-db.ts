@@ -79,7 +79,7 @@ function generateEmail(firmName: string, index: number): string {
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-|-$/g, '')
     .substring(0, 30)
-  return `contact-${slug}-${index}@investor.foundermatch.vc`
+  return `contact-${slug}-${index}@investor.nexus.vc`
 }
 
 function mapFundType(type: string): string {

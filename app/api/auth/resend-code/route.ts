@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseAuthRouteClient } from '@/lib/supabase/route-handler'
+import { getSiteUrl } from '@/lib/site-url'
+import { otpErrorResponse } from '@/lib/supabase/otp-errors'
 
 export const dynamic = 'force-dynamic'
 
@@ -14,18 +16,20 @@ export async function POST(request: NextRequest) {
     const normalizedEmail = email.toLowerCase().trim()
     const { supabase, applyAuthCookies } = createSupabaseAuthRouteClient(request)
 
+    const siteUrl = getSiteUrl(request)
+    const emailRedirectTo = `${siteUrl}/api/auth/callback?next=${encodeURIComponent('/founder/onboarding')}`
+
     const { error } = await supabase.auth.signInWithOtp({
       email: normalizedEmail,
       options: {
         shouldCreateUser: true,
+        emailRedirectTo,
       },
     })
 
     if (error) {
-      return NextResponse.json(
-        { error: error.message || 'Failed to resend verification code' },
-        { status: 400 }
-      )
+      const { status, body } = otpErrorResponse(error.message)
+      return NextResponse.json(body, { status })
     }
 
     const res = NextResponse.json({

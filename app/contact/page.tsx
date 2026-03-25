@@ -9,14 +9,14 @@ export default function ContactPage() {
         <div className="prose prose-slate max-w-none">
           <p>
             For general inquiries, please reach out to us at{" "}
-            <a href="mailto:contact@foundermatch.com" className="text-primary hover:underline">
-              contact@foundermatch.com
+            <a href="mailto:contact@nexus.app" className="text-primary hover:underline">
+              contact@nexus.app
             </a>
           </p>
           <p>
             For VC partnerships and opportunities, please contact{" "}
-            <a href="mailto:partners@foundermatch.com" className="text-primary hover:underline">
-              partners@foundermatch.com
+            <a href="mailto:partners@nexus.app" className="text-primary hover:underline">
+              partners@nexus.app
             </a>
           </p>
         </div>

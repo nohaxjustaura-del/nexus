@@ -1,7 +1,7 @@
 @echo off
 echo.
 echo ========================================
-echo   FounderMatch Background Worker
+echo   NEXUS background worker
 echo ========================================
 echo.
 echo Starting automated data update system...

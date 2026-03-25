@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { LogOut, Loader2 } from 'lucide-react'
+import { CLIENT_STORAGE } from '@/lib/client-storage-keys'
 
 export function LogoutButton() {
   const router = useRouter()
@@ -19,10 +20,11 @@ export function LogoutButton() {
       })
 
       if (response.ok) {
-        // Clear localStorage backup
         try {
-          localStorage.removeItem('fm_user_email')
-          localStorage.removeItem('fm_logged_in')
+          localStorage.removeItem(CLIENT_STORAGE.USER_EMAIL)
+          localStorage.removeItem(CLIENT_STORAGE.LOGGED_IN)
+          localStorage.removeItem(CLIENT_STORAGE.USER_EMAIL_LEGACY)
+          localStorage.removeItem(CLIENT_STORAGE.LOGGED_IN_LEGACY)
         } catch (e) {
           // Ignore localStorage errors
         }
@@ -39,8 +41,10 @@ export function LogoutButton() {
       console.error('Logout error:', error)
       // Fallback: clear cookie and localStorage, then redirect
       try {
-        localStorage.removeItem('fm_user_email')
-        localStorage.removeItem('fm_logged_in')
+        localStorage.removeItem(CLIENT_STORAGE.USER_EMAIL)
+        localStorage.removeItem(CLIENT_STORAGE.LOGGED_IN)
+        localStorage.removeItem(CLIENT_STORAGE.USER_EMAIL_LEGACY)
+        localStorage.removeItem(CLIENT_STORAGE.LOGGED_IN_LEGACY)
       } catch (e) {
         // Ignore localStorage errors
       }

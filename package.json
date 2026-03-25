@@ -1,10 +1,11 @@
 {
-  "name": "foundermatch",
+  "name": "nexus",
   "version": "0.1.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "node scripts/pre-build.js && next build",
+    "postinstall": "prisma generate",
     "start": "next start",
     "lint": "next lint",
     "type-check": "tsc --noEmit",
