@@ -8,7 +8,6 @@ const publicRoutes = [
   '/login',
   '/verify',
   '/vc-guide',
-  '/test-auth', // Debug page - always accessible
   '/about',
   '/contact',
   '/cookies',

@@ -21,18 +21,10 @@ export default async function PendingRequestsPage() {
   // Get pending user approvals
   let userApprovals: any[] = []
   try {
-    await (db as any).$executeRawUnsafe?.(`
-      CREATE TABLE IF NOT EXISTS UserApproval (
-        email TEXT PRIMARY KEY,
-        status TEXT NOT NULL DEFAULT 'pending',
-        createdAt TEXT NOT NULL,
-        reviewedAt TEXT
-      );
-    `)
-    const rows = await (db as any).$queryRawUnsafe?.(
-      `SELECT email, status, createdAt, reviewedAt FROM UserApproval WHERE status = 'pending' ORDER BY createdAt DESC;`
-    )
-    userApprovals = Array.isArray(rows) ? rows : []
+    userApprovals = await db.userApproval.findMany({
+      where: { status: 'pending' },
+      orderBy: { createdAt: 'desc' },
+    })
   } catch (error) {
     console.error('Error loading user approvals:', error)
   }

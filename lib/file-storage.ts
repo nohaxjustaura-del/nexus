@@ -1,16 +1,4 @@
-import fs from 'fs'
-import path from 'path'
-
-const UPLOADS_ROOT = path.join(process.cwd(), 'uploads')
-
-/**
- * Ensure a directory exists, creating it recursively if needed.
- */
-function ensureDir(dir: string) {
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true })
-  }
-}
+import { createSupabaseAdminClient, getStorageBucketName } from '@/lib/supabase/admin'
 
 /**
  * Sanitize a filename – keep only alphanumerics, dashes, underscores and dots.
@@ -19,33 +7,49 @@ function sanitizeFilename(name: string): string {
   return name.replace(/[^a-zA-Z0-9._-]/g, '_').substring(0, 200)
 }
 
+export type UploadOptions = {
+  contentType?: string
+  /** If false, callers should use signed URLs or server-side download (default: true) */
+  publicRead?: boolean
+}
+
 /**
- * Save a file buffer to local disk under the given sub-directory.
- *
- * @param buffer   The file contents
- * @param subDir   Sub-directory inside `uploads/` (e.g. "videos", "pitch-decks")
- * @param founderId  Used to namespace the file
- * @param originalName  Original filename from the upload
- * @returns The relative path from the project root (e.g. "uploads/videos/abc123_1707300000000_pitch.mp4")
+ * Upload a file to Supabase Storage. Returns the object path within the bucket
+ * (e.g. `videos/founderId/timestamp_file.mp4`). Store this in the database.
  */
 export async function saveFileToDisk(
   buffer: Buffer,
   subDir: string,
   founderId: string,
-  originalName: string
+  originalName: string,
+  options?: UploadOptions
 ): Promise<string> {
-  const dir = path.join(UPLOADS_ROOT, subDir)
-  ensureDir(dir)
-
+  const supabase = createSupabaseAdminClient()
+  const bucket = getStorageBucketName()
   const timestamp = Date.now()
   const safeName = sanitizeFilename(originalName)
-  const filename = `${founderId}_${timestamp}_${safeName}`
-  const filePath = path.join(dir, filename)
+  const objectPath = `${subDir}/${founderId}/${timestamp}_${safeName}`
 
-  fs.writeFileSync(filePath, buffer)
+  const { error } = await supabase.storage.from(bucket).upload(objectPath, buffer, {
+    contentType: options?.contentType || 'application/octet-stream',
+    upsert: false,
+  })
 
-  // Return path relative to project root
-  return path.join('uploads', subDir, filename).replace(/\\/g, '/')
+  if (error) {
+    throw error
+  }
+
+  return objectPath
+}
+
+/**
+ * Public URL for objects in a public bucket. For private buckets, use signed URLs or server download.
+ */
+export function getStoragePublicUrl(objectPath: string): string {
+  const supabase = createSupabaseAdminClient()
+  const bucket = getStorageBucketName()
+  const { data } = supabase.storage.from(bucket).getPublicUrl(objectPath)
+  return data.publicUrl
 }
 
 /**
@@ -77,4 +81,3 @@ export function buildFounderSnapshot(founder: any): Record<string, any> {
     willingToDropOut: founder.willingToDropOut ?? false,
   }
 }
-

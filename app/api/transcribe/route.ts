@@ -80,7 +80,9 @@ export async function POST(request: NextRequest) {
     let savedFilePath = ''
     if (!isInterim) {
       try {
-        savedFilePath = await saveFileToDisk(buffer, 'voice-recordings', founder.id, audioFile.name)
+        savedFilePath = await saveFileToDisk(buffer, 'voice-recordings', founder.id, audioFile.name, {
+          contentType: audioFile.type || 'audio/webm',
+        })
         logger.log(`[TRANSCRIBE] Saved audio to: ${savedFilePath}`)
       } catch (saveErr: any) {
         logger.error('[TRANSCRIBE] Failed to save audio file (non-critical):', saveErr.message)

@@ -11,26 +11,10 @@ export async function GET(
   try {
     const email = decodeURIComponent(params.email)
     const founder = await db.founder.findUnique({ where: { email } })
-    const user = await db.user.findUnique({ where: { email } }).catch(() => null as any)
+    const user = await db.user.findUnique({ where: { email } }).catch(() => null)
 
-    // Lightweight tables
-    let contact: any = null
-    let verification: any = null
-    try {
-      const rows = await (db as any).$queryRawUnsafe?.(
-        `SELECT phone, altEmail, website, linkedin, city, country, cofounders, hoursPerWeek, prevFunding, prevFundingAmount, updatedAt
-         FROM FounderContact WHERE email = ? LIMIT 1`,
-        email
-      )
-      contact = Array.isArray(rows) && rows.length > 0 ? rows[0] : null
-    } catch {}
-    try {
-      const rows = await (db as any).$queryRawUnsafe?.(
-        `SELECT url, status, submittedAt, verifiedAt, reviewerEmail FROM FounderVerification WHERE email = ? LIMIT 1`,
-        email
-      )
-      verification = Array.isArray(rows) && rows.length > 0 ? rows[0] : null
-    } catch {}
+    const contact = await db.founderContact.findUnique({ where: { email } }).catch(() => null)
+    const verification = await db.founderVerification.findUnique({ where: { email } }).catch(() => null)
 
     return NextResponse.json({
       email,
@@ -44,5 +28,3 @@ export async function GET(
     return NextResponse.json({ error: 'Failed to fetch founder details' }, { status: 500 })
   }
 }
-
-

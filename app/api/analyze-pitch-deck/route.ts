@@ -221,7 +221,9 @@ export async function POST(request: NextRequest) {
     try {
       const arrayBuffer = await file.arrayBuffer()
       const buffer = Buffer.from(arrayBuffer)
-      savedFilePath = await saveFileToDisk(buffer, 'pitch-decks', founder.id, file.name)
+      savedFilePath = await saveFileToDisk(buffer, 'pitch-decks', founder.id, file.name, {
+        contentType: file.type || 'application/pdf',
+      })
       logger.log(`[ANALYZE-PITCH-DECK] File saved to: ${savedFilePath}`)
     } catch (saveErr: any) {
       logger.error('[ANALYZE-PITCH-DECK] Failed to save file to disk (non-critical):', saveErr.message)

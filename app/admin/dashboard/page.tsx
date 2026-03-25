@@ -23,44 +23,30 @@ export default async function AdminDashboardPage() {
     vcClaims,
     unverifiedVCs
   ] = await Promise.all([
-    // Pending user signups
     (async () => {
       try {
-        await (db as any).$executeRawUnsafe?.(`
-          CREATE TABLE IF NOT EXISTS UserApproval (
-            email TEXT PRIMARY KEY,
-            status TEXT NOT NULL DEFAULT 'pending',
-            createdAt TEXT NOT NULL,
-            reviewedAt TEXT
-          );
-        `)
-        const rows = await (db as any).$queryRawUnsafe?.(
-          `SELECT email, status, createdAt, reviewedAt FROM UserApproval WHERE status = 'pending' ORDER BY createdAt DESC;`
-        )
-        return Array.isArray(rows) ? rows : []
+        return await db.userApproval.findMany({
+          where: { status: 'pending' },
+          orderBy: { createdAt: 'desc' },
+        })
       } catch (error) {
         console.error('Error loading user approvals:', error)
         return []
       }
     })(),
-    
-    // Pending founder verifications
+
     (async () => {
       try {
-        await (db as any).$executeRawUnsafe?.(`
-          CREATE TABLE IF NOT EXISTS FounderVerification (
-            email TEXT PRIMARY KEY,
-            url TEXT,
-            status TEXT NOT NULL DEFAULT 'pending',
-            submittedAt TEXT NOT NULL,
-            verifiedAt TEXT,
-            reviewerEmail TEXT
-          );
-        `)
-        const rows = await (db as any).$queryRawUnsafe?.(
-          `SELECT email, url, status, submittedAt FROM FounderVerification WHERE status = 'pending' ORDER BY submittedAt DESC;`
-        )
-        return Array.isArray(rows) ? rows : []
+        return await db.founderVerification.findMany({
+          where: { status: 'pending' },
+          orderBy: { submittedAt: 'desc' },
+          select: {
+            email: true,
+            url: true,
+            status: true,
+            submittedAt: true,
+          },
+        })
       } catch (error) {
         console.error('Error loading founder verifications:', error)
         return []

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { downloadStorageObject } from '@/lib/supabase/admin'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -10,25 +11,26 @@ export async function GET(
 ) {
   try {
     const email = decodeURIComponent(params.email)
-    // Read from SQLite blob table
-    const rows = await (db as any).$queryRawUnsafe?.(
-      `SELECT fileName, mimeType, size, data FROM FounderIdFiles WHERE email = ? LIMIT 1`,
-      email
-    )
-    const row = Array.isArray(rows) && rows.length > 0 ? rows[0] : null
-    if (!row) {
+    const row = await db.founderVerification.findUnique({
+      where: { email },
+    })
+    if (!row?.url) {
       return NextResponse.json({ error: 'File not found' }, { status: 404 })
     }
-    const fileName = row.fileName || 'id-document'
-    const mimeType = row.mimeType || 'application/octet-stream'
-    const data: Uint8Array = row.data as Uint8Array
 
-    return new NextResponse(Buffer.from(data), {
+    if (row.url.startsWith('http://') || row.url.startsWith('https://')) {
+      return NextResponse.redirect(row.url)
+    }
+
+    const { buffer, contentType } = await downloadStorageObject(row.url)
+    const fileName = row.url.split('/').pop() || 'id-document'
+
+    return new NextResponse(buffer, {
       status: 200,
       headers: {
-        'Content-Type': mimeType,
+        'Content-Type': contentType || 'application/octet-stream',
         'Content-Disposition': `attachment; filename="${fileName}"`,
-        'Content-Length': String(row.size || (data?.length ?? 0)),
+        'Content-Length': String(buffer.length),
         'Cache-Control': 'no-store',
       },
     })
@@ -37,5 +39,3 @@ export async function GET(
     return NextResponse.json({ error: 'Failed to download file' }, { status: 500 })
   }
 }
-
-

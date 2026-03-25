@@ -1,45 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getCurrentUser, refreshSession } from '@/lib/auth'
+import { createSupabaseAuthRouteClient } from '@/lib/supabase/route-handler'
 
 export const dynamic = 'force-dynamic'
 
-// Endpoint to refresh session (called periodically by client)
 export async function POST(request: NextRequest) {
   try {
-    const user = await getCurrentUser(false) // Don't auto-refresh here, we'll do it manually
-    
-    if (!user) {
-      return NextResponse.json(
-        { error: 'Not authenticated' },
-        { status: 401 }
-      )
+    const { supabase, applyAuthCookies } = createSupabaseAuthRouteClient(request)
+    const { data, error } = await supabase.auth.refreshSession()
+
+    if (error || !data.session) {
+      return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
     }
-    
-    // Refresh the session expiration
-    await refreshSession(user.id)
-    
-    return NextResponse.json({
+
+    const res = NextResponse.json({
       success: true,
       message: 'Session refreshed',
     })
+    applyAuthCookies(res)
+    return res
   } catch (error) {
-    return NextResponse.json(
-      { error: 'Failed to refresh session' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Failed to refresh session' }, { status: 500 })
   }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-

@@ -256,115 +256,71 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Store optional contact info in a lightweight table (no migration required)
     try {
-      await (db as any).$executeRawUnsafe?.(`
-        CREATE TABLE IF NOT EXISTS FounderContact (
-          email TEXT PRIMARY KEY,
-          phone TEXT,
-          altEmail TEXT,
-          website TEXT,
-          linkedin TEXT,
-          city TEXT,
-          country TEXT,
-          cofounders TEXT,
-          hoursPerWeek TEXT,
-          prevFunding TEXT,
-          prevFundingAmount TEXT,
-          updatedAt TEXT NOT NULL
-        );
-      `)
-      const nowIso = new Date().toISOString()
-      await (db as any).$executeRawUnsafe?.(
-        `INSERT INTO FounderContact (email, phone, altEmail, website, linkedin, city, country, cofounders, hoursPerWeek, prevFunding, prevFundingAmount, updatedAt)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-         ON CONFLICT(email) DO UPDATE SET phone=excluded.phone, altEmail=excluded.altEmail, website=excluded.website, linkedin=excluded.linkedin, city=excluded.city, country=excluded.country, cofounders=excluded.cofounders, hoursPerWeek=excluded.hoursPerWeek, prevFunding=excluded.prevFunding, prevFundingAmount=excluded.prevFundingAmount, updatedAt=excluded.updatedAt;`,
-        normalizedEmail,
-        phone || null,
-        altEmail || null,
-        website || null,
-        linkedin || null,
-        city || null,
-        country || null,
-        cofounders || null,
-        hoursPerWeek || null,
-        prevFunding || null,
-        prevFundingAmount || null,
-        nowIso
-      )
-      // Store preferences in a lightweight table
-      // Note: Using Prisma model now, but keeping raw SQL as fallback for migration
+      await db.founderContact.upsert({
+        where: { email: normalizedEmail },
+        create: {
+          email: normalizedEmail,
+          phone: phone || null,
+          altEmail: altEmail || null,
+          website: website || null,
+          linkedin: linkedin || null,
+          city: city || null,
+          country: country || null,
+          cofounders: cofounders || null,
+          hoursPerWeek: hoursPerWeek || null,
+          prevFunding: prevFunding || null,
+          prevFundingAmount: prevFundingAmount || null,
+        },
+        update: {
+          phone: phone || null,
+          altEmail: altEmail || null,
+          website: website || null,
+          linkedin: linkedin || null,
+          city: city || null,
+          country: country || null,
+          cofounders: cofounders || null,
+          hoursPerWeek: hoursPerWeek || null,
+          prevFunding: prevFunding || null,
+          prevFundingAmount: prevFundingAmount || null,
+        },
+      })
+
       const {
         isImmigrant,
         isUnderrepresented,
         isStudent,
         isVeteran,
       } = data
-      
-      try {
-        await (db as any).founderPrefs.upsert({
-          where: { email: normalizedEmail },
-          create: {
-            email: normalizedEmail,
-            geoPreference: geoPreference || null,
-            decisionSpeedDays: decisionSpeedDays || null,
-            targetOwnershipMax: targetOwnershipMax || null,
-            fundTypePreference: fundTypePreference || null,
-            leadPreference: leadPreference || null,
-            isImmigrant: isImmigrant || false,
-            isUnderrepresented: isUnderrepresented || false,
-            isStudent: isStudent || false,
-            isVeteran: isVeteran || false,
-          },
-          update: {
-            geoPreference: geoPreference || null,
-            decisionSpeedDays: decisionSpeedDays || null,
-            targetOwnershipMax: targetOwnershipMax || null,
-            fundTypePreference: fundTypePreference || null,
-            leadPreference: leadPreference || null,
-            isImmigrant: isImmigrant || false,
-            isUnderrepresented: isUnderrepresented || false,
-            isStudent: isStudent || false,
-            isVeteran: isVeteran || false,
-          },
-        })
-      } catch (prismaError: any) {
-        // Fallback to raw SQL if Prisma model doesn't exist yet
-        await (db as any).$executeRawUnsafe?.(`
-          CREATE TABLE IF NOT EXISTS FounderPrefs (
-            email TEXT PRIMARY KEY,
-            geoPreference TEXT,
-            decisionSpeedDays TEXT,
-            targetOwnershipMax TEXT,
-            fundTypePreference TEXT,
-            leadPreference TEXT,
-            isImmigrant INTEGER DEFAULT 0,
-            isUnderrepresented INTEGER DEFAULT 0,
-            isStudent INTEGER DEFAULT 0,
-            isVeteran INTEGER DEFAULT 0,
-            updatedAt TEXT NOT NULL
-          );
-        `)
-        await (db as any).$executeRawUnsafe?.(
-          `INSERT INTO FounderPrefs (email, geoPreference, decisionSpeedDays, targetOwnershipMax, fundTypePreference, leadPreference, isImmigrant, isUnderrepresented, isStudent, isVeteran, updatedAt)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-           ON CONFLICT(email) DO UPDATE SET geoPreference=excluded.geoPreference, decisionSpeedDays=excluded.decisionSpeedDays, targetOwnershipMax=excluded.targetOwnershipMax, fundTypePreference=excluded.fundTypePreference, leadPreference=excluded.leadPreference, isImmigrant=excluded.isImmigrant, isUnderrepresented=excluded.isUnderrepresented, isStudent=excluded.isStudent, isVeteran=excluded.isVeteran, updatedAt=excluded.updatedAt;`,
-          normalizedEmail,
-          geoPreference || null,
-          decisionSpeedDays || null,
-          targetOwnershipMax || null,
-          fundTypePreference || null,
-          leadPreference || null,
-          isImmigrant ? 1 : 0,
-          isUnderrepresented ? 1 : 0,
-          isStudent ? 1 : 0,
-          isVeteran ? 1 : 0,
-          nowIso
-        )
-      }
+
+      await db.founderPrefs.upsert({
+        where: { email: normalizedEmail },
+        create: {
+          email: normalizedEmail,
+          geoPreference: geoPreference || null,
+          decisionSpeedDays: decisionSpeedDays || null,
+          targetOwnershipMax: targetOwnershipMax || null,
+          fundTypePreference: fundTypePreference || null,
+          leadPreference: leadPreference || null,
+          isImmigrant: isImmigrant || false,
+          isUnderrepresented: isUnderrepresented || false,
+          isStudent: isStudent || false,
+          isVeteran: isVeteran || false,
+        },
+        update: {
+          geoPreference: geoPreference || null,
+          decisionSpeedDays: decisionSpeedDays || null,
+          targetOwnershipMax: targetOwnershipMax || null,
+          fundTypePreference: fundTypePreference || null,
+          leadPreference: leadPreference || null,
+          isImmigrant: isImmigrant || false,
+          isUnderrepresented: isUnderrepresented || false,
+          isStudent: isStudent || false,
+          isVeteran: isVeteran || false,
+        },
+      })
     } catch (e) {
-      // Non-fatal; continue even if this lightweight store fails
-      console.warn('FounderContact upsert skipped:', e)
+      console.warn('FounderContact / FounderPrefs upsert skipped:', e)
     }
 
     // Fire-and-forget application receipt email

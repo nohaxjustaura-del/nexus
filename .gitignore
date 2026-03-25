@@ -38,6 +38,8 @@ prisma/dev.db
 prisma/dev.db-journal
 prisma/*.db
 prisma/*.db-journal
+prisma/*.db-shm
+prisma/*.db-wal
 
 # uploads and temp files
 public/uploads/*

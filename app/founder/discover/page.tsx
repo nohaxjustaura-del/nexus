@@ -49,84 +49,47 @@ export default async function DiscoverPage({
   
   try {
     if (user?.email) {
-      // Create table if needed (only once, can be optimized further)
-      // Use $executeRawUnsafe with proper error handling
-      try {
-        await (db as any).$executeRawUnsafe(
-          `CREATE TABLE IF NOT EXISTS FounderVerification (
-            email TEXT PRIMARY KEY,
-            url TEXT,
-            status TEXT NOT NULL DEFAULT 'pending',
-            submittedAt TEXT NOT NULL,
-            verifiedAt TEXT,
-            reviewerEmail TEXT
-          )`
-        )
-      } catch (tableError: any) {
-        // Ignore if table already exists or other table creation errors
-        // SQLite may return errors even for IF NOT EXISTS in some cases
-      }
-      
-      // Parallel queries for better performance - combine all founder data queries
-      let verificationRows: any[] = []
+      let verificationRow: { status: string } | null = null
       let founder = null
-      let prefs: any[] = []
-      
+      let prefsRow: Awaited<ReturnType<typeof db.founderPrefs.findUnique>> = null
+
       try {
-        // Use Promise.allSettled to handle individual query failures gracefully
         const results = await Promise.allSettled([
-          // Check if FounderVerification table exists before querying
-          (async () => {
-            try {
-              const result = await (db as any).$queryRawUnsafe(
-                `SELECT status FROM FounderVerification WHERE email = ? LIMIT 1`,
-                user.email
-              )
-              return Array.isArray(result) ? result : []
-            } catch {
-              return []
-            }
-          })(),
+          db.founderVerification
+            .findUnique({
+              where: { email: user.email },
+              select: { status: true },
+            })
+            .catch(() => null),
           db.founder.findUnique({
             where: { email: user.email },
-            select: { 
-              name: true, 
-              stage: true, 
-              sectors: true, 
-              location: true, 
-              gender: true, 
-              willingToDropOut: true, 
+            select: {
+              name: true,
+              stage: true,
+              sectors: true,
+              location: true,
+              gender: true,
+              willingToDropOut: true,
               resumeAnalyses: { select: { id: true }, take: 1 },
               videoPitches: { select: { id: true }, take: 1 },
-              pitchDeckAnalyses: { select: { id: true }, take: 1 }
+              pitchDeckAnalyses: { select: { id: true }, take: 1 },
             },
           }).catch(() => null),
-          // Check if FounderPrefs table exists before querying
-          (async () => {
-            try {
-              const result = await (db as any).$queryRawUnsafe(
-                `SELECT geoPreference, decisionSpeedDays, targetOwnershipMax, fundTypePreference, leadPreference, isStudent, isImmigrant, isUnderrepresented, isVeteran FROM FounderPrefs WHERE email = ? LIMIT 1`,
-                user.email
-              )
-              return Array.isArray(result) ? result : []
-            } catch {
-              return []
-            }
-          })()
+          db.founderPrefs.findUnique({ where: { email: user.email } }).catch(() => null),
         ])
-        
-        verificationRows = results[0].status === 'fulfilled' ? results[0].value : []
+
+        verificationRow =
+          results[0].status === 'fulfilled' ? results[0].value : null
         founder = results[1].status === 'fulfilled' ? results[1].value : null
-        prefs = results[2].status === 'fulfilled' ? results[2].value : []
-      } catch (queryError) {
-        // If queries fail, continue with empty data
-        verificationRows = []
+        prefsRow = results[2].status === 'fulfilled' ? results[2].value : null
+      } catch {
+        verificationRow = null
         founder = null
-        prefs = []
+        prefsRow = null
       }
-      
-      if (Array.isArray(verificationRows) && verificationRows.length > 0 && verificationRows[0]?.status && verificationRows[0].status !== 'approved') {
-        verificationBanner = { status: verificationRows[0].status }
+
+      if (verificationRow?.status && verificationRow.status !== 'approved') {
+        verificationBanner = { status: verificationRow.status }
       }
       
       let sectors: string[] = []
@@ -143,8 +106,8 @@ export default async function DiscoverPage({
       }
       
       // Set preference defaults
-      if (Array.isArray(prefs) && prefs.length > 0) {
-        const p = prefs[0]
+      if (prefsRow) {
+        const p = prefsRow
         if (p?.fundTypePreference && p.fundTypePreference !== 'either') prefDefaults.fundType = String(p.fundTypePreference)
         if (sectors?.length > 0) prefDefaults.sector = sectors[0]
         if (founder?.stage) prefDefaults.stage = String(founder.stage)

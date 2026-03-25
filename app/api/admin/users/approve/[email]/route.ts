@@ -15,28 +15,24 @@ export async function PATCH(
       return NextResponse.json({ error: 'Invalid email' }, { status: 400 })
     }
 
-    await (db as any).$executeRawUnsafe?.(`
-      CREATE TABLE IF NOT EXISTS UserApproval (
-        email TEXT PRIMARY KEY,
-        status TEXT NOT NULL DEFAULT 'pending',
-        createdAt TEXT NOT NULL,
-        reviewedAt TEXT
-      );
-    `)
+    await db.userApproval.upsert({
+      where: { email },
+      create: {
+        email,
+        status: 'approved',
+        reviewedAt: new Date(),
+      },
+      update: {
+        status: 'approved',
+        reviewedAt: new Date(),
+      },
+    })
 
-    const now = new Date().toISOString()
-    await (db as any).$executeRawUnsafe?.(
-      `INSERT INTO UserApproval (email, status, createdAt, reviewedAt)
-       VALUES (?, 'approved', ?, ?)
-       ON CONFLICT(email) DO UPDATE SET status='approved', reviewedAt=?;`,
-      email,
-      now,
-      now,
-      now
-    )
-
-    // Notify the user
-    try { await sendUserApprovalStatus(email, 'approved') } catch {}
+    try {
+      await sendUserApprovalStatus(email, 'approved')
+    } catch {
+      /* non-fatal */
+    }
 
     return NextResponse.json({ success: true })
   } catch (error: any) {
@@ -45,21 +41,16 @@ export async function PATCH(
   }
 }
 
-// Convenience: allow approval via GET so clicking the URL in a browser works
-export async function GET(
-  request: NextRequest,
-  ctx: { params: { email: string } }
-) {
+export async function GET(request: NextRequest, ctx: { params: { email: string } }) {
   const res = await PATCH(request, ctx)
-  // If JSON success, redirect admin to approvals page for UX
   try {
     const data = await res.clone().json()
     if (data?.success) {
       const url = new URL('/admin/approvals?approved=1', request.nextUrl.origin)
       return NextResponse.redirect(url, { status: 302 })
     }
-  } catch {}
+  } catch {
+    /* ignore */
+  }
   return res
 }
-
-

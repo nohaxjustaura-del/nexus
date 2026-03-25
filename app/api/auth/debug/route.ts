@@ -4,42 +4,28 @@ import { cookies } from 'next/headers'
 
 export const dynamic = 'force-dynamic'
 
-// Debug endpoint to check session status
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
   try {
     const cookieStore = await cookies()
-    const sessionCookie = cookieStore.get('session')
+    const all = cookieStore.getAll()
+    const hasSupabaseAuthCookie = all.some(
+      (c) => c.name.includes('sb-') && c.name.includes('auth')
+    )
     const user = await getCurrentUser(false)
-    
+
     return NextResponse.json({
-      hasCookie: !!sessionCookie,
-      cookieValue: sessionCookie?.value ? `${sessionCookie.value.substring(0, 30)}...` : null,
-      cookieLength: sessionCookie?.value?.length || 0,
+      hasCookie: hasSupabaseAuthCookie,
       hasUser: !!user,
       userEmail: user?.email || null,
       userVerified: user?.emailVerified || false,
-      sessionToken: user?.sessionToken ? `${user.sessionToken.substring(0, 30)}...` : null,
-      sessionExpires: user?.sessionExpires?.toISOString() || null,
-      tokenMatch: user && sessionCookie ? user.sessionToken === sessionCookie.value : false,
     })
   } catch (error: any) {
-    return NextResponse.json({
-      error: error.message,
-      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined,
-    }, { status: 500 })
+    return NextResponse.json(
+      {
+        error: error.message,
+        stack: process.env.NODE_ENV === 'development' ? error.stack : undefined,
+      },
+      { status: 500 }
+    )
   }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-

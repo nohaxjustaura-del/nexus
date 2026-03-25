@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { getUserFromRequest } from '@/lib/auth'
+import { createSupabaseAdminClient, getStorageBucketName } from '@/lib/supabase/admin'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -8,11 +9,20 @@ export const dynamic = 'force-dynamic'
 const MAX_SIZE = 10 * 1024 * 1024 // 10MB
 const ALLOWED_TYPES = ['image/png', 'image/jpeg', 'image/jpg', 'application/pdf']
 
+function sanitizeFilename(name: string): string {
+  return name.replace(/[^a-zA-Z0-9._-]/g, '_').substring(0, 200)
+}
+
 export async function POST(request: NextRequest) {
   try {
     const user = await getUserFromRequest(request)
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const founder = await db.founder.findUnique({ where: { email: user.email } })
+    if (!founder) {
+      return NextResponse.json({ error: 'Founder profile not found' }, { status: 404 })
     }
 
     const formData = await request.formData()
@@ -28,68 +38,49 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'File too large (max 10MB)' }, { status: 400 })
     }
 
-    // Basic magic-byte checks
     const arrBuf = await file.arrayBuffer()
     const bytes = new Uint8Array(arrBuf).slice(0, 8)
     const isPdf = file.type === 'application/pdf' && bytes[0] === 0x25 && bytes[1] === 0x50 && bytes[2] === 0x44 && bytes[3] === 0x46
-    const isPng = file.type === 'image/png' && bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4E && bytes[3] === 0x47
-    const isJpg = file.type === 'image/jpeg' && bytes[0] === 0xFF && bytes[1] === 0xD8
+    const isPng = file.type === 'image/png' && bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47
+    const isJpg = file.type === 'image/jpeg' && bytes[0] === 0xff && bytes[1] === 0xd8
     if (!(isPdf || isPng || isJpg)) {
       return NextResponse.json({ error: 'File content check failed' }, { status: 400 })
     }
 
-    // Store file bytes in a lightweight SQLite table so admins can download
-    const fakeUrl = `founder-id://${encodeURIComponent(user.email || 'unknown')}/${encodeURIComponent(file.name)}`
-    console.log('🪪 Founder ID Upload:', { email: user.email, fileName: file.name, type: file.type, size: file.size, fakeUrl })
+    const buffer = Buffer.from(arrBuf)
+    const supabase = createSupabaseAdminClient()
+    const bucket = getStorageBucketName()
+    const objectPath = `founder-verification/${founder.id}/${Date.now()}_${sanitizeFilename(file.name)}`
 
-    // Persist to local SQLite (BLOB)
-    try {
-      await (db as any).$executeRawUnsafe?.(`
-        CREATE TABLE IF NOT EXISTS FounderIdFiles (
-          email TEXT PRIMARY KEY,
-          fileName TEXT NOT NULL,
-          mimeType TEXT NOT NULL,
-          size INTEGER NOT NULL,
-          data BLOB NOT NULL,
-          createdAt TEXT NOT NULL
-        );
-      `)
-      const buf = Buffer.from(arrBuf)
-      const nowIso = new Date().toISOString()
-      // Use REPLACE to upsert
-      await (db as any).$executeRawUnsafe?.(
-        `INSERT OR REPLACE INTO FounderIdFiles (email, fileName, mimeType, size, data, createdAt)
-         VALUES (?, ?, ?, ?, ?, ?)`,
-        user.email!, file.name, file.type, file.size, buf as any, nowIso
-      )
-    } catch (blobErr) {
-      console.warn('FounderIdFiles store failed:', blobErr)
+    const { error: upErr } = await supabase.storage.from(bucket).upload(objectPath, buffer, {
+      contentType: file.type,
+      upsert: true,
+    })
+    if (upErr) {
+      console.error('Founder ID storage upload failed:', upErr)
+      return NextResponse.json({ error: 'Failed to store document' }, { status: 500 })
     }
 
-    // Ensure verification table and insert/update
-    await (db as any).$executeRawUnsafe?.(`
-      CREATE TABLE IF NOT EXISTS FounderVerification (
-        email TEXT PRIMARY KEY,
-        url TEXT,
-        status TEXT NOT NULL DEFAULT 'pending',
-        submittedAt TEXT NOT NULL,
-        verifiedAt TEXT,
-        reviewerEmail TEXT
-      );
-    `)
-    const now = new Date().toISOString()
-    await (db as any).$executeRawUnsafe?.(
-      `INSERT INTO FounderVerification (email, url, status, submittedAt)
-       VALUES (?, ?, 'pending', ?)
-       ON CONFLICT(email) DO UPDATE SET url=excluded.url, status='pending', submittedAt=excluded.submittedAt;`,
-      user.email!, fakeUrl, now
-    )
+    await db.founderVerification.upsert({
+      where: { email: user.email },
+      create: {
+        email: user.email,
+        url: objectPath,
+        status: 'pending',
+        submittedAt: new Date(),
+      },
+      update: {
+        url: objectPath,
+        status: 'pending',
+        submittedAt: new Date(),
+        verifiedAt: null,
+        reviewerEmail: null,
+      },
+    })
 
-    return NextResponse.json({ success: true, url: fakeUrl })
+    return NextResponse.json({ success: true, url: objectPath })
   } catch (error: any) {
     console.error('Founder verify-id error:', error)
     return NextResponse.json({ error: 'Failed to upload ID', message: error?.message }, { status: 500 })
   }
 }
-
-

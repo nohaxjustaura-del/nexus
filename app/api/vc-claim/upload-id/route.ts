@@ -1,34 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { getUserFromRequest } from '@/lib/auth'
+import { createSupabaseAdminClient, getStorageBucketName } from '@/lib/supabase/admin'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
-// Allowed file types and size (images or PDF)
 const MAX_SIZE = 10 * 1024 * 1024 // 10MB
-const ALLOWED_TYPES = [
-  'image/png',
-  'image/jpeg',
-  'image/jpg',
-  'application/pdf',
-]
+const ALLOWED_TYPES = ['image/png', 'image/jpeg', 'image/jpg', 'application/pdf']
+
+function sanitizeFilename(name: string): string {
+  return name.replace(/[^a-zA-Z0-9._-]/g, '_').substring(0, 200)
+}
 
 export async function POST(request: NextRequest) {
   try {
-    const user = await getUserFromRequest(request)
-    // Optional: we allow upload without auth as long as they have claimId
-    // but rate-limit by claim existence and createdAt
-
     const formData = await request.formData()
     const claimId = formData.get('claimId') as string
     const file = formData.get('file') as File
 
     if (!claimId || !file) {
-      return NextResponse.json(
-        { error: 'Missing claimId or file' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'Missing claimId or file' }, { status: 400 })
     }
 
     if (!ALLOWED_TYPES.includes(file.type)) {
@@ -38,26 +29,19 @@ export async function POST(request: NextRequest) {
       )
     }
     if (file.size > MAX_SIZE) {
-      return NextResponse.json(
-        { error: 'File too large. Max size is 10MB.' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'File too large. Max size is 10MB.' }, { status: 400 })
     }
 
     const claim = await db.vCClaim.findUnique({ where: { id: claimId } })
     if (!claim) {
-      return NextResponse.json(
-        { error: 'Claim not found' },
-        { status: 404 }
-      )
+      return NextResponse.json({ error: 'Claim not found' }, { status: 404 })
     }
 
-    // Security: basic magic-byte check to mitigate spoofed content
     const arrBuf = await file.arrayBuffer()
     const bytes = new Uint8Array(arrBuf).slice(0, 8)
-    const isPdf = file.type === 'application/pdf' && bytes[0] === 0x25 && bytes[1] === 0x50 && bytes[2] === 0x44 && bytes[3] === 0x46 // %PDF
-    const isPng = file.type === 'image/png' && bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4E && bytes[3] === 0x47
-    const isJpg = file.type === 'image/jpeg' && bytes[0] === 0xFF && bytes[1] === 0xD8
+    const isPdf = file.type === 'application/pdf' && bytes[0] === 0x25 && bytes[1] === 0x50 && bytes[2] === 0x44 && bytes[3] === 0x46
+    const isPng = file.type === 'image/png' && bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47
+    const isJpg = file.type === 'image/jpeg' && bytes[0] === 0xff && bytes[1] === 0xd8
     if (!(isPdf || isPng || isJpg)) {
       return NextResponse.json(
         { error: 'File content does not match the declared type. Please upload a valid PNG, JPG, or PDF.' },
@@ -65,24 +49,26 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // In production, upload to secure storage (e.g., S3/GCS) and store URL.
-    // For development, we do not persist files; we mark receipt and log metadata.
-    const fakeUrl = `id-upload://${claimId}/${encodeURIComponent(file.name)}`
-    console.log('🪪 VC ID Upload Received:', {
-      claimId,
-      fileName: file.name,
-      fileType: file.type,
-      fileSize: file.size,
-    })
+    const buffer = Buffer.from(arrBuf)
+    const supabase = createSupabaseAdminClient()
+    const bucket = getStorageBucketName()
+    const objectPath = `vc-claims/${claimId}/${Date.now()}_${sanitizeFilename(file.name)}`
 
-    // Update VCClaim with ID verification status using raw SQL since schema may vary
-    await (db as any).$executeRawUnsafe(`
-      UPDATE VCClaim 
-      SET idStatus = 'pending', 
-          idDocumentUrl = ?, 
-          idSubmittedAt = ? 
-      WHERE id = ?
-    `, fakeUrl, new Date().toISOString(), claimId)
+    const { error: upErr } = await supabase.storage.from(bucket).upload(objectPath, buffer, {
+      contentType: file.type,
+      upsert: false,
+    })
+    if (upErr) {
+      console.error('VC claim ID upload failed:', upErr)
+      return NextResponse.json({ error: 'Failed to store document' }, { status: 500 })
+    }
+
+    await db.vCClaim.update({
+      where: { id: claimId },
+      data: {
+        idVerificationUrl: objectPath,
+      },
+    })
 
     return NextResponse.json({
       success: true,
@@ -96,6 +82,3 @@ export async function POST(request: NextRequest) {
     )
   }
 }
-
-
-

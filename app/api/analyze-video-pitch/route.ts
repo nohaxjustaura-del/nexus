@@ -222,7 +222,9 @@ export async function POST(request: NextRequest) {
 
       // Save video file to local disk for training data
       try {
-        savedFilePath = await saveFileToDisk(buffer, 'videos', founder.id, file.name)
+        savedFilePath = await saveFileToDisk(buffer, 'videos', founder.id, file.name, {
+          contentType: file.type || 'video/mp4',
+        })
         logger.log(`[ANALYZE-VIDEO-PITCH] File saved to: ${savedFilePath}`)
       } catch (saveErr: any) {
         logger.error('[ANALYZE-VIDEO-PITCH] Failed to save file to disk (non-critical):', saveErr.message)

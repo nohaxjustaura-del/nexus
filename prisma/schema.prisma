@@ -1,10 +1,11 @@
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "rhel-openssl-3.0.x"]
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = "file:./dev.db"
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 model Founder {
@@ -78,17 +79,11 @@ model Founder {
   // Relations for new features
   conversations        Conversation[]
   notifications        Notification[] // userId matches Founder email or id
-  profileViews         ProfileView[]        @relation("FounderProfileViews")
-  viewerProfileViews   ProfileView[]        @relation("FounderViewerViews")
   matchInteractions    MatchInteraction[]
   referrals            Referral[] // referrerId or referredUserId matches Founder id
   media                ProfileMedia[] // userId matches Founder id
-  endorsementsGiven    ProfileEndorsement[] @relation("EndorsementsGiven")
-  endorsementsReceived ProfileEndorsement[] @relation("EndorsementsReceived")
   achievements         Achievement[] // userId matches Founder id
   savedSearches        SavedSearch[] // userId matches Founder id
-  reportsMade          Report[]             @relation("ReportsMade")
-  reportsReceived      Report[]             @relation("ReportsReceived")
   firmDeals            VCFirmDeal[] // founderId matches Founder id
 
   createdAt DateTime @default(now())
@@ -167,22 +162,23 @@ model Investor {
   // Relations for new features
   conversations        Conversation[]
   notifications        Notification[] // userId matches Investor email or id
-  profileViews         ProfileView[]        @relation("InvestorProfileViews")
-  viewerProfileViews   ProfileView[]        @relation("InvestorViewerViews")
   matchInteractions    MatchInteraction[]
   referrals            Referral[] // referrerId or referredUserId matches Investor id
   media                ProfileMedia[] // userId matches Investor id
   firmMemberships      VCFirmMember[]
-  endorsementsGiven    ProfileEndorsement[] @relation("EndorsementsGiven")
-  endorsementsReceived ProfileEndorsement[] @relation("EndorsementsReceived")
   achievements         Achievement[] // userId matches Investor id
   savedSearches        SavedSearch[] // userId matches Investor id
-  reportsMade          Report[]             @relation("ReportsMade")
-  reportsReceived      Report[]             @relation("ReportsReceived")
   enrichmentCache      VCEnrichmentCache?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  // Supabase/Postgres: speeds up discover + matching queries as Investor count grows
+  @@index([isPublic, discoverable])
+  @@index([verified])
+  @@index([fundType])
+  @@index([firmName])
+  @@index([createdAt])
 }
 
 model Mentor {
@@ -634,12 +630,6 @@ model ProfileView {
   viewedId   String // Profile being viewed (founder or investor ID)
   viewedType String // "founder" or "investor"
 
-  // Relations for proper cascading
-  founderViewed  Founder?  @relation("FounderProfileViews", fields: [viewedId], references: [id], onDelete: Cascade)
-  founderViewer  Founder?  @relation("FounderViewerViews", fields: [viewerId], references: [id], onDelete: Cascade)
-  investorViewed Investor? @relation("InvestorProfileViews", fields: [viewedId], references: [id], onDelete: Cascade)
-  investorViewer Investor? @relation("InvestorViewerViews", fields: [viewerId], references: [id], onDelete: Cascade)
-
   // Optional: how they found it
   source String? // "discover", "match", "search", "referral", etc.
 
@@ -848,12 +838,6 @@ model ProfileEndorsement {
   endorsedId   String // User being endorsed
   endorsedType String // "founder" or "investor"
 
-  // Relations
-  endorserFounder  Founder?  @relation("EndorsementsGiven", fields: [endorserId], references: [id], onDelete: Cascade)
-  endorserInvestor Investor? @relation("EndorsementsGiven", fields: [endorserId], references: [id], onDelete: Cascade)
-  endorsedFounder  Founder?  @relation("EndorsementsReceived", fields: [endorsedId], references: [id], onDelete: Cascade)
-  endorsedInvestor Investor? @relation("EndorsementsReceived", fields: [endorsedId], references: [id], onDelete: Cascade)
-
   // Endorsement content
   rating  Int // 1-5 stars
   comment String? // Private comment (not shown publicly)
@@ -916,12 +900,6 @@ model Report {
   reporterType String // "founder" or "investor"
   reportedId   String // User/Profile being reported
   reportedType String // "founder" or "investor"
-
-  // Relations
-  reporterFounder  Founder?  @relation("ReportsMade", fields: [reporterId], references: [id], onDelete: Cascade)
-  reporterInvestor Investor? @relation("ReportsMade", fields: [reporterId], references: [id], onDelete: Cascade)
-  reportedFounder  Founder?  @relation("ReportsReceived", fields: [reportedId], references: [id], onDelete: Cascade)
-  reportedInvestor Investor? @relation("ReportsReceived", fields: [reportedId], references: [id], onDelete: Cascade)
 
   reason      String // "spam", "fraudulent", "inappropriate", "harassment", "other"
   description String? // Additional details
