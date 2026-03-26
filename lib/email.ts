@@ -1,6 +1,7 @@
 import { Resend } from 'resend'
 import { BRAND_NAME } from '@/lib/brand'
 import { getSiteUrl } from '@/lib/site-url'
+import { formatDisplayOtp } from '@/lib/auth-otp'
 
 export {
   RESEND_DEV_CONSOLE_FALLBACK_HINT,
@@ -9,8 +10,44 @@ export {
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 
+function debugLog(
+  runId: string,
+  hypothesisId: string,
+  location: string,
+  message: string,
+  data: Record<string, unknown>
+) {
+  fetch('http://127.0.0.1:7464/ingest/8942f439-d0f1-43ea-9e6d-5d7995eef824', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Debug-Session-Id': '0f3c2c',
+    },
+    body: JSON.stringify({
+      sessionId: '0f3c2c',
+      runId,
+      hypothesisId,
+      location,
+      message,
+      data,
+      timestamp: Date.now(),
+    }),
+  }).catch(() => {})
+}
+
 function emailFromHeader(): string {
-  return process.env.RESEND_FROM_EMAIL || `${BRAND_NAME} <onboarding@resend.dev>`
+  const raw = process.env.RESEND_FROM_EMAIL
+  if (!raw) return `${BRAND_NAME} <onboarding@resend.dev>`
+  const trimmed = raw.trim()
+  // Vercel env UI sometimes stores quotes literally; strip one wrapping pair.
+  if (
+    (trimmed.startsWith('"') && trimmed.endsWith('"')) ||
+    (trimmed.startsWith("'") && trimmed.endsWith("'"))
+  ) {
+    const unwrapped = trimmed.slice(1, -1).trim()
+    if (unwrapped) return unwrapped
+  }
+  return trimmed
 }
 
 /** Stable string for logs and dev API responses (Resend returns { message } or plain strings). */
@@ -97,8 +134,11 @@ export async function sendMagicLinkEmail(
     magicLink,
     otp,
     isNew = false,
-  }: { magicLink: string; otp: string; isNew?: boolean }
+    includeOtp = true,
+  }: { magicLink: string; otp?: string; isNew?: boolean; includeOtp?: boolean }
 ) {
+  const displayOtp = otp ? formatDisplayOtp(otp) : ''
+  const fromHeader = emailFromHeader()
   const subject = isNew
     ? `Verify your ${BRAND_NAME} account`
     : `Sign in to ${BRAND_NAME}`
@@ -118,10 +158,8 @@ Subject: ${subject}
 ${intro}
 
 Magic link: ${magicLink}
-
-Or enter this 8-digit code on the verify page: ${otp}
-
-This link and code expire in 1 hour.
+${includeOtp && displayOtp ? `\nOr enter this 8-digit code on the verify page: ${displayOtp}\n` : ''}
+This link${includeOtp && displayOtp ? ' and code' : ''} expire in 1 hour.
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     `)
     return { success: true, devConsoleFallback: true }
@@ -163,6 +201,9 @@ This link and code expire in 1 hour.
                 </tr>
               </table>
               <!-- Divider -->
+              ${
+                includeOtp && displayOtp
+                  ? `
               <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:28px;">
                 <tr>
                   <td style="border-top:1px solid #e2e8f0;"></td>
@@ -173,9 +214,12 @@ This link and code expire in 1 hour.
               <!-- OTP code -->
               <p style="margin:0 0 8px;font-size:13px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:0.8px;">8-digit verification code</p>
               <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:20px;text-align:center;margin-bottom:28px;">
-                <span style="font-size:36px;font-weight:700;color:#0f172a;letter-spacing:14px;">${otp}</span>
+                <span style="font-size:36px;font-weight:700;color:#0f172a;letter-spacing:14px;">${displayOtp}</span>
               </div>
-              <p style="margin:0 0 4px;font-size:13px;color:#94a3b8;line-height:1.5;">This link and code expire in <strong>1 hour</strong>. If you didn't request this, you can safely ignore this email.</p>
+              `
+                  : ''
+              }
+              <p style="margin:0 0 4px;font-size:13px;color:#94a3b8;line-height:1.5;">This link${includeOtp && displayOtp ? ' and code' : ''} expire in <strong>1 hour</strong>. If you didn't request this, you can safely ignore this email.</p>
             </td>
           </tr>
           <!-- Footer -->
@@ -197,18 +241,35 @@ ${intro}
 
 Sign-in link (click to authenticate instantly):
 ${magicLink}
-
-Or enter this 8-digit code on the verify page:
-${otp}
-
-This link and code expire in 1 hour. If you didn't request this, you can safely ignore this email.
+${includeOtp && displayOtp ? `\nOr enter this 8-digit code on the verify page:\n${displayOtp}\n` : ''}
+This link${includeOtp && displayOtp ? ' and code' : ''} expire in 1 hour. If you didn't request this, you can safely ignore this email.
 
 The ${BRAND_NAME} team`
 
   try {
     console.log(`📧 Sending magic-link email to: ${email}`)
+    // #region agent log
+    debugLog(
+      'pre-fix-domain-send',
+      'H4',
+      'lib/email.ts:sendMagicLinkEmail-pre-send',
+      'About to call resend.emails.send',
+      {
+        fromDomain: fromHeader.includes('@') ? fromHeader.split('@').pop()?.replace(/[>\s]/g, '') : null,
+        usesResendDevFromAddress: usesResendDevFromAddress(),
+        magicLinkHost: (() => {
+          try {
+            return new URL(magicLink).host
+          } catch {
+            return null
+          }
+        })(),
+        otpLen: String(displayOtp).length,
+      }
+    )
+    // #endregion
     const { data, error } = await resend.emails.send({
-      from: emailFromHeader(),
+      from: fromHeader,
       to: email,
       subject,
       html,
@@ -216,6 +277,20 @@ The ${BRAND_NAME} team`
     })
     if (error) {
       console.error('❌ Resend API error (magic link):', error)
+      // #region agent log
+      debugLog(
+        'pre-fix-domain-send',
+        'H5',
+        'lib/email.ts:sendMagicLinkEmail-resend-error',
+        'Resend send returned error',
+        {
+          statusCode: (error as any)?.statusCode ?? null,
+          name: (error as any)?.name ?? null,
+          message: formatResendErrorMessage(error).slice(0, 220),
+          testingRestriction: isResendTestingRecipientError(error),
+        }
+      )
+      // #endregion
       if (isResendTestingRecipientError(error)) {
         return { success: false, error, resendTestingRecipientOnly: true as const }
       }

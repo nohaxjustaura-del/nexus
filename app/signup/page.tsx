@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card'
@@ -17,6 +17,29 @@ export default function SignUpPage() {
   const [userType, setUserType] = useState<'founder' | 'investor' | 'mentor'>('founder')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      try {
+        const res = await fetch('/api/auth/check', {
+          credentials: 'include',
+          headers: { 'Cache-Control': 'no-cache' },
+        })
+        const data = await res.json().catch(() => ({}))
+        if (cancelled) return
+        if (data?.authenticated) {
+          const target = redirectUrl || (data?.verified ? '/founder/dashboard' : '/founder/onboarding')
+          window.location.replace(target)
+        }
+      } catch {
+        /* ignore */
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [redirectUrl])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -106,7 +129,7 @@ export default function SignUpPage() {
           </div>
           <CardTitle className="text-3xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">Create Your Account</CardTitle>
           <CardDescription className="text-base mt-2">
-            Enter your email to get started. We'll send you a verification code.
+            Enter your email to get started. We'll send you a one-tap verification link.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -176,11 +199,11 @@ export default function SignUpPage() {
               {loading ? (
                 <>
                   <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                  Sending Code...
+                  Sending link...
                 </>
               ) : (
                 <>
-                  Send Verification Code
+                  Send Verification Link
                   <Mail className="ml-2 h-5 w-5" />
                 </>
               )}

@@ -213,24 +213,6 @@ export function Step1BasicInfo({ formData, setFormData, errors, setErrors, setSt
               </div>
             )}
 
-            <div className="space-y-2">
-              <Label htmlFor="universityAffiliation">University Affiliation (Optional)</Label>
-              <Input
-                id="universityAffiliation"
-                name="universityAffiliation"
-                autoComplete="organization"
-                value={formData.universityAffiliation}
-                onChange={(e) => setFormData({ ...formData, universityAffiliation: e.target.value })}
-                placeholder="e.g., UC Berkeley (for The House Fund)"
-                list="universities-affiliation"
-              />
-              <datalist id="universities-affiliation">
-                {SUGGESTED_UNIVERSITIES.slice(0, 50).map(u => (
-                  <option key={u} value={u} />
-                ))}
-              </datalist>
-              <p className="text-xs text-muted-foreground">Some funds are university-specific (e.g., The House Fund for Berkeley)</p>
-            </div>
           </div>
         </div>
 

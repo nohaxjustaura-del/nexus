@@ -70,7 +70,7 @@ export default function Home() {
         {/* Hero */}
         <section className="px-4 pt-14 pb-10 md:pt-24 md:pb-16">
           <div className="mx-auto max-w-3xl text-center">
-            <p className="mb-5 inline-flex items-center gap-2 rounded-full border border-border/80 bg-card/60 px-3.5 py-1.5 text-xs font-medium text-muted-foreground shadow-sm ring-1 ring-white/[0.04] backdrop-blur-md">
+            <p className="mb-5 inline-flex items-center gap-2 rounded-full border border-border/75 bg-card/60 px-3.5 py-1.5 text-xs font-medium text-muted-foreground ring-1 ring-white/[0.03] backdrop-blur-md">
               <span className="relative flex h-2 w-2">
                 <span
                   className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary/40 opacity-75 motion-reduce:hidden"
@@ -102,7 +102,7 @@ export default function Home() {
                     router.push('/founder/dashboard')
                   }
                 }}
-                className="h-12 px-8 text-base font-semibold shadow-lg shadow-primary/20 ring-1 ring-primary/30 transition-all hover:shadow-primary/25 hover:ring-primary/40"
+                className="h-12 px-8 text-base font-semibold ring-1 ring-primary/30"
               >
                 {mounted && isAuthenticated ? (
                   <>
@@ -120,7 +120,7 @@ export default function Home() {
                 href="/founder/discover"
                 className={cn(
                   buttonVariants({ variant: 'outline', size: 'lg' }),
-                  'h-12 border-border/80 bg-card/40 px-8 text-base font-semibold backdrop-blur-md ring-1 ring-white/[0.05] hover:bg-card/60'
+                  'h-12 border-border/80 bg-card/40 px-8 text-base font-semibold backdrop-blur-md ring-1 ring-white/[0.04] hover:bg-card/55'
                 )}
               >
                 Browse investors
@@ -145,7 +145,7 @@ export default function Home() {
         {/* Fund coach */}
         <section className="px-4 py-10 md:py-16">
           <div className="mx-auto max-w-5xl">
-            <div className="overflow-hidden rounded-2xl border border-border/80 bg-card/80 shadow-xl shadow-black/20 ring-1 ring-white/[0.06] backdrop-blur-sm">
+            <div className="surface-panel overflow-hidden">
               <div className="border-b border-border/80 bg-gradient-to-r from-muted/50 via-muted/30 to-transparent px-6 py-4 md:px-10 md:py-5">
                 <div className="inline-flex items-center gap-2 rounded-lg bg-primary/12 px-3 py-1.5 text-xs font-semibold text-primary ring-1 ring-primary/20">
                   <Sparkles className="h-3.5 w-3.5" />
@@ -168,7 +168,7 @@ export default function Home() {
                     { title: 'Smart matching', desc: 'Recommendations grounded in fit' },
                     { title: 'Pitch adaptation', desc: 'Notes you can use in real conversations' },
                   ].map((item) => (
-                    <li key={item.title} className="flex gap-3 rounded-xl border border-border/70 bg-background/40 p-4 ring-1 ring-white/[0.04] transition-colors hover:border-border hover:bg-background/60">
+                    <li key={item.title} className="flex gap-3 rounded-xl border border-border/70 bg-background/40 p-4 ring-1 ring-white/[0.03] transition-colors hover:border-border hover:bg-background/55">
                       <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/12 text-primary ring-1 ring-primary/15">
                         <Check className="h-4 w-4" strokeWidth={2.5} />
                       </span>
@@ -241,7 +241,7 @@ export default function Home() {
               ].map(({ icon: Icon, title, body }) => (
                 <div
                   key={title}
-                  className="group rounded-2xl border border-border/80 bg-card/60 p-6 shadow-sm ring-1 ring-white/[0.04] backdrop-blur-sm transition-all duration-300 hover:border-primary/25 hover:shadow-lg hover:shadow-primary/5"
+                  className="group rounded-2xl border border-border/80 bg-card/60 p-6 ring-1 ring-white/[0.04] backdrop-blur-sm transition-all duration-300 hover:border-primary/25"
                 >
                   <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-primary/12 text-primary ring-1 ring-primary/15 transition-transform duration-300 group-hover:scale-105">
                     <Icon className="h-5 w-5" strokeWidth={2} />
@@ -276,7 +276,7 @@ export default function Home() {
             ].map((s) => (
               <div
                 key={s.l}
-                className="rounded-xl border border-border/80 bg-card/50 px-4 py-5 text-center shadow-sm ring-1 ring-white/[0.04] backdrop-blur-md"
+                className="rounded-xl border border-border/80 bg-card/50 px-4 py-5 text-center ring-1 ring-white/[0.04] backdrop-blur-md"
               >
                 <div className="font-heading text-2xl font-bold text-foreground md:text-3xl">{s.n}</div>
                 <div className="mt-1 text-xs font-medium text-muted-foreground md:text-sm">{s.l}</div>
@@ -287,7 +287,7 @@ export default function Home() {
 
         {/* Trust */}
         <section className="px-4 pb-16 md:pb-24">
-          <div className="mx-auto max-w-5xl rounded-2xl border border-border/80 bg-muted/15 px-6 py-10 ring-1 ring-white/[0.05] md:px-12 md:py-12">
+          <div className="mx-auto max-w-5xl rounded-2xl border border-border/80 bg-muted/15 px-6 py-10 ring-1 ring-white/[0.04] md:px-12 md:py-12">
             <div className="text-center">
               <h3 className="font-heading text-xl font-bold text-foreground md:text-2xl">Your data stays yours</h3>
               <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">

@@ -29,6 +29,29 @@ export default function LoginPage() {
     router.replace(qs ? `/login?${qs}` : '/login')
   }, [searchParams, router, redirectUrl])
 
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      try {
+        const res = await fetch('/api/auth/check', {
+          credentials: 'include',
+          headers: { 'Cache-Control': 'no-cache' },
+        })
+        const data = await res.json().catch(() => ({}))
+        if (cancelled) return
+        if (data?.authenticated) {
+          const target = redirectUrl || (data?.verified ? '/founder/dashboard' : '/founder/onboarding')
+          window.location.replace(target)
+        }
+      } catch {
+        /* ignore */
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [redirectUrl])
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
@@ -122,14 +145,14 @@ export default function LoginPage() {
           </div>
           <CardTitle className="font-heading text-2xl font-bold tracking-tight">Log in</CardTitle>
           <CardDescription>
-            Enter your email to receive a verification code
+            Enter your email to receive a one-tap sign-in link
           </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             {existingAccountBanner && (
               <div className="p-3 text-sm text-amber-950 bg-amber-500/15 border border-amber-500/30 rounded-md">
-                An account with this email already exists. Log in below to get a sign-in link or code.
+                An account with this email already exists. Log in below to get a sign-in link.
               </div>
             )}
             <div className="space-y-2">
@@ -166,11 +189,11 @@ export default function LoginPage() {
               {loading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Sending Code...
+                  Sending link...
                 </>
               ) : (
                 <>
-                  Send Verification Code
+                  Send Sign-In Link
                   <Mail className="ml-2 h-4 w-4" />
                 </>
               )}

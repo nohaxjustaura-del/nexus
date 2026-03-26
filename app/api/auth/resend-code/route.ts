@@ -5,6 +5,7 @@ import { getSiteUrl } from '@/lib/site-url'
 import {
   RESEND_DEV_CONSOLE_FALLBACK_HINT,
   RESEND_TESTING_MODE_PUBLIC_MESSAGE,
+  formatResendErrorMessage,
   sendMagicLinkEmail,
 } from '@/lib/email'
 import { db } from '@/lib/db'
@@ -53,20 +54,24 @@ export async function POST(request: NextRequest) {
     }
 
     const magicLink = linkData.properties?.action_link
-    const otp = linkData.properties?.email_otp
-
-    if (!magicLink || !otp) {
-      console.error('Resend-code generateLink: missing action_link or email_otp', linkData.properties)
+    const tokenHash = linkData.properties?.hashed_token
+    if (!magicLink) {
+      console.error('Resend-code generateLink: missing action_link', linkData.properties)
       return NextResponse.json(
         { error: 'Failed to generate sign-in link. Please try again.' },
         { status: 500 }
       )
     }
 
+    const oneTapLink =
+      tokenHash && typeof tokenHash === 'string'
+        ? `${siteUrl}/auth/link?token_hash=${encodeURIComponent(tokenHash)}&type=${existingUser ? 'magiclink' : 'invite'}&next=${encodeURIComponent('/founder/onboarding')}&email=${encodeURIComponent(normalizedEmail)}`
+        : magicLink
+
     const emailResult = await sendMagicLinkEmail(normalizedEmail, {
-      magicLink,
-      otp,
+      magicLink: oneTapLink,
       isNew: !existingUser,
+      includeOtp: false,
     })
 
     if (!emailResult.success) {
@@ -79,9 +84,14 @@ export async function POST(request: NextRequest) {
           { status: 503 }
         )
       }
-      console.error('Resend-code email send failed:', emailResult.error)
+      const resendHint = formatResendErrorMessage(emailResult.error)
+      console.error('Resend-code email send failed:', resendHint || emailResult.error)
       return NextResponse.json(
-        { error: 'Failed to send email. Please try again.' },
+        {
+          error: 'Failed to send email. Please try again.',
+          code: 'EMAIL_SEND_FAILED',
+          ...(resendHint ? { details: resendHint } : {}),
+        },
         { status: 500 }
       )
     }
@@ -92,7 +102,7 @@ export async function POST(request: NextRequest) {
       success: true,
       message: emailResult.devConsoleFallback
         ? RESEND_DEV_CONSOLE_FALLBACK_HINT
-        : 'New sign-in email sent. Check your inbox for a link or 8-digit code.',
+        : 'New sign-in link sent. Check your inbox and tap the one-click link to continue.',
       ...(emailResult.devConsoleFallback ? { devConsoleFallback: true } : {}),
     })
     applyAuthCookies(res)

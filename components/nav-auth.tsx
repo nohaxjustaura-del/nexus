@@ -86,24 +86,34 @@ export const NavAuth = memo(function NavAuth() {
     )
   }
 
-  // User is logged in and verified
-  if (authState?.authenticated && authState?.verified) {
+  // User is logged in (verified users get full nav; unverified can continue onboarding)
+  if (authState?.authenticated) {
     return (
       <div className="flex items-center gap-3" suppressHydrationWarning>
-        {/* Credit counter - more subtle and compact */}
-        <CreditCounter variant="badge" showClaimButton={true} className="hidden lg:flex" />
-        
-        {/* Divider between credits and user actions */}
-        <div className="hidden lg:block h-5 w-px bg-border" />
-        
-        {/* User actions grouped together */}
+        {authState.verified && (
+          <>
+            <CreditCounter variant="badge" showClaimButton={true} className="hidden lg:flex" />
+            <div className="hidden lg:block h-5 w-px bg-border" />
+          </>
+        )}
+
         <div className="flex items-center gap-1.5">
-          <NotificationBell />
-          <Link href="/founder/dashboard">
-            <Button size="sm" variant="default" className="h-8 px-3 text-sm font-medium">
-              Dashboard
-            </Button>
-          </Link>
+          {authState.verified ? (
+            <>
+              <NotificationBell />
+              <Link href="/founder/dashboard">
+                <Button size="sm" variant="default" className="h-8 px-3 text-sm font-medium">
+                  Dashboard
+                </Button>
+              </Link>
+            </>
+          ) : (
+            <Link href="/founder/onboarding">
+              <Button size="sm" variant="default" className="h-8 px-3 text-sm font-medium">
+                Continue onboarding
+              </Button>
+            </Link>
+          )}
           <Link href="/account">
             <Button size="sm" variant="ghost" className="h-8 px-2.5 hidden sm:flex">
               <User className="h-4 w-4" />

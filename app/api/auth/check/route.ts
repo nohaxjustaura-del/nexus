@@ -18,21 +18,16 @@ export async function GET(_request: NextRequest) {
 
     let approved = false
     try {
-      const row = await db.userApproval.findUnique({
+      // Avoid race-condition duplicates under concurrent auth checks.
+      const row = await db.userApproval.upsert({
         where: { email: user.email },
+        create: {
+          email: user.email,
+          status: 'pending',
+        },
+        update: {},
       })
-
-      if (!row) {
-        await db.userApproval.create({
-          data: {
-            email: user.email,
-            status: 'pending',
-          },
-        })
-        approved = false
-      } else {
-        approved = row.status === 'approved'
-      }
+      approved = row.status === 'approved'
     } catch (approvalError) {
       logger.error('AUTH_CHECK', 'Approval check error', approvalError)
       approved = false

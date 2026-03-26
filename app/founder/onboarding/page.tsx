@@ -117,6 +117,16 @@ export default function OnboardingPage() {
             }))
           } else {
             try {
+              const draftRes = await fetch('/api/onboarding/founder/draft', { credentials: 'include' })
+              if (draftRes.ok) {
+                const draftData = await draftRes.json()
+                if (draftData?.exists && draftData?.draft && typeof draftData.draft === 'object') {
+                  setFormData(prev => ({ ...prev, ...(draftData.draft as Partial<OnboardingFormData>) }))
+                  return
+                }
+              }
+            } catch {}
+            try {
               const draft =
                 localStorage.getItem(CLIENT_STORAGE.ONBOARDING_DRAFT) ||
                 localStorage.getItem(CLIENT_STORAGE.ONBOARDING_DRAFT_LEGACY)
@@ -142,6 +152,12 @@ export default function OnboardingPage() {
   useEffect(() => {
     const t = setTimeout(() => {
       try { localStorage.setItem(CLIENT_STORAGE.ONBOARDING_DRAFT, JSON.stringify(formData)) } catch {}
+      fetch('/api/onboarding/founder/draft', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(formData),
+      }).catch(() => {})
     }, 400)
     return () => clearTimeout(t)
   }, [formData])
@@ -239,6 +255,12 @@ export default function OnboardingPage() {
 
       localStorage.removeItem(CLIENT_STORAGE.ONBOARDING_DRAFT)
       localStorage.removeItem(CLIENT_STORAGE.ONBOARDING_DRAFT_LEGACY)
+      fetch('/api/onboarding/founder/draft', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({}),
+      }).catch(() => {})
       setSaving(false)
       // Small delay to show success state before redirect
       await new Promise(resolve => setTimeout(resolve, 1500))
@@ -271,8 +293,14 @@ export default function OnboardingPage() {
           <div className="flex items-center gap-4">
             <button
               className="text-sm underline underline-offset-4 hover:text-primary transition-colors"
-              onClick={() => {
+              onClick={async () => {
                 try { localStorage.setItem(CLIENT_STORAGE.ONBOARDING_DRAFT, JSON.stringify(formData)) } catch {}
+                fetch('/api/onboarding/founder/draft', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  credentials: 'include',
+                  body: JSON.stringify(formData),
+                }).catch(() => {})
                 router.push('/')
               }}
             >

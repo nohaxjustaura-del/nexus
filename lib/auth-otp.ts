@@ -19,3 +19,14 @@ export function otpVerificationCandidates(raw: string): string[] {
   }
   return out
 }
+
+/**
+ * Supabase email OTP is 6 digits. We display 8 by appending a deterministic checksum.
+ * The verify flow accepts the first 6 digits from this format.
+ */
+export function formatDisplayOtp(rawOtp: string): string {
+  const digits = String(rawOtp || '').replace(/\D/g, '')
+  if (digits.length !== 6) return digits
+  const checksum = (Number(digits) % 97).toString().padStart(2, '0')
+  return `${digits}${checksum}`
+}

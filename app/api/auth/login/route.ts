@@ -13,6 +13,31 @@ import { ADMIN_EMAIL } from '@/lib/constants'
 
 export const dynamic = 'force-dynamic'
 
+function debugLog(
+  runId: string,
+  hypothesisId: string,
+  location: string,
+  message: string,
+  data: Record<string, unknown>
+) {
+  fetch('http://127.0.0.1:7464/ingest/8942f439-d0f1-43ea-9e6d-5d7995eef824', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Debug-Session-Id': '0f3c2c',
+    },
+    body: JSON.stringify({
+      sessionId: '0f3c2c',
+      runId,
+      hypothesisId,
+      location,
+      message,
+      data,
+      timestamp: Date.now(),
+    }),
+  }).catch(() => {})
+}
+
 export async function POST(request: NextRequest) {
   try {
     const { email } = await request.json()
@@ -77,6 +102,21 @@ export async function POST(request: NextRequest) {
     // and send the email ourselves through Resend.
     const siteUrl = getSiteUrl(request)
     const callbackUrl = `${siteUrl}/api/auth/callback?next=${encodeURIComponent('/founder/onboarding')}`
+    // #region agent log
+    debugLog(
+      'pre-fix-domain-send',
+      'H1,H2',
+      'app/api/auth/login/route.ts:regular-login-pre-generate',
+      'Prepared callback URL for magic link generation',
+      {
+        siteUrl,
+        callbackUrl,
+        hasResendKey: Boolean(process.env.RESEND_API_KEY),
+        hasFromEnv: Boolean(process.env.RESEND_FROM_EMAIL),
+        nodeEnv: process.env.NODE_ENV ?? null,
+      }
+    )
+    // #endregion
 
     const { data: linkData, error: linkError } = await adminClient.auth.admin.generateLink({
       type: 'magiclink',
@@ -85,6 +125,21 @@ export async function POST(request: NextRequest) {
         redirectTo: callbackUrl,
       },
     })
+    // #region agent log
+    debugLog(
+      'pre-fix-domain-send',
+      'H3',
+      'app/api/auth/login/route.ts:regular-login-generate-result',
+      'Supabase generateLink returned',
+      {
+        hasLinkError: Boolean(linkError),
+        linkErrorStatus: (linkError as any)?.status ?? null,
+        linkErrorCode: (linkError as any)?.code ?? null,
+        hasActionLink: Boolean(linkData?.properties?.action_link),
+        otpLen: String(linkData?.properties?.email_otp ?? '').length,
+      }
+    )
+    // #endregion
 
     if (linkError) {
       console.error('Login generateLink error:', linkError)
@@ -106,7 +161,7 @@ export async function POST(request: NextRequest) {
 
     const magicLink = linkData.properties?.action_link
     const otp = linkData.properties?.email_otp
-
+    const tokenHash = linkData.properties?.hashed_token
     if (!magicLink || !otp) {
       console.error('Login generateLink: missing action_link or email_otp', linkData.properties)
       return NextResponse.json(
@@ -115,7 +170,31 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const emailResult = await sendMagicLinkEmail(normalizedEmail, { magicLink, otp, isNew: false })
+    const oneTapLink =
+      tokenHash && typeof tokenHash === 'string'
+        ? `${siteUrl}/auth/link?token_hash=${encodeURIComponent(tokenHash)}&type=magiclink&next=${encodeURIComponent('/founder/onboarding')}&email=${encodeURIComponent(normalizedEmail)}`
+        : magicLink
+
+    const emailResult = await sendMagicLinkEmail(normalizedEmail, {
+      magicLink: oneTapLink,
+      otp,
+      isNew: false,
+    })
+    // #region agent log
+    debugLog(
+      'pre-fix-domain-send',
+      'H4,H5',
+      'app/api/auth/login/route.ts:regular-login-send-result',
+      'Magic-link send function returned',
+      {
+        sendSuccess: emailResult.success,
+        resendTestingRecipientOnly:
+          !emailResult.success ? Boolean(emailResult.resendTestingRecipientOnly) : false,
+        usedDevConsoleFallback:
+          emailResult.success ? Boolean((emailResult as any).devConsoleFallback) : false,
+      }
+    )
+    // #endregion
 
     if (!emailResult.success) {
       if (emailResult.resendTestingRecipientOnly) {
@@ -133,9 +212,7 @@ export async function POST(request: NextRequest) {
         {
           error: 'Failed to send sign-in email. Please try again.',
           code: 'EMAIL_SEND_FAILED',
-          ...(process.env.NODE_ENV === 'development' && resendHint
-            ? { details: resendHint }
-            : {}),
+          ...(resendHint ? { details: resendHint } : {}),
         },
         { status: 500 }
       )
@@ -145,7 +222,7 @@ export async function POST(request: NextRequest) {
       success: true,
       message: emailResult.devConsoleFallback
         ? RESEND_DEV_CONSOLE_FALLBACK_HINT
-        : 'Sign-in email sent. Check your inbox for a link or 8-digit code.',
+        : 'Sign-in link sent. Check your inbox and tap the one-click link to continue.',
       email: normalizedEmail,
       ...(emailResult.devConsoleFallback ? { devConsoleFallback: true } : {}),
     })
