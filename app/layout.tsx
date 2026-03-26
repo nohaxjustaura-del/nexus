@@ -97,7 +97,7 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" className={cn("scroll-smooth", dmSans.variable, outfit.variable)}>
+    <html lang="en" className={cn("dark scroll-smooth", dmSans.variable, outfit.variable)}>
       <body className={cn("min-h-screen bg-background font-sans antialiased")} suppressHydrationWarning>
         <SessionKeeper />
         
@@ -109,7 +109,7 @@ export default function RootLayout({
           Skip to main content
         </a>
 
-        <header className="sticky top-0 z-50 no-print border-b border-border/80 bg-background/75 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60">
+        <header className="sticky top-0 z-50 no-print border-b border-border/80 bg-background/80 backdrop-blur-xl ring-1 ring-white/[0.03] supports-[backdrop-filter]:bg-background/55">
           <div className="container mx-auto max-w-7xl flex h-14 sm:h-16 items-center justify-between px-4 sm:px-6">
             <Link
               href="/"

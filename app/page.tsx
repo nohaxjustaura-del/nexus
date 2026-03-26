@@ -61,24 +61,37 @@ export default function Home() {
   return (
     <div className="relative min-h-[calc(100vh-4rem)]">
       <div className="bg-page-mesh fixed inset-0 -z-10" aria-hidden />
+      <div
+        className="pointer-events-none fixed inset-0 -z-10 bg-[radial-gradient(ellipse_55%_40%_at_50%_0%,hsl(var(--primary)/0.06),transparent)]"
+        aria-hidden
+      />
 
       <div className="relative z-10 flex flex-col">
         {/* Hero */}
-        <section className="px-4 pt-14 pb-10 md:pt-20 md:pb-14">
+        <section className="px-4 pt-14 pb-10 md:pt-24 md:pb-16">
           <div className="mx-auto max-w-3xl text-center">
-            <p className="mb-4 inline-flex items-center gap-2 rounded-full border border-border bg-card/80 px-3 py-1 text-xs font-medium text-muted-foreground shadow-sm backdrop-blur-sm">
-              <span className="h-1.5 w-1.5 rounded-full bg-primary" aria-hidden />
+            <p className="mb-5 inline-flex items-center gap-2 rounded-full border border-border/80 bg-card/60 px-3.5 py-1.5 text-xs font-medium text-muted-foreground shadow-sm ring-1 ring-white/[0.04] backdrop-blur-md">
+              <span className="relative flex h-2 w-2">
+                <span
+                  className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary/40 opacity-75 motion-reduce:hidden"
+                  aria-hidden
+                />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-primary" aria-hidden />
+              </span>
               Investor intelligence for founders
             </p>
-            <h1 className="font-heading text-4xl font-bold tracking-tight text-foreground sm:text-5xl md:text-6xl md:leading-[1.08]">
+            <h1 className="font-heading text-4xl font-bold tracking-tight text-foreground sm:text-5xl md:text-6xl md:leading-[1.06]">
               Get matched to{' '}
-              <span className="text-primary">1,002 investors</span> who fund startups like yours
+              <span className="bg-gradient-to-r from-primary via-sky-400 to-primary bg-[length:200%_auto] bg-clip-text text-transparent animate-gradient motion-reduce:animate-none">
+                1,002 investors
+              </span>{' '}
+              who fund startups like yours
             </h1>
-            <p className="mx-auto mt-5 max-w-xl text-base leading-relaxed text-muted-foreground sm:text-lg" suppressHydrationWarning>
+            <p className="mx-auto mt-6 max-w-xl text-base leading-relaxed text-muted-foreground sm:text-lg" suppressHydrationWarning>
               Upload your pitch idea, deck, or video. We analyze your story and surface investors who are a real fit - not a generic list.
             </p>
 
-            <div className="mt-8 flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:items-center">
+            <div className="mt-9 flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:items-center">
               <Button
                 size="lg"
                 onClick={() => {
@@ -89,7 +102,7 @@ export default function Home() {
                     router.push('/founder/dashboard')
                   }
                 }}
-                className="h-12 px-8 text-base font-semibold shadow-md shadow-primary/15"
+                className="h-12 px-8 text-base font-semibold shadow-lg shadow-primary/20 ring-1 ring-primary/30 transition-all hover:shadow-primary/25 hover:ring-primary/40"
               >
                 {mounted && isAuthenticated ? (
                   <>
@@ -107,7 +120,7 @@ export default function Home() {
                 href="/founder/discover"
                 className={cn(
                   buttonVariants({ variant: 'outline', size: 'lg' }),
-                  'h-12 border-border bg-card/60 px-8 text-base font-semibold backdrop-blur-sm'
+                  'h-12 border-border/80 bg-card/40 px-8 text-base font-semibold backdrop-blur-md ring-1 ring-white/[0.05] hover:bg-card/60'
                 )}
               >
                 Browse investors
@@ -115,21 +128,26 @@ export default function Home() {
             </div>
 
             {mounted && (
-              <div className="mt-10 flex flex-wrap items-center justify-center gap-3 text-xs text-muted-foreground">
-                <span className="rounded-full border border-border bg-card/70 px-3 py-1.5 backdrop-blur-sm">Double opt-in</span>
-                <span className="rounded-full border border-border bg-card/70 px-3 py-1.5 backdrop-blur-sm">Private by default</span>
-                <span className="rounded-full border border-border bg-card/70 px-3 py-1.5 backdrop-blur-sm">Global coverage</span>
+              <div className="mt-11 flex flex-wrap items-center justify-center gap-2.5 text-xs text-muted-foreground">
+                {['Double opt-in', 'Private by default', 'Global coverage'].map((label) => (
+                  <span
+                    key={label}
+                    className="rounded-full border border-border/70 bg-muted/25 px-3 py-1.5 backdrop-blur-sm ring-1 ring-white/[0.03]"
+                  >
+                    {label}
+                  </span>
+                ))}
               </div>
             )}
           </div>
         </section>
 
         {/* Fund coach */}
-        <section className="px-4 py-10 md:py-14">
+        <section className="px-4 py-10 md:py-16">
           <div className="mx-auto max-w-5xl">
-            <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
-              <div className="border-b border-border bg-muted/40 px-6 py-4 md:px-10 md:py-5">
-                <div className="inline-flex items-center gap-2 rounded-md bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary">
+            <div className="overflow-hidden rounded-2xl border border-border/80 bg-card/80 shadow-xl shadow-black/20 ring-1 ring-white/[0.06] backdrop-blur-sm">
+              <div className="border-b border-border/80 bg-gradient-to-r from-muted/50 via-muted/30 to-transparent px-6 py-4 md:px-10 md:py-5">
+                <div className="inline-flex items-center gap-2 rounded-lg bg-primary/12 px-3 py-1.5 text-xs font-semibold text-primary ring-1 ring-primary/20">
                   <Sparkles className="h-3.5 w-3.5" />
                   AI fund coach
                 </div>
@@ -150,8 +168,8 @@ export default function Home() {
                     { title: 'Smart matching', desc: 'Recommendations grounded in fit' },
                     { title: 'Pitch adaptation', desc: 'Notes you can use in real conversations' },
                   ].map((item) => (
-                    <li key={item.title} className="flex gap-3 rounded-xl border border-border/80 bg-background/50 p-4">
-                      <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                    <li key={item.title} className="flex gap-3 rounded-xl border border-border/70 bg-background/40 p-4 ring-1 ring-white/[0.04] transition-colors hover:border-border hover:bg-background/60">
+                      <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/12 text-primary ring-1 ring-primary/15">
                         <Check className="h-4 w-4" strokeWidth={2.5} />
                       </span>
                       <div>
@@ -194,11 +212,11 @@ export default function Home() {
         </section>
 
         {/* Value props */}
-        <section className="px-4 py-10 md:py-12">
+        <section className="px-4 py-10 md:py-14">
           <div className="mx-auto max-w-5xl">
             <div className="text-center">
               <h2 className="font-heading text-2xl font-bold text-foreground md:text-3xl">Smarter outreach, fewer dead ends</h2>
-              <p className="mx-auto mt-3 max-w-lg text-muted-foreground">
+              <p className="mx-auto mt-3 max-w-lg text-muted-foreground leading-relaxed">
                 Focus on investors who align with your stage, sector, and story.
               </p>
             </div>
@@ -223,9 +241,9 @@ export default function Home() {
               ].map(({ icon: Icon, title, body }) => (
                 <div
                   key={title}
-                  className="rounded-2xl border border-border bg-card p-6 shadow-sm transition-shadow hover:shadow-md"
+                  className="group rounded-2xl border border-border/80 bg-card/60 p-6 shadow-sm ring-1 ring-white/[0.04] backdrop-blur-sm transition-all duration-300 hover:border-primary/25 hover:shadow-lg hover:shadow-primary/5"
                 >
-                  <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                  <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-primary/12 text-primary ring-1 ring-primary/15 transition-transform duration-300 group-hover:scale-105">
                     <Icon className="h-5 w-5" strokeWidth={2} />
                   </div>
                   <h3 className="font-heading text-lg font-semibold text-foreground">{title}</h3>
@@ -248,7 +266,7 @@ export default function Home() {
         </section>
 
         {/* Stats */}
-        <section className="px-4 py-8 md:py-10">
+        <section className="px-4 py-8 md:py-12">
           <div className="mx-auto grid max-w-5xl grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
             {[
               { n: '500+', l: 'Active VCs' },
@@ -258,7 +276,7 @@ export default function Home() {
             ].map((s) => (
               <div
                 key={s.l}
-                className="rounded-xl border border-border bg-card/80 px-4 py-5 text-center shadow-sm backdrop-blur-sm"
+                className="rounded-xl border border-border/80 bg-card/50 px-4 py-5 text-center shadow-sm ring-1 ring-white/[0.04] backdrop-blur-md"
               >
                 <div className="font-heading text-2xl font-bold text-foreground md:text-3xl">{s.n}</div>
                 <div className="mt-1 text-xs font-medium text-muted-foreground md:text-sm">{s.l}</div>
@@ -268,8 +286,8 @@ export default function Home() {
         </section>
 
         {/* Trust */}
-        <section className="px-4 pb-16 md:pb-20">
-          <div className="mx-auto max-w-5xl rounded-2xl border border-border bg-muted/20 px-6 py-10 md:px-10">
+        <section className="px-4 pb-16 md:pb-24">
+          <div className="mx-auto max-w-5xl rounded-2xl border border-border/80 bg-muted/15 px-6 py-10 ring-1 ring-white/[0.05] md:px-12 md:py-12">
             <div className="text-center">
               <h3 className="font-heading text-xl font-bold text-foreground md:text-2xl">Your data stays yours</h3>
               <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">

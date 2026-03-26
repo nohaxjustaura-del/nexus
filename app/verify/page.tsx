@@ -22,7 +22,9 @@ export default function VerifyPage() {
   const searchParams = useSearchParams()
   const paramEmail = (searchParams.get('email') || '').trim()
   const authError = searchParams.get('error') || ''
-  const redirectUrl = searchParams.get('redirect') || ''
+  /** `/api/auth/callback` uses `next`; login/signup use `redirect` — accept both. */
+  const redirectUrl =
+    searchParams.get('redirect')?.trim() || searchParams.get('next')?.trim() || ''
 
   /** Email used for verify + resend (may be typed on this page if link had no ?email=). */
   const [email, setEmail] = useState('')

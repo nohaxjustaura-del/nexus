@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card'
@@ -12,10 +12,22 @@ import { CLIENT_STORAGE } from '@/lib/client-storage-keys'
 export default function LoginPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const redirectUrl = searchParams.get('redirect') || ''
+  const redirectUrl = searchParams.get('redirect') || searchParams.get('next') || ''
   const [email, setEmail] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [existingAccountBanner, setExistingAccountBanner] = useState(false)
+
+  useEffect(() => {
+    if (searchParams.get('accountExists') !== '1') return
+    setExistingAccountBanner(true)
+    const prefill = searchParams.get('email')?.trim()
+    if (prefill?.includes('@')) setEmail(prefill)
+    const next = new URLSearchParams()
+    if (redirectUrl) next.set('redirect', redirectUrl)
+    const qs = next.toString()
+    router.replace(qs ? `/login?${qs}` : '/login')
+  }, [searchParams, router, redirectUrl])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -115,6 +127,11 @@ export default function LoginPage() {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
+            {existingAccountBanner && (
+              <div className="p-3 text-sm text-amber-950 bg-amber-500/15 border border-amber-500/30 rounded-md">
+                An account with this email already exists. Log in below to get a sign-in link or code.
+              </div>
+            )}
             <div className="space-y-2">
               <label htmlFor="email" className="text-sm font-medium">
                 Email Address

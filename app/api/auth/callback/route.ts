@@ -24,7 +24,10 @@ export async function GET(request: NextRequest) {
   const safeNext = nextPath.startsWith('/') ? nextPath : '/'
 
   if (!code) {
-    return NextResponse.redirect(new URL('/verify?error=missing_code', request.url))
+    const v = new URL('/verify', request.url)
+    v.searchParams.set('error', 'missing_code')
+    v.searchParams.set('redirect', safeNext)
+    return NextResponse.redirect(v)
   }
 
   const jar: PendingCookie[] = []
@@ -45,7 +48,7 @@ export async function GET(request: NextRequest) {
     console.error('auth callback exchangeCodeForSession:', error.message)
     const verify = new URL('/verify', request.url)
     verify.searchParams.set('error', 'callback')
-    verify.searchParams.set('next', safeNext)
+    verify.searchParams.set('redirect', safeNext)
     return NextResponse.redirect(verify)
   }
 

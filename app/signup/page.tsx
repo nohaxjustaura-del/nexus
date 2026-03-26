@@ -12,7 +12,7 @@ import { CLIENT_STORAGE } from '@/lib/client-storage-keys'
 export default function SignUpPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const redirectUrl = searchParams.get('redirect') || ''
+  const redirectUrl = searchParams.get('redirect') || searchParams.get('next') || ''
   const [email, setEmail] = useState('')
   const [userType, setUserType] = useState<'founder' | 'investor' | 'mentor'>('founder')
   const [loading, setLoading] = useState(false)
@@ -54,21 +54,16 @@ export default function SignUpPage() {
       const data = await response.json()
 
       if (!response.ok) {
-        // Better error handling
-        const errorMsg = data.error || data.message || 'Something went wrong'
-        
-        // If account exists, offer to redirect to login
         if (data.existingAccount) {
-          setError(`${errorMsg} Would you like to log in instead?`)
-          // Show login link option
-          setTimeout(() => {
-            if (confirm(`${errorMsg}\n\nWould you like to go to the login page?`)) {
-              router.push(`/login${redirectUrl ? `?redirect=${encodeURIComponent(redirectUrl)}` : ''}`)
-            }
-          }, 100)
-        } else {
-          setError(errorMsg)
+          const params = new URLSearchParams()
+          if (redirectUrl) params.set('redirect', redirectUrl)
+          params.set('accountExists', '1')
+          params.set('email', trimmedEmail)
+          setLoading(false)
+          router.replace(`/login?${params.toString()}`)
+          return
         }
+        setError(data.error || data.message || 'Something went wrong')
         setLoading(false)
         return
       }
