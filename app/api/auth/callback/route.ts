@@ -46,6 +46,7 @@ export async function GET(request: NextRequest) {
     const code = requestUrl.searchParams.get('code')
     const tokenHash = requestUrl.searchParams.get('token_hash')
     const tokenType = requestUrl.searchParams.get('type') || 'email'
+  const confirm = requestUrl.searchParams.get('confirm') || ''
     const nextPath = requestUrl.searchParams.get('next') || '/founder/onboarding'
     const safeNext = nextPath.startsWith('/') ? nextPath : '/'
   // #region agent log
@@ -67,6 +68,16 @@ export async function GET(request: NextRequest) {
       v.searchParams.set('error', 'missing_code')
       v.searchParams.set('redirect', safeNext)
       return NextResponse.redirect(v)
+    }
+
+    // Guard against email scanners consuming one-time token links.
+    // Any direct token_hash callback must pass through /auth/link and require a manual user click.
+    if (tokenHash && confirm !== '1') {
+      const bridge = new URL('/auth/link', request.url)
+      bridge.searchParams.set('token_hash', tokenHash)
+      bridge.searchParams.set('type', tokenType)
+      bridge.searchParams.set('next', safeNext)
+      return NextResponse.redirect(bridge)
     }
 
     const jar: PendingCookie[] = []
@@ -140,4 +151,5 @@ export async function GET(request: NextRequest) {
     verify.searchParams.set('redirect', '/founder/onboarding')
     return NextResponse.redirect(verify)
   }
+
 }
