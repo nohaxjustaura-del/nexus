@@ -16,6 +16,7 @@ interface Step5VerificationProps {
   setIdUploaded: (uploaded: boolean) => void
   saving: boolean
   setStep: (step: number) => void
+  ensureProfileSaved: () => Promise<void>
   handleSubmit: () => Promise<void>
 }
 
@@ -28,6 +29,7 @@ export function Step5Verification({
   setIdUploaded, 
   saving, 
   setStep, 
+  ensureProfileSaved,
   handleSubmit 
 }: Step5VerificationProps) {
   const [submitted, setSubmitted] = useState(false)
@@ -66,6 +68,7 @@ export function Step5Verification({
               if (!idFile) return
               setIdUploading(true)
               try {
+                await ensureProfileSaved()
                 const fd = new FormData()
                 fd.append('file', idFile)
                 const res = await fetch('/api/founder/verify-id', {

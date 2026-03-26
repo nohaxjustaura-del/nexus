@@ -104,7 +104,7 @@ export async function POST(request: NextRequest) {
       success: true,
       message: emailResult.devConsoleFallback
         ? RESEND_DEV_CONSOLE_FALLBACK_HINT
-        : 'Verification email sent. Check your inbox for a sign-in link or 6-digit code.',
+        : 'Verification email sent. Check your inbox for a sign-in link or 8-digit code.',
       email: normalizedEmail,
       ...(emailResult.devConsoleFallback ? { devConsoleFallback: true } : {}),
     })

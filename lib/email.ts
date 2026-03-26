@@ -13,13 +13,30 @@ function emailFromHeader(): string {
   return process.env.RESEND_FROM_EMAIL || `${BRAND_NAME} <onboarding@resend.dev>`
 }
 
+/** Stable string for logs and dev API responses (Resend returns { message } or plain strings). */
+export function formatResendErrorMessage(error: unknown): string {
+  if (error == null) return ''
+  if (typeof error === 'string') return error
+  if (typeof error === 'object' && 'message' in error && (error as { message: unknown }).message != null) {
+    return String((error as { message: unknown }).message)
+  }
+  try {
+    return JSON.stringify(error)
+  } catch {
+    return String(error)
+  }
+}
+
 function isResendTestingRecipientError(error: unknown): boolean {
-  const s = (typeof error === 'string' ? error : JSON.stringify(error)).toLowerCase()
+  const s = formatResendErrorMessage(error).toLowerCase()
   return (
     s.includes('only send testing emails') ||
     s.includes('verify a domain') ||
+    s.includes('domain is not verified') ||
+    s.includes('must verify') ||
     (s.includes('testing') && s.includes('recipient')) ||
-    s.includes('not allowed to send')
+    s.includes('not allowed to send') ||
+    (s.includes('restricted') && s.includes('recipient'))
   )
 }
 
@@ -102,7 +119,7 @@ ${intro}
 
 Magic link: ${magicLink}
 
-Or enter this 6-digit code on the verify page: ${otp}
+Or enter this 8-digit code on the verify page: ${otp}
 
 This link and code expire in 1 hour.
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -154,7 +171,7 @@ This link and code expire in 1 hour.
                 </tr>
               </table>
               <!-- OTP code -->
-              <p style="margin:0 0 8px;font-size:13px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:0.8px;">6-digit verification code</p>
+              <p style="margin:0 0 8px;font-size:13px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:0.8px;">8-digit verification code</p>
               <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:20px;text-align:center;margin-bottom:28px;">
                 <span style="font-size:36px;font-weight:700;color:#0f172a;letter-spacing:14px;">${otp}</span>
               </div>
@@ -181,7 +198,7 @@ ${intro}
 Sign-in link (click to authenticate instantly):
 ${magicLink}
 
-Or enter this 6-digit code on the verify page:
+Or enter this 8-digit code on the verify page:
 ${otp}
 
 This link and code expire in 1 hour. If you didn't request this, you can safely ignore this email.

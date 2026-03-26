@@ -92,7 +92,7 @@ export async function POST(request: NextRequest) {
       success: true,
       message: emailResult.devConsoleFallback
         ? RESEND_DEV_CONSOLE_FALLBACK_HINT
-        : 'New sign-in email sent. Check your inbox for a link or 6-digit code.',
+        : 'New sign-in email sent. Check your inbox for a link or 8-digit code.',
       ...(emailResult.devConsoleFallback ? { devConsoleFallback: true } : {}),
     })
     applyAuthCookies(res)

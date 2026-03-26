@@ -6,6 +6,7 @@ import { getSiteUrl } from '@/lib/site-url'
 import {
   RESEND_DEV_CONSOLE_FALLBACK_HINT,
   RESEND_TESTING_MODE_PUBLIC_MESSAGE,
+  formatResendErrorMessage,
   sendMagicLinkEmail,
 } from '@/lib/email'
 import { ADMIN_EMAIL } from '@/lib/constants'
@@ -126,9 +127,16 @@ export async function POST(request: NextRequest) {
           { status: 503 }
         )
       }
-      console.error('Login email send failed:', emailResult.error)
+      const resendHint = formatResendErrorMessage(emailResult.error)
+      console.error('Login email send failed:', resendHint || emailResult.error)
       return NextResponse.json(
-        { error: 'Failed to send sign-in email. Please try again.' },
+        {
+          error: 'Failed to send sign-in email. Please try again.',
+          code: 'EMAIL_SEND_FAILED',
+          ...(process.env.NODE_ENV === 'development' && resendHint
+            ? { details: resendHint }
+            : {}),
+        },
         { status: 500 }
       )
     }
@@ -137,7 +145,7 @@ export async function POST(request: NextRequest) {
       success: true,
       message: emailResult.devConsoleFallback
         ? RESEND_DEV_CONSOLE_FALLBACK_HINT
-        : 'Sign-in email sent. Check your inbox for a link or 6-digit code.',
+        : 'Sign-in email sent. Check your inbox for a link or 8-digit code.',
       email: normalizedEmail,
       ...(emailResult.devConsoleFallback ? { devConsoleFallback: true } : {}),
     })

@@ -60,7 +60,7 @@ export default function VerifyPage() {
     }
   }, [paramEmail])
 
-  /** Primary UI is 6 digits; 8 allowed if verify needs the full Supabase value. */
+  /** Primary UI is 8 digits; 6 is accepted as a fallback. */
   const [otpInput, setOtpInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [resending, setResending] = useState(false)
@@ -97,7 +97,7 @@ export default function VerifyPage() {
     }
 
     if (digits.length !== 6 && digits.length !== 8) {
-      setError('Enter the 6-digit code (or all 8 digits if the short code was rejected).')
+      setError('Enter the 8-digit code from your email (6 digits also work for older codes).')
       return
     }
 
@@ -326,7 +326,7 @@ export default function VerifyPage() {
                     type="text"
                     inputMode="numeric"
                     autoComplete="one-time-code"
-                    placeholder="6-digit code"
+                    placeholder="8-digit code"
                     maxLength={8}
                     value={otpInput}
                     onChange={(e) => {
@@ -338,8 +338,8 @@ export default function VerifyPage() {
                     className="w-full h-14 text-center text-2xl font-bold tracking-[0.35em] font-mono"
                   />
                   <p className="text-xs text-center text-muted-foreground">
-                    Use the <strong>6-digit</strong> code from email or terminal. If verify fails, try all{' '}
-                    <strong>8 digits</strong> shown after &quot;If that code fails…&quot; in the terminal or email.
+                    Use the <strong>8-digit</strong> code from email or terminal. <strong>6-digit</strong> codes are
+                    still accepted for compatibility.
                   </p>
                 </div>
 

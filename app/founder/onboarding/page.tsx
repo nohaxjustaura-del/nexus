@@ -161,10 +161,7 @@ export default function OnboardingPage() {
     })
   }, [])
 
-  const handleSubmit = async () => {
-    setSaving(true)
-    
-    try {
+  const ensureProfileSaved = useCallback(async () => {
       const preErrors: typeof errors = {}
       if (!formData.name?.trim()) preErrors.name = 'Please enter your full name.'
       if (!/.+@.+\..+/.test(formData.email || '')) preErrors.email = 'Please enter a valid email.'
@@ -187,8 +184,7 @@ export default function OnboardingPage() {
             if (el) { el.focus(); break }
           }
         }, 0)
-        setSaving(false)
-        return
+        throw new Error('Please complete required profile fields before uploading ID.')
       }
 
       const response = await fetch('/api/founder/profile', {
@@ -233,6 +229,13 @@ export default function OnboardingPage() {
       if (!response.ok) {
         throw new Error(data?.message || data?.error || 'Failed to save profile')
       }
+  }, [formData, errors])
+
+  const handleSubmit = async () => {
+    setSaving(true)
+    
+    try {
+      await ensureProfileSaved()
 
       localStorage.removeItem(CLIENT_STORAGE.ONBOARDING_DRAFT)
       localStorage.removeItem(CLIENT_STORAGE.ONBOARDING_DRAFT_LEGACY)
@@ -341,6 +344,7 @@ export default function OnboardingPage() {
             setIdUploaded={setIdUploaded}
             saving={saving}
             setStep={setStep}
+            ensureProfileSaved={ensureProfileSaved}
             handleSubmit={handleSubmit}
           />
         )}
