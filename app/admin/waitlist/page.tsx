@@ -263,7 +263,7 @@ export default async function AdminWaitlistPage() {
                           claim.status === 'pending' 
                             ? 'border-yellow-500 bg-yellow-50/50' 
                             : claim.status === 'approved'
-                            ? 'border-green-500 bg-green-50/50'
+                            ? 'border-green-500 bg-emerald-500/10'
                             : 'border-red-500 bg-red-50/50'
                         }`}
                       >

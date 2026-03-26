@@ -158,14 +158,14 @@ export function InvestorProfileModal({
       onClick={onClose}
     >
       <div 
-        className="relative w-full max-w-3xl max-h-[90vh] overflow-y-auto bg-white rounded-xl shadow-2xl"
+        className="relative w-full max-w-3xl max-h-[90vh] overflow-y-auto bg-card rounded-xl shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="sticky top-0 z-10 bg-white border-b px-6 py-4">
+        <div className="sticky top-0 z-10 bg-card border-b px-6 py-4">
           <div className="flex items-start justify-between gap-4">
             <div className="flex-1 min-w-0">
-              <h2 className="text-2xl font-bold text-slate-900 mb-2">
+              <h2 className="text-2xl font-bold text-foreground mb-2">
                 {investor.firmName}
               </h2>
               <div className="flex flex-wrap items-center gap-2">
@@ -214,10 +214,10 @@ export function InvestorProfileModal({
         </div>
 
         {/* Key Facts Row */}
-        <div className="px-6 py-4 bg-slate-50 border-b">
+        <div className="px-6 py-4 bg-muted/50 border-b">
           <div className="flex flex-wrap gap-2">
             {cleanStages.length > 0 && (
-              <div className="flex items-center gap-1.5 bg-blue-100 text-blue-700 px-3 py-1.5 rounded-md text-sm font-medium">
+              <div className="flex items-center gap-1.5 bg-blue-100 text-primary px-3 py-1.5 rounded-md text-sm font-medium">
                 <Target className="h-4 w-4" />
                 <span>{cleanStages.slice(0, 3).join(', ')}</span>
               </div>
@@ -247,7 +247,7 @@ export function InvestorProfileModal({
             )}
             
             {introPreference !== 'Unknown' && (
-              <div className="flex items-center gap-1.5 bg-slate-100 text-slate-700 px-3 py-1.5 rounded-md text-sm font-medium">
+              <div className="flex items-center gap-1.5 bg-muted text-foreground/85 px-3 py-1.5 rounded-md text-sm font-medium">
                 <span>{introPreference}</span>
               </div>
             )}
@@ -266,8 +266,8 @@ export function InvestorProfileModal({
           
           {/* Section 1: Summary */}
           <div>
-            <h3 className="text-lg font-semibold text-slate-900 mb-3">Summary</h3>
-            <p className="text-slate-700 leading-relaxed">
+            <h3 className="text-lg font-semibold text-foreground mb-3">Summary</h3>
+            <p className="text-foreground/85 leading-relaxed">
               {summary}
             </p>
           </div>
@@ -275,15 +275,15 @@ export function InvestorProfileModal({
           {/* Section 2: What They Look For */}
           <Card>
             <CardContent className="pt-6">
-              <h3 className="text-lg font-semibold text-slate-900 mb-4">What They Look For</h3>
+              <h3 className="text-lg font-semibold text-foreground mb-4">What They Look For</h3>
               
               {/* Best fit if */}
               {fitBullets.length > 0 && (
                 <div className="mb-4">
-                  <h4 className="text-sm font-semibold text-slate-700 mb-2">Best fit if:</h4>
+                  <h4 className="text-sm font-semibold text-foreground/85 mb-2">Best fit if:</h4>
                   <ul className="space-y-2">
                     {fitBullets.map((bullet, i) => (
-                      <li key={i} className="flex items-start gap-2 text-sm text-slate-600">
+                      <li key={i} className="flex items-start gap-2 text-sm text-muted-foreground">
                         <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
                         <span>{bullet}</span>
                       </li>
@@ -295,10 +295,10 @@ export function InvestorProfileModal({
               {/* They usually avoid */}
               {avoidBullets.length > 0 && (
                 <div>
-                  <h4 className="text-sm font-semibold text-slate-700 mb-2">They usually avoid:</h4>
+                  <h4 className="text-sm font-semibold text-foreground/85 mb-2">They usually avoid:</h4>
                   <ul className="space-y-2">
                     {avoidBullets.map((bullet, i) => (
-                      <li key={i} className="flex items-start gap-2 text-sm text-slate-600">
+                      <li key={i} className="flex items-start gap-2 text-sm text-muted-foreground">
                         <X className="h-4 w-4 text-red-500 mt-0.5 flex-shrink-0" />
                         <span>{bullet}</span>
                       </li>
@@ -312,19 +312,19 @@ export function InvestorProfileModal({
           {/* Section 3: How to Engage */}
           <Card className="border-2 border-primary/20 bg-primary/5">
             <CardContent className="pt-6">
-              <h3 className="text-lg font-semibold text-slate-900 mb-4">How to Engage</h3>
+              <h3 className="text-lg font-semibold text-foreground mb-4">How to Engage</h3>
               
               <div className="space-y-4">
                 {/* Best path */}
                 <div>
-                  <h4 className="text-sm font-semibold text-slate-700 mb-2">Best path:</h4>
-                  <p className="text-sm text-slate-600">{introPreference}</p>
+                  <h4 className="text-sm font-semibold text-foreground/85 mb-2">Best path:</h4>
+                  <p className="text-sm text-muted-foreground">{introPreference}</p>
                 </div>
 
                 {/* What to include */}
                 <div>
-                  <h4 className="text-sm font-semibold text-slate-700 mb-2">What to include:</h4>
-                  <ul className="space-y-1 text-sm text-slate-600">
+                  <h4 className="text-sm font-semibold text-foreground/85 mb-2">What to include:</h4>
+                  <ul className="space-y-1 text-sm text-muted-foreground">
                     <li>• One-line pitch</li>
                     <li>• Key traction metric</li>
                     <li>• Why now + why you</li>
@@ -359,7 +359,7 @@ export function InvestorProfileModal({
           {/* Portfolio (if available) */}
           {(notableInvestments.length > 0 || portfolio.length > 0) && (
             <div>
-              <h3 className="text-sm font-semibold text-slate-700 mb-3">Portfolio</h3>
+              <h3 className="text-sm font-semibold text-foreground/85 mb-3">Portfolio</h3>
               <div className="flex flex-wrap gap-2">
                 {notableInvestments.slice(0, 8).map((company, i) => (
                   <Badge key={i} variant="secondary" className="text-xs">
@@ -381,7 +381,7 @@ export function InvestorProfileModal({
           {/* Sectors */}
           {cleanSectors.length > 0 && (
             <div>
-              <h3 className="text-sm font-semibold text-slate-700 mb-3">Sectors</h3>
+              <h3 className="text-sm font-semibold text-foreground/85 mb-3">Sectors</h3>
               <div className="flex flex-wrap gap-2">
                 {cleanSectors.map((sector, i) => (
                   <Badge key={i} variant="outline" className="text-xs">

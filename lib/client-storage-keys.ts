@@ -10,4 +10,6 @@ export const CLIENT_STORAGE = {
   LOGGED_IN_LEGACY: 'fm_logged_in',
   ONBOARDING_DRAFT: 'nexus_onboarding_draft',
   ONBOARDING_DRAFT_LEGACY: 'fm_onboarding_draft',
+  /** Set when magic link was printed to the dev server terminal (Resend test mode). */
+  DEV_CONSOLE_MAGIC_LINK: 'nexus_dev_console_magic_link',
 } as const

@@ -94,15 +94,14 @@ export function VCCardClient({
   return (
     <>
       <Card 
-        className={`group relative overflow-hidden transition-all duration-300 hover:-translate-y-2 hover:shadow-xl cursor-pointer ${
+        className={`group relative cursor-pointer overflow-hidden transition-all duration-300 hover:-translate-y-0.5 ${
           isYC 
-            ? 'border-2 border-amber-400 bg-gradient-to-br from-amber-50/50 to-white shadow-sm hover:border-amber-500' 
-            : 'border border-slate-200 bg-white hover:border-primary/40 hover:shadow-lg'
+            ? 'border-amber-400/50 bg-gradient-to-br from-amber-500/10 to-card/90 hover:border-amber-400/70' 
+            : 'border-border/40 hover:border-primary/30'
         }`}
         onClick={() => setIsModalOpen(true)}
       >
-        {/* Hover gradient overlay */}
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-blue-50/30 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-primary/5 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
         
         {/* Top accent for YC only */}
         {isYC && (
@@ -112,13 +111,13 @@ export function VCCardClient({
         <CardHeader className="pb-3 pt-5 relative z-10">
           <div className="flex items-start justify-between gap-3 mb-3">
             <div className="flex-1 min-w-0">
-              <CardTitle className={`text-lg font-bold leading-tight transition-colors group-hover:text-primary ${isYC ? 'text-amber-600' : 'text-slate-900'}`}>
+              <CardTitle className={`text-lg font-bold leading-tight transition-colors group-hover:text-primary ${isYC ? 'text-amber-300' : 'text-foreground'}`}>
                 {investor?.firmName || 'Unknown Firm'}
               </CardTitle>
             </div>
             <div className="flex flex-col items-end gap-1.5">
               {investor?.verified && (
-                <Badge className="text-xs bg-green-100 text-green-800 border-green-300 group-hover:scale-105 transition-transform">
+                <Badge className="border border-emerald-500/35 bg-emerald-500/15 text-xs text-emerald-200 transition-transform group-hover:scale-105">
                   Verified
                 </Badge>
               )}
@@ -128,7 +127,7 @@ export function VCCardClient({
                 </Badge>
               )}
               {isYC && (
-                <Badge className="text-xs bg-amber-100 text-amber-800 border-amber-300 group-hover:scale-105 transition-transform">
+                <Badge className="text-xs bg-amber-100 text-amber-800 border-amber-500/35 group-hover:scale-105 transition-transform">
                   Top VC
                 </Badge>
               )}
@@ -137,7 +136,7 @@ export function VCCardClient({
           
           {/* Description - truncated with "Read more" hint */}
           <div className="mb-4">
-            <p className="text-sm text-slate-700 leading-relaxed mb-2 font-medium">
+            <p className="text-sm text-foreground/85 leading-relaxed mb-2 font-medium">
               {description || fullDescription || 'No description available.'}
             </p>
             <button 
@@ -155,13 +154,13 @@ export function VCCardClient({
           {/* Key Facts Row - stage, check, geo */}
           <div className="flex flex-wrap gap-2 mb-3 text-xs">
             {safeStages.length > 0 && (
-              <div className="flex items-center gap-1 bg-blue-50 text-blue-700 px-2 py-1 rounded">
+              <div className="flex items-center gap-1 bg-primary/10 text-primary px-2 py-1 rounded">
                 <Target className="h-3 w-3" />
                 <span className="font-medium">{safeStages.slice(0, 2).join(', ')}</span>
               </div>
             )}
             {investor?.checkSizeMin && investor?.checkSizeMax && (
-              <div className="flex items-center gap-1 bg-green-50 text-green-700 px-2 py-1 rounded">
+              <div className="flex items-center gap-1 bg-emerald-500/10 text-green-700 px-2 py-1 rounded">
                 <span className="font-medium">
                   ${investor.checkSizeMin >= 1000 ? `${Math.round(investor.checkSizeMin/1000)}M` : `${investor.checkSizeMin}k`}–
                   ${investor.checkSizeMax >= 1000 ? `${Math.round(investor.checkSizeMax/1000)}M` : `${investor.checkSizeMax}k`}
@@ -169,7 +168,7 @@ export function VCCardClient({
               </div>
             )}
             {investor?.leadFollow && (
-              <div className="flex items-center gap-1 bg-purple-50 text-purple-700 px-2 py-1 rounded">
+              <div className="flex items-center gap-1 bg-purple-500/10 text-purple-700 px-2 py-1 rounded">
                 <span className="font-medium capitalize">{investor.leadFollow === 'lead' ? 'Leads' : investor.leadFollow === 'follow' ? 'Follows' : 'Either'}</span>
               </div>
             )}
@@ -221,8 +220,8 @@ export function VCCardClient({
             })()}
             
             {proofPoints && (Array.isArray(proofPoints) ? proofPoints.length > 0 : Object.keys(proofPoints).length > 0) && (
-              <div className="text-xs text-slate-600 bg-slate-50 px-2 py-1.5 rounded-md group-hover:bg-primary/5 transition-colors">
-                <span className="font-semibold text-slate-700">Focus: </span>
+              <div className="text-xs text-muted-foreground bg-muted/50 px-2 py-1.5 rounded-md group-hover:bg-primary/5 transition-colors">
+                <span className="font-semibold text-foreground/85">Focus: </span>
                 {Array.isArray(proofPoints) 
                   ? proofPoints.slice(0, 2).join(', ')
                   : (() => {
@@ -238,19 +237,19 @@ export function VCCardClient({
             )}
             
             {investor?.personalityType && (
-              <div className="text-xs text-slate-600 flex items-center gap-1.5">
-                <span className="font-semibold text-slate-700">Style:</span>
+              <div className="text-xs text-muted-foreground flex items-center gap-1.5">
+                <span className="font-semibold text-foreground/85">Style:</span>
                 <span className="capitalize">{String(investor.personalityType).replace('-', ' ')}</span>
               </div>
             )}
             
             {investor?.leadFollow && investor.leadFollow !== 'either' && (
-              <div className="text-xs text-slate-600 flex items-center gap-1.5">
-                <span className="font-semibold text-slate-700">
+              <div className="text-xs text-muted-foreground flex items-center gap-1.5">
+                <span className="font-semibold text-foreground/85">
                   {investor.leadFollow === 'lead' ? '✓ Leads' : 'Follows'} rounds
                 </span>
                 {investor?.decisionSpeed && (
-                  <span className="text-slate-500">• {investor.decisionSpeed}</span>
+                  <span className="text-muted-foreground">• {investor.decisionSpeed}</span>
                 )}
               </div>
             )}
@@ -258,7 +257,7 @@ export function VCCardClient({
           
           {/* YC Insider subsection - only for Y Combinator */}
           {isYC && (
-            <div className="mt-4 pt-4 border-t border-slate-200">
+            <div className="mt-4 pt-4 border-t border-border">
               <Link 
                 href="/founder/yc-insider" 
                 onClick={(e) => e.stopPropagation()}
@@ -271,7 +270,7 @@ export function VCCardClient({
           )}
         </CardContent>
 
-        <CardFooter className="flex items-center gap-2 pt-4 border-t border-slate-100 relative z-10 bg-slate-50/50 group-hover:bg-white transition-colors">
+        <CardFooter className="flex items-center gap-2 pt-4 border-t border-border/60 relative z-10 bg-muted/40 group-hover:bg-card transition-colors">
           {profileComplete ? (
             <>
               {applicationLink ? (
@@ -301,7 +300,7 @@ export function VCCardClient({
                   </Button>
                 </a>
               ) : (
-                <Button className="flex-1 font-semibold bg-slate-400 cursor-not-allowed" size="sm" disabled>
+                <Button className="flex-1 cursor-not-allowed bg-muted font-semibold text-muted-foreground" size="sm" disabled>
                   Contact N/A
                 </Button>
               )}

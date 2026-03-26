@@ -89,7 +89,7 @@ function VCSearchSimple() {
             variant="ghost"
             size="sm"
             onClick={clearSearch}
-            className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8 p-0 hover:bg-slate-100"
+            className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8 p-0 hover:bg-muted/70"
             aria-label="Clear search"
           >
             <X className="h-4 w-4" />
@@ -101,19 +101,19 @@ function VCSearchSimple() {
           <span>Try searching for:</span>
           <button
             onClick={() => handleSearch('AI')}
-            className="px-2 py-1 rounded-md bg-slate-100 hover:bg-slate-200 transition-colors"
+            className="px-2 py-1 rounded-md bg-muted hover:bg-slate-200 transition-colors"
           >
             AI
           </button>
           <button
             onClick={() => handleSearch('Seed')}
-            className="px-2 py-1 rounded-md bg-slate-100 hover:bg-slate-200 transition-colors"
+            className="px-2 py-1 rounded-md bg-muted hover:bg-slate-200 transition-colors"
           >
             Seed
           </button>
           <button
             onClick={() => handleSearch('San Francisco')}
-            className="px-2 py-1 rounded-md bg-slate-100 hover:bg-slate-200 transition-colors"
+            className="px-2 py-1 rounded-md bg-muted hover:bg-slate-200 transition-colors"
           >
             San Francisco
           </button>

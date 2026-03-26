@@ -113,15 +113,15 @@ export default function YCInsiderPage() {
           </div>
 
           <div className="text-center">
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-orange-50 border border-orange-200 mb-4">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-orange-500/10 border border-orange-500/30 mb-4">
               <Sparkles className="h-4 w-4 text-orange-600" />
               <span className="text-sm font-semibold text-orange-700">Verified • YC W26</span>
             </div>
-            <h1 className="mb-3 text-4xl md:text-5xl font-bold text-slate-900">
+            <h1 className="mb-3 text-4xl md:text-5xl font-bold text-foreground">
               Steal YC-Winning Decisions, Not Just Decks
             </h1>
-            <p className="mx-auto max-w-2xl text-lg text-slate-600">
-              Annotated deck, interview patterns, traction timeline, and exact decision logic — structured into actionable templates
+            <p className="mx-auto max-w-2xl text-pretty text-lg leading-relaxed text-muted-foreground">
+              Annotated deck, interview patterns, traction timeline, and decision logic, organized into actionable templates.
             </p>
             <div className="flex items-center justify-center gap-6 mt-6 text-sm text-slate-500">
               <div className="flex items-center gap-1">
@@ -141,19 +141,19 @@ export default function YCInsiderPage() {
         </div>
 
         {!isPremium && (
-          <Card className="mb-10 border-orange-200 bg-gradient-to-br from-orange-50/50 to-white">
+          <Card className="mb-10 border-orange-500/30 bg-gradient-to-br from-orange-500/12 to-card">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-orange-900">
                 <Lock className="h-5 w-5 text-orange-600" />
                 Unlock YC Insider Access
               </CardTitle>
-              <CardDescription className="text-slate-600">
+              <CardDescription className="text-muted-foreground">
                 Get operator-grade breakdowns from founders currently in YC W26
               </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="flex items-center justify-between pt-4 border-t">
-                <p className="text-sm text-slate-600">
+                <p className="text-sm text-muted-foreground">
                   Access decision logic, templates, and insider intelligence you can't Google
                 </p>
                 {/* @ts-ignore */}
@@ -184,9 +184,9 @@ export default function YCInsiderPage() {
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
                       <h4 className="font-semibold">William Namgyal</h4>
-                      <Badge className="bg-orange-100 text-orange-800 border-orange-300 text-xs">YC W26</Badge>
+                      <Badge className="bg-orange-100 text-orange-800 border-orange-500/35 text-xs">YC W26</Badge>
                     </div>
-                    <p className="text-sm text-slate-600 mb-2">
+                    <p className="text-sm text-muted-foreground mb-2">
                       Co-Founder & CEO at <strong>Luel</strong>, currently in <strong>Y Combinator W26</strong>. Berkeley M.E.T.
                     </p>
                     <div className="mb-3">
@@ -225,9 +225,9 @@ export default function YCInsiderPage() {
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
                       <h4 className="font-semibold">Inigo Lenderking</h4>
-                      <Badge className="bg-orange-100 text-orange-800 border-orange-300 text-xs">YC W26</Badge>
+                      <Badge className="bg-orange-100 text-orange-800 border-orange-500/35 text-xs">YC W26</Badge>
                     </div>
-                    <p className="text-sm text-slate-600 mb-2">
+                    <p className="text-sm text-muted-foreground mb-2">
                       Co-Founder at <strong>Luel</strong>, currently in <strong>Y Combinator W26</strong>. Berkeley dropout.
                     </p>
                     <div className="mb-3">
@@ -265,7 +265,7 @@ export default function YCInsiderPage() {
           <div className="space-y-4">
             
             {/* Module 1: Application Deconstruction */}
-            <Card className="border-2 hover:border-purple-300 transition-colors relative">
+            <Card className="border-2 hover:border-purple-500/35 transition-colors relative">
               {hasPurchased('application-deconstruction') && (
                 <div className="absolute top-3 right-3">
                   <CheckCircle className="h-5 w-5 text-green-600" />
@@ -287,23 +287,23 @@ export default function YCInsiderPage() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-3 mb-4">
-                  <p className="text-sm text-slate-600">
+                  <p className="text-sm text-muted-foreground">
                     <strong>What you get:</strong> Every YC application question with their actual answer, breakdown of why it works, risk flags they avoided, and a rewrite template you can use.
                   </p>
                   <div className="grid grid-cols-2 gap-2 text-xs">
-                    <div className="flex items-center gap-1 text-slate-600">
+                    <div className="flex items-center gap-1 text-muted-foreground">
                       <CheckCircle className="h-3 w-3 text-green-600" />
                       <span>Raw application answers</span>
                     </div>
-                    <div className="flex items-center gap-1 text-slate-600">
+                    <div className="flex items-center gap-1 text-muted-foreground">
                       <CheckCircle className="h-3 w-3 text-green-600" />
                       <span>"Why this works" analysis</span>
                     </div>
-                    <div className="flex items-center gap-1 text-slate-600">
+                    <div className="flex items-center gap-1 text-muted-foreground">
                       <CheckCircle className="h-3 w-3 text-green-600" />
                       <span>Risk flags avoided</span>
                     </div>
-                    <div className="flex items-center gap-1 text-slate-600">
+                    <div className="flex items-center gap-1 text-muted-foreground">
                       <CheckCircle className="h-3 w-3 text-green-600" />
                       <span>Fill-in templates</span>
                     </div>
@@ -378,23 +378,23 @@ export default function YCInsiderPage() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-3 mb-4">
-                  <p className="text-sm text-slate-600">
+                  <p className="text-sm text-muted-foreground">
                     <strong>What you get:</strong> Their full deck with slide-by-slide annotations explaining what each slide must prove, why the wording works, and what YC likely questioned.
                   </p>
                   <div className="grid grid-cols-2 gap-2 text-xs">
-                    <div className="flex items-center gap-1 text-slate-600">
+                    <div className="flex items-center gap-1 text-muted-foreground">
                       <CheckCircle className="h-3 w-3 text-green-600" />
                       <span>Full annotated deck</span>
                     </div>
-                    <div className="flex items-center gap-1 text-slate-600">
+                    <div className="flex items-center gap-1 text-muted-foreground">
                       <CheckCircle className="h-3 w-3 text-green-600" />
                       <span>Critical 5 slides spotlight</span>
                     </div>
-                    <div className="flex items-center gap-1 text-slate-600">
+                    <div className="flex items-center gap-1 text-muted-foreground">
                       <CheckCircle className="h-3 w-3 text-green-600" />
                       <span>YC question predictions</span>
                     </div>
-                    <div className="flex items-center gap-1 text-slate-600">
+                    <div className="flex items-center gap-1 text-muted-foreground">
                       <CheckCircle className="h-3 w-3 text-green-600" />
                       <span>Deck checklist</span>
                     </div>
@@ -469,23 +469,23 @@ export default function YCInsiderPage() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-3 mb-4">
-                  <p className="text-sm text-slate-600">
+                  <p className="text-sm text-muted-foreground">
                     <strong>What you get:</strong> Interactive drill with actual YC interview questions, their answers, YC's intent behind each question, and follow-up patterns.
                   </p>
                   <div className="grid grid-cols-2 gap-2 text-xs">
-                    <div className="flex items-center gap-1 text-slate-600">
+                    <div className="flex items-center gap-1 text-muted-foreground">
                       <CheckCircle className="h-3 w-3 text-green-600" />
                       <span>Actual interview questions</span>
                     </div>
-                    <div className="flex items-center gap-1 text-slate-600">
+                    <div className="flex items-center gap-1 text-muted-foreground">
                       <CheckCircle className="h-3 w-3 text-green-600" />
                       <span>Their winning answers</span>
                     </div>
-                    <div className="flex items-center gap-1 text-slate-600">
+                    <div className="flex items-center gap-1 text-muted-foreground">
                       <CheckCircle className="h-3 w-3 text-green-600" />
                       <span>YC intent analysis</span>
                     </div>
-                    <div className="flex items-center gap-1 text-slate-600">
+                    <div className="flex items-center gap-1 text-muted-foreground">
                       <CheckCircle className="h-3 w-3 text-green-600" />
                       <span>Follow-up patterns</span>
                     </div>
@@ -541,7 +541,7 @@ export default function YCInsiderPage() {
             </Card>
 
             {/* Module 4: Metrics Timeline */}
-            <Card className="border-2 hover:border-amber-300 transition-colors relative">
+            <Card className="border-2 hover:border-amber-500/35 transition-colors relative">
               {hasPurchased('metrics-timeline') && (
                 <div className="absolute top-3 right-3">
                   <CheckCircle className="h-5 w-5 text-green-600" />
@@ -560,23 +560,23 @@ export default function YCInsiderPage() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-3 mb-4">
-                  <p className="text-sm text-slate-600">
-                    <strong>What you get:</strong> Exact metrics at 90 days, 30 days, and application week — showing progress velocity, not just scale.
+                  <p className="text-sm text-muted-foreground">
+                    <strong>What you get:</strong> Exact metrics at 90 days, 30 days, and application week, with emphasis on progress velocity, not just scale.
                   </p>
                   <div className="grid grid-cols-2 gap-2 text-xs">
-                    <div className="flex items-center gap-1 text-slate-600">
+                    <div className="flex items-center gap-1 text-muted-foreground">
                       <CheckCircle className="h-3 w-3 text-green-600" />
                       <span>90/30/0 day snapshots</span>
                     </div>
-                    <div className="flex items-center gap-1 text-slate-600">
+                    <div className="flex items-center gap-1 text-muted-foreground">
                       <CheckCircle className="h-3 w-3 text-green-600" />
                       <span>Growth rate analysis</span>
                     </div>
-                    <div className="flex items-center gap-1 text-slate-600">
+                    <div className="flex items-center gap-1 text-muted-foreground">
                       <CheckCircle className="h-3 w-3 text-green-600" />
                       <span>Retention signals</span>
                     </div>
-                    <div className="flex items-center gap-1 text-slate-600">
+                    <div className="flex items-center gap-1 text-muted-foreground">
                       <CheckCircle className="h-3 w-3 text-green-600" />
                       <span>How they framed progress</span>
                     </div>
@@ -651,23 +651,23 @@ export default function YCInsiderPage() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-3 mb-4">
-                  <p className="text-sm text-slate-600">
+                  <p className="text-sm text-muted-foreground">
                     <strong>What you get:</strong> Copy/paste scripts, channel playbooks, and the exact experiments they ran to get early traction.
                   </p>
                   <div className="grid grid-cols-2 gap-2 text-xs">
-                    <div className="flex items-center gap-1 text-slate-600">
+                    <div className="flex items-center gap-1 text-muted-foreground">
                       <CheckCircle className="h-3 w-3 text-green-600" />
                       <span>First 10 customer stories</span>
                     </div>
-                    <div className="flex items-center gap-1 text-slate-600">
+                    <div className="flex items-center gap-1 text-muted-foreground">
                       <CheckCircle className="h-3 w-3 text-green-600" />
                       <span>Outreach scripts (DM/email)</span>
                     </div>
-                    <div className="flex items-center gap-1 text-slate-600">
+                    <div className="flex items-center gap-1 text-muted-foreground">
                       <CheckCircle className="h-3 w-3 text-green-600" />
                       <span>Channel experiments</span>
                     </div>
-                    <div className="flex items-center gap-1 text-slate-600">
+                    <div className="flex items-center gap-1 text-muted-foreground">
                       <CheckCircle className="h-3 w-3 text-green-600" />
                       <span>What didn't work + why</span>
                     </div>
@@ -742,23 +742,23 @@ export default function YCInsiderPage() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-3 mb-4">
-                  <p className="text-sm text-slate-600">
+                  <p className="text-sm text-muted-foreground">
                     <strong>What you get:</strong> Their application video with timestamp annotations showing what's being proven at each moment and what to replicate.
                   </p>
                   <div className="grid grid-cols-2 gap-2 text-xs">
-                    <div className="flex items-center gap-1 text-slate-600">
+                    <div className="flex items-center gap-1 text-muted-foreground">
                       <CheckCircle className="h-3 w-3 text-green-600" />
                       <span>Full application video</span>
                     </div>
-                    <div className="flex items-center gap-1 text-slate-600">
+                    <div className="flex items-center gap-1 text-muted-foreground">
                       <CheckCircle className="h-3 w-3 text-green-600" />
                       <span>Timestamp breakdowns</span>
                     </div>
-                    <div className="flex items-center gap-1 text-slate-600">
+                    <div className="flex items-center gap-1 text-muted-foreground">
                       <CheckCircle className="h-3 w-3 text-green-600" />
                       <span>What to copy</span>
                     </div>
-                    <div className="flex items-center gap-1 text-slate-600">
+                    <div className="flex items-center gap-1 text-muted-foreground">
                       <CheckCircle className="h-3 w-3 text-green-600" />
                       <span>Demo script</span>
                     </div>
@@ -814,7 +814,7 @@ export default function YCInsiderPage() {
             </Card>
 
             {/* Bundle Deal */}
-            <Card className="border-2 border-orange-300 bg-gradient-to-br from-orange-50/30 to-white">
+            <Card className="border-2 border-orange-500/35 bg-gradient-to-br from-orange-500/10 to-card">
               <CardHeader>
                 <div className="flex items-center gap-2 mb-2">
                   <Sparkles className="h-5 w-5 text-orange-600" />
@@ -825,13 +825,13 @@ export default function YCInsiderPage() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  <p className="text-sm text-slate-600">
+                  <p className="text-sm text-muted-foreground">
                     Everything above plus exclusive bonus: Founder Operating System (weekly cadence, decision principles, tool stack)
                   </p>
-                  <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                  <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
                     <div>
-                      <div className="text-sm text-slate-600">Individual: 360 credits</div>
-                      <div className="text-2xl font-bold text-slate-900">Bundle: 320 credits</div>
+                      <div className="text-sm text-muted-foreground">Individual: 360 credits</div>
+                      <div className="text-2xl font-bold text-foreground">Bundle: 320 credits</div>
                     </div>
                     <Button 
                       className="bg-orange-600 hover:bg-orange-700"
@@ -852,23 +852,23 @@ export default function YCInsiderPage() {
           </div>
 
           {/* Why This Matters */}
-          <Card className="border-2 bg-slate-50">
+          <Card className="border-2 bg-muted/50">
             <CardHeader>
               <CardTitle>Why This Is Different</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid md:grid-cols-3 gap-4 text-sm">
                 <div>
-                  <div className="font-semibold text-slate-900 mb-1">Not Google-able</div>
-                  <p className="text-slate-600">Decision logic, templates, and insider patterns you can't find anywhere else</p>
+                  <div className="font-semibold text-foreground mb-1">Not Google-able</div>
+                  <p className="text-muted-foreground">Decision logic, templates, and insider patterns you can't find anywhere else</p>
                 </div>
                 <div>
-                  <div className="font-semibold text-slate-900 mb-1">Actionable Templates</div>
-                  <p className="text-slate-600">Fill-in frameworks you can use immediately for your own application</p>
+                  <div className="font-semibold text-foreground mb-1">Actionable Templates</div>
+                  <p className="text-muted-foreground">Fill-in frameworks you can use immediately for your own application</p>
                 </div>
                 <div>
-                  <div className="font-semibold text-slate-900 mb-1">Verified & Current</div>
-                  <p className="text-slate-600">From founders currently in YC W26, not outdated advice from years ago</p>
+                  <div className="font-semibold text-foreground mb-1">Verified & Current</div>
+                  <p className="text-muted-foreground">From founders currently in YC W26, not outdated advice from years ago</p>
                 </div>
               </div>
             </CardContent>

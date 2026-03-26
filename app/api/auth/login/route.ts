@@ -3,7 +3,11 @@ import { createSupabaseAuthRouteClient } from '@/lib/supabase/route-handler'
 import { createSupabaseAdminClient } from '@/lib/supabase/admin'
 import { syncPrismaUserFromAuth } from '@/lib/auth'
 import { getSiteUrl } from '@/lib/site-url'
-import { sendMagicLinkEmail } from '@/lib/email'
+import {
+  RESEND_DEV_CONSOLE_FALLBACK_HINT,
+  RESEND_TESTING_MODE_PUBLIC_MESSAGE,
+  sendMagicLinkEmail,
+} from '@/lib/email'
 import { ADMIN_EMAIL } from '@/lib/constants'
 
 export const dynamic = 'force-dynamic'
@@ -113,6 +117,15 @@ export async function POST(request: NextRequest) {
     const emailResult = await sendMagicLinkEmail(normalizedEmail, { magicLink, otp, isNew: false })
 
     if (!emailResult.success) {
+      if (emailResult.resendTestingRecipientOnly) {
+        return NextResponse.json(
+          {
+            error: RESEND_TESTING_MODE_PUBLIC_MESSAGE,
+            code: 'RESEND_TESTING_RECIPIENT',
+          },
+          { status: 503 }
+        )
+      }
       console.error('Login email send failed:', emailResult.error)
       return NextResponse.json(
         { error: 'Failed to send sign-in email. Please try again.' },
@@ -122,8 +135,11 @@ export async function POST(request: NextRequest) {
 
     const res = NextResponse.json({
       success: true,
-      message: 'Sign-in email sent. Check your inbox for a link or 6-digit code.',
+      message: emailResult.devConsoleFallback
+        ? RESEND_DEV_CONSOLE_FALLBACK_HINT
+        : 'Sign-in email sent. Check your inbox for a link or 6-digit code.',
       email: normalizedEmail,
+      ...(emailResult.devConsoleFallback ? { devConsoleFallback: true } : {}),
     })
     applyAuthCookies(res)
     return res

@@ -186,7 +186,7 @@ export default function VCGuidePage() {
                   <li>• Evaluation benchmarks (quality/cost/latency)</li>
                   <li>• Defensibility beyond "we call an API"</li>
                   <li>• Inference cost curves</li>
-                  <li>• AI-native UX</li>
+                  <li>• Product-led UX</li>
                   <li>• Security & privacy controls</li>
                 </ul>
               </CardContent>
@@ -423,7 +423,7 @@ export default function VCGuidePage() {
               proof points against your resume to tell you exactly where you're strong and where to improve.
             </p>
             <p className="text-sm">
-              Our AI doesn't just give you a score - it shows you the exact resume lines and VC thesis 
+              NEXUS does not just give you a score: it shows you the exact resume lines and VC thesis
               statements that contributed to each match, plus tailored suggestions for improvement.
             </p>
             <div className="flex gap-4 mt-6">

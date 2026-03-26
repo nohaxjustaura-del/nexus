@@ -80,8 +80,8 @@ export const NavAuth = memo(function NavAuth() {
   if (!mounted || loading) {
     return (
       <div className="flex items-center gap-3" suppressHydrationWarning>
-        <div className="h-9 w-20 bg-slate-100 animate-pulse rounded-md" />
-        <div className="h-9 w-20 bg-slate-100 animate-pulse rounded-md" />
+        <div className="h-9 w-20 bg-muted animate-pulse rounded-md" />
+        <div className="h-9 w-20 bg-muted animate-pulse rounded-md" />
       </div>
     )
   }
@@ -94,13 +94,13 @@ export const NavAuth = memo(function NavAuth() {
         <CreditCounter variant="badge" showClaimButton={true} className="hidden lg:flex" />
         
         {/* Divider between credits and user actions */}
-        <div className="hidden lg:block h-5 w-px bg-slate-200" />
+        <div className="hidden lg:block h-5 w-px bg-border" />
         
         {/* User actions grouped together */}
         <div className="flex items-center gap-1.5">
           <NotificationBell />
           <Link href="/founder/dashboard">
-            <Button size="sm" variant="default" className="h-8 px-3 text-sm font-medium shadow-sm">
+            <Button size="sm" variant="default" className="h-8 px-3 text-sm font-medium">
               Dashboard
             </Button>
           </Link>

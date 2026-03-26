@@ -102,13 +102,13 @@ export default function BookmarksPage() {
           <nav className="flex items-center gap-1 -mb-px">
             <Link
               href="/founder/discover"
-              className="px-4 py-2 text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors"
+              className="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
             >
               Discover
             </Link>
             <Link
               href="/founder/matches"
-              className="px-4 py-2 text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors"
+              className="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
             >
               Matches
             </Link>
@@ -120,7 +120,7 @@ export default function BookmarksPage() {
             </Link>
             <Link
               href="/founder/my-analyses"
-              className="px-4 py-2 text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors"
+              className="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
             >
               My Analyses
             </Link>
@@ -136,11 +136,11 @@ export default function BookmarksPage() {
 
         {bookmarks.length === 0 ? (
           <Card className="p-12 text-center border-2 border-dashed">
-            <div className="mx-auto mb-4 w-16 h-16 rounded-full bg-gradient-to-br from-primary/10 to-blue-50 flex items-center justify-center">
+            <div className="mx-auto mb-4 w-16 h-16 rounded-full bg-gradient-to-br from-primary/10 to-primary/10 flex items-center justify-center">
               <MessageSquare className="h-8 w-8 text-primary" />
             </div>
-            <h2 className="mb-2 text-2xl font-bold text-slate-900">No Bookmarks Yet</h2>
-            <p className="mb-2 text-slate-600 max-w-md mx-auto">
+            <h2 className="mb-2 text-2xl font-bold text-foreground">No Bookmarks Yet</h2>
+            <p className="mb-2 text-muted-foreground max-w-md mx-auto">
               Start exploring and save your favorite VCs to keep track of them
             </p>
             <p className="mb-6 text-sm text-slate-500">

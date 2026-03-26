@@ -30,11 +30,11 @@ export async function generateVCSummary(
   const entityLabel = isAccelerator ? 'program' : 'investor'
 
   const dealsBlock = deals.length > 0
-    ? deals.map((d, i) => `${i + 1}. "${d.title}" (${d.date ?? "unknown date"}) — ${d.snippet}`).join("\n")
+    ? deals.map((d, i) => `${i + 1}. "${d.title}" (${d.date ?? "unknown date"}): ${d.snippet}`).join("\n")
     : isAccelerator ? "No recent cohort or batch activity found." : "No recent deals found.";
 
   const leadershipBlock = leadership.length > 0
-    ? leadership.map((l, i) => `${i + 1}. "${l.title}" (${l.date ?? "unknown date"}) — ${l.snippet}`).join("\n")
+    ? leadership.map((l, i) => `${i + 1}. "${l.title}" (${l.date ?? "unknown date"}): ${l.snippet}`).join("\n")
     : "No recent public commentary found.";
 
   const result = await openrouterGenerateJson<VCSummary>({
@@ -86,7 +86,7 @@ export async function detectConflict(
   }
 
   const dealsBlock = deals
-    .map((d, i) => `${i + 1}. "${d.title}" — ${d.snippet}`)
+    .map((d, i) => `${i + 1}. "${d.title}": ${d.snippet}`)
     .join("\n");
 
   const result = await openrouterGenerateJson<ConflictResult>({
@@ -98,9 +98,9 @@ A direct competitor means:
 - NOT just same broad industry (e.g., two AI companies in different verticals are NOT competitors)
 
 Return a JSON object with:
-- "isConflict": boolean — true only if a genuine direct competitor exists
-- "competitorNames": string[] — names of the competing companies (empty array if none)
-- "reasoning": string — one sentence explaining your decision`,
+- "isConflict": boolean (true only if a genuine direct competitor exists)
+- "competitorNames": string[] (names of competing companies; empty array if none)
+- "reasoning": string (one sentence explaining your decision)`,
     user: `VC: ${vcName}
 
 Their Recent Portfolio Companies:

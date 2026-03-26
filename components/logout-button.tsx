@@ -61,7 +61,7 @@ export function LogoutButton() {
       variant="ghost"
       onClick={handleLogout}
       disabled={loading}
-      className="h-8 px-2.5 text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+      className="h-8 px-2.5 text-muted-foreground hover:text-foreground hover:bg-muted/70"
     >
       {loading ? (
         <>

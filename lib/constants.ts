@@ -3,7 +3,7 @@
  * Centralized configuration values to avoid magic numbers and strings
  */
 
-// Admin Configuration — set ADMIN_EMAIL in your .env / .env.local
+// Admin Configuration  -  set ADMIN_EMAIL in your .env / .env.local
 export const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'adventa.counseling@gmail.com'
 
 // Credit Costs for AI Analysis Features

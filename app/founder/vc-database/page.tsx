@@ -105,10 +105,10 @@ export default function VCDatabasePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/20 to-white flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-background flex items-center justify-center">
         <div className="text-center">
           <Loader2 className="mx-auto h-12 w-12 animate-spin text-blue-600 mb-4" />
-          <p className="text-lg text-slate-600">Checking access...</p>
+          <p className="text-lg text-muted-foreground">Checking access...</p>
         </div>
       </div>
     )
@@ -119,7 +119,7 @@ export default function VCDatabasePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/20 to-white">
+    <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-background">
       <div className="container mx-auto max-w-4xl px-4 py-12">
         {/* Header */}
         <div className="mb-8 text-center">
@@ -128,8 +128,8 @@ export default function VCDatabasePage() {
               <Shield className="h-8 w-8 text-blue-600" />
             </div>
           </div>
-          <h1 className="mb-2 text-4xl font-bold text-slate-900">VC Database Export</h1>
-          <p className="text-lg text-slate-600">
+          <h1 className="mb-2 text-4xl font-bold text-foreground">VC Database Export</h1>
+          <p className="text-lg text-muted-foreground">
             Admin-only: Download the complete database of all verified VCs and investors
           </p>
           <div className="mt-2 inline-flex items-center gap-2 rounded-full bg-red-100 px-3 py-1 text-sm text-red-700">
@@ -151,7 +151,7 @@ export default function VCDatabasePage() {
           </CardHeader>
           <CardContent className="space-y-6">
             {/* CSV Option - Primary */}
-            <div className="rounded-lg border-2 border-blue-500 bg-blue-50/30 p-6 hover:border-blue-600 transition-colors">
+            <div className="rounded-lg border-2 border-blue-500 bg-primary/10 p-6 hover:border-blue-600 transition-colors">
               <div className="mb-4 flex items-start justify-between">
                 <div className="flex items-start gap-4">
                   <div className="rounded-lg bg-green-100 p-3">
@@ -159,7 +159,7 @@ export default function VCDatabasePage() {
                   </div>
                   <div>
                     <h3 className="mb-1 text-lg font-semibold">CSV Format</h3>
-                    <p className="text-sm text-slate-600">
+                    <p className="text-sm text-muted-foreground">
                       Perfect for Excel, Google Sheets, or any spreadsheet application.
                       <br />
                       Includes all VC data in a tabular format with UTF-8 encoding.
@@ -168,15 +168,15 @@ export default function VCDatabasePage() {
                 </div>
               </div>
               <div className="ml-16 space-y-2">
-                <div className="flex items-center gap-2 text-sm text-slate-600">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <CheckCircle2 className="h-4 w-4 text-green-500" />
                   <span>Compatible with Excel and Google Sheets</span>
                 </div>
-                <div className="flex items-center gap-2 text-sm text-slate-600">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <CheckCircle2 className="h-4 w-4 text-green-500" />
                   <span>Easy to filter and sort</span>
                 </div>
-                <div className="flex items-center gap-2 text-sm text-slate-600">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <CheckCircle2 className="h-4 w-4 text-green-500" />
                   <span>35+ columns of detailed information</span>
                 </div>
@@ -202,7 +202,7 @@ export default function VCDatabasePage() {
             </div>
 
             {/* PDF Option */}
-            <div className="rounded-lg border-2 border-slate-200 p-6 hover:border-blue-300 transition-colors">
+            <div className="rounded-lg border-2 border-border p-6 hover:border-blue-300 transition-colors">
               <div className="mb-4 flex items-start justify-between">
                 <div className="flex items-start gap-4">
                   <div className="rounded-lg bg-red-100 p-3">
@@ -210,7 +210,7 @@ export default function VCDatabasePage() {
                   </div>
                   <div>
                     <h3 className="mb-1 text-lg font-semibold">PDF Format</h3>
-                    <p className="text-sm text-slate-600">
+                    <p className="text-sm text-muted-foreground">
                       Professional document format, perfect for printing and sharing.
                       <br />
                       Beautifully formatted with all VC details in an easy-to-read layout.
@@ -219,15 +219,15 @@ export default function VCDatabasePage() {
                 </div>
               </div>
               <div className="ml-16 space-y-2">
-                <div className="flex items-center gap-2 text-sm text-slate-600">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <CheckCircle2 className="h-4 w-4 text-red-500" />
                   <span>Professional formatting and layout</span>
                 </div>
-                <div className="flex items-center gap-2 text-sm text-slate-600">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <CheckCircle2 className="h-4 w-4 text-red-500" />
                   <span>Perfect for printing and sharing</span>
                 </div>
-                <div className="flex items-center gap-2 text-sm text-slate-600">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <CheckCircle2 className="h-4 w-4 text-red-500" />
                   <span>All VC information included</span>
                 </div>
@@ -254,7 +254,7 @@ export default function VCDatabasePage() {
             </div>
 
             {/* JSON Option */}
-            <div className="rounded-lg border-2 border-slate-200 p-6 hover:border-blue-300 transition-colors">
+            <div className="rounded-lg border-2 border-border p-6 hover:border-blue-300 transition-colors">
               <div className="mb-4 flex items-start justify-between">
                 <div className="flex items-start gap-4">
                   <div className="rounded-lg bg-purple-100 p-3">
@@ -262,7 +262,7 @@ export default function VCDatabasePage() {
                   </div>
                   <div>
                     <h3 className="mb-1 text-lg font-semibold">JSON Format</h3>
-                    <p className="text-sm text-slate-600">
+                    <p className="text-sm text-muted-foreground">
                       Ideal for developers, APIs, or programmatic access.
                       <br />
                       Structured data with nested arrays and objects preserved.
@@ -271,15 +271,15 @@ export default function VCDatabasePage() {
                 </div>
               </div>
               <div className="ml-16 space-y-2">
-                <div className="flex items-center gap-2 text-sm text-slate-600">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <CheckCircle2 className="h-4 w-4 text-purple-500" />
                   <span>Preserves nested data structures</span>
                 </div>
-                <div className="flex items-center gap-2 text-sm text-slate-600">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <CheckCircle2 className="h-4 w-4 text-purple-500" />
                   <span>Easy to parse programmatically</span>
                 </div>
-                <div className="flex items-center gap-2 text-sm text-slate-600">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <CheckCircle2 className="h-4 w-4 text-purple-500" />
                   <span>Includes metadata and timestamps</span>
                 </div>
@@ -316,7 +316,7 @@ export default function VCDatabasePage() {
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
                 <h4 className="font-semibold">Profile Information</h4>
-                <ul className="space-y-1 text-sm text-slate-600">
+                <ul className="space-y-1 text-sm text-muted-foreground">
                   <li>• Name, Email, Firm Name</li>
                   <li>• Bio and Profile Photos</li>
                   <li>• Verification Status</li>
@@ -325,7 +325,7 @@ export default function VCDatabasePage() {
               </div>
               <div className="space-y-2">
                 <h4 className="font-semibold">Investment Details</h4>
-                <ul className="space-y-1 text-sm text-slate-600">
+                <ul className="space-y-1 text-sm text-muted-foreground">
                   <li>• Investment Stages</li>
                   <li>• Check Size Range</li>
                   <li>• Sectors of Interest</li>
@@ -334,7 +334,7 @@ export default function VCDatabasePage() {
               </div>
               <div className="space-y-2">
                 <h4 className="font-semibold">Firm Information</h4>
-                <ul className="space-y-1 text-sm text-slate-600">
+                <ul className="space-y-1 text-sm text-muted-foreground">
                   <li>• Fund Type & Size</li>
                   <li>• Portfolio Companies</li>
                   <li>• Notable Investments</li>
@@ -343,7 +343,7 @@ export default function VCDatabasePage() {
               </div>
               <div className="space-y-2">
                 <h4 className="font-semibold">Contact & Links</h4>
-                <ul className="space-y-1 text-sm text-slate-600">
+                <ul className="space-y-1 text-sm text-muted-foreground">
                   <li>• Website URLs</li>
                   <li>• LinkedIn Profiles</li>
                   <li>• Application URLs</li>

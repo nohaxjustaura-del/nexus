@@ -64,7 +64,7 @@ export default function AnalysisPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-muted/50 via-primary/5 to-primary/10 flex items-center justify-center">
         <div className="text-center">
           <div className="inline-block h-12 w-12 animate-spin rounded-full border-4 border-solid border-blue-600 border-r-transparent"></div>
           <p className="mt-4 text-lg text-gray-600">Analyzing your startup...</p>
@@ -76,7 +76,7 @@ export default function AnalysisPage() {
 
   if (!feedback) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-muted/50 via-primary/5 to-primary/10 flex items-center justify-center">
         <div className="text-center max-w-md mx-auto p-8">
           <h2 className="text-2xl font-bold text-gray-900 mb-4">No Analysis Found</h2>
           <p className="text-gray-600 mb-6">Complete the onboarding questionnaire to get your personalized analysis.</p>
@@ -92,9 +92,9 @@ export default function AnalysisPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+    <div className="min-h-screen bg-gradient-to-br from-muted/50 via-primary/5 to-primary/10">
       {/* Header */}
-      <div className="bg-white border-b border-gray-200 shadow-sm">
+      <div className="bg-card border-b border-border shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex items-center justify-between">
             <div>
@@ -103,7 +103,7 @@ export default function AnalysisPage() {
             </div>
             <Link
               href="/onboarding/founder"
-              className="text-blue-600 hover:text-blue-700 font-medium flex items-center gap-2"
+              className="text-blue-600 hover:text-primary font-medium flex items-center gap-2"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -115,7 +115,7 @@ export default function AnalysisPage() {
       </div>
 
       {/* Tab Navigation */}
-      <div className="bg-white border-b border-gray-200">
+      <div className="bg-card border-b border-border">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex space-x-8">
             <button
@@ -123,7 +123,7 @@ export default function AnalysisPage() {
               className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
                 activeTab === 'overview'
                   ? 'border-blue-600 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  : 'border-transparent text-gray-500 hover:text-muted-foreground hover:border-gray-300'
               }`}
             >
               Overview & Assessment
@@ -133,7 +133,7 @@ export default function AnalysisPage() {
               className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
                 activeTab === 'pitch'
                   ? 'border-blue-600 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  : 'border-transparent text-gray-500 hover:text-muted-foreground hover:border-gray-300'
               }`}
             >
               Pitch & Strategy
@@ -143,7 +143,7 @@ export default function AnalysisPage() {
               className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
                 activeTab === 'matching'
                   ? 'border-blue-600 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  : 'border-transparent text-gray-500 hover:text-muted-foreground hover:border-gray-300'
               }`}
             >
               Investor Matches ({feedback.topMatches.length})
@@ -157,9 +157,9 @@ export default function AnalysisPage() {
         {activeTab === 'overview' && (
           <div className="space-y-6">
             {/* Overall Assessment */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div className="bg-card rounded-xl shadow-sm border border-border p-6">
               <h2 className="text-2xl font-bold text-gray-900 mb-4">Overall Assessment</h2>
-              <div className="prose max-w-none text-gray-700 leading-relaxed">
+              <div className="prose max-w-none text-muted-foreground leading-relaxed">
                 {feedback.overallAssessment.split('\n').map((paragraph, idx) => (
                   <p key={idx} className="mb-3">{paragraph}</p>
                 ))}
@@ -169,7 +169,7 @@ export default function AnalysisPage() {
             {/* Strengths & Weaknesses */}
             <div className="grid md:grid-cols-2 gap-6">
               {/* Strengths */}
-              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+              <div className="bg-card rounded-xl shadow-sm border border-border p-6">
                 <div className="flex items-center gap-2 mb-4">
                   <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
                     <svg className="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 20 20">
@@ -180,7 +180,7 @@ export default function AnalysisPage() {
                 </div>
                 <ul className="space-y-3">
                   {feedback.strengths.map((strength, idx) => (
-                    <li key={idx} className="flex items-start gap-3 text-gray-700">
+                    <li key={idx} className="flex items-start gap-3 text-muted-foreground">
                       <span className="text-green-500 mt-1">✓</span>
                       <span>{strength}</span>
                     </li>
@@ -189,7 +189,7 @@ export default function AnalysisPage() {
               </div>
 
               {/* Weaknesses */}
-              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+              <div className="bg-card rounded-xl shadow-sm border border-border p-6">
                 <div className="flex items-center gap-2 mb-4">
                   <div className="w-8 h-8 bg-amber-100 rounded-lg flex items-center justify-center">
                     <svg className="w-5 h-5 text-amber-600" fill="currentColor" viewBox="0 0 20 20">
@@ -200,7 +200,7 @@ export default function AnalysisPage() {
                 </div>
                 <ul className="space-y-3">
                   {feedback.weaknesses.map((weakness, idx) => (
-                    <li key={idx} className="flex items-start gap-3 text-gray-700">
+                    <li key={idx} className="flex items-start gap-3 text-muted-foreground">
                       <span className="text-amber-500 mt-1">⚠</span>
                       <span>{weakness}</span>
                     </li>
@@ -222,12 +222,12 @@ export default function AnalysisPage() {
         {activeTab === 'pitch' && (
           <div className="space-y-6">
             {/* Pitch Improvements */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div className="bg-card rounded-xl shadow-sm border border-border p-6">
               <h2 className="text-2xl font-bold text-gray-900 mb-4">Pitch Improvements</h2>
               <p className="text-gray-600 mb-6">Specific recommendations to strengthen your pitch narrative:</p>
               <div className="space-y-4">
                 {feedback.pitchImprovements.map((improvement, idx) => (
-                  <div key={idx} className="flex items-start gap-4 p-4 bg-blue-50 rounded-lg border border-blue-100">
+                  <div key={idx} className="flex items-start gap-4 p-4 bg-primary/10 rounded-lg border border-primary/20">
                     <div className="flex-shrink-0 w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-bold">
                       {idx + 1}
                     </div>
@@ -238,12 +238,12 @@ export default function AnalysisPage() {
             </div>
 
             {/* Deck Feedback */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div className="bg-card rounded-xl shadow-sm border border-border p-6">
               <h2 className="text-2xl font-bold text-gray-900 mb-4">Pitch Deck Feedback</h2>
               <p className="text-gray-600 mb-6">How to create or improve your investor deck:</p>
               <div className="space-y-3">
                 {feedback.deckFeedback.map((item, idx) => (
-                  <div key={idx} className="flex items-start gap-3 text-gray-700">
+                  <div key={idx} className="flex items-start gap-3 text-muted-foreground">
                     <span className="text-indigo-500 mt-1">📊</span>
                     <span>{item}</span>
                   </div>
@@ -252,12 +252,12 @@ export default function AnalysisPage() {
             </div>
 
             {/* Fundraising Strategy */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div className="bg-card rounded-xl shadow-sm border border-border p-6">
               <h2 className="text-2xl font-bold text-gray-900 mb-4">Fundraising Strategy</h2>
               <p className="text-gray-600 mb-6">Tactical playbook for running your fundraise:</p>
               <div className="space-y-3">
                 {feedback.fundraisingStrategy.map((item, idx) => (
-                  <div key={idx} className="flex items-start gap-3 text-gray-700">
+                  <div key={idx} className="flex items-start gap-3 text-muted-foreground">
                     <span className="text-purple-500 mt-1">💡</span>
                     <span>{item}</span>
                   </div>
@@ -270,7 +270,7 @@ export default function AnalysisPage() {
         {activeTab === 'matching' && (
           <div className="space-y-6">
             {/* Matching Overview */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div className="bg-card rounded-xl shadow-sm border border-border p-6">
               <h2 className="text-2xl font-bold text-gray-900 mb-2">Your Top Investor Matches</h2>
               <p className="text-gray-600">
                 We've analyzed {feedback.topMatches.length} investors that align with your startup profile.
@@ -279,9 +279,9 @@ export default function AnalysisPage() {
             </div>
 
             {/* Match Score Legend */}
-            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-4 border border-blue-100">
+            <div className="bg-gradient-to-r from-primary/10 to-primary/10 rounded-lg p-4 border border-primary/20">
               <div className="flex items-center justify-between text-sm">
-                <span className="text-gray-700 font-medium">Match Score:</span>
+                <span className="text-muted-foreground font-medium">Match Score:</span>
                 <div className="flex items-center gap-6">
                   <div className="flex items-center gap-2">
                     <div className="w-3 h-3 rounded-full bg-green-500"></div>
@@ -302,7 +302,7 @@ export default function AnalysisPage() {
             {/* Investor Matches */}
             <div className="grid gap-6">
               {feedback.topMatches.map((match, idx) => (
-                <div key={match.id} className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
+                <div key={match.id} className="bg-card rounded-xl shadow-sm border border-border p-6 hover:shadow-md transition-shadow">
                   <div className="flex items-start justify-between mb-4">
                     <div className="flex items-start gap-4">
                       <div className="flex-shrink-0 w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 text-white rounded-lg flex items-center justify-center text-xl font-bold">
@@ -335,7 +335,7 @@ export default function AnalysisPage() {
                     <h4 className="font-semibold text-gray-900 mb-2">Why This Investor:</h4>
                     <ul className="space-y-1">
                       {match.matchReasons.map((reason, ridx) => (
-                        <li key={ridx} className="text-sm text-gray-700">{reason}</li>
+                        <li key={ridx} className="text-sm text-muted-foreground">{reason}</li>
                       ))}
                     </ul>
                   </div>
@@ -343,7 +343,7 @@ export default function AnalysisPage() {
                   {/* Toggle Details */}
                   <button
                     onClick={() => setSelectedInvestor(selectedInvestor?.id === match.id ? null : match)}
-                    className="w-full mt-4 py-2 px-4 bg-blue-50 hover:bg-blue-100 text-blue-700 font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
+                    className="w-full mt-4 py-2 px-4 bg-primary/10 hover:bg-primary/18 text-primary font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
                   >
                     {selectedInvestor?.id === match.id ? 'Hide' : 'Show'} Detailed Strategy
                     <svg
@@ -358,14 +358,14 @@ export default function AnalysisPage() {
 
                   {/* Detailed Strategy (Expandable) */}
                   {selectedInvestor?.id === match.id && (
-                    <div className="mt-6 space-y-6 pt-6 border-t border-gray-200">
+                    <div className="mt-6 space-y-6 pt-6 border-t border-border">
                       {/* Why This Investor */}
                       <div>
                         <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
                           <span className="text-xl">🎯</span>
                           Strategic Fit
                         </h4>
-                        <div className="text-sm text-gray-700 whitespace-pre-line bg-gray-50 p-4 rounded-lg">
+                        <div className="text-sm text-muted-foreground whitespace-pre-line bg-muted/50 p-4 rounded-lg">
                           {match.whyThisInvestor}
                         </div>
                       </div>
@@ -376,7 +376,7 @@ export default function AnalysisPage() {
                           <span className="text-xl">📝</span>
                           How to Adapt Your Pitch
                         </h4>
-                        <div className="text-sm text-gray-700 whitespace-pre-line bg-blue-50 p-4 rounded-lg border border-blue-100">
+                        <div className="text-sm text-muted-foreground whitespace-pre-line bg-primary/10 p-4 rounded-lg border border-primary/20">
                           {match.pitchAdaptation}
                         </div>
                       </div>
@@ -389,7 +389,7 @@ export default function AnalysisPage() {
                         </h4>
                         <ul className="space-y-2">
                           {match.keyTalkingPoints.map((point, pidx) => (
-                            <li key={pidx} className="flex items-start gap-3 text-sm text-gray-700 bg-purple-50 p-3 rounded-lg">
+                            <li key={pidx} className="flex items-start gap-3 text-sm text-muted-foreground bg-purple-500/10 p-3 rounded-lg">
                               <span className="text-purple-500 mt-0.5">→</span>
                               <span>{point}</span>
                             </li>
@@ -398,7 +398,7 @@ export default function AnalysisPage() {
                       </div>
 
                       {/* Contact Info */}
-                      <div className="flex items-center gap-4 pt-4 border-t border-gray-200">
+                      <div className="flex items-center gap-4 pt-4 border-t border-border">
                         {match.website && (
                           <a
                             href={match.website}
@@ -415,7 +415,7 @@ export default function AnalysisPage() {
                         {match.email && (
                           <a
                             href={`mailto:${match.email}`}
-                            className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+                            className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-muted-foreground rounded-lg hover:bg-gray-200 transition-colors"
                           >
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
@@ -431,7 +431,7 @@ export default function AnalysisPage() {
             </div>
 
             {feedback.topMatches.length === 0 && (
-              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
+              <div className="bg-card rounded-xl shadow-sm border border-border p-12 text-center">
                 <p className="text-gray-600">No matches found. Try updating your profile with more details.</p>
               </div>
             )}
@@ -444,9 +444,9 @@ export default function AnalysisPage() {
 
 function DetailSection({ title, content }: { title: string; content: string }) {
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+    <div className="bg-card rounded-xl shadow-sm border border-border p-6">
       <h3 className="text-xl font-bold text-gray-900 mb-4">{title}</h3>
-      <div className="prose max-w-none text-gray-700 text-sm leading-relaxed whitespace-pre-line">
+      <div className="prose max-w-none text-muted-foreground text-sm leading-relaxed whitespace-pre-line">
         {content}
       </div>
     </div>

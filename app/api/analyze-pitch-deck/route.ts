@@ -198,7 +198,7 @@ export async function POST(request: NextRequest) {
           error: 'Insufficient Credits',
           message: `Pitch deck analysis costs ${CREDIT_COST} credits. You have ${userCredits.credits ?? 0} credits.`,
           whatWentWrong: `You need ${creditsNeeded} more credit${creditsNeeded > 1 ? 's' : ''} to analyze your pitch deck`,
-          whyItFailed: 'Each analysis uses credits to cover AI processing costs',
+          whyItFailed: 'Each analysis uses credits to cover processing costs',
           howToFix: [
             'Claim your daily free credits (available every 24 hours)',
             'Purchase additional credits from your account page',
@@ -534,11 +534,11 @@ export async function POST(request: NextRequest) {
     
     // AI-specific errors
     if (error.message?.includes('API') || error.message?.includes('OpenAI') || error.message?.includes('OpenRouter')) {
-      errorDetails.whatWentWrong = 'AI analysis service is unavailable or misconfigured'
-      errorDetails.whyItFailed = 'The AI service could not process your request'
+      errorDetails.whatWentWrong = 'Analysis service is unavailable or misconfigured'
+      errorDetails.whyItFailed = 'The analysis service could not process your request'
       errorDetails.howToFix = [
         'Try again in a few moments',
-        'Check that the AI service is properly configured',
+        'Check that the analysis service is properly configured',
         'If this persists, contact support',
       ]
     }

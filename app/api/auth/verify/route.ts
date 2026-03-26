@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { otpVerificationCandidates } from '@/lib/auth-otp'
 import { createSupabaseAuthRouteClient } from '@/lib/supabase/route-handler'
 import { syncPrismaUserFromAuth } from '@/lib/auth'
 
@@ -13,17 +14,30 @@ export async function POST(request: NextRequest) {
     }
 
     const normalizedEmail = email.toLowerCase().trim()
-    const token = String(code).replace(/\s/g, '')
+    const candidates = otpVerificationCandidates(String(code))
+    if (candidates.length === 0) {
+      return NextResponse.json({ error: 'Invalid verification code' }, { status: 400 })
+    }
 
     const { supabase, applyAuthCookies } = createSupabaseAuthRouteClient(request)
 
-    const { data, error } = await supabase.auth.verifyOtp({
-      email: normalizedEmail,
-      token,
-      type: 'email',
-    })
+    let data: Awaited<ReturnType<typeof supabase.auth.verifyOtp>>['data'] | null = null
+    let error: Awaited<ReturnType<typeof supabase.auth.verifyOtp>>['error'] | null = null
 
-    if (error || !data.user) {
+    for (const token of candidates) {
+      const result = await supabase.auth.verifyOtp({
+        email: normalizedEmail,
+        token,
+        type: 'email',
+      })
+      data = result.data
+      error = result.error
+      if (!result.error && result.data?.user) {
+        break
+      }
+    }
+
+    if (error || !data?.user) {
       return NextResponse.json(
         { error: error?.message || 'Invalid verification code' },
         { status: 400 }

@@ -436,8 +436,8 @@ export default async function DiscoverPage({
   }
 
   // Limit free tailored recommendations to top 5
-  // If user hasn't done AI analysis, only show top 5 tailored matches
-  // Limit free tailored recommendations to top 5 quality matches if no AI analysis
+  // If user hasn't done pitch analysis, only show top 5 tailored matches
+  // Limit free tailored recommendations to top 5 quality matches if no analysis yet
   // Show good tailored matches based on profile preferences, not necessarily the absolute best
   let showLimitedTailored = false
   if (!viewAll && !hasResumeAnalysis && filteredInvestors.length > FREE_TAILORED_LIMIT) {
@@ -447,66 +447,60 @@ export default async function DiscoverPage({
   }
 
   return (
-    <div className="min-h-screen bg-white" data-page="discover">
-      <div className="container mx-auto max-w-7xl px-4 py-6 md:py-8">
+    <div className="min-h-[calc(100vh-3.25rem)]" data-page="discover">
+      <div className="mx-auto w-full max-w-7xl px-5 pb-24 pt-6 sm:px-8 md:pt-8 lg:px-10">
         {/* Clean Title */}
-        <div className="mb-8">
-          <h1 className="text-3xl md:text-4xl font-bold text-slate-900 mb-2">
+        <div className="mb-10">
+          <h1 className="mb-2 font-heading text-3xl font-bold tracking-tight text-foreground md:text-4xl">
             1,002 Verified Investors
           </h1>
-          <p className="text-slate-600 text-lg">
-            Find the right investors for your startup
-          </p>
+          <p className="text-lg text-muted-foreground">Find the right investors for your startup</p>
         </div>
 
-        {/* Clean Tab Navigation */}
-        <div className="mb-6 border-b border-slate-200">
-          <nav className="flex gap-6 -mb-px">
+        {/* Tab Navigation */}
+        <div className="mb-8 border-b border-border/40">
+          <nav className="-mb-px flex gap-1 overflow-x-auto pb-px sm:gap-2">
             <Link
               href="/founder/discover"
-              className="px-1 py-3 text-sm font-semibold border-b-2 border-blue-600 text-blue-600 transition-colors"
+              className="whitespace-nowrap border-b-2 border-primary px-3 py-3 text-sm font-semibold text-primary transition-colors sm:px-4"
             >
               Discover
             </Link>
             <Link
               href="/founder/matches"
-              className="px-1 py-3 text-sm font-medium text-slate-600 hover:text-slate-900 border-b-2 border-transparent hover:border-slate-300 transition-colors"
+              className="whitespace-nowrap border-b-2 border-transparent px-3 py-3 text-sm font-medium text-muted-foreground transition-colors hover:border-border/60 hover:text-foreground sm:px-4"
             >
               Matches
             </Link>
             <Link
               href="/founder/bookmarks"
-              className="px-1 py-3 text-sm font-medium text-slate-600 hover:text-slate-900 border-b-2 border-transparent hover:border-slate-300 transition-colors"
+              className="whitespace-nowrap border-b-2 border-transparent px-3 py-3 text-sm font-medium text-muted-foreground transition-colors hover:border-border/60 hover:text-foreground sm:px-4"
             >
               Bookmarks
             </Link>
             <Link
               href="/founder/my-analyses"
-              className="px-1 py-3 text-sm font-medium text-slate-600 hover:text-slate-900 border-b-2 border-transparent hover:border-slate-300 transition-colors"
+              className="whitespace-nowrap border-b-2 border-transparent px-3 py-3 text-sm font-medium text-muted-foreground transition-colors hover:border-border/60 hover:text-foreground sm:px-4"
             >
               My Analyses
             </Link>
           </nav>
         </div>
 
-        {/* Toggle Switch */}
-        <div className="mb-6 flex items-center gap-2">
+        {/* Toggle */}
+        <div className="mb-8 inline-flex rounded-full border border-border/40 bg-muted/30 p-1">
           <Link
             href="/founder/discover"
-            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-              !viewAll
-                ? 'bg-blue-600 text-white'
-                : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+            className={`rounded-full px-5 py-2 text-sm font-medium transition-all ${
+              !viewAll ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground'
             }`}
           >
             Tailored
           </Link>
           <Link
             href="/founder/discover?all=1"
-            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-              viewAll
-                ? 'bg-blue-600 text-white'
-                : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+            className={`rounded-full px-5 py-2 text-sm font-medium transition-all ${
+              viewAll ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground'
             }`}
           >
             All ({investors.length})
@@ -514,8 +508,8 @@ export default async function DiscoverPage({
         </div>
 
         {verificationBanner && (
-          <Card className="mb-4 border-yellow-300 bg-yellow-50">
-            <CardContent className="py-4 text-sm text-yellow-800">
+          <Card className="mb-6 border-amber-500/35 bg-amber-500/10">
+            <CardContent className="py-4 text-sm text-amber-100">
               Your identity verification is <strong>{verificationBanner.status}</strong>. You can still browse matches; some actions may require approval.
             </CardContent>
           </Card>
@@ -524,7 +518,7 @@ export default async function DiscoverPage({
 
         {/* Results count */}
         <div className="mb-6">
-          <p className="text-sm text-slate-600">
+          <p className="text-sm text-muted-foreground">
             Showing {filteredInvestors.length} {filteredInvestors.length === 1 ? 'investor' : 'investors'}
             {!viewAll && backgroundReasons.length > 0 && (
               <span className="ml-1">• Tailored to {backgroundReasons[0].toLowerCase()}</span>

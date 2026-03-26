@@ -9,10 +9,10 @@ export default function NotFound() {
     <div className="flex min-h-[calc(100vh-12rem)] flex-col items-center justify-center px-4 text-center">
       <div className="mb-8">
         <h1 className="text-9xl font-bold text-primary mb-4 animate-bounce">404</h1>
-        <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-4">
+        <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
           Page Not Found
         </h2>
-        <p className="text-lg text-slate-600 max-w-md mx-auto mb-8">
+        <p className="text-lg text-muted-foreground max-w-md mx-auto mb-8">
           Oops! The page you're looking for doesn't exist. It might have been moved or deleted.
         </p>
       </div>

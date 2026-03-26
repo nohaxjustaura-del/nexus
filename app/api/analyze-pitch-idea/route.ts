@@ -622,7 +622,7 @@ Be specific and actionable.`
       }
 
       // -----------------------------------------------------------------------
-      // UNIVERSAL ANALYSIS ENGINE — rubric scoring with Exa market intelligence
+      // UNIVERSAL ANALYSIS ENGINE  -  rubric scoring with Exa market intelligence
       // -----------------------------------------------------------------------
       let rubricAnalysis: any = null
       try {
@@ -739,7 +739,7 @@ Be specific and actionable.`
       const status = String(msg).includes('429') ? 429 : 500
       return NextResponse.json(
         {
-          error: 'AI Analysis Failed',
+          error: 'Analysis failed',
           message: msg,
           provider: 'gemini',
         },

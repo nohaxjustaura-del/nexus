@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { CheckCircle, Loader2, ArrowLeft, Mail } from 'lucide-react'
 import Link from 'next/link'
 import { BRAND_NAME } from '@/lib/brand'
+import { RESEND_DEV_CONSOLE_FALLBACK_HINT } from '@/lib/resend-user-messages'
 import { CLIENT_STORAGE } from '@/lib/client-storage-keys'
 
 const VERIFY_EMAIL_KEY = CLIENT_STORAGE.PENDING_VERIFY_EMAIL
@@ -57,85 +58,35 @@ export default function VerifyPage() {
     }
   }, [paramEmail])
 
-  const [code, setCode] = useState(['', '', '', '', '', ''])
+  /** Primary UI is 6 digits; 8 allowed if verify needs the full Supabase value. */
+  const [otpInput, setOtpInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [resending, setResending] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
-  const inputRefs = useRef<(HTMLInputElement | null)[]>([])
+  const [devConsoleHint, setDevConsoleHint] = useState(false)
+  const otpInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
-    // Prefer code boxes when email already known (e.g. from ?email=); otherwise user starts at email field.
+    try {
+      setDevConsoleHint(sessionStorage.getItem(CLIENT_STORAGE.DEV_CONSOLE_MAGIC_LINK) === '1')
+    } catch {
+      setDevConsoleHint(false)
+    }
+  }, [])
+
+  useEffect(() => {
     const t = window.setTimeout(() => {
       if (paramEmail) {
-        inputRefs.current[0]?.focus()
+        otpInputRef.current?.focus()
       }
     }, 0)
     return () => window.clearTimeout(t)
   }, [paramEmail])
 
-  const handleCodeChange = (index: number, value: string) => {
-    if (value.length > 1) {
-      // Handle paste
-      const pastedCode = value.slice(0, 6).split('')
-      const newCode = [...code]
-      pastedCode.forEach((char, i) => {
-        if (index + i < 6 && /^\d$/.test(char)) {
-          newCode[index + i] = char
-        }
-      })
-      setCode(newCode)
-      // Focus the last filled input or submit
-      const nextIndex = Math.min(index + pastedCode.length, 5)
-      inputRefs.current[nextIndex]?.focus()
-      return
-    }
-
-    if (!/^\d$/.test(value) && value !== '') return
-
-    const newCode = [...code]
-    newCode[index] = value
-    setCode(newCode)
-
-    // Auto-focus next input
-    if (value && index < 5) {
-      inputRefs.current[index + 1]?.focus()
-    }
-
-    // Auto-submit when all 6 digits are entered
-    if (index === 5 && value && newCode.every(digit => digit !== '')) {
-      handleVerify(newCode.join(''))
-    }
-  }
-
-  const handleKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Backspace' && !code[index] && index > 0) {
-      inputRefs.current[index - 1]?.focus()
-    }
-  }
-
-  // Allow copy-paste of the full 6-digit code from the email
-  const handlePaste = (index: number) => (e: React.ClipboardEvent<HTMLInputElement>) => {
-    const pasted = e.clipboardData.getData('text') || ''
-    const digits = pasted.replace(/\D/g, '').slice(0, 6)
-    if (digits.length > 1) {
-      e.preventDefault()
-      const newCode = [...code]
-      for (let i = 0; i < digits.length && index + i < 6; i++) {
-        newCode[index + i] = digits[i]
-      }
-      setCode(newCode)
-      const nextIndex = Math.min(index + digits.length, 5)
-      if (newCode.every(d => d !== '')) {
-        handleVerify(newCode.join(''))
-      } else {
-        inputRefs.current[nextIndex]?.focus()
-      }
-    }
-  }
-
   const handleVerify = async (verificationCode?: string) => {
-    const codeToVerify = verificationCode || code.join('')
+    const raw = String(verificationCode ?? otpInput).trim()
+    const digits = raw.replace(/\D/g, '')
     const normalizedEmail = email.trim().toLowerCase()
 
     if (!normalizedEmail || !normalizedEmail.includes('@')) {
@@ -143,8 +94,8 @@ export default function VerifyPage() {
       return
     }
 
-    if (codeToVerify.length !== 6) {
-      setError('Please enter the complete 6-digit code')
+    if (digits.length !== 6 && digits.length !== 8) {
+      setError('Enter the 6-digit code (or all 8 digits if the short code was rejected).')
       return
     }
 
@@ -164,7 +115,7 @@ export default function VerifyPage() {
           'Content-Type': 'application/json',
         },
         credentials: 'include', // Important: Include cookies
-        body: JSON.stringify({ email: normalizedEmail, code: codeToVerify }),
+        body: JSON.stringify({ email: normalizedEmail, code: raw }),
       })
 
       const data = await response.json()
@@ -172,13 +123,19 @@ export default function VerifyPage() {
       if (!response.ok) {
         setError(data.error || 'Invalid verification code')
         setLoading(false)
-        // Clear code on error
-        setCode(['', '', '', '', '', ''])
-        inputRefs.current[0]?.focus()
+        setOtpInput('')
+        otpInputRef.current?.focus()
         return
       }
 
       setSuccess(true)
+
+      try {
+        sessionStorage.removeItem(CLIENT_STORAGE.DEV_CONSOLE_MAGIC_LINK)
+      } catch {
+        /* ignore */
+      }
+      setDevConsoleHint(false)
 
       if (data.user) {
         try {
@@ -249,9 +206,19 @@ export default function VerifyPage() {
 
       // Show success message
       setError('')
-      alert('New verification code sent to your email!')
-      setCode(['', '', '', '', '', ''])
-      inputRefs.current[0]?.focus()
+      if (data.devConsoleFallback) {
+        try {
+          sessionStorage.setItem(CLIENT_STORAGE.DEV_CONSOLE_MAGIC_LINK, '1')
+        } catch {
+          /* ignore */
+        }
+        setDevConsoleHint(true)
+        alert(RESEND_DEV_CONSOLE_FALLBACK_HINT)
+      } else {
+        alert('New verification code sent to your email!')
+      }
+      setOtpInput('')
+      otpInputRef.current?.focus()
     } catch (err) {
       setError('Failed to resend code. Please try again.')
     } finally {
@@ -260,7 +227,7 @@ export default function VerifyPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 via-white to-blue-50 p-4">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-primary/5 to-background p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1 text-center">
           {success ? (
@@ -282,9 +249,9 @@ export default function VerifyPage() {
               </div>
               <CardTitle className="text-2xl font-bold">Verify Your Email</CardTitle>
               <CardDescription>
-                We sent a sign-in email to <strong>{email}</strong> with a <strong>6-digit code</strong> and/or a
-                one-tap link. If you do not see a code, check spam or use the link in the email (it opens this site and
-                signs you in).
+                We sent a sign-in email to <strong>{email}</strong> with a <strong>verification code</strong> and/or a
+                one-tap link. If you do not see a code, check spam, the <strong>dev server terminal</strong>, or use the
+                link (it opens this site and signs you in).
                 <br />
                 <span className="text-sm text-muted-foreground mt-2 block">
                   You must verify your email to access {BRAND_NAME}
@@ -296,18 +263,23 @@ export default function VerifyPage() {
         <CardContent>
           {!success ? (
             <>
+              {devConsoleHint && (
+                <div className="mb-4 p-3 text-sm text-amber-900 bg-amber-500/10 border border-amber-500/30 rounded-md">
+                  {RESEND_DEV_CONSOLE_FALLBACK_HINT}
+                </div>
+              )}
               {(authError === 'callback' || authError === 'missing_code') && (
-                <div className="mb-4 p-3 text-sm text-amber-900 bg-amber-50 border border-amber-200 rounded-md">
+                <div className="mb-4 p-3 text-sm text-amber-900 bg-amber-500/10 border border-amber-500/30 rounded-md">
                   {authError === 'missing_code' ? (
                     <>
                       The sign-in link did not include a valid token (often wrong redirect URL in Supabase, or an
-                      expired link). Enter your <strong>email</strong> below, then the <strong>6-digit code</strong> from
-                      the email, or use <strong>Resend Code</strong>.
+                      expired link). Enter your <strong>email</strong> below, then the <strong>code</strong> from the
+                      email or terminal, or use <strong>Resend Code</strong>.
                     </>
                   ) : (
                     <>
                       The email link could not complete sign-in. Enter your <strong>email</strong> and the{' '}
-                      <strong>6-digit code</strong> from that message, or tap <strong>Resend Code</strong>.
+                      <strong>code</strong> from that message or terminal, or tap <strong>Resend Code</strong>.
                     </>
                   )}
                 </div>
@@ -342,31 +314,31 @@ export default function VerifyPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-center block">
-                    Enter Verification Code
+                  <label htmlFor="verify-otp" className="text-sm font-medium text-center block">
+                    Verification code
                   </label>
-                  <div className="flex gap-2 justify-center">
-                    {code.map((digit, index) => (
-                      <Input
-                        key={index}
-                        id={`code-input-${index}`}
-                        name={`code-${index}`}
-                        ref={(el) => {
-                          inputRefs.current[index] = el
-                        }}
-                        type="text"
-                        inputMode="numeric"
-                        maxLength={1}
-                        value={digit}
-                        onChange={(e) => handleCodeChange(index, e.target.value)}
-                        onKeyDown={(e) => handleKeyDown(index, e)}
-                        onPaste={handlePaste(index)}
-                        disabled={loading}
-                        className="w-12 h-14 text-center text-2xl font-bold tracking-widest"
-                        autoComplete="off"
-                      />
-                    ))}
-                  </div>
+                  <Input
+                    ref={otpInputRef}
+                    id="verify-otp"
+                    name="otp"
+                    type="text"
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
+                    placeholder="6-digit code"
+                    maxLength={8}
+                    value={otpInput}
+                    onChange={(e) => {
+                      const digits = e.target.value.replace(/\D/g, '').slice(0, 8)
+                      setOtpInput(digits)
+                      setError('')
+                    }}
+                    disabled={loading}
+                    className="w-full h-14 text-center text-2xl font-bold tracking-[0.35em] font-mono"
+                  />
+                  <p className="text-xs text-center text-muted-foreground">
+                    Use the <strong>6-digit</strong> code from email or terminal. If verify fails, try all{' '}
+                    <strong>8 digits</strong> shown after &quot;If that code fails…&quot; in the terminal or email.
+                  </p>
                 </div>
 
                 {error && (
@@ -381,7 +353,8 @@ export default function VerifyPage() {
                   disabled={
                     loading ||
                     !email.trim().includes('@') ||
-                    code.some(d => d === '')
+                    otpInput.replace(/\D/g, '').length < 6 ||
+                    otpInput.replace(/\D/g, '').length === 7
                   }
                 >
                   {loading ? (

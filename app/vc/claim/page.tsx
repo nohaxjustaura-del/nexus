@@ -159,27 +159,27 @@ export default function VCClaimPage() {
           <h1 className="mb-6 text-5xl md:text-6xl font-bold bg-gradient-to-r from-primary via-blue-600 to-purple-600 bg-clip-text text-transparent">
             Access Premium Deal Flow
           </h1>
-          <p className="mx-auto max-w-3xl text-xl md:text-2xl text-slate-600 leading-relaxed mb-8">
+          <p className="mx-auto max-w-3xl text-xl md:text-2xl text-muted-foreground leading-relaxed mb-8">
             Get matched with highly qualified founders who fit your investment thesis. 
             Save time, improve deal quality, and grow your portfolio.
           </p>
           
           {/* Simplified Key Benefits */}
           <div className="grid md:grid-cols-3 gap-4 max-w-4xl mx-auto mb-12">
-            <div className="text-center p-6 rounded-xl border border-slate-200 bg-white">
+            <div className="text-center p-6 rounded-xl border border-border bg-card">
               <Sparkles className="h-8 w-8 text-primary mx-auto mb-3" />
-              <h3 className="font-semibold mb-2">AI-Pre-Screened</h3>
-              <p className="text-sm text-slate-600">Quality founders, pre-analyzed for fit</p>
+              <h3 className="font-semibold mb-2">Pre-screened</h3>
+              <p className="text-sm text-muted-foreground">Quality founders, pre-analyzed for fit</p>
             </div>
-            <div className="text-center p-6 rounded-xl border border-slate-200 bg-white">
+            <div className="text-center p-6 rounded-xl border border-border bg-card">
               <CheckCircle className="h-8 w-8 text-primary mx-auto mb-3" />
               <h3 className="font-semibold mb-2">Verified</h3>
-              <p className="text-sm text-slate-600">Identity-verified, serious founders only</p>
+              <p className="text-sm text-muted-foreground">Identity-verified, serious founders only</p>
             </div>
-            <div className="text-center p-6 rounded-xl border border-slate-200 bg-white">
+            <div className="text-center p-6 rounded-xl border border-border bg-card">
               <ArrowRight className="h-8 w-8 text-primary mx-auto mb-3" />
               <h3 className="font-semibold mb-2">Save Time</h3>
-              <p className="text-sm text-slate-600">Deal flow that matches your criteria</p>
+              <p className="text-sm text-muted-foreground">Deal flow that matches your criteria</p>
             </div>
           </div>
         </div>
@@ -447,7 +447,7 @@ export default function VCClaimPage() {
               </div>
 
               {/* Simplified Benefits Section */}
-              <div className="rounded-2xl border-2 border-primary/20 bg-gradient-to-br from-primary/5 via-white to-purple-50/30 p-6 mb-6">
+              <div className="rounded-2xl border-2 border-primary/20 bg-gradient-to-br from-primary/5 via-background to-purple-500/10 p-6 mb-6">
                 <h3 className="mb-4 text-lg font-bold flex items-center gap-2">
                   <Sparkles className="h-5 w-5 text-primary" />
                   What You Get
@@ -457,7 +457,7 @@ export default function VCClaimPage() {
                     <CheckCircle className="h-5 w-5 text-primary shrink-0 mt-0.5" />
                     <div>
                       <div className="font-semibold text-sm">Quality Deal Flow</div>
-                      <div className="text-xs text-muted-foreground">AI-pre-screened founders who match your thesis</div>
+                      <div className="text-xs text-muted-foreground">Pre-screened founders who match your thesis</div>
                     </div>
                   </div>
                   <div className="flex items-start gap-3">
@@ -477,8 +477,8 @@ export default function VCClaimPage() {
                 </div>
               </div>
 
-              <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
-                <p className="text-sm text-slate-600">
+              <div className="rounded-lg border border-border bg-muted/50 p-4">
+                <p className="text-sm text-muted-foreground">
                   <strong>Next steps:</strong> We'll verify your profile within 24 hours, then you'll start receiving matched founders. Free forever.
                 </p>
               </div>
@@ -490,7 +490,7 @@ export default function VCClaimPage() {
               )}
 
               {success && (
-                <div className="rounded-lg border border-green-500 bg-green-50 p-4 text-sm text-green-700">
+                <div className="rounded-lg border border-green-500 bg-emerald-500/10 p-4 text-sm text-green-700">
                   ✓ Your claim request has been submitted! We'll review it and get back to you within 24 hours.
                 </div>
               )}

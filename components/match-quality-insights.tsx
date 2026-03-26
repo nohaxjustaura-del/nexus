@@ -146,8 +146,8 @@ export function MatchQualityInsights({ analyses, founderProfile, matches }: Matc
           <Progress value={completeness} className="mb-4" />
           {completeness < 100 && (
             <div className="space-y-2">
-              <p className="text-sm font-medium text-slate-700">Missing fields:</p>
-              <ul className="text-sm text-slate-600 space-y-1">
+              <p className="text-sm font-medium text-foreground/85">Missing fields:</p>
+              <ul className="text-sm text-muted-foreground space-y-1">
                 {!founderProfile?.videoPitchUrl && (
                   <li className="flex items-center gap-2">
                     <XCircle className="h-4 w-4 text-red-500" />
@@ -197,7 +197,7 @@ export function MatchQualityInsights({ analyses, founderProfile, matches }: Matc
                 <div className="text-3xl font-bold bg-gradient-to-r from-primary to-blue-600 bg-clip-text text-transparent">
                   {Math.round(latestAnalysis.compatibilityScore || 0)}
                 </div>
-                <div className="text-xs text-slate-600">out of 100</div>
+                <div className="text-xs text-muted-foreground">out of 100</div>
               </div>
             </div>
             <CardDescription>
@@ -210,7 +210,7 @@ export function MatchQualityInsights({ analyses, founderProfile, matches }: Matc
           </CardHeader>
           <CardContent>
             {scoreTrend && (
-              <div className="mb-4 p-3 rounded-lg bg-slate-50 border">
+              <div className="mb-4 p-3 rounded-lg bg-muted/50 border">
                 <div className="flex items-center gap-2">
                   {scoreTrend.trend === 'up' ? (
                     <TrendingUp className="h-4 w-4 text-green-600" />
@@ -227,7 +227,7 @@ export function MatchQualityInsights({ analyses, founderProfile, matches }: Matc
               </div>
             )}
             {avgMatchScore > 0 && (
-              <div className="text-sm text-slate-600">
+              <div className="text-sm text-muted-foreground">
                 Average match score: <span className="font-semibold">{avgMatchScore}%</span>
               </div>
             )}
@@ -252,7 +252,7 @@ export function MatchQualityInsights({ analyses, founderProfile, matches }: Matc
               {matchReasons.map((reason, i) => (
                 <li key={i} className="flex items-start gap-2 text-sm">
                   <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
-                  <span className="text-slate-700">{reason}</span>
+                  <span className="text-foreground/85">{reason}</span>
                 </li>
               ))}
             </ul>
@@ -262,7 +262,7 @@ export function MatchQualityInsights({ analyses, founderProfile, matches }: Matc
 
       {/* Improvement Suggestions */}
       {suggestions.length > 0 && (
-        <Card className="border-2 border-amber-200 bg-amber-50/30">
+        <Card className="border-2 border-amber-500/30 bg-amber-500/10">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Lightbulb className="h-5 w-5 text-amber-600" />
@@ -279,7 +279,7 @@ export function MatchQualityInsights({ analyses, founderProfile, matches }: Matc
                   <div className="p-1 rounded-full bg-amber-100 mt-0.5">
                     <AlertCircle className="h-4 w-4 text-amber-600" />
                   </div>
-                  <span className="text-sm text-slate-700 flex-1">{suggestion}</span>
+                  <span className="text-sm text-foreground/85 flex-1">{suggestion}</span>
                 </li>
               ))}
             </ul>

@@ -88,7 +88,7 @@ export default function SignupThankYouPage() {
     <div className="min-h-screen bg-background">
       <div className="container mx-auto max-w-2xl px-4 py-20">
         <div className="rounded-lg border bg-card p-10 text-center shadow-sm">
-          <h1 className="mb-3 text-3xl font-bold">Thanks — your signup is under review</h1>
+          <h1 className="mb-3 font-heading text-3xl font-bold tracking-tight">Thanks. Your signup is under review.</h1>
           <p className="text-muted-foreground">
             We received your information and ID. Our team will verify your account and email you with the result.
             This typically takes less than 24 hours.

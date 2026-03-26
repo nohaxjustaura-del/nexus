@@ -270,7 +270,7 @@ export default function AdminVCsPage() {
 
         {/* Pending Claims Section */}
         {showPendingClaims && pendingClaims.length > 0 && (
-          <Card className="mb-8 border-blue-200">
+          <Card className="mb-8 border-primary/25">
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div>

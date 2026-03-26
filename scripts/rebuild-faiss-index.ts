@@ -17,7 +17,7 @@ import { execSync } from 'child_process'
 
 async function main() {
   console.log('🚀 Rebuilding FAISS index with 1024-dimensional embeddings (Voyage AI)...\n')
-  console.log('⚠️  Voyage AI free tier: 3 req/min — this will take a while for large datasets\n')
+  console.log('⚠️  Voyage AI free tier: 3 req/min  -  this will take a while for large datasets\n')
 
   // Get all verified VCs
   const investors = await db.investor.findMany({
@@ -115,7 +115,7 @@ async function main() {
       apiCalls++
     }
 
-    // Rate limiting OUTSIDE try/catch — applies after every API call
+    // Rate limiting OUTSIDE try/catch  -  applies after every API call
     if (apiCalls > 0 && apiCalls % 3 === 0) {
       console.log(`⏳ Rate-limit pause (60s) after ${apiCalls} API calls...`)
       await new Promise(resolve => setTimeout(resolve, 60_000))

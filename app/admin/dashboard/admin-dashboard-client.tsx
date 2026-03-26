@@ -273,7 +273,7 @@ export function AdminDashboardClient({
                 return (
                   <div
                     key={verification.email}
-                    className="flex items-center justify-between rounded-lg border border-blue-200 bg-blue-50/50 p-4 hover:bg-blue-50 transition-colors"
+                    className="flex items-center justify-between rounded-lg border border-primary/25 bg-primary/12 p-4 hover:bg-primary/10 transition-colors"
                   >
                     <div className="flex items-center gap-3">
                       <FileCheck className="h-5 w-5 text-blue-600" />
@@ -333,7 +333,7 @@ export function AdminDashboardClient({
                 return (
                   <div
                     key={claim.id}
-                    className="flex items-center justify-between rounded-lg border border-purple-200 bg-purple-50/50 p-4 hover:bg-purple-50 transition-colors"
+                    className="flex items-center justify-between rounded-lg border border-purple-500/30 bg-purple-500/10/50 p-4 hover:bg-purple-500/10 transition-colors"
                   >
                     <div className="flex items-center gap-3">
                       <Building2 className="h-5 w-5 text-purple-600" />
@@ -392,7 +392,7 @@ export function AdminDashboardClient({
                 return (
                   <div
                     key={vc.id}
-                    className="flex items-center justify-between rounded-lg border border-orange-200 bg-orange-50/50 p-4 hover:bg-orange-50 transition-colors"
+                    className="flex items-center justify-between rounded-lg border border-orange-500/30 bg-orange-500/10 p-4 hover:bg-orange-500/10 transition-colors"
                   >
                     <div className="flex items-center gap-3">
                       <Shield className="h-5 w-5 text-orange-600" />

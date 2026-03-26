@@ -80,15 +80,15 @@ export function PitchFeedbackComparison({ analyses }: PitchFeedbackComparisonPro
       </CardHeader>
       <CardContent className="space-y-6">
         {/* Score Trend */}
-        <div className="p-4 rounded-lg bg-gradient-to-r from-slate-50 to-blue-50/30 border-2">
+        <div className="p-4 rounded-lg bg-gradient-to-r from-muted/50 to-primary/5 border-2">
           <div className="flex items-center justify-between mb-2">
             <div>
-              <p className="text-sm font-medium text-slate-700">Latest Score</p>
-              <p className="text-3xl font-bold text-slate-900">{Math.round(latest.compatibilityScore)}</p>
+              <p className="text-sm font-medium text-foreground/85">Latest Score</p>
+              <p className="text-3xl font-bold text-foreground">{Math.round(latest.compatibilityScore)}</p>
             </div>
             <div className="text-right">
-              <p className="text-sm font-medium text-slate-700">Previous Score</p>
-              <p className="text-3xl font-bold text-slate-600">{Math.round(previous.compatibilityScore)}</p>
+              <p className="text-sm font-medium text-foreground/85">Previous Score</p>
+              <p className="text-3xl font-bold text-muted-foreground">{Math.round(previous.compatibilityScore)}</p>
             </div>
           </div>
           <div className="flex items-center gap-2 mt-3">
@@ -109,7 +109,7 @@ export function PitchFeedbackComparison({ analyses }: PitchFeedbackComparisonPro
             ) : (
               <>
                 <Minus className="h-5 w-5 text-slate-400" />
-                <span className="text-sm font-semibold text-slate-600">No change</span>
+                <span className="text-sm font-semibold text-muted-foreground">No change</span>
               </>
             )}
           </div>
@@ -127,19 +127,19 @@ export function PitchFeedbackComparison({ analyses }: PitchFeedbackComparisonPro
                 <div
                   key={analysis.id}
                   className={`flex items-center justify-between p-3 rounded-lg border-2 ${
-                    isLatest ? 'border-primary bg-primary/5' : 'border-slate-200 bg-white'
+                    isLatest ? 'border-primary bg-primary/5' : 'border-border bg-card'
                   }`}
                 >
                   <div className="flex items-center gap-3">
                     <div className={`p-2 rounded-lg ${
-                      isLatest ? 'bg-primary/10' : 'bg-slate-100'
+                      isLatest ? 'bg-primary/10' : 'bg-muted'
                     }`}>
                       <Calendar className={`h-4 w-4 ${
-                        isLatest ? 'text-primary' : 'text-slate-600'
+                        isLatest ? 'text-primary' : 'text-muted-foreground'
                       }`} />
                     </div>
                     <div>
-                      <p className="text-sm font-medium text-slate-900">
+                      <p className="text-sm font-medium text-foreground">
                         {analysis.type === 'video-pitch' && 'Video Pitch'}
                         {analysis.type === 'pitch-deck' && 'Pitch Deck'}
                         {analysis.type === 'pitch-idea' && 'Pitch Idea'}
@@ -180,7 +180,7 @@ export function PitchFeedbackComparison({ analyses }: PitchFeedbackComparisonPro
                   <div className="p-1 rounded-full bg-green-100 mt-0.5">
                     <TrendingUp className="h-3 w-3 text-green-600" />
                   </div>
-                  <span className="text-slate-700">{improvement}</span>
+                  <span className="text-foreground/85">{improvement}</span>
                 </li>
               ))}
             </ul>
@@ -188,8 +188,8 @@ export function PitchFeedbackComparison({ analyses }: PitchFeedbackComparisonPro
         )}
 
         {/* Summary */}
-        <div className="p-4 rounded-lg bg-slate-50 border">
-          <p className="text-sm text-slate-700">
+        <div className="p-4 rounded-lg bg-muted/50 border">
+          <p className="text-sm text-foreground/85">
             <span className="font-semibold">{feedbackComparison.totalImprovements}</span> total improvements in latest analysis
             {feedbackComparison.previousTotal > 0 && (
               <> (was {feedbackComparison.previousTotal} previously)</>

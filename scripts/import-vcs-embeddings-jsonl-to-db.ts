@@ -6,8 +6,8 @@
  *   npx tsx scripts/import-vcs-embeddings-jsonl-to-db.ts
  *
  * Optional env:
- *   VCS_EMBEDDINGS_JSONL — path to JSONL (default: ./vcs_embeddings.jsonl)
- *   VCS_METADATA_JSONL   — path to metadata JSONL (default: ./faiss-data/vcs_embedding_inputs_trimmed.json)
+ *   VCS_EMBEDDINGS_JSONL  -  path to JSONL (default: ./vcs_embeddings.jsonl)
+ *   VCS_METADATA_JSONL    -  path to metadata JSONL (default: ./faiss-data/vcs_embedding_inputs_trimmed.json)
  */
 
 import { createReadStream } from 'fs'

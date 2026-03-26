@@ -15,7 +15,7 @@ const siteUrl = getSiteUrl()
 
 const defaultMetadata = {
   title: BRAND_DEFAULT_TITLE,
-  description: 'AI-powered platform connecting founders with compatible VCs, angels, and mentors. Evidence-based matching by stage, sector, vision, and working style.',
+  description: 'Platform connecting founders with compatible VCs, angels, and mentors. Evidence-based matching by stage, sector, vision, and working style.',
   image: '/og-image.png',
   url: siteUrl,
 }
@@ -74,7 +74,7 @@ export function generateOrganizationSchema() {
     '@context': 'https://schema.org',
     '@type': 'Organization',
     name: BRAND_NAME,
-    description: 'AI-powered platform connecting founders with compatible VCs',
+    description: 'Platform connecting founders with compatible VCs',
     url: siteUrl,
     logo: `${siteUrl}/logo.png`,
     sameAs: [
@@ -89,7 +89,7 @@ export function generateWebsiteSchema() {
     '@type': 'WebSite',
     name: BRAND_NAME,
     url: siteUrl,
-    description: 'AI-powered platform connecting founders with compatible VCs',
+    description: 'Platform connecting founders with compatible VCs',
     potentialAction: {
       '@type': 'SearchAction',
       target: `${siteUrl}/search?q={search_term_string}`,

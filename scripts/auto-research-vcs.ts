@@ -9,7 +9,7 @@ import { db } from '../lib/db'
 import { searchVCInfo } from '../lib/web-search'
 import { openrouterGenerateJson } from '../lib/openrouter'
 
-interface VCResearchResult {
+export interface VCResearchResult {
   firmName: string
   checkSizeMin?: number
   checkSizeMax?: number
@@ -52,7 +52,7 @@ async function extractWithAI(firmName: string, rawContent: string): Promise<Part
       linkedinUrl: string | null
       applicationUrl: string | null
     }>({
-      system: `You extract structured VC/investor data from web search results. Return accurate JSON only — never fabricate data. If information is not found, use null for strings/numbers and empty arrays for lists.
+      system: `You extract structured VC/investor data from web search results. Return accurate JSON only; never fabricate data. If information is not found, use null for strings/numbers and empty arrays for lists.
 
 Fund types: "Micro VC", "Venture Capital", "Accelerator", "CVC", "Angel Group", "Family Office", "Growth Equity"
 Lead/follow: "lead", "follow", "either"
@@ -125,7 +125,7 @@ async function researchVC(firmName: string): Promise<VCResearchResult | null> {
 }
 
 /**
- * Update VC in database — only fills in missing fields, never overwrites
+ * Update VC in database  -  only fills in missing fields, never overwrites
  * existing good data with potentially worse AI-extracted data.
  */
 async function updateVCInDatabase(research: VCResearchResult): Promise<boolean> {
@@ -264,7 +264,7 @@ async function researchVCsBatch(
 }
 
 /**
- * Main function — can be called from CLI or scheduled
+ * Main function  -  can be called from CLI or scheduled
  */
 async function main() {
   const args = process.argv.slice(2)
@@ -277,7 +277,7 @@ async function main() {
     ]
     await researchVCsBatch(topVCs, { delayBetweenSearches: 2000, maxConcurrent: 2 })
   } else if (args[0] === '--all') {
-    console.log('⚠️ Researching ALL VCs — this will take hours!')
+    console.log('⚠️ Researching ALL VCs  -  this will take hours!')
     const allVCs = await db.investor.findMany({
       select: { firmName: true },
       orderBy: { updatedAt: 'asc' },

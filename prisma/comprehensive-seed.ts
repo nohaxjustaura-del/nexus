@@ -6549,7 +6549,7 @@ export const comprehensiveVCs = [
     leadFollow: 'lead',
     fundSize: '$500K-$3M+',
     fundType: 'institutional',
-    thesis: '"VC built like a tech company" — heavy ML + data platform to source & support founders. Very AI-native; good match if you lean into data + AI.',
+    thesis: '"VC built like a tech company": heavy ML + data platform to source & support founders. Strong fit if you lean into data and ML.',
     proofPoints: JSON.stringify({
       'General': ['ML/data platform', 'AI-native', 'Tech-forward VC', 'Data-driven sourcing']
     }),
@@ -6665,7 +6665,7 @@ export const comprehensiveVCs = [
     leadFollow: 'lead',
     fundSize: '$250K-$3M+',
     fundType: 'institutional',
-    thesis: 'Generalist early-stage firm with offices SF/Boston/NY; deployed $800M+ to date. Just launched a creator-focused fund as well — good fit if you combine product + audience.',
+    thesis: 'Generalist early-stage firm with offices SF/Boston/NY; deployed $800M+ to date. Just launched a creator-focused fund as well; good fit if you combine product + audience.',
     proofPoints: JSON.stringify({
       'General': ['$800M+ deployed', 'Generalist approach', 'Multi-office', 'Creator focus']
     }),
@@ -6840,7 +6840,7 @@ export const comprehensiveVCs = [
     leadFollow: 'lead',
     fundSize: '$250K-$1M',
     fundType: 'micro-VC',
-    thesis: 'Solo-GP fund backing "philomath" founders — people obsessively deep in their domain. Strong New York + East Coast network; good for software with real depth.',
+    thesis: 'Solo-GP fund backing "philomath" founders: people obsessively deep in their domain. Strong New York + East Coast network; good for software with real depth.',
     proofPoints: JSON.stringify({
       'General': ['Philomath founders', 'Domain depth', 'East Coast network', 'Solo GP']
     }),
@@ -7190,7 +7190,7 @@ export const comprehensiveVCs = [
     leadFollow: 'lead',
     fundSize: 'Multi-stage; often seed/Series A checks in the 6-7 figure range',
     fundType: 'CVC',
-    thesis: 'Strategically connected to DraftKings plus General Catalyst, Accomplice, Boston Seed — gives portfolio access to a strong sports/media network. Mix of financial + strategic LPs; good fit for B2C/B2B2C products in sports & entertainment.',
+    thesis: 'Strategically connected to DraftKings plus General Catalyst, Accomplice, Boston Seed, which gives portfolio access to a strong sports/media network. Mix of financial + strategic LPs; good fit for B2C/B2B2C products in sports & entertainment.',
     proofPoints: JSON.stringify({
       'General': ['DraftKings connection', 'General Catalyst ties', 'Sports/media network', 'Strategic LPs']
     }),

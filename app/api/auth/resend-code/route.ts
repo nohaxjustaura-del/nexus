@@ -2,7 +2,11 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseAuthRouteClient } from '@/lib/supabase/route-handler'
 import { createSupabaseAdminClient } from '@/lib/supabase/admin'
 import { getSiteUrl } from '@/lib/site-url'
-import { sendMagicLinkEmail } from '@/lib/email'
+import {
+  RESEND_DEV_CONSOLE_FALLBACK_HINT,
+  RESEND_TESTING_MODE_PUBLIC_MESSAGE,
+  sendMagicLinkEmail,
+} from '@/lib/email'
 import { db } from '@/lib/db'
 
 export const dynamic = 'force-dynamic'
@@ -66,6 +70,15 @@ export async function POST(request: NextRequest) {
     })
 
     if (!emailResult.success) {
+      if (emailResult.resendTestingRecipientOnly) {
+        return NextResponse.json(
+          {
+            error: RESEND_TESTING_MODE_PUBLIC_MESSAGE,
+            code: 'RESEND_TESTING_RECIPIENT',
+          },
+          { status: 503 }
+        )
+      }
       console.error('Resend-code email send failed:', emailResult.error)
       return NextResponse.json(
         { error: 'Failed to send email. Please try again.' },
@@ -77,7 +90,10 @@ export async function POST(request: NextRequest) {
 
     const res = NextResponse.json({
       success: true,
-      message: 'New sign-in email sent. Check your inbox for a link or 6-digit code.',
+      message: emailResult.devConsoleFallback
+        ? RESEND_DEV_CONSOLE_FALLBACK_HINT
+        : 'New sign-in email sent. Check your inbox for a link or 6-digit code.',
+      ...(emailResult.devConsoleFallback ? { devConsoleFallback: true } : {}),
     })
     applyAuthCookies(res)
     return res

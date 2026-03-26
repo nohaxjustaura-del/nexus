@@ -33,13 +33,13 @@ export function MobileNav({ links }: MobileNavProps) {
       {isOpen && (
         <>
           <div 
-            className="fixed inset-0 bg-black/20 backdrop-blur-sm z-40"
+            className="fixed inset-0 bg-background/70 backdrop-blur-sm z-40"
             onClick={() => setIsOpen(false)}
             aria-hidden="true"
           />
           <nav 
             className={cn(
-              "fixed top-16 right-0 left-0 bg-white border-b border-slate-200 shadow-lg z-50 animate-slide-down",
+              "fixed top-16 right-0 left-0 bg-card/95 border-b border-border/60 backdrop-blur-xl z-50 animate-slide-down shadow-none",
               "max-h-[calc(100vh-4rem)] overflow-y-auto"
             )}
             role="navigation"
@@ -50,7 +50,7 @@ export function MobileNav({ links }: MobileNavProps) {
                 <Link
                   key={link.href}
                   href={link.href}
-                  className="text-slate-700 hover:text-primary transition-colors font-medium py-2 px-4 rounded-lg hover:bg-slate-50"
+                  className="text-muted-foreground hover:text-foreground transition-colors font-medium py-2 px-4 rounded-lg hover:bg-muted/50"
                   onClick={() => setIsOpen(false)}
                 >
                   {link.label}

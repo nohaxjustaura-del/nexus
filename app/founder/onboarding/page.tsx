@@ -261,10 +261,10 @@ export default function OnboardingPage() {
   const displayStep = step >= 5 ? 4 : step === 4 ? 4 : step
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50/30">
+    <div className="min-h-screen bg-gradient-to-br from-muted/50 via-background to-primary/5">
       <div className="container mx-auto max-w-3xl px-4 py-12">
         <div className="flex items-center justify-between mb-6">
-          <h1 className="text-2xl font-bold text-slate-900">Founder Onboarding</h1>
+          <h1 className="text-2xl font-bold text-foreground">Founder Onboarding</h1>
           <div className="flex items-center gap-4">
             <button
               className="text-sm underline underline-offset-4 hover:text-primary transition-colors"

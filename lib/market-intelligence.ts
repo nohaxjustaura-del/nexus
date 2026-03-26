@@ -6,10 +6,10 @@
  * Uses Exa Deep Search to build real-time market context around a founder's idea.
  * Four parallel searches paint a complete competitive picture:
  *
- *   1. SATURATION  — Who else is funded in this space right now?
- *   2. CATALYSTS   — What macro shifts (regulation, tech breakthroughs) could help or hurt?
- *   3. GRAVEYARD   — What already failed here, and why?
- *   4. INCUMBENTS  — Which established giants already own the customer relationship?
+ *   1. SATURATION: who else is funded in this space right now?
+ *   2. CATALYSTS: what macro shifts (regulation, tech breakthroughs) could help or hurt?
+ *   3. GRAVEYARD: what already failed here, and why?
+ *   4. INCUMBENTS: which established giants already own the customer relationship?
  *
  * The output is a structured text dossier consumed by the scoring LLM so it can
  * ground its analysis in real market data rather than training-set knowledge.
@@ -170,7 +170,7 @@ export async function getDeepMarketContext(
   }
 
   logger.log(
-    `[MARKET-INTEL] Results — saturation: ${saturation.length}, catalysts: ${catalysts.length}, graveyard: ${graveyard.length}, incumbents: ${incumbents.length}`,
+    `[MARKET-INTEL] Results: saturation ${saturation.length}, catalysts ${catalysts.length}, graveyard ${graveyard.length}, incumbents ${incumbents.length}`,
   )
 
   const dossier = [
@@ -180,22 +180,22 @@ export async function getDeepMarketContext(
     buildSection(
       "SATURATION (recently funded competitors):",
       saturation,
-      "No recent Seed/Series A rounds found in this space — may indicate a white-space opportunity or nascent market.",
+      "No recent Seed/Series A rounds found in this space. That may indicate a white-space opportunity or a nascent market.",
     ),
     buildSection(
       "INCUMBENTS (established market leaders & Goliaths):",
       incumbents,
-      "No dominant incumbents identified — the space may lack a clear market leader.",
+      "No dominant incumbents identified. The space may lack a clear market leader.",
     ),
     buildSection(
       "CATALYSTS (macro tailwinds & headwinds):",
       catalysts,
-      "No recent regulatory or technology shifts found — market conditions appear stable.",
+      "No recent regulatory or technology shifts found. Market conditions appear stable.",
     ),
     buildSection(
       "GRAVEYARD (failed predecessors & lessons):",
       graveyard,
-      "No notable failures found in this space — either under-explored or well-established market.",
+      "No notable failures found in this space: either under-explored or a well-established market.",
     ),
   ].join("\n")
 

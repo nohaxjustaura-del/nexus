@@ -130,7 +130,7 @@ export default function TrainingDataPage() {
   }
 
   const formatFileSize = (bytes: number | null) => {
-    if (!bytes) return '—'
+    if (!bytes) return '-'
     if (bytes < 1024) return `${bytes} B`
     if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
@@ -147,14 +147,14 @@ export default function TrainingDataPage() {
   }
 
   const truncateText = (text: string | null, maxLen = 120) => {
-    if (!text) return '—'
+    if (!text) return '-'
     return text.length > maxLen ? text.substring(0, maxLen) + '...' : text
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-muted/50">
       {/* Header */}
-      <header className="sticky top-0 z-50 border-b bg-white/95 backdrop-blur">
+      <header className="sticky top-0 z-50 border-b bg-card/95 backdrop-blur">
         <div className="container mx-auto flex h-16 items-center justify-between px-4">
           <div className="flex items-center gap-4">
             <Link href="/admin/dashboard">
@@ -165,7 +165,7 @@ export default function TrainingDataPage() {
             </Link>
             <div className="flex items-center gap-2">
               <Database className="h-5 w-5 text-blue-600" />
-              <h1 className="text-xl font-bold text-slate-900">Training Data</h1>
+              <h1 className="text-xl font-bold text-foreground">Training Data</h1>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -206,14 +206,14 @@ export default function TrainingDataPage() {
           <CardContent className="py-4">
             <div className="flex flex-wrap items-end gap-4">
               <div>
-                <label className="block text-xs font-medium text-slate-600 mb-1">
+                <label className="block text-xs font-medium text-muted-foreground mb-1">
                   <Filter className="inline h-3 w-3 mr-1" />
                   Type
                 </label>
                 <select
                   value={typeFilter}
                   onChange={e => setTypeFilter(e.target.value)}
-                  className="rounded-md border border-slate-300 px-3 py-2 text-sm bg-white"
+                  className="rounded-md border border-border px-3 py-2 text-sm bg-card"
                 >
                   <option value="all">All Types</option>
                   <option value="video">Video Pitches</option>
@@ -223,7 +223,7 @@ export default function TrainingDataPage() {
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-medium text-slate-600 mb-1">
+                <label className="block text-xs font-medium text-muted-foreground mb-1">
                   <Calendar className="inline h-3 w-3 mr-1" />
                   Since
                 </label>
@@ -231,7 +231,7 @@ export default function TrainingDataPage() {
                   type="date"
                   value={sinceFilter}
                   onChange={e => setSinceFilter(e.target.value)}
-                  className="rounded-md border border-slate-300 px-3 py-2 text-sm bg-white"
+                  className="rounded-md border border-border px-3 py-2 text-sm bg-card"
                 />
               </div>
               <Button size="sm" onClick={handleApplyFilters} disabled={loading}>
@@ -258,7 +258,7 @@ export default function TrainingDataPage() {
         {loading && (
           <div className="flex items-center justify-center py-20">
             <RefreshCw className="h-8 w-8 animate-spin text-blue-600" />
-            <span className="ml-3 text-slate-600">Loading training data...</span>
+            <span className="ml-3 text-muted-foreground">Loading training data...</span>
           </div>
         )}
 
@@ -270,8 +270,8 @@ export default function TrainingDataPage() {
                 <CardContent className="pt-6">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-2xl font-bold text-slate-900">{data.counts.total}</p>
-                      <p className="text-sm text-slate-600">Total Records</p>
+                      <p className="text-2xl font-bold text-foreground">{data.counts.total}</p>
+                      <p className="text-sm text-muted-foreground">Total Records</p>
                     </div>
                     <Database className="h-8 w-8 text-blue-600 opacity-60" />
                   </div>
@@ -282,7 +282,7 @@ export default function TrainingDataPage() {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-2xl font-bold text-purple-700">{data.counts.videoPitches}</p>
-                      <p className="text-sm text-slate-600">Video Pitches</p>
+                      <p className="text-sm text-muted-foreground">Video Pitches</p>
                     </div>
                     <Video className="h-8 w-8 text-purple-600 opacity-60" />
                   </div>
@@ -293,7 +293,7 @@ export default function TrainingDataPage() {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-2xl font-bold text-green-700">{data.counts.pitchDecks}</p>
-                      <p className="text-sm text-slate-600">Pitch Decks</p>
+                      <p className="text-sm text-muted-foreground">Pitch Decks</p>
                     </div>
                     <FileText className="h-8 w-8 text-green-600 opacity-60" />
                   </div>
@@ -304,7 +304,7 @@ export default function TrainingDataPage() {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-2xl font-bold text-amber-700">{data.counts.pitchIdeas}</p>
-                      <p className="text-sm text-slate-600">Pitch Ideas</p>
+                      <p className="text-sm text-muted-foreground">Pitch Ideas</p>
                     </div>
                     <Lightbulb className="h-8 w-8 text-amber-600 opacity-60" />
                   </div>
@@ -315,7 +315,7 @@ export default function TrainingDataPage() {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-2xl font-bold text-rose-700">{data.counts.voiceRecordings || 0}</p>
-                      <p className="text-sm text-slate-600">Voice Recordings</p>
+                      <p className="text-sm text-muted-foreground">Voice Recordings</p>
                     </div>
                     <Mic className="h-8 w-8 text-rose-600 opacity-60" />
                   </div>
@@ -334,7 +334,7 @@ export default function TrainingDataPage() {
             {data.videoPitches.length > 0 && (
               <Card className="mb-6">
                 <CardHeader
-                  className="cursor-pointer hover:bg-slate-50 transition-colors"
+                  className="cursor-pointer hover:bg-muted/50 transition-colors"
                   onClick={() => toggleSection('videoPitches')}
                 >
                   <div className="flex items-center justify-between">
@@ -357,12 +357,12 @@ export default function TrainingDataPage() {
                       {data.videoPitches.map((vp: any) => (
                         <div
                           key={vp.id}
-                          className="border rounded-lg p-4 hover:bg-slate-50 transition-colors"
+                          className="border rounded-lg p-4 hover:bg-muted/50 transition-colors"
                         >
                           <div className="flex items-start justify-between gap-4">
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2 mb-1">
-                                <span className="font-medium text-sm text-slate-900">{vp.fileName}</span>
+                                <span className="font-medium text-sm text-foreground">{vp.fileName}</span>
                                 <Badge variant="outline" className="text-xs">{vp.fileType || 'mp4'}</Badge>
                                 <span className="text-xs text-slate-500">{formatFileSize(vp.fileSize)}</span>
                               </div>
@@ -385,7 +385,7 @@ export default function TrainingDataPage() {
                                 )}
                               </div>
                               {vp.transcriptText && (
-                                <p className="mt-2 text-xs text-slate-600 bg-slate-100 rounded p-2">
+                                <p className="mt-2 text-xs text-muted-foreground bg-muted rounded p-2">
                                   {expandedRows.has(vp.id)
                                     ? vp.transcriptText
                                     : truncateText(vp.transcriptText, 200)}
@@ -405,16 +405,16 @@ export default function TrainingDataPage() {
                             <div className="mt-3 pt-3 border-t space-y-3">
                               {vp.founderSnapshot && (
                                 <div>
-                                  <h4 className="text-xs font-semibold text-slate-700 mb-1">Founder Snapshot</h4>
-                                  <pre className="text-xs bg-slate-100 rounded p-2 overflow-x-auto max-h-40">
+                                  <h4 className="text-xs font-semibold text-foreground/85 mb-1">Founder Snapshot</h4>
+                                  <pre className="text-xs bg-muted rounded p-2 overflow-x-auto max-h-40">
                                     {JSON.stringify(vp.founderSnapshot, null, 2)}
                                   </pre>
                                 </div>
                               )}
                               {vp.analysisResult && (
                                 <div>
-                                  <h4 className="text-xs font-semibold text-slate-700 mb-1">Analysis Result</h4>
-                                  <pre className="text-xs bg-slate-100 rounded p-2 overflow-x-auto max-h-40">
+                                  <h4 className="text-xs font-semibold text-foreground/85 mb-1">Analysis Result</h4>
+                                  <pre className="text-xs bg-muted rounded p-2 overflow-x-auto max-h-40">
                                     {JSON.stringify(vp.analysisResult, null, 2).substring(0, 2000)}
                                     {JSON.stringify(vp.analysisResult).length > 2000 && '\n... (truncated)'}
                                   </pre>
@@ -434,7 +434,7 @@ export default function TrainingDataPage() {
             {data.pitchDecks.length > 0 && (
               <Card className="mb-6">
                 <CardHeader
-                  className="cursor-pointer hover:bg-slate-50 transition-colors"
+                  className="cursor-pointer hover:bg-muted/50 transition-colors"
                   onClick={() => toggleSection('pitchDecks')}
                 >
                   <div className="flex items-center justify-between">
@@ -457,12 +457,12 @@ export default function TrainingDataPage() {
                       {data.pitchDecks.map((pd: any) => (
                         <div
                           key={pd.id}
-                          className="border rounded-lg p-4 hover:bg-slate-50 transition-colors"
+                          className="border rounded-lg p-4 hover:bg-muted/50 transition-colors"
                         >
                           <div className="flex items-start justify-between gap-4">
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2 mb-1">
-                                <span className="font-medium text-sm text-slate-900">{pd.fileName}</span>
+                                <span className="font-medium text-sm text-foreground">{pd.fileName}</span>
                                 <Badge variant="outline" className="text-xs">{pd.fileType || 'pdf'}</Badge>
                                 <span className="text-xs text-slate-500">{formatFileSize(pd.fileSize)}</span>
                                 {pd.overallScore != null && (
@@ -490,7 +490,7 @@ export default function TrainingDataPage() {
                                 )}
                               </div>
                               {pd.extractedText && (
-                                <p className="mt-2 text-xs text-slate-600 bg-slate-100 rounded p-2">
+                                <p className="mt-2 text-xs text-muted-foreground bg-muted rounded p-2">
                                   {expandedRows.has(pd.id)
                                     ? pd.extractedText
                                     : truncateText(pd.extractedText, 200)}
@@ -510,16 +510,16 @@ export default function TrainingDataPage() {
                             <div className="mt-3 pt-3 border-t space-y-3">
                               {pd.founderSnapshot && (
                                 <div>
-                                  <h4 className="text-xs font-semibold text-slate-700 mb-1">Founder Snapshot</h4>
-                                  <pre className="text-xs bg-slate-100 rounded p-2 overflow-x-auto max-h-40">
+                                  <h4 className="text-xs font-semibold text-foreground/85 mb-1">Founder Snapshot</h4>
+                                  <pre className="text-xs bg-muted rounded p-2 overflow-x-auto max-h-40">
                                     {JSON.stringify(pd.founderSnapshot, null, 2)}
                                   </pre>
                                 </div>
                               )}
                               {pd.analysisResult && (
                                 <div>
-                                  <h4 className="text-xs font-semibold text-slate-700 mb-1">Analysis Result</h4>
-                                  <pre className="text-xs bg-slate-100 rounded p-2 overflow-x-auto max-h-40">
+                                  <h4 className="text-xs font-semibold text-foreground/85 mb-1">Analysis Result</h4>
+                                  <pre className="text-xs bg-muted rounded p-2 overflow-x-auto max-h-40">
                                     {JSON.stringify(pd.analysisResult, null, 2).substring(0, 2000)}
                                     {JSON.stringify(pd.analysisResult).length > 2000 && '\n... (truncated)'}
                                   </pre>
@@ -539,7 +539,7 @@ export default function TrainingDataPage() {
             {data.pitchIdeas.length > 0 && (
               <Card className="mb-6">
                 <CardHeader
-                  className="cursor-pointer hover:bg-slate-50 transition-colors"
+                  className="cursor-pointer hover:bg-muted/50 transition-colors"
                   onClick={() => toggleSection('pitchIdeas')}
                 >
                   <div className="flex items-center justify-between">
@@ -562,12 +562,12 @@ export default function TrainingDataPage() {
                       {data.pitchIdeas.map((pi: any) => (
                         <div
                           key={pi.id}
-                          className="border rounded-lg p-4 hover:bg-slate-50 transition-colors"
+                          className="border rounded-lg p-4 hover:bg-muted/50 transition-colors"
                         >
                           <div className="flex items-start justify-between gap-4">
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2 mb-1">
-                                <span className="font-medium text-sm text-slate-900">
+                                <span className="font-medium text-sm text-foreground">
                                   Pitch Idea
                                 </span>
                                 <span className="text-xs text-slate-500">
@@ -587,7 +587,7 @@ export default function TrainingDataPage() {
                                 )}
                               </div>
                               {pi.ideaText && (
-                                <p className="mt-2 text-xs text-slate-600 bg-slate-100 rounded p-2">
+                                <p className="mt-2 text-xs text-muted-foreground bg-muted rounded p-2">
                                   {expandedRows.has(pi.id)
                                     ? pi.ideaText
                                     : truncateText(pi.ideaText, 200)}
@@ -607,16 +607,16 @@ export default function TrainingDataPage() {
                             <div className="mt-3 pt-3 border-t space-y-3">
                               {pi.founderSnapshot && (
                                 <div>
-                                  <h4 className="text-xs font-semibold text-slate-700 mb-1">Founder Snapshot</h4>
-                                  <pre className="text-xs bg-slate-100 rounded p-2 overflow-x-auto max-h-40">
+                                  <h4 className="text-xs font-semibold text-foreground/85 mb-1">Founder Snapshot</h4>
+                                  <pre className="text-xs bg-muted rounded p-2 overflow-x-auto max-h-40">
                                     {JSON.stringify(pi.founderSnapshot, null, 2)}
                                   </pre>
                                 </div>
                               )}
                               {pi.analysisResult && (
                                 <div>
-                                  <h4 className="text-xs font-semibold text-slate-700 mb-1">Analysis Result</h4>
-                                  <pre className="text-xs bg-slate-100 rounded p-2 overflow-x-auto max-h-40">
+                                  <h4 className="text-xs font-semibold text-foreground/85 mb-1">Analysis Result</h4>
+                                  <pre className="text-xs bg-muted rounded p-2 overflow-x-auto max-h-40">
                                     {JSON.stringify(pi.analysisResult, null, 2).substring(0, 2000)}
                                     {JSON.stringify(pi.analysisResult).length > 2000 && '\n... (truncated)'}
                                   </pre>
@@ -636,7 +636,7 @@ export default function TrainingDataPage() {
             {data.voiceRecordings && data.voiceRecordings.length > 0 && (
               <Card className="mb-6">
                 <CardHeader
-                  className="cursor-pointer hover:bg-slate-50 transition-colors"
+                  className="cursor-pointer hover:bg-muted/50 transition-colors"
                   onClick={() => toggleSection('voiceRecordings')}
                 >
                   <div className="flex items-center justify-between">
@@ -659,12 +659,12 @@ export default function TrainingDataPage() {
                       {data.voiceRecordings.map((vr: any) => (
                         <div
                           key={vr.id}
-                          className="border rounded-lg p-4 hover:bg-slate-50 transition-colors"
+                          className="border rounded-lg p-4 hover:bg-muted/50 transition-colors"
                         >
                           <div className="flex items-start justify-between gap-4">
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2 mb-1">
-                                <span className="font-medium text-sm text-slate-900">{vr.fileName}</span>
+                                <span className="font-medium text-sm text-foreground">{vr.fileName}</span>
                                 <Badge variant="outline" className="text-xs">{vr.fileType || 'audio'}</Badge>
                                 <span className="text-xs text-slate-500">{formatFileSize(vr.fileSize)}</span>
                                 {vr.durationSeconds && (
@@ -694,13 +694,13 @@ export default function TrainingDataPage() {
                                   </span>
                                 )}
                                 {vr.pitchIdeaAnalysisId && (
-                                  <Badge variant="outline" className="text-xs bg-amber-50">
+                                  <Badge variant="outline" className="text-xs bg-amber-500/10">
                                     Linked to Pitch Idea
                                   </Badge>
                                 )}
                               </div>
                               {vr.transcript && (
-                                <p className="mt-2 text-xs text-slate-600 bg-slate-100 rounded p-2">
+                                <p className="mt-2 text-xs text-muted-foreground bg-muted rounded p-2">
                                   {expandedRows.has(vr.id)
                                     ? vr.transcript
                                     : truncateText(vr.transcript, 200)}
@@ -720,8 +720,8 @@ export default function TrainingDataPage() {
                             <div className="mt-3 pt-3 border-t space-y-3">
                               {vr.founderSnapshot && (
                                 <div>
-                                  <h4 className="text-xs font-semibold text-slate-700 mb-1">Founder Snapshot</h4>
-                                  <pre className="text-xs bg-slate-100 rounded p-2 overflow-x-auto max-h-40">
+                                  <h4 className="text-xs font-semibold text-foreground/85 mb-1">Founder Snapshot</h4>
+                                  <pre className="text-xs bg-muted rounded p-2 overflow-x-auto max-h-40">
                                     {JSON.stringify(vr.founderSnapshot, null, 2)}
                                   </pre>
                                 </div>
@@ -741,7 +741,7 @@ export default function TrainingDataPage() {
               <Card>
                 <CardContent className="py-16 text-center">
                   <Database className="h-12 w-12 text-slate-300 mx-auto mb-4" />
-                  <h3 className="text-lg font-semibold text-slate-700 mb-2">No Training Data Yet</h3>
+                  <h3 className="text-lg font-semibold text-foreground/85 mb-2">No Training Data Yet</h3>
                   <p className="text-sm text-slate-500 max-w-md mx-auto">
                     Training data will appear here after users submit video pitches, pitch decks,
                     text pitch ideas, or voice recordings through the analysis pages.

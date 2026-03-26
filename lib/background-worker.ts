@@ -1,17 +1,17 @@
 /**
  * ===============================================================================
- * BACKGROUND WORKER SYSTEM v2 — Streamlined & Integrated with Exa Enrichment
+ * BACKGROUND WORKER SYSTEM v2  -  Streamlined & Integrated with Exa Enrichment
  * ===============================================================================
  *
  * Jobs:
- *  1. VC Research     (24h) — Web search + AI extraction to fill missing fields
- *  2. Exa Enrichment  (24h) — Pre-warm VCEnrichmentCache via Exa for top VCs
- *  3. Embeddings      (24h) — Regenerate Voyage AI embeddings + FAISS index
- *  4. Data Validation  (12h) — Check data quality, flag gaps, report stats
+ *  1. VC Research     (24h)  -  Web search + AI extraction to fill missing fields
+ *  2. Exa Enrichment  (24h)  -  Pre-warm VCEnrichmentCache via Exa for top VCs
+ *  3. Embeddings      (24h)  -  Regenerate Voyage AI embeddings + FAISS index
+ *  4. Data Validation  (12h)  -  Check data quality, flag gaps, report stats
  *
  * Removed:
- *  - YC Trends (separate job) — YC is just another VC; the research job covers it
- *  - Market Trends — was generating analysis and discarding it; replaced by
+ *  - YC Trends (separate job)  -  YC is just another VC; the research job covers it
+ *  - Market Trends  -  was generating analysis and discarding it; replaced by
  *    live Exa enrichment which actually stores and uses its output
  */
 
@@ -103,7 +103,7 @@ let scheduledJobs: Map<string, NodeJS.Timeout> = new Map()
 // ============================================================================
 
 /**
- * Research and update VC data — fills ALL missing fields via web search + AI.
+ * Research and update VC data  -  fills ALL missing fields via web search + AI.
  * Targets VCs that are stale (>30 days), missing thesis, or have 0 check sizes.
  */
 async function executeVCResearch(): Promise<void> {
@@ -282,7 +282,7 @@ async function executeDataValidation(): Promise<void> {
     })
     const totalVCs = await db.investor.count()
     if (defaultFundType > totalVCs * 0.8) {
-      issues.push(`${defaultFundType}/${totalVCs} VCs still have default fund type — likely unclassified`)
+      issues.push(`${defaultFundType}/${totalVCs} VCs still have default fund type  -  likely unclassified`)
     }
 
     // 7. VCs with missing or empty embeddings
@@ -295,13 +295,13 @@ async function executeDataValidation(): Promise<void> {
     const noStages = await db.investor.count({
       where: { stages: '[]' },
     })
-    if (noStages > 0) issues.push(`${noStages} VCs with empty stages array — hard filter will skip them`)
+    if (noStages > 0) issues.push(`${noStages} VCs with empty stages array  -  hard filter will skip them`)
 
     // Report
     if (issues.length > 0) {
       logger.warn('WORKER', `⚠️ Data quality issues (${issues.length}):\n  - ${issues.join('\n  - ')}`)
     } else {
-      logger.info('WORKER', '✅ Data validation passed — no issues found')
+      logger.info('WORKER', '✅ Data validation passed  -  no issues found')
     }
 
     logger.info('WORKER', '✅ Data validation complete')
@@ -383,7 +383,7 @@ async function startAllJobsImmediate(): Promise<void> {
   const sortedJobs = [...workerConfig.jobs].sort((a, b) => b.priority - a.priority)
 
   for (const job of sortedJobs) {
-    // Embeddings rebuild takes hours at 3 RPM — only run on the 24h schedule,
+    // Embeddings rebuild takes hours at 3 RPM  -  only run on the 24h schedule,
     // not on every worker startup. Use `npm run rebuild-faiss-index` for manual runs.
     if (job.type === 'embeddings') {
       logger.info('WORKER', `⏭️ Skipping ${job.name} on startup (runs on 24h schedule only)`)

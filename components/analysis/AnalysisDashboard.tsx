@@ -31,7 +31,7 @@ const CATEGORIES: CategoryMeta[] = [
   { key: 'moat',       label: 'Moat Integrity',     weight: '25%', icon: Shield,       liveVerified: true },
   { key: 'founderFit', label: 'Founder-Market Fit',  weight: '20%', icon: UserCheck,    liveVerified: false },
   { key: 'momentum',   label: 'Strategic Momentum',  weight: '25%', icon: Rocket,       liveVerified: false },
-  { key: 'execution',  label: 'Execution',           weight: '—',   icon: Presentation, liveVerified: false },
+  { key: 'execution',  label: 'Execution',           weight: '-',   icon: Presentation, liveVerified: false },
 ]
 
 // ---------------------------------------------------------------------------
@@ -74,7 +74,7 @@ const TIER_TEXT_CLASS: Record<Tier, string> = {
 
 function LiveVerifiedBadge() {
   return (
-    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
+    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-emerald-400 dark:text-emerald-400">
       <span className="relative flex h-1.5 w-1.5">
         <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
         <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500" />

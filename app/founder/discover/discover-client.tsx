@@ -61,11 +61,11 @@ export default function DiscoverClient({ investors, profileComplete }: DiscoverC
     return (
       <>
         <div className="mb-6">
-          <div className="h-12 bg-slate-100 rounded-md animate-pulse" />
+          <div className="h-12 bg-muted rounded-md animate-pulse" />
         </div>
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {[...Array(8)].map((_, i) => (
-            <div key={i} className="h-64 bg-slate-100 rounded-lg animate-pulse" />
+            <div key={i} className="h-64 bg-muted rounded-lg animate-pulse" />
           ))}
         </div>
       </>
@@ -79,19 +79,17 @@ export default function DiscoverClient({ investors, profileComplete }: DiscoverC
         <VCSearchSimple />
         
         {/* Smart Match CTA */}
-        <div className="flex items-center justify-center gap-4 p-4 bg-gradient-to-r from-purple-50 to-pink-50 border-2 border-purple-200 rounded-lg">
-          <div className="flex-1">
-            <p className="text-sm font-semibold text-slate-900">
-              Want AI to find your best matches?
-            </p>
-            <p className="text-xs text-slate-600">
+        <div className="flex flex-col gap-4 rounded-2xl border border-border/35 bg-gradient-to-r from-primary/10 via-card/60 to-purple-500/10 p-5 backdrop-blur-sm sm:flex-row sm:items-center sm:justify-between sm:gap-6">
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-semibold text-foreground">Want better-ranked matches?</p>
+            <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
               Analyze your pitch first, then use Smart Match to rank all 1,002 investors by fit
             </p>
           </div>
-          <Link href="/founder/pitch-deck-analysis">
-            <Button className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700">
+          <Link href="/founder/pitch-deck-analysis" className="shrink-0">
+            <Button className="w-full rounded-full sm:w-auto">
               <Sparkles className="mr-2 h-4 w-4" />
-              Get Started
+              Get started
             </Button>
           </Link>
         </div>
@@ -116,7 +114,7 @@ export default function DiscoverClient({ investors, profileComplete }: DiscoverC
           }}
         />
       ) : (
-        <div className="text-center py-12 text-slate-600">
+        <div className="text-center py-12 text-muted-foreground">
           <p>No investors found. Try adjusting your filters.</p>
         </div>
       )}

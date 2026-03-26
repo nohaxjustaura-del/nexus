@@ -1047,7 +1047,7 @@ Format as valid JSON.`
       // Return fallback - NEVER throw error
       return {
         strengths: ['Video pitch completed successfully'],
-        weaknesses: ['AI analysis unavailable - please try again'],
+        weaknesses: ['Analysis unavailable - please try again'],
         improvements: [
           'Speak clearly about your problem and solution',
           'Share specific metrics (revenue, users, growth)',

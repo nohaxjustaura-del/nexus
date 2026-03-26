@@ -26,17 +26,17 @@ export default function Error({
     <div className="flex min-h-[calc(100vh-12rem)] flex-col items-center justify-center px-4 text-center">
       <AlertTriangle className="h-20 w-20 text-destructive mb-6 animate-bounce" />
       
-      <h1 className="text-4xl md:text-5xl font-bold text-slate-900 mb-4">
+      <h1 className="text-4xl md:text-5xl font-bold text-foreground mb-4">
         Something Went Wrong
       </h1>
       
-      <p className="text-lg text-slate-600 max-w-md mx-auto mb-8">
+      <p className="text-lg text-muted-foreground max-w-md mx-auto mb-8">
         We encountered an unexpected error. Don't worry, our team has been notified and we're working on it.
       </p>
 
       {process.env.NODE_ENV === 'development' && (
-        <div className="mb-8 p-4 bg-slate-100 rounded-lg text-left overflow-auto max-w-2xl w-full">
-          <p className="text-sm font-mono text-slate-700 break-words">
+        <div className="mb-8 p-4 bg-muted rounded-lg text-left overflow-auto max-w-2xl w-full">
+          <p className="text-sm font-mono text-foreground/85 break-words">
             {error.message}
           </p>
         </div>

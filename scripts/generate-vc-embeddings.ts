@@ -1,6 +1,6 @@
 /**
  * Generate and store embeddings for all VCs in the database
- * Uses Voyage AI (voyage-3) — 1024 dimensions
+ * Uses Voyage AI (voyage-3)  -  1024 dimensions
  * Run this script to pre-compute VC embeddings for fast Smart Match
  * 
  * Usage: npm run generate-vc-embeddings
@@ -99,7 +99,7 @@ async function main() {
       apiCalls++
     }
 
-    // Rate limiting OUTSIDE try/catch — applies after every API call (success or error)
+    // Rate limiting OUTSIDE try/catch  -  applies after every API call (success or error)
     if (apiCalls > 0 && apiCalls % 3 === 0) {
       console.log(`⏳ Rate-limit pause (60s) after ${apiCalls} API calls...`)
       await new Promise(resolve => setTimeout(resolve, 60_000))

@@ -77,7 +77,7 @@ async function main() {
       apiCalls++
     }
 
-    // Rate limiting OUTSIDE try/catch — applies after every API call
+    // Rate limiting OUTSIDE try/catch  -  applies after every API call
     if (apiCalls > 0 && apiCalls % 3 === 0) {
       console.log(`⏳ Rate-limit pause (60s) after ${apiCalls} API calls...`)
       await new Promise(resolve => setTimeout(resolve, 60_000))

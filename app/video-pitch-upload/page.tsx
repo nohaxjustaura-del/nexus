@@ -166,7 +166,7 @@ export default function VideoPitchUploadPage() {
             Upload Your Video Pitch
           </h1>
           <p className="mx-auto max-w-2xl text-lg text-muted-foreground">
-            Get AI-powered feedback on your pitch delivery, content quality, and personalized VC recommendations with application strategies.
+            Get feedback on your pitch delivery, content quality, and personalized VC recommendations with application strategies.
           </p>
         </div>
 
@@ -340,7 +340,7 @@ export default function VideoPitchUploadPage() {
               <ul className="space-y-3 text-sm text-muted-foreground">
                 <li className="flex items-start gap-2">
                   <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-                  <span>Your video will be transcribed and analyzed by AI</span>
+                  <span>Your video will be transcribed and reviewed in depth</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
@@ -363,7 +363,7 @@ export default function VideoPitchUploadPage() {
 
             {/* Tips Section */}
             <div className="rounded-lg border border-blue-500/30 bg-blue-500/10 p-6">
-              <h3 className="mb-4 font-semibold flex items-center gap-2 text-blue-700 dark:text-blue-400">
+              <h3 className="mb-4 font-semibold flex items-center gap-2 text-primary dark:text-blue-400">
                 <Zap className="h-4 w-4" />
                 Tips for Best Results
               </h3>

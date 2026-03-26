@@ -76,6 +76,9 @@ export default function SignUpPage() {
       const resolvedEmail = (data.email || trimmedEmail).toLowerCase().trim()
       try {
         sessionStorage.setItem(CLIENT_STORAGE.PENDING_VERIFY_EMAIL, resolvedEmail)
+        if (data.devConsoleFallback) {
+          sessionStorage.setItem(CLIENT_STORAGE.DEV_CONSOLE_MAGIC_LINK, '1')
+        }
       } catch {
         /* ignore */
       }
@@ -96,12 +99,12 @@ export default function SignUpPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-white via-primary/5 to-purple-50/40 p-4 relative overflow-hidden">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-primary/5 to-background p-4 relative overflow-hidden">
       {/* Background decorations */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-primary/5 rounded-full blur-3xl -z-10" />
       <div className="absolute bottom-0 right-0 w-[400px] h-[400px] bg-purple-500/5 rounded-full blur-3xl -z-10" />
       
-      <Card className="w-full max-w-md border-2 border-slate-200 shadow-2xl bg-white/95 backdrop-blur-sm">
+      <Card className="w-full max-w-md border-2 border-border shadow-2xl bg-card/95 backdrop-blur-sm">
         <CardHeader className="space-y-1 text-center pb-6">
           <div className="mx-auto w-16 h-16 bg-gradient-to-br from-primary via-blue-600 to-purple-600 rounded-2xl flex items-center justify-center mb-4 shadow-lg">
             <Mail className="w-8 h-8 text-white" />
@@ -114,7 +117,7 @@ export default function SignUpPage() {
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <label htmlFor="email" className="text-sm font-semibold text-slate-700">
+              <label htmlFor="email" className="text-sm font-semibold text-foreground/85">
                 Email Address
               </label>
               <Input
@@ -134,13 +137,13 @@ export default function SignUpPage() {
                 }}
                 required
                 disabled={loading}
-                className="w-full h-12 border-2 border-slate-300 focus:border-primary rounded-xl text-base transition-all"
+                className="w-full h-12 border-2 border-border focus:border-primary rounded-xl text-base transition-all"
                 autoComplete="email"
               />
             </div>
 
             <div className="space-y-2">
-              <label htmlFor="userType" className="text-sm font-semibold text-slate-700">
+              <label htmlFor="userType" className="text-sm font-semibold text-foreground/85">
                 I am a...
               </label>
               <select
@@ -148,7 +151,7 @@ export default function SignUpPage() {
                 value={userType}
                 onChange={(e) => setUserType(e.target.value as 'founder' | 'investor' | 'mentor')}
                 disabled={loading}
-                className="flex h-12 w-full rounded-xl border-2 border-slate-300 focus:border-primary bg-background px-4 py-2 text-base ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 transition-all"
+                className="flex h-12 w-full rounded-xl border-2 border-border focus:border-primary bg-background px-4 py-2 text-base ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 transition-all"
               >
                 <option value="founder">Founder</option>
                 <option value="investor">Investor/VC</option>

@@ -81,6 +81,9 @@ export default function LoginPage() {
       const resolvedEmail = (data.email || trimmedEmail).toLowerCase().trim()
       try {
         sessionStorage.setItem(CLIENT_STORAGE.PENDING_VERIFY_EMAIL, resolvedEmail)
+        if (data.devConsoleFallback) {
+          sessionStorage.setItem(CLIENT_STORAGE.DEV_CONSOLE_MAGIC_LINK, '1')
+        }
       } catch {
         /* ignore */
       }
@@ -99,13 +102,13 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 via-white to-blue-50 p-4">
-      <Card className="w-full max-w-md">
+    <div className="flex min-h-[calc(100vh-3.25rem)] items-center justify-center p-5 sm:p-8">
+      <Card className="w-full max-w-md border-border/35 shadow-none">
         <CardHeader className="space-y-1 text-center">
-          <div className="mx-auto w-12 h-12 bg-gradient-to-br from-purple-600 to-blue-600 rounded-full flex items-center justify-center mb-4">
-            <Mail className="w-6 h-6 text-white" />
+          <div className="mx-auto w-12 h-12 rounded-full flex items-center justify-center mb-4 bg-primary/15 ring-1 ring-border/60">
+            <Mail className="w-6 h-6 text-primary" />
           </div>
-          <CardTitle className="text-2xl font-bold">Log In</CardTitle>
+          <CardTitle className="font-heading text-2xl font-bold tracking-tight">Log in</CardTitle>
           <CardDescription>
             Enter your email to receive a verification code
           </CardDescription>
@@ -133,14 +136,14 @@ export default function LoginPage() {
             </div>
 
             {error && (
-              <div className="p-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded-md">
+              <div className="p-3 text-sm text-destructive bg-destructive/10 border border-destructive/25 rounded-md">
                 {error}
               </div>
             )}
 
             <Button
               type="submit"
-              className="w-full"
+              className="w-full rounded-full"
               disabled={loading || !email.trim()}
             >
               {loading ? (

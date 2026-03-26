@@ -112,9 +112,9 @@ export function CreditCounter({
   if (variant === 'badge') {
     return (
       <div className={cn("flex items-center gap-1.5", className)}>
-        <div className="flex items-center gap-1.5 px-2 py-1.5 bg-slate-50 rounded-md border border-slate-200/80">
+        <div className="flex items-center gap-1.5 px-2 py-1.5 bg-muted/50 rounded-md border border-border/70">
           <Coins className="h-3.5 w-3.5 text-primary" />
-          <span className="font-semibold text-slate-700 text-xs">{formatCredits(credits)}</span>
+          <span className="font-semibold text-foreground/85 text-xs">{formatCredits(credits)}</span>
         </div>
         {showClaimButton && canClaim && (
           <Button
@@ -122,7 +122,7 @@ export function CreditCounter({
             disabled={claiming}
             size="sm"
             variant="ghost"
-            className="h-7 px-2 text-xs text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
+            className="h-7 px-2 text-xs text-emerald-400 hover:text-emerald-400 hover:bg-emerald-500/10"
           >
             <Gift className="h-3 w-3 mr-1" />
             {claiming ? '...' : 'Claim'}
@@ -135,10 +135,10 @@ export function CreditCounter({
   // Header variant (default)
   return (
     <div className={cn("flex items-center gap-3", className)}>
-      <div className="flex items-center gap-2 px-3 py-1.5 bg-gradient-to-br from-primary/10 to-blue-50 rounded-lg border border-primary/20">
+      <div className="flex items-center gap-2 px-3 py-1.5 bg-gradient-to-br from-primary/10 to-primary/10 rounded-lg border border-primary/20">
         <Coins className="h-4 w-4 text-primary" />
-        <span className="font-bold text-slate-900 text-sm">{formatCredits(credits)}</span>
-        <span className="text-xs text-slate-600 font-medium">credits</span>
+        <span className="font-bold text-foreground text-sm">{formatCredits(credits)}</span>
+        <span className="text-xs text-muted-foreground font-medium">credits</span>
       </div>
       {showClaimButton && canClaim && (
         <Button

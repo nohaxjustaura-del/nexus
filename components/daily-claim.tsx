@@ -88,8 +88,8 @@ export default function DailyClaim() {
   return (
     <Card className={`border-2 transition-all ${
       canClaim 
-        ? 'border-emerald-300 bg-gradient-to-br from-emerald-50 to-blue-50 shadow-lg hover:shadow-xl' 
-        : 'border-slate-200 bg-slate-50'
+        ? 'border-emerald-300 bg-gradient-to-br from-emerald-500/10 to-primary/10 shadow-lg hover:shadow-xl' 
+        : 'border-border bg-muted/50'
     }`}>
       <CardContent className="p-5">
         <div className="flex items-start justify-between gap-4">
@@ -106,10 +106,10 @@ export default function DailyClaim() {
               )}
             </div>
             <div className="flex-1">
-              <h3 className="font-bold text-base text-slate-900 mb-1">
+              <h3 className="font-bold text-base text-foreground mb-1">
                 Daily Free Credit
               </h3>
-              <p className="text-sm text-slate-600 mb-2">
+              <p className="text-sm text-muted-foreground mb-2">
                 {canClaim 
                   ? 'Claim your free credit today!' 
                   : 'You\'ve claimed your credit today'}
@@ -122,7 +122,7 @@ export default function DailyClaim() {
               )}
               {message && (
                 <p className={`text-sm font-semibold mt-2 ${
-                  message.includes('✨') ? 'text-emerald-600' : 'text-slate-600'
+                  message.includes('✨') ? 'text-emerald-400' : 'text-muted-foreground'
                 }`}>
                   {message}
                 </p>

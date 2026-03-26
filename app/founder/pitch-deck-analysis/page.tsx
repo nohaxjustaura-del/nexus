@@ -289,7 +289,7 @@ export default function PitchDeckAnalysisPage() {
             Pitch Deck Analysis
           </Badge>
           <h1 className="mb-4 text-4xl font-bold md:text-5xl">
-            Get AI-Powered Pitch Deck Feedback
+            Get pitch deck feedback
           </h1>
           <p className="mx-auto max-w-2xl text-lg text-muted-foreground">
             Upload your pitch deck and get detailed feedback on what to improve, plus discover which VCs are the best fit for your startup.

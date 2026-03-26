@@ -4,10 +4,11 @@ Fast similarity search service for matching pitches with VCs using FAISS.
 
 ## Setup
 
-1. Install dependencies:
+1. Install dependencies (from repo root you can run `npm run faiss:install`, or from this folder):
 ```bash
-pip install -r requirements.txt
+python -m pip install -r requirements.txt
 ```
+This installs **`faiss-cpu`**, which provides the `import faiss` module on Windows and macOS/Linux without a GPU build.
 
 2. Ensure FAISS data files exist:
    - `../faiss-data/vc_index.faiss`

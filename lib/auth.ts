@@ -76,14 +76,14 @@ export async function getUserFromRequest(request: NextRequest): Promise<PrismaUs
   }
 }
 
-/** @deprecated Legacy JWT session — use Supabase Auth. */
+/** @deprecated Legacy JWT session  -  use Supabase Auth. */
 export async function setSessionCookie(_token: string, response?: NextResponse) {
   if (response) {
     return response
   }
 }
 
-/** @deprecated Legacy JWT session — use Supabase Auth. */
+/** @deprecated Legacy JWT session  -  use Supabase Auth. */
 export async function clearSession() {
   const cookieStore = await cookies()
   const names = cookieStore.getAll().map((c) => c.name)

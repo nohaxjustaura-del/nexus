@@ -198,8 +198,8 @@ export function NotificationBell() {
                 {notifications.map((notification) => (
                   <div
                     key={notification.id}
-                    className={`p-4 hover:bg-slate-50 transition-colors cursor-pointer ${
-                      !notification.read ? 'bg-blue-50/50' : ''
+                    className={`p-4 hover:bg-muted/50 transition-colors cursor-pointer ${
+                      !notification.read ? 'bg-primary/12' : ''
                     }`}
                     onClick={() => handleNotificationClick(notification)}
                   >
@@ -209,14 +209,14 @@ export function NotificationBell() {
                           <span className="text-xl mt-0.5">{getNotificationIcon(notification.type)}</span>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-start justify-between gap-2">
-                              <p className={`text-sm font-semibold ${!notification.read ? 'text-slate-900' : 'text-slate-700'}`}>
+                              <p className={`text-sm font-semibold ${!notification.read ? 'text-foreground' : 'text-foreground/85'}`}>
                                 {notification.title}
                               </p>
                               {!notification.read && (
                                 <div className="h-2 w-2 rounded-full bg-blue-500 shrink-0 mt-1.5" />
                               )}
                             </div>
-                            <p className="text-xs text-slate-600 mt-1 line-clamp-2">
+                            <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
                               {notification.message}
                             </p>
                             <p className="text-xs text-slate-400 mt-1">
@@ -230,14 +230,14 @@ export function NotificationBell() {
                         <span className="text-xl mt-0.5">{getNotificationIcon(notification.type)}</span>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-start justify-between gap-2">
-                            <p className={`text-sm font-semibold ${!notification.read ? 'text-slate-900' : 'text-slate-700'}`}>
+                            <p className={`text-sm font-semibold ${!notification.read ? 'text-foreground' : 'text-foreground/85'}`}>
                               {notification.title}
                             </p>
                             {!notification.read && (
                               <div className="h-2 w-2 rounded-full bg-blue-500 shrink-0 mt-1.5" />
                             )}
                           </div>
-                          <p className="text-xs text-slate-600 mt-1 line-clamp-2">
+                          <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
                             {notification.message}
                           </p>
                           <p className="text-xs text-slate-400 mt-1">

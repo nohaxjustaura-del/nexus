@@ -8,10 +8,10 @@ function isLocalUrl(url: string): boolean {
  * Canonical site origin for redirects (magic links, emailRedirectTo).
  *
  * Priority:
- *   1. NEXT_PUBLIC_URL — if set to a non-localhost value (i.e. production domain)
- *   2. NEXT_PUBLIC_APP_URL — same rule
- *   3. VERCEL_URL — auto-set by Vercel for every deployment (server-side only)
- *   4. Request headers — x-forwarded-host / host (most accurate at runtime)
+ *   1. NEXT_PUBLIC_URL  -  if set to a non-localhost value (i.e. production domain)
+ *   2. NEXT_PUBLIC_APP_URL  -  same rule
+ *   3. VERCEL_URL  -  auto-set by Vercel for every deployment (server-side only)
+ *   4. Request headers  -  x-forwarded-host / host (most accurate at runtime)
  *   5. NEXT_PUBLIC_URL / NEXT_PUBLIC_APP_URL even if localhost (local dev fallback)
  *   6. http://localhost:3000
  *

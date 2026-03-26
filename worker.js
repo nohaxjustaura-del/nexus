@@ -18,7 +18,7 @@ const envPath = nodePath && !process.env.PATH?.includes(nodePath)
   : process.env.PATH
 
 // Run the TypeScript worker using tsx
-const worker = spawn('npx', ['tsx', 'scripts/worker-start.ts'], {
+const worker = spawn('npx', ['tsx', 'scripts/worker-start.ts', '--loop'], {
   cwd: process.cwd(),
   stdio: 'inherit',
   shell: true, // Required for Windows to find npx.cmd

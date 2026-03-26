@@ -2,10 +2,29 @@ import { Resend } from 'resend'
 import { BRAND_NAME } from '@/lib/brand'
 import { getSiteUrl } from '@/lib/site-url'
 
+export {
+  RESEND_DEV_CONSOLE_FALLBACK_HINT,
+  RESEND_TESTING_MODE_PUBLIC_MESSAGE,
+} from '@/lib/resend-user-messages'
+
 const resend = new Resend(process.env.RESEND_API_KEY)
 
 function emailFromHeader(): string {
   return process.env.RESEND_FROM_EMAIL || `${BRAND_NAME} <onboarding@resend.dev>`
+}
+
+function isResendTestingRecipientError(error: unknown): boolean {
+  const s = (typeof error === 'string' ? error : JSON.stringify(error)).toLowerCase()
+  return (
+    s.includes('only send testing emails') ||
+    s.includes('verify a domain') ||
+    (s.includes('testing') && s.includes('recipient')) ||
+    s.includes('not allowed to send')
+  )
+}
+
+function usesResendDevFromAddress(): boolean {
+  return emailFromHeader().toLowerCase().includes('onboarding@resend.dev')
 }
 
 export async function sendVerificationCode(email: string, code: string) {
@@ -70,11 +89,11 @@ export async function sendMagicLinkEmail(
   const headline = isNew ? 'Confirm your email address' : 'Sign in to your account'
   const intro = isNew
     ? `Click the button below to verify your email and activate your ${BRAND_NAME} account.`
-    : `Click the button below to sign in to your ${BRAND_NAME} account instantly — no password needed.`
+    : `Click the button below to sign in to your ${BRAND_NAME} account instantly (no password needed).`
 
   if (!process.env.RESEND_API_KEY) {
     console.log(`
-📧 Magic Link Email (Development Mode)
+📧 Magic Link Email (Development Mode, no RESEND_API_KEY)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 To: ${email}
 Subject: ${subject}
@@ -88,7 +107,7 @@ Or enter this 6-digit code on the verify page: ${otp}
 This link and code expire in 1 hour.
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     `)
-    return { success: true }
+    return { success: true, devConsoleFallback: true }
   }
 
   const html = `<!DOCTYPE html>
@@ -167,7 +186,7 @@ ${otp}
 
 This link and code expire in 1 hour. If you didn't request this, you can safely ignore this email.
 
-— The ${BRAND_NAME} team`
+The ${BRAND_NAME} team`
 
   try {
     console.log(`📧 Sending magic-link email to: ${email}`)
@@ -180,18 +199,28 @@ This link and code expire in 1 hour. If you didn't request this, you can safely 
     })
     if (error) {
       console.error('❌ Resend API error (magic link):', error)
+      if (isResendTestingRecipientError(error)) {
+        return { success: false, error, resendTestingRecipientOnly: true as const }
+      }
       return { success: false, error }
     }
     console.log('✅ Magic-link email sent successfully:', data?.id)
-    return { success: true, data }
+    return {
+      success: true,
+      data,
+      ...(usesResendDevFromAddress() ? { devConsoleFallback: true as const } : {}),
+    }
   } catch (error) {
     console.error('❌ Magic-link email send error:', error)
+    if (isResendTestingRecipientError(error)) {
+      return { success: false, error, resendTestingRecipientOnly: true as const }
+    }
     return { success: false, error }
   }
 }
 
 export async function sendVCClaimReceipt(toEmail: string, name: string, firmName: string) {
-  const subject = `Your VC application is under review — ${BRAND_NAME}`
+  const subject = `Your VC application is under review - ${BRAND_NAME}`
   const plain = `Hi ${name || 'there'},
 
 Thanks for submitting your VC profile for ${firmName}.
@@ -227,7 +256,7 @@ ${plain}
 }
 
 export async function sendFounderApplicationReceipt(toEmail: string, name?: string) {
-  const subject = `Your Founder application is under review — ${BRAND_NAME}`
+  const subject = `Your Founder application is under review - ${BRAND_NAME}`
   const plain = `Hi ${name || 'there'},
 
 Thanks for creating your ${BRAND_NAME} profile. We received your information and ID.
@@ -274,7 +303,7 @@ export async function sendUserApprovalStatus(toEmail: string, status: 'approved'
     status === 'approved'
       ? `Hi there,
 
-Good news — your ${BRAND_NAME} account has been approved. You now have full access to analysis tools and investor outreach.
+Good news: your ${BRAND_NAME} account has been approved. You now have full access to analysis tools and investor outreach.
 
 You can sign in and continue here: ${base}/founder/discover`
       : `Hi there,

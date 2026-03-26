@@ -48,7 +48,7 @@ export function LoadingSkeleton({ className }: { className?: string }) {
 
 export function CardSkeleton() {
   return (
-    <div className="rounded-lg border border-slate-200 p-6 space-y-4">
+    <div className="rounded-lg border border-border p-6 space-y-4">
       <LoadingSkeleton className="h-6 w-3/4" />
       <LoadingSkeleton className="h-4 w-full" />
       <LoadingSkeleton className="h-4 w-5/6" />

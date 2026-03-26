@@ -2,9 +2,22 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseAuthRouteClient } from '@/lib/supabase/route-handler'
 import { createSupabaseAdminClient } from '@/lib/supabase/admin'
 import { getSiteUrl } from '@/lib/site-url'
-import { sendMagicLinkEmail } from '@/lib/email'
+import {
+  RESEND_DEV_CONSOLE_FALLBACK_HINT,
+  RESEND_TESTING_MODE_PUBLIC_MESSAGE,
+  sendMagicLinkEmail,
+} from '@/lib/email'
 
 export const dynamic = 'force-dynamic'
+
+function isExistingUserLinkError(err: { message?: string; code?: string } | null) {
+  if (!err) return false
+  if (err.code === 'email_exists') return true
+  const msg = (err.message || '').toLowerCase()
+  if (msg.includes('already been registered') || msg.includes('already registered')) return true
+  if (msg.includes('user with this email') && msg.includes('registered')) return true
+  return false
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -33,13 +46,7 @@ export async function POST(request: NextRequest) {
     })
 
     if (linkError) {
-      console.error('Signup generateLink error:', linkError)
-
-      if (
-        linkError.message?.toLowerCase().includes('already registered') ||
-        linkError.message?.toLowerCase().includes('user already registered') ||
-        (linkError as any).status === 422
-      ) {
+      if (isExistingUserLinkError(linkError)) {
         return NextResponse.json(
           {
             error: 'An account with this email already exists.',
@@ -50,6 +57,7 @@ export async function POST(request: NextRequest) {
         )
       }
 
+      console.error('Signup generateLink error:', linkError)
       return NextResponse.json(
         { error: 'Failed to create verification link. Please try again.' },
         { status: 500 }
@@ -74,6 +82,15 @@ export async function POST(request: NextRequest) {
     })
 
     if (!emailResult.success) {
+      if (emailResult.resendTestingRecipientOnly) {
+        return NextResponse.json(
+          {
+            error: RESEND_TESTING_MODE_PUBLIC_MESSAGE,
+            code: 'RESEND_TESTING_RECIPIENT',
+          },
+          { status: 503 }
+        )
+      }
       console.error('Signup email send failed:', emailResult.error)
       return NextResponse.json(
         { error: 'Failed to send verification email. Please try again.' },
@@ -85,8 +102,11 @@ export async function POST(request: NextRequest) {
 
     const res = NextResponse.json({
       success: true,
-      message: 'Verification email sent. Check your inbox for a sign-in link or 6-digit code.',
+      message: emailResult.devConsoleFallback
+        ? RESEND_DEV_CONSOLE_FALLBACK_HINT
+        : 'Verification email sent. Check your inbox for a sign-in link or 6-digit code.',
       email: normalizedEmail,
+      ...(emailResult.devConsoleFallback ? { devConsoleFallback: true } : {}),
     })
     applyAuthCookies(res)
     return res

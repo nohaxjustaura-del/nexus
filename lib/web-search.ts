@@ -39,6 +39,19 @@ export interface WebSearchResponse {
   results: WebSearchResult[]
   query: string
   responseTime: number
+  /** Tavily-reported API credits for this request when includeUsage was sent */
+  tavilyCredits?: number
+}
+
+/** Optional Tavily filters (see @tavily/core TavilySearchOptions). */
+export type SearchWebTavilyOptions = {
+  topic?: 'general' | 'news' | 'finance'
+  days?: number
+  startDate?: string
+  endDate?: string
+  timeRange?: 'year' | 'month' | 'week' | 'day' | 'y' | 'm' | 'w' | 'd'
+  /** When true, response may include usage (logged in discovery). */
+  includeUsage?: boolean
 }
 
 /**
@@ -46,11 +59,13 @@ export interface WebSearchResponse {
  * @param query Search query
  * @param maxResults Maximum number of results (default: 5)
  * @param searchDepth Depth of search (default: 'advanced' for more accurate results)
+ * @param tavilyExtra Optional Tavily API filters (e.g. startDate, topic: news)
  */
 export async function searchWeb(
   query: string,
   maxResults: number = 5,
-  searchDepth: 'basic' | 'advanced' = 'advanced'
+  searchDepth: 'basic' | 'advanced' = 'advanced',
+  tavilyExtra?: SearchWebTavilyOptions
 ): Promise<WebSearchResponse> {
   const client = getTavilyClient()
   if (!client) {
@@ -71,6 +86,7 @@ export async function searchWeb(
       includeAnswer: true,
       includeRawContent: 'text',
       includeImages: false,
+      ...(tavilyExtra || {}),
     })
 
     const results: WebSearchResult[] = (response.results || []).map((result: any) => ({
@@ -82,14 +98,29 @@ export async function searchWeb(
     }))
 
     const responseTime = Date.now() - startTime
+    const usage = (response as { usage?: { credits?: number } }).usage
+    const tavilyCredits = typeof usage?.credits === 'number' ? usage.credits : undefined
+
+    if (results.length === 0) {
+      const hint =
+        tavilyExtra?.startDate != null
+          ? ' (strict startDate can return nothing; check quota or relax VC_DISCOVERY_CONTENT_SINCE)'
+          : ''
+      console.warn(`[WEB-SEARCH] Tavily returned 0 results for query.${hint}`)
+    }
 
     return {
       results,
       query,
       responseTime,
+      tavilyCredits,
     }
   } catch (error: any) {
-    console.error('[WEB-SEARCH] Search failed:', error?.message || error)
+    const msg = error?.message || String(error)
+    console.error('[WEB-SEARCH] Search failed:', msg)
+    if (/402|403|429|quota|credit|limit|exceeded|payment/i.test(msg)) {
+      console.error('[WEB-SEARCH] This may be a Tavily billing, rate limit, or plan issue. Check https://tavily.com')
+    }
     return {
       results: [],
       query,

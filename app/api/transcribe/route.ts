@@ -65,7 +65,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Check if this is an interim (live) transcription request — skip DB/file saving
+    // Check if this is an interim (live) transcription request  -  skip DB/file saving
     const isInterim = request.nextUrl.searchParams.get('interim') === 'true'
 
     logger.log(`[TRANSCRIBE] Received audio: ${audioFile.name}, ${audioFile.type}, ${(audioFile.size / 1024).toFixed(1)}KB${isInterim ? ' (interim)' : ''}`)
@@ -217,7 +217,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // For interim requests, just return the transcript — no DB save
+    // For interim requests, just return the transcript  -  no DB save
     if (isInterim) {
       return NextResponse.json(
         { transcript: transcriptText, language: detectedLanguage },

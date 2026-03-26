@@ -3,7 +3,7 @@
  * Uses Voyage AI embedding API (voyage-3)
  *
  * voyage-3: 1024 dimensions, 200M free tokens for new accounts.
- * Rate limits: 3 RPM, 10K TPM — callers must respect these.
+ * Rate limits: 3 RPM, 10K TPM  -  callers must respect these.
  * API: POST https://api.voyageai.com/v1/embeddings
  */
 
