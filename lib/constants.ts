@@ -3,8 +3,29 @@
  * Centralized configuration values to avoid magic numbers and strings
  */
 
-// Admin Configuration  -  set ADMIN_EMAIL in your .env / .env.local
-export const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'adventa.counseling@gmail.com'
+// Admin: set ADMIN_EMAIL in .env (comma-separated for multiple). Used server-side; client UI should use /api/auth/check `isAdmin`.
+const DEFAULT_ADMIN_EMAIL = 'nohaxjustaura@gmail.com'
+
+function buildAdminEmailSet(): Set<string> {
+  const raw = process.env.ADMIN_EMAIL || DEFAULT_ADMIN_EMAIL
+  const set = new Set<string>()
+  for (const part of raw.split(',')) {
+    const e = part.trim().toLowerCase()
+    if (e.includes('@')) set.add(e)
+  }
+  if (set.size === 0) set.add(DEFAULT_ADMIN_EMAIL.toLowerCase())
+  return set
+}
+
+const adminEmailSet = buildAdminEmailSet()
+
+/** First admin in the list (legacy); use isAdminEmail() for access checks. */
+export const ADMIN_EMAIL = [...adminEmailSet][0]!
+
+export function isAdminEmail(email: string | null | undefined): boolean {
+  if (!email) return false
+  return adminEmailSet.has(email.trim().toLowerCase())
+}
 
 // Credit Costs for AI Analysis Features
 export const CREDIT_COSTS = {

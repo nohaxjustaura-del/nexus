@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { getCurrentUser } from '@/lib/auth'
+import { isAdminEmail } from '@/lib/constants'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -9,9 +11,14 @@ export async function PATCH(
   { params }: { params: { email: string } }
 ) {
   try {
+    const admin = await getCurrentUser(false)
+    if (!admin || !isAdminEmail(admin.email)) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
+
     const body = await request.json()
     const action = body?.action as 'approve' | 'reject'
-    const reviewerEmail = body?.reviewerEmail || 'admin@local'
+    const reviewerEmail = (body?.reviewerEmail as string) || admin.email
     const email = decodeURIComponent(params.email || '').toLowerCase().trim()
     if (!email || !email.includes('@')) {
       return NextResponse.json({ error: 'Invalid email' }, { status: 400 })

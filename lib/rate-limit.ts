@@ -10,7 +10,7 @@
 
 import { getCurrentUser } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
-import { ADMIN_EMAIL } from '@/lib/constants'
+import { isAdminEmail } from '@/lib/constants'
 import { logger } from '@/lib/logger'
 
 // In-memory store for rate limiting (for development/single-instance)
@@ -99,7 +99,7 @@ export async function checkRateLimit(
     if (skipAdmin) {
       try {
         const user = await getCurrentUser()
-        if (user?.email === ADMIN_EMAIL) {
+        if (isAdminEmail(user?.email)) {
           return { allowed: true, remaining: limit, resetAt: Date.now() + windowMs }
         }
       } catch (error) {

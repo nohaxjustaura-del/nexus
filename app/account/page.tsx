@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Mail, User, Settings, ArrowRight } from 'lucide-react'
 import Link from 'next/link'
-import { ADMIN_EMAIL } from '@/lib/constants'
+import { isAdminEmail } from '@/lib/constants'
 
 export default async function AccountPage() {
   try {
@@ -92,7 +92,7 @@ export default async function AccountPage() {
                       <ArrowRight className="h-4 w-4" />
                     </Button>
                   </Link>
-                  {user.email === ADMIN_EMAIL && (
+                  {isAdminEmail(user.email) && (
                     <Link href="/founder/vc-database">
                       <Button variant="outline" className="w-full justify-between border-slate-200">
                         VC Database (Admin)

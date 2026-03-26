@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from "@/components/ui/button"
 import { CheckCircle, XCircle, Loader2 } from "lucide-react"
+import { toast } from '@/components/ui/toast-simple'
 
 export function VCClaimActions({ claimId }: { claimId: string }) {
   const router = useRouter()
@@ -24,12 +25,12 @@ export function VCClaimActions({ claimId }: { claimId: string }) {
       if (response.ok) {
         router.refresh()
       } else {
-        alert('Failed to approve claim')
+        toast.error('Failed to approve claim')
         setIsApproving(false)
       }
     } catch (error) {
       console.error('Error approving claim:', error)
-      alert('Failed to approve claim')
+      toast.error('Failed to approve claim')
       setIsApproving(false)
     }
   }
@@ -52,12 +53,12 @@ export function VCClaimActions({ claimId }: { claimId: string }) {
       if (response.ok) {
         router.refresh()
       } else {
-        alert('Failed to reject claim')
+        toast.error('Failed to reject claim')
         setIsRejecting(false)
       }
     } catch (error) {
       console.error('Error rejecting claim:', error)
-      alert('Failed to reject claim')
+      toast.error('Failed to reject claim')
       setIsRejecting(false)
     }
   }

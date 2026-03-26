@@ -23,6 +23,7 @@ import {
   BarChart3,
   Users
 } from 'lucide-react'
+import { toast } from '@/components/ui/toast-simple'
 
 export default function YCInsiderPage() {
   const [loading, setLoading] = useState(true)
@@ -53,7 +54,7 @@ export default function YCInsiderPage() {
   const handlePurchase = async (itemId: string, cost: number) => {
     // Skip credit check for premium users (they have unlimited credits shown as MAX_SAFE_INTEGER)
     if (!isPremium && credits < cost) {
-      alert('Not enough credits. Please purchase more credits.')
+      toast.error('Not enough credits. Please purchase more credits.')
       return
     }
     
@@ -72,13 +73,13 @@ export default function YCInsiderPage() {
         setCredits(data.remainingCredits)
         // Add the new purchase to local state (no need to refetch)
         setPurchases(prev => prev.includes(itemId) ? prev : [...prev, itemId])
-        alert('Purchase successful! You can now access this material.')
+        toast.success('Purchase successful! You can now access this material.')
       } else {
         const errorData = await res.json().catch(() => ({}))
-        alert(errorData.error || 'Purchase failed. Please try again.')
+        toast.error(errorData.error || 'Purchase failed. Please try again.')
       }
     } catch (e) {
-      alert('Purchase failed. Please try again.')
+      toast.error('Purchase failed. Please try again.')
     } finally {
       setPurchasing(null)
     }
@@ -322,12 +323,15 @@ export default function YCInsiderPage() {
                         })
                         if (res.ok) {
                           const data = await res.json()
-                          alert(`Download would start: ${data.filename}\n\nNote: Actual materials will be available in production.`)
+                          toast.info(
+                            `Download would start: ${data.filename}\n\nNote: Actual materials will be available in production.`,
+                            8000
+                          )
                         } else {
-                          alert('Failed to access material. Please try again.')
+                          toast.error('Failed to access material. Please try again.')
                         }
                       } catch (e) {
-                        alert('Failed to download. Please try again.')
+                        toast.error('Failed to download. Please try again.')
                       }
                     }}
                   >
@@ -413,12 +417,15 @@ export default function YCInsiderPage() {
                         })
                         if (res.ok) {
                           const data = await res.json()
-                          alert(`Download would start: ${data.filename}\n\nNote: Actual materials will be available in production.`)
+                          toast.info(
+                            `Download would start: ${data.filename}\n\nNote: Actual materials will be available in production.`,
+                            8000
+                          )
                         } else {
-                          alert('Failed to access material. Please try again.')
+                          toast.error('Failed to access material. Please try again.')
                         }
                       } catch (e) {
-                        alert('Failed to download. Please try again.')
+                        toast.error('Failed to download. Please try again.')
                       }
                     }}
                   >
@@ -504,12 +511,15 @@ export default function YCInsiderPage() {
                         })
                         if (res.ok) {
                           const data = await res.json()
-                          alert(`Download would start: ${data.filename}\n\nNote: Actual materials will be available in production.`)
+                          toast.info(
+                            `Download would start: ${data.filename}\n\nNote: Actual materials will be available in production.`,
+                            8000
+                          )
                         } else {
-                          alert('Failed to access material. Please try again.')
+                          toast.error('Failed to access material. Please try again.')
                         }
                       } catch (e) {
-                        alert('Failed to download. Please try again.')
+                        toast.error('Failed to download. Please try again.')
                       }
                     }}
                   >
@@ -595,12 +605,15 @@ export default function YCInsiderPage() {
                         })
                         if (res.ok) {
                           const data = await res.json()
-                          alert(`Download would start: ${data.filename}\n\nNote: Actual materials will be available in production.`)
+                          toast.info(
+                            `Download would start: ${data.filename}\n\nNote: Actual materials will be available in production.`,
+                            8000
+                          )
                         } else {
-                          alert('Failed to access material. Please try again.')
+                          toast.error('Failed to access material. Please try again.')
                         }
                       } catch (e) {
-                        alert('Failed to download. Please try again.')
+                        toast.error('Failed to download. Please try again.')
                       }
                     }}
                   >
@@ -686,12 +699,15 @@ export default function YCInsiderPage() {
                         })
                         if (res.ok) {
                           const data = await res.json()
-                          alert(`Download would start: ${data.filename}\n\nNote: Actual materials will be available in production.`)
+                          toast.info(
+                            `Download would start: ${data.filename}\n\nNote: Actual materials will be available in production.`,
+                            8000
+                          )
                         } else {
-                          alert('Failed to access material. Please try again.')
+                          toast.error('Failed to access material. Please try again.')
                         }
                       } catch (e) {
-                        alert('Failed to download. Please try again.')
+                        toast.error('Failed to download. Please try again.')
                       }
                     }}
                   >
@@ -777,12 +793,15 @@ export default function YCInsiderPage() {
                         })
                         if (res.ok) {
                           const data = await res.json()
-                          alert(`Download would start: ${data.filename}\n\nNote: Actual materials will be available in production.`)
+                          toast.info(
+                            `Download would start: ${data.filename}\n\nNote: Actual materials will be available in production.`,
+                            8000
+                          )
                         } else {
-                          alert('Failed to access material. Please try again.')
+                          toast.error('Failed to access material. Please try again.')
                         }
                       } catch (e) {
-                        alert('Failed to download. Please try again.')
+                        toast.error('Failed to download. Please try again.')
                       }
                     }}
                   >

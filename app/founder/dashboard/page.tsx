@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
+import { Button, buttonVariants } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import DailyClaim from "@/components/daily-claim"
 import { 
@@ -23,7 +23,8 @@ import {
   Clock,
   Activity,
   ArrowRight,
-  Send
+  Send,
+  Shield,
 } from "lucide-react"
 import Link from "next/link"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -41,6 +42,7 @@ export default function FounderDashboard() {
     recentAnalyses: any[]
   } | null>(null)
   const [founderProfile, setFounderProfile] = useState<any>(null)
+  const [isAdmin, setIsAdmin] = useState(false)
 
   useEffect(() => {
     let isMounted = true
@@ -54,6 +56,7 @@ export default function FounderDashboard() {
           router.push('/signup')
           return
         }
+        setIsAdmin(Boolean(data?.isAdmin))
         setLoading(false)
       })
       .catch(() => {
@@ -194,6 +197,24 @@ export default function FounderDashboard() {
   return (
     <div className="min-h-screen bg-white">
       <div className="container mx-auto max-w-7xl px-4 py-8 md:py-12">
+        {isAdmin && (
+          <div className="mb-6 flex flex-col gap-3 rounded-lg border border-amber-200/80 bg-amber-50/90 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-2 text-sm text-amber-950">
+              <Shield className="h-4 w-4 shrink-0 text-amber-700" aria-hidden />
+              <span>You are signed in as an admin. Open the admin hub to manage approvals, VCs, and tools.</span>
+            </div>
+            <Link
+              href="/admin/dashboard"
+              className={buttonVariants({
+                size: 'sm',
+                className:
+                  'shrink-0 bg-amber-700 text-white hover:bg-amber-800 hover:text-white shadow-none',
+              })}
+            >
+              Admin dashboard
+            </Link>
+          </div>
+        )}
         {/* Header - Simplified */}
         <div className="mb-8">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">

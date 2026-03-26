@@ -11,6 +11,7 @@ import { Orbit } from "lucide-react"
 import { MobileNav } from "@/components/ui/mobile-nav"
 import { getSiteUrl } from "@/lib/site-url"
 import { BRAND_DEFAULT_TITLE, BRAND_NAME, BRAND_TITLE_TEMPLATE } from "@/lib/brand"
+import { AppToaster } from "@/components/ui/app-toaster"
 
 const siteUrl = getSiteUrl()
 
@@ -24,7 +25,8 @@ const dmSans = DM_Sans({
 const outfit = Outfit({
   subsets: ["latin"],
   display: "swap",
-  preload: true,
+  // Body font (DM Sans) keeps preload; heading font loads on demand to cut critical-path bytes
+  preload: false,
   variable: "--font-heading",
 })
 
@@ -147,7 +149,7 @@ export default function RootLayout({
           {children}
         </main>
         {/* Global Footer - Clean & Modern */}
-        <footer className="mt-auto border-t border-border py-14 no-print bg-muted/30" role="contentinfo">
+        <footer className="mt-auto border-t border-border/80 py-14 no-print bg-background" role="contentinfo">
           <div className="container mx-auto max-w-6xl px-4">
             <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-2 mb-10">
               <Link href="/privacy" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Privacy</Link>
@@ -175,6 +177,7 @@ export default function RootLayout({
             </p>
           </div>
         </footer>
+        <AppToaster />
       </body>
     </html>
   )

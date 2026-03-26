@@ -31,6 +31,7 @@ const track = (event: string, props?: Record<string, unknown>) => {
 export default function Home() {
   const router = useRouter()
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null)
+  const [isAdmin, setIsAdmin] = useState(false)
   const [mounted, setMounted] = useState(false)
 
   useLayoutEffect(() => {
@@ -51,6 +52,7 @@ export default function Home() {
         })
         const data = await res.json().catch(() => ({}))
         setIsAuthenticated(Boolean(data?.authenticated && data?.verified))
+        setIsAdmin(Boolean(data?.isAdmin))
       } catch {
         setIsAuthenticated(false)
       }
@@ -99,14 +101,14 @@ export default function Home() {
                   if (!mounted || !isAuthenticated) {
                     router.push('/signup')
                   } else {
-                    router.push('/founder/dashboard')
+                    router.push(isAdmin ? '/admin/dashboard' : '/founder/dashboard')
                   }
                 }}
                 className="h-12 px-8 text-base font-semibold ring-1 ring-primary/30"
               >
                 {mounted && isAuthenticated ? (
                   <>
-                    Go to dashboard
+                    {isAdmin ? 'Admin dashboard' : 'Go to dashboard'}
                     <LayoutDashboard className="ml-2 h-4 w-4" />
                   </>
                 ) : (

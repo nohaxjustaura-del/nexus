@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { getCurrentUser } from '@/lib/auth'
-import { ADMIN_EMAIL, CREDIT_COSTS } from '@/lib/constants'
+import { isAdminEmail, CREDIT_COSTS } from '@/lib/constants'
 import { logger } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'
@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Grant admin unlimited credits and premium
-    if (user.email === ADMIN_EMAIL) {
+    if (isAdminEmail(user.email)) {
       // Parse purchases for admin too
       let purchases: string[] = []
       try {
@@ -87,17 +87,31 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const { action, amount } = await request.json()
+    const { action } = await request.json()
 
-    // Admin gets infinite/unlocked access
-    if (user.email === ADMIN_EMAIL) {
+    // Admin gets infinite/unlocked access (no credit deduction)
+    if (isAdminEmail(user.email)) {
       if (action === 'unlock_top_matches') {
         return NextResponse.json({ success: true, unlocked: true })
       }
       if (action === 'add_credits') {
         return NextResponse.json({ success: true })
       }
-      // fall through to default "invalid action" for unknown actions
+      if (action === 'grant_premium') {
+        await (db as any).userCredits.update({
+          where: { userId: user.id },
+          data: {
+            isPremium: true,
+            premiumExpiresAt: null,
+          },
+        })
+        return NextResponse.json({ success: true, isPremium: true })
+      }
+      // fall through for other actions handled below
+    }
+
+    if (action === 'add_credits' || action === 'grant_premium') {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
     let credits = await (db as any).userCredits.findUnique({
@@ -134,28 +148,6 @@ export async function POST(request: NextRequest) {
           { status: 402 }
         )
       }
-    }
-
-    if (action === 'add_credits' && amount) {
-      await (db as any).userCredits.update({
-        where: { userId: user.id },
-        data: {
-          credits: credits.credits + amount,
-        },
-      })
-      return NextResponse.json({ success: true })
-    }
-
-    if (action === 'grant_premium') {
-      // Grant premium access (admin or self-grant)
-      await (db as any).userCredits.update({
-        where: { userId: user.id },
-        data: {
-          isPremium: true,
-          premiumExpiresAt: null, // Lifetime premium
-        },
-      })
-      return NextResponse.json({ success: true, isPremium: true })
     }
 
     return NextResponse.json({ error: 'Invalid action' }, { status: 400 })

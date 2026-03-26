@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Heart, Crown, Target, Eye, Send, Bookmark } from "lucide-react"
+import { Heart, Crown, Target, Eye, Send } from "lucide-react"
 import Link from "next/link"
 import InvestorProfileModal from '@/components/investor-profile-modal'
 import { parseJSON } from '@/lib/utils'
@@ -93,42 +93,45 @@ export function VCCardClient({
 
   return (
     <>
-      <Card 
-        className={`group relative cursor-pointer overflow-hidden transition-all duration-300 hover:-translate-y-0.5 ${
-          isYC 
-            ? 'border-amber-400/50 bg-gradient-to-br from-amber-500/10 to-card/90 hover:border-amber-400/70' 
-            : 'border-border/40 hover:border-primary/30'
+      <Card
+        className={`group relative cursor-pointer overflow-hidden border-border bg-card transition-colors duration-200 hover:border-foreground/25 ${
+          isYC ? 'ring-1 ring-foreground/10' : ''
         }`}
         onClick={() => setIsModalOpen(true)}
       >
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-primary/5 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
-        
-        {/* Top accent for YC only */}
         {isYC && (
-          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-400 to-amber-500" />
+          <div className="absolute top-0 left-0 right-0 h-px bg-foreground/25" />
         )}
-        
+
         <CardHeader className="pb-3 pt-5 relative z-10">
           <div className="flex items-start justify-between gap-3 mb-3">
             <div className="flex-1 min-w-0">
-              <CardTitle className={`text-lg font-bold leading-tight transition-colors group-hover:text-primary ${isYC ? 'text-amber-300' : 'text-foreground'}`}>
+              <CardTitle
+                className={`text-lg font-semibold leading-tight text-foreground ${isYC ? 'tracking-tight' : ''}`}
+              >
                 {investor?.firmName || 'Unknown Firm'}
               </CardTitle>
             </div>
             <div className="flex flex-col items-end gap-1.5">
               {investor?.verified && (
-                <Badge className="border border-emerald-500/35 bg-emerald-500/15 text-xs text-emerald-200 transition-transform group-hover:scale-105">
+                <Badge
+                  variant="outline"
+                  className="text-xs font-normal text-muted-foreground border-border bg-transparent"
+                >
                   Verified
                 </Badge>
               )}
               {investor?.fundType && (
-                <Badge variant="outline" className="text-xs capitalize group-hover:border-primary/50 transition-colors">
+                <Badge
+                  variant="outline"
+                  className="text-xs capitalize font-normal text-muted-foreground border-border"
+                >
                   {investor.fundType}
                 </Badge>
               )}
               {isYC && (
-                <Badge className="text-xs bg-amber-100 text-amber-800 border-amber-500/35 group-hover:scale-105 transition-transform">
-                  Top VC
+                <Badge variant="outline" className="text-xs font-normal text-foreground border-foreground/30">
+                  Featured
                 </Badge>
               )}
             </div>
@@ -139,12 +142,12 @@ export function VCCardClient({
             <p className="text-sm text-foreground/85 leading-relaxed mb-2 font-medium">
               {description || fullDescription || 'No description available.'}
             </p>
-            <button 
+            <button
               onClick={(e) => {
                 e.stopPropagation()
                 setIsModalOpen(true)
               }}
-              className="text-xs text-primary hover:text-primary/80 hover:underline flex items-center gap-1 font-medium transition-colors"
+              className="text-xs text-muted-foreground hover:text-foreground underline-offset-4 hover:underline flex items-center gap-1 font-medium transition-colors"
             >
               <Eye className="h-3 w-3" />
               View full description
@@ -154,21 +157,21 @@ export function VCCardClient({
           {/* Key Facts Row - stage, check, geo */}
           <div className="flex flex-wrap gap-2 mb-3 text-xs">
             {safeStages.length > 0 && (
-              <div className="flex items-center gap-1 bg-primary/10 text-primary px-2 py-1 rounded">
-                <Target className="h-3 w-3" />
+              <div className="flex items-center gap-1 border border-border bg-muted/40 text-foreground px-2 py-1 rounded-md">
+                <Target className="h-3 w-3 text-muted-foreground" />
                 <span className="font-medium">{safeStages.slice(0, 2).join(', ')}</span>
               </div>
             )}
             {investor?.checkSizeMin && investor?.checkSizeMax && (
-              <div className="flex items-center gap-1 bg-emerald-500/10 text-green-700 px-2 py-1 rounded">
-                <span className="font-medium">
+              <div className="flex items-center gap-1 border border-border bg-muted/40 text-foreground px-2 py-1 rounded-md">
+                <span className="font-medium tabular-nums">
                   ${investor.checkSizeMin >= 1000 ? `${Math.round(investor.checkSizeMin/1000)}M` : `${investor.checkSizeMin}k`}–
                   ${investor.checkSizeMax >= 1000 ? `${Math.round(investor.checkSizeMax/1000)}M` : `${investor.checkSizeMax}k`}
                 </span>
               </div>
             )}
             {investor?.leadFollow && (
-              <div className="flex items-center gap-1 bg-purple-500/10 text-purple-700 px-2 py-1 rounded">
+              <div className="flex items-center gap-1 border border-border bg-muted/40 text-foreground px-2 py-1 rounded-md">
                 <span className="font-medium capitalize">{investor.leadFollow === 'lead' ? 'Leads' : investor.leadFollow === 'follow' ? 'Follows' : 'Either'}</span>
               </div>
             )}
@@ -178,10 +181,10 @@ export function VCCardClient({
           {safeSectors.length > 0 && (
             <div className="flex flex-wrap gap-1.5 mb-2">
               {safeSectors.slice(0, 3).map((sector: string, i: number) => (
-                <Badge 
-                  key={i} 
-                  variant="secondary" 
-                  className="text-xs group-hover:bg-primary/10 group-hover:border-primary/20 transition-colors"
+                <Badge
+                  key={i}
+                  variant="outline"
+                  className="text-xs font-normal text-muted-foreground border-border"
                 >
                   {sector}
                 </Badge>
@@ -207,10 +210,10 @@ export function VCCardClient({
               return uniqueTags.length > 0 && (
                 <div className="flex flex-wrap gap-1.5">
                   {uniqueTags.map((tag: string, i: number) => (
-                    <Badge 
-                      key={i} 
-                      variant="outline" 
-                      className="text-xs bg-primary/5 border-primary/20 text-primary group-hover:bg-primary/10 group-hover:border-primary/30 transition-all"
+                    <Badge
+                      key={i}
+                      variant="outline"
+                      className="text-xs font-normal border-border text-muted-foreground"
                     >
                       {tag}
                     </Badge>
@@ -220,7 +223,7 @@ export function VCCardClient({
             })()}
             
             {proofPoints && (Array.isArray(proofPoints) ? proofPoints.length > 0 : Object.keys(proofPoints).length > 0) && (
-              <div className="text-xs text-muted-foreground bg-muted/50 px-2 py-1.5 rounded-md group-hover:bg-primary/5 transition-colors">
+              <div className="text-xs text-muted-foreground border border-border/60 bg-muted/30 px-2 py-1.5 rounded-md">
                 <span className="font-semibold text-foreground/85">Focus: </span>
                 {Array.isArray(proofPoints) 
                   ? proofPoints.slice(0, 2).join(', ')
@@ -258,71 +261,71 @@ export function VCCardClient({
           {/* YC Insider subsection - only for Y Combinator */}
           {isYC && (
             <div className="mt-4 pt-4 border-t border-border">
-              <Link 
-                href="/founder/yc-insider" 
+              <Link
+                href="/founder/yc-insider"
                 onClick={(e) => e.stopPropagation()}
-                className="flex items-center gap-2 text-xs font-semibold bg-gradient-to-r from-orange-500 to-red-500 text-white px-3 py-2 rounded-lg hover:from-orange-600 hover:to-red-600 transition-all shadow-sm hover:shadow-md hover:scale-105 transform"
+                className="flex items-center gap-2 text-xs font-medium border border-border rounded-md px-3 py-2 text-foreground hover:bg-muted/50 transition-colors"
               >
-                <Crown className="h-4 w-4" />
-                <span>YC Insider: Alumni tips & office hours</span>
+                <Crown className="h-4 w-4 text-muted-foreground" />
+                <span>YC Insider — tips & office hours</span>
               </Link>
             </div>
           )}
         </CardContent>
 
-        <CardFooter className="flex items-center gap-2 pt-4 border-t border-border/60 relative z-10 bg-muted/40 group-hover:bg-card transition-colors">
+        <CardFooter className="flex items-center gap-2 pt-4 border-t border-border relative z-10 bg-muted/20">
           {profileComplete ? (
             <>
               {applicationLink ? (
-                <a 
+                <a
                   href={applicationLink}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex-1"
                   onClick={(e) => e.stopPropagation()}
                 >
-                  <Button 
-                    className={`w-full font-semibold transition-all group-hover:scale-105 ${isYC ? 'bg-amber-600 hover:bg-amber-700 shadow-md hover:shadow-lg' : 'bg-primary hover:bg-primary/90 shadow-md hover:shadow-lg'}`} 
+                  <Button
+                    className="w-full font-medium bg-foreground text-background hover:bg-foreground/90"
                     size="sm"
                   >
                     <Send className="mr-2 h-4 w-4" />
-                    Apply Now
+                    Apply
                   </Button>
                 </a>
               ) : investor?.email ? (
-                <a 
-                  href={`mailto:${investor.email}?subject=Investment Inquiry`} 
+                <a
+                  href={`mailto:${investor.email}?subject=Investment Inquiry`}
                   className="flex-1"
                   onClick={(e) => e.stopPropagation()}
                 >
-                  <Button className="w-full font-semibold bg-primary hover:bg-primary/90 shadow-md hover:shadow-lg transition-all group-hover:scale-105" size="sm">
+                  <Button className="w-full font-medium bg-foreground text-background hover:bg-foreground/90" size="sm">
                     Contact ↗
                   </Button>
                 </a>
               ) : (
-                <Button className="flex-1 cursor-not-allowed bg-muted font-semibold text-muted-foreground" size="sm" disabled>
+                <Button className="flex-1 cursor-not-allowed bg-muted font-medium text-muted-foreground" size="sm" disabled>
                   Contact N/A
                 </Button>
               )}
             </>
           ) : (
-            <Link 
-              href="/founder/onboarding" 
+            <Link
+              href="/founder/onboarding"
               className="flex-1"
               onClick={(e) => e.stopPropagation()}
             >
-              <Button className="w-full font-medium border-2 hover:border-primary hover:bg-primary/5 transition-all" size="sm" variant="outline">
-                Complete Profile
+              <Button className="w-full font-medium border-border hover:bg-muted" size="sm" variant="outline">
+                Complete profile
               </Button>
             </Link>
           )}
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            className={`transition-all rounded-lg group-hover:scale-110 ${
-              isBookmarked 
-                ? 'bg-red-50 text-red-600 hover:bg-red-100' 
-                : 'hover:bg-red-50 hover:text-red-600'
+          <Button
+            variant="ghost"
+            size="sm"
+            className={`shrink-0 rounded-md border border-transparent ${
+              isBookmarked
+                ? 'text-foreground bg-muted hover:bg-muted/80'
+                : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
             }`}
             onClick={handleBookmark}
             title={isBookmarked ? 'Remove bookmark' : 'Bookmark this VC'}

@@ -5,7 +5,7 @@ import { extractPitchDeckFeatures } from '@/lib/ai'
 import { aiNativeMatchVCs } from '@/lib/ai-native-matching'
 import { logger } from '@/lib/logger'
 import { validatePitchDeck } from '@/lib/content-validator'
-import { ADMIN_EMAIL, CREDIT_COSTS } from '@/lib/constants'
+import { isAdminEmail, CREDIT_COSTS } from '@/lib/constants'
 import { rateLimitMiddleware, RATE_LIMITS } from '@/lib/rate-limit'
 import { parseJSON } from '@/lib/utils'
 import { getComprehensiveFounderContext } from '@/lib/founder-context'
@@ -177,7 +177,7 @@ export async function POST(request: NextRequest) {
     const CREDIT_COST = CREDIT_COSTS.PITCH_DECK
     
     // Skip credit check for admin
-    if (user.email !== ADMIN_EMAIL) {
+    if (!isAdminEmail(user.email)) {
       let userCredits = await db.userCredits.findUnique({
         where: { userId: user.id },
       })

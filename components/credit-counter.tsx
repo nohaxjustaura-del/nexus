@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Coins, Gift } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
@@ -21,6 +21,7 @@ export function CreditCounter({
   const [claiming, setClaiming] = useState(false)
   const [loading, setLoading] = useState(true)
   const [mounted, setMounted] = useState(false)
+  const claimInFlight = useRef(false)
 
   useEffect(() => {
     setMounted(true)
@@ -60,7 +61,8 @@ export function CreditCounter({
   }
 
   const handleClaim = async () => {
-    if (claiming) return
+    if (claiming || claimInFlight.current) return
+    claimInFlight.current = true
     setClaiming(true)
     try {
       const res = await fetch('/api/claim-daily', {
@@ -82,6 +84,7 @@ export function CreditCounter({
     } catch (error) {
       console.error('Failed to claim daily credit:', error)
     } finally {
+      claimInFlight.current = false
       setClaiming(false)
     }
   }

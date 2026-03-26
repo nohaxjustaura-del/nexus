@@ -19,19 +19,15 @@ import {
   ExternalLink
 } from "lucide-react"
 import Link from "next/link"
+import { toast } from '@/components/ui/toast-simple'
+import { FounderVerificationReviewPanel } from '@/components/admin/founder-verification-review-panel'
+import type { FounderVerificationReviewItem } from '@/lib/admin/founder-verifications'
 
 interface UserApproval {
   email: string
   status: string
   createdAt: string
   reviewedAt?: string
-}
-
-interface FounderVerification {
-  email: string
-  url?: string
-  status: string
-  submittedAt: string
 }
 
 interface VCClaim {
@@ -55,14 +51,14 @@ interface UnverifiedVC {
 
 interface AdminDashboardClientProps {
   userApprovals: UserApproval[]
-  founderVerifications: FounderVerification[]
+  founderVerificationPending: FounderVerificationReviewItem[]
   vcClaims: VCClaim[]
   unverifiedVCs: UnverifiedVC[]
 }
 
 export function AdminDashboardClient({
   userApprovals,
-  founderVerifications,
+  founderVerificationPending,
   vcClaims,
   unverifiedVCs,
 }: AdminDashboardClientProps) {
@@ -98,34 +94,8 @@ export function AdminDashboardClient({
       if (!res.ok) throw new Error('Failed to approve')
       router.refresh()
     } catch (error) {
-      alert('Failed to approve user signup')
+      toast.error('Failed to approve user signup')
       setProcessingState(`user-${email}`, false)
-    }
-  }
-
-  // Approve founder verification
-  const approveFounderVerification = async (email: string) => {
-    setProcessingState(`founder-${email}`, true)
-    try {
-      // Approve verification
-      const res1 = await fetch(`/api/admin/founders/verification/${encodeURIComponent(email)}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'approve' }),
-      })
-      if (!res1.ok) throw new Error('Failed to approve verification')
-      
-      // Also approve user access
-      const res2 = await fetch(`/api/admin/users/approve/${encodeURIComponent(email)}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-      })
-      if (!res2.ok) console.warn('Failed to approve user access')
-      
-      router.refresh()
-    } catch (error) {
-      alert('Failed to approve founder verification')
-      setProcessingState(`founder-${email}`, false)
     }
   }
 
@@ -141,7 +111,7 @@ export function AdminDashboardClient({
       if (!res.ok) throw new Error('Failed to approve')
       router.refresh()
     } catch (error) {
-      alert('Failed to approve VC claim')
+      toast.error('Failed to approve VC claim')
       setProcessingState(`vcclaim-${claimId}`, false)
     }
   }
@@ -158,7 +128,7 @@ export function AdminDashboardClient({
       if (!res.ok) throw new Error('Failed to verify VC')
       router.refresh()
     } catch (error) {
-      alert('Failed to verify VC')
+      toast.error('Failed to verify VC')
       setProcessingState(`vc-${vcId}`, false)
     }
   }
@@ -180,7 +150,7 @@ export function AdminDashboardClient({
       )
       router.refresh()
     } catch (error) {
-      alert('Failed to bulk approve')
+      toast.error('Failed to bulk approve')
       setProcessingState('bulk-users', false)
     }
   }
@@ -256,61 +226,17 @@ export function AdminDashboardClient({
       )}
 
       {/* Founder Verifications */}
-      {founderVerifications.length > 0 && (
+      {founderVerificationPending.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <FileCheck className="h-5 w-5" />
-              Founder ID Verifications ({founderVerifications.length})
+              Founder ID Verifications ({founderVerificationPending.length})
             </CardTitle>
-            <CardDescription>Identity verification submissions</CardDescription>
+            <CardDescription>Review each ID on this page, then verify or reject</CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              {founderVerifications.map((verification) => {
-                const id = `founder-${verification.email}`
-                const isProcessing = processing.has(id)
-                return (
-                  <div
-                    key={verification.email}
-                    className="flex items-center justify-between rounded-lg border border-primary/25 bg-primary/12 p-4 hover:bg-primary/10 transition-colors"
-                  >
-                    <div className="flex items-center gap-3">
-                      <FileCheck className="h-5 w-5 text-blue-600" />
-                      <div>
-                        <div className="font-medium">{verification.email}</div>
-                        <div className="text-xs text-muted-foreground">
-                          <Clock className="mr-1 inline h-3 w-3" />
-                          {verification.submittedAt ? (mounted ? new Date(verification.submittedAt).toLocaleString() : new Date(verification.submittedAt).toISOString().slice(0, 10)) : 'Unknown'}
-                          {verification.url && (
-                            <a
-                              href={`/api/admin/founders/verification/file/${encodeURIComponent(verification.email)}`}
-                              target="_blank"
-                              className="ml-2 text-blue-600 hover:underline"
-                            >
-                              View file
-                            </a>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                    <Button
-                      onClick={() => approveFounderVerification(verification.email)}
-                      disabled={isProcessing}
-                      size="sm"
-                      className="bg-green-600 hover:bg-green-700"
-                    >
-                      {isProcessing ? (
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      ) : (
-                        <CheckCircle className="mr-2 h-4 w-4" />
-                      )}
-                      Approve
-                    </Button>
-                  </div>
-                )
-              })}
-            </div>
+          <CardContent className="pt-0">
+            <FounderVerificationReviewPanel pending={founderVerificationPending} showHeader={false} />
           </CardContent>
         </Card>
       )}

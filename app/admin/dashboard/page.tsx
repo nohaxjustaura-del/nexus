@@ -4,7 +4,11 @@ import { redirect } from "next/navigation"
 import { AdminDashboardClient } from "./admin-dashboard-client"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Users, Building2, Shield, FileCheck, CheckCircle2, Clock } from "lucide-react"
-import { ADMIN_EMAIL } from "@/lib/constants"
+import { isAdminEmail } from "@/lib/constants"
+import {
+  enrichFounderVerifications,
+  serializeFounderVerificationRows,
+} from "@/lib/admin/founder-verifications"
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -12,14 +16,14 @@ export const runtime = 'nodejs'
 export default async function AdminDashboardPage() {
   // Check admin access
   const user = await getCurrentUser(false)
-  if (!user || user.email !== ADMIN_EMAIL) {
+  if (!user || !isAdminEmail(user.email)) {
     redirect('/')
   }
 
   // Fetch all pending items in parallel
   const [
     userApprovals,
-    founderVerifications,
+    founderVerificationPending,
     vcClaims,
     unverifiedVCs
   ] = await Promise.all([
@@ -37,16 +41,12 @@ export default async function AdminDashboardPage() {
 
     (async () => {
       try {
-        return await db.founderVerification.findMany({
+        const rows = await db.founderVerification.findMany({
           where: { status: 'pending' },
           orderBy: { submittedAt: 'desc' },
-          select: {
-            email: true,
-            url: true,
-            status: true,
-            submittedAt: true,
-          },
         })
+        const enriched = await enrichFounderVerifications(rows)
+        return serializeFounderVerificationRows(enriched)
       } catch (error) {
         console.error('Error loading founder verifications:', error)
         return []
@@ -78,10 +78,10 @@ export default async function AdminDashboardPage() {
   // Calculate statistics
   const stats = {
     userSignups: userApprovals.length,
-    founderVerifications: founderVerifications.length,
+    founderVerifications: founderVerificationPending.length,
     vcClaims: vcClaims.length,
     unverifiedVCs: unverifiedVCs.length,
-    total: userApprovals.length + founderVerifications.length + vcClaims.length + unverifiedVCs.length,
+    total: userApprovals.length + founderVerificationPending.length + vcClaims.length + unverifiedVCs.length,
   }
 
   return (
@@ -172,12 +172,7 @@ export default async function AdminDashboardPage() {
               createdAt: u.createdAt.toISOString(),
               reviewedAt: u.reviewedAt?.toISOString(),
             }))}
-            founderVerifications={founderVerifications.map((f) => ({
-              email: f.email,
-              url: f.url ?? undefined,
-              status: f.status,
-              submittedAt: f.submittedAt.toISOString(),
-            }))}
+            founderVerificationPending={founderVerificationPending}
             vcClaims={vcClaims.map(c => ({
               ...c,
               createdAt: c.createdAt.toISOString(),

@@ -9,6 +9,7 @@ import Link from 'next/link'
 import { BRAND_NAME } from '@/lib/brand'
 import { RESEND_DEV_CONSOLE_FALLBACK_HINT } from '@/lib/resend-user-messages'
 import { CLIENT_STORAGE } from '@/lib/client-storage-keys'
+import { toast } from '@/components/ui/toast-simple'
 
 const VERIFY_EMAIL_KEY = CLIENT_STORAGE.PENDING_VERIFY_EMAIL
 const USER_EMAIL_KEY = CLIENT_STORAGE.USER_EMAIL
@@ -55,7 +56,8 @@ export default function VerifyPage() {
         const data = await res.json().catch(() => ({}))
         if (cancelled) return
         if (data?.authenticated) {
-          const target = redirectUrl || (data?.verified ? '/founder/dashboard' : '/founder/onboarding')
+          const defaultVerified = data?.isAdmin ? '/admin/dashboard' : '/founder/dashboard'
+          const target = redirectUrl || (data?.verified ? defaultVerified : '/founder/onboarding')
           window.location.replace(target)
         }
       } catch {
@@ -107,9 +109,9 @@ export default function VerifyPage() {
           /* ignore */
         }
         setDevConsoleHint(true)
-        alert(RESEND_DEV_CONSOLE_FALLBACK_HINT)
+        toast.info(RESEND_DEV_CONSOLE_FALLBACK_HINT, 12000)
       } else {
-        alert('A new sign-in link has been sent.')
+        toast.success('A new sign-in link has been sent.')
       }
     } catch {
       setError('Failed to resend sign-in link. Please try again.')
@@ -142,7 +144,11 @@ export default function VerifyPage() {
               The sign-in link expired or failed. Tap resend to receive a fresh one.
             </div>
           )}
-          {error && <div className="p-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded-md">{error}</div>}
+          {error && (
+            <div className="rounded-lg border border-destructive/25 bg-destructive/10 px-3 py-2.5 text-sm text-destructive">
+              {error}
+            </div>
+          )}
           <Button type="button" variant="default" className="w-full" onClick={handleResend} disabled={resending}>
             {resending ? (
               <>

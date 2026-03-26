@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { ArrowRight, Sparkles } from 'lucide-react'
+import { toast } from '@/components/ui/toast-simple'
 
 export default function FounderOnboarding() {
   const router = useRouter()
@@ -99,7 +100,7 @@ export default function FounderOnboarding() {
     if (missingFields.length > 0) {
       console.warn('[FounderOnboarding] Validation failed - missing fields:', missingFields)
       console.warn('[FounderOnboarding] Required fields status:', requiredFields)
-      alert(`Please fill in all required fields. Missing: ${missingFields.join(', ')}`)
+      toast.warning(`Please fill in all required fields. Missing: ${missingFields.join(', ')}`)
       return
     }
     
@@ -151,15 +152,17 @@ export default function FounderOnboarding() {
         
         // Provide user-friendly error messages
         if (response.status === 401) {
-          alert('Please sign in to continue. Redirecting to sign in page...')
+          toast.info('Please sign in to continue. Redirecting to sign in page...')
           router.push('/signup')
         } else if (response.status === 403) {
-          alert(`Email verification required: ${errorMessage}`)
+          toast.warning(`Email verification required: ${errorMessage}`)
           router.push('/verify')
         } else if (response.status === 400) {
-          alert(`Please check your form: ${errorMessage}`)
+          toast.error(`Please check your form: ${errorMessage}`)
         } else {
-          alert(`Failed to submit: ${errorMessage}\n\nIf this problem persists, please check your internet connection and try again.`)
+          toast.error(
+            `Failed to submit: ${errorMessage}\n\nIf this problem persists, please check your internet connection and try again.`
+          )
         }
       }
     } catch (error) {
@@ -169,7 +172,7 @@ export default function FounderOnboarding() {
         message: error instanceof Error ? error.message : String(error),
         stack: error instanceof Error ? error.stack : undefined
       })
-      alert(`An error occurred: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      toast.error(`An error occurred: ${error instanceof Error ? error.message : 'Unknown error'}`)
     } finally {
       console.log('[FounderOnboarding] Form submission completed, setting loading to false')
       setLoading(false)

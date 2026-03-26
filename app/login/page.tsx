@@ -40,7 +40,8 @@ export default function LoginPage() {
         const data = await res.json().catch(() => ({}))
         if (cancelled) return
         if (data?.authenticated) {
-          const target = redirectUrl || (data?.verified ? '/founder/dashboard' : '/founder/onboarding')
+          const defaultVerified = data?.isAdmin ? '/admin/dashboard' : '/founder/dashboard'
+          const target = redirectUrl || (data?.verified ? defaultVerified : '/founder/onboarding')
           window.location.replace(target)
         }
       } catch {
@@ -106,7 +107,7 @@ export default function LoginPage() {
         if (!targetUrl) {
           if (data.user?.userType === 'investor') targetUrl = '/vc/dashboard'
           else if (data.user?.userType === 'mentor') targetUrl = '/'
-          else targetUrl = '/founder/onboarding'
+          else targetUrl = '/admin/dashboard'
         }
 
         window.location.assign(targetUrl)
@@ -130,7 +131,7 @@ export default function LoginPage() {
       if (err.message?.includes('JSON')) {
         setError('Server error: Please check your connection and try again.')
       } else {
-        setError(err.message || 'Failed to send verification code. Please try again.')
+        setError(err.message || 'Failed to send sign-in link. Please try again.')
       }
       setLoading(false)
     }

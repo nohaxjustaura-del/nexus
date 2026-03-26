@@ -20,9 +20,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const founder = await db.founder.findUnique({ where: { email: user.email } })
+    const sessionEmail = user.email.toLowerCase().trim()
+    const founder = await db.founder.findUnique({ where: { email: sessionEmail } })
     if (!founder) {
-      return NextResponse.json({ error: 'Founder profile not found' }, { status: 404 })
+      return NextResponse.json(
+        {
+          error: 'Founder profile not found',
+          hint: 'Save your onboarding profile first (your account email must match the saved founder record).',
+        },
+        { status: 404 }
+      )
     }
 
     const formData = await request.formData()
@@ -62,9 +69,9 @@ export async function POST(request: NextRequest) {
     }
 
     await db.founderVerification.upsert({
-      where: { email: user.email },
+      where: { email: sessionEmail },
       create: {
-        email: user.email,
+        email: sessionEmail,
         url: objectPath,
         status: 'pending',
         submittedAt: new Date(),

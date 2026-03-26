@@ -13,6 +13,7 @@ export const NavAuth = memo(function NavAuth() {
     authenticated: boolean
     verified: boolean
     email?: string
+    isAdmin?: boolean
   } | null>(null)
   const [loading, setLoading] = useState(true)
   const [mounted, setMounted] = useState(false)
@@ -34,6 +35,7 @@ export const NavAuth = memo(function NavAuth() {
           authenticated: data.authenticated || false,
           verified: data.verified || false,
           email: data.user?.email,
+          isAdmin: Boolean(data.isAdmin),
         })
       })
       .catch(() => {
@@ -101,11 +103,26 @@ export const NavAuth = memo(function NavAuth() {
           {authState.verified ? (
             <>
               <NotificationBell />
-              <Link href="/founder/dashboard">
-                <Button size="sm" variant="default" className="h-8 px-3 text-sm font-medium">
-                  Dashboard
-                </Button>
-              </Link>
+              {authState.isAdmin ? (
+                <>
+                  <Link href="/admin/dashboard">
+                    <Button size="sm" variant="default" className="h-8 px-3 text-sm font-medium">
+                      Admin
+                    </Button>
+                  </Link>
+                  <Link href="/founder/dashboard" className="hidden sm:block">
+                    <Button size="sm" variant="outline" className="h-8 px-2.5 text-sm font-medium">
+                      Founder
+                    </Button>
+                  </Link>
+                </>
+              ) : (
+                <Link href="/founder/dashboard">
+                  <Button size="sm" variant="default" className="h-8 px-3 text-sm font-medium">
+                    Dashboard
+                  </Button>
+                </Link>
+              )}
             </>
           ) : (
             <Link href="/founder/onboarding">

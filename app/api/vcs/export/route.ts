@@ -3,7 +3,7 @@ import { db } from '@/lib/db'
 import { getCurrentUser } from '@/lib/auth'
 import { logger } from '@/lib/logger'
 import PDFDocument from 'pdfkit'
-import { ADMIN_EMAIL } from '@/lib/constants'
+import { isAdminEmail } from '@/lib/constants'
 
 export const dynamic = 'force-dynamic'
 
@@ -43,7 +43,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Check if user is admin (only admins can download VC database)
-    if (user.email !== ADMIN_EMAIL) {
+    if (!isAdminEmail(user.email)) {
       return NextResponse.json(
         { error: 'Admin access required' },
         { status: 403 }

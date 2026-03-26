@@ -10,6 +10,15 @@ export const runtime = 'nodejs'
 // Claim cooldown: 12 hours in milliseconds
 const CLAIM_COOLDOWN_MS = 12 * 60 * 60 * 1000
 
+function isUniqueConstraintViolation(error: unknown): boolean {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    'code' in error &&
+    (error as { code: string }).code === 'P2002'
+  )
+}
+
 export async function POST() {
   try {
     const user = await getCurrentUser()
@@ -21,62 +30,94 @@ export async function POST() {
       )
     }
 
-    // Get or create user credits
-    let userCredits = await db.userCredits.findUnique({
-      where: { userId: user.id },
-    })
+    const now = new Date()
+    const cooldownBefore = new Date(now.getTime() - CLAIM_COOLDOWN_MS)
 
-    if (!userCredits) {
-      // Create credits record with first claim (give 1 credit)
-      const created = await db.userCredits.create({
-        data: {
+    const tryAtomicClaim = () =>
+      db.userCredits.updateMany({
+        where: {
           userId: user.id,
-          credits: 1,
-          isPremium: false,
-          lastDailyClaim: new Date(),
+          OR: [
+            { lastDailyClaim: null },
+            { lastDailyClaim: { lte: cooldownBefore } },
+          ],
+        },
+        data: {
+          credits: { increment: 1 },
+          lastDailyClaim: now,
         },
       })
 
-      logger.info('DAILY_CLAIM', `User ${user.id} claimed first credit`)
-
+    // Single atomic update: only one concurrent request can pass the cooldown window
+    let claimResult = await tryAtomicClaim()
+    if (claimResult.count > 0) {
+      const row = await db.userCredits.findUnique({
+        where: { userId: user.id },
+      })
+      logger.info('DAILY_CLAIM', `User ${user.id} claimed credit. Balance: ${row?.credits}`)
       return NextResponse.json({
         success: true,
-        credits: created.credits,
+        credits: row?.credits ?? 0,
         message: 'Claimed 1 free credit!',
-        canClaimAgainAt: getNextClaimTime(new Date()),
+        canClaimAgainAt: getNextClaimTime(now),
       })
     }
 
-    // Check if user can claim (12 hours must have passed)
-    const now = new Date()
-    const lastClaim = userCredits.lastDailyClaim
-    
-    if (lastClaim && !canClaimNow(lastClaim, now)) {
-      const nextClaimTime = getNextClaimTime(lastClaim)
-      return NextResponse.json({
-        success: false,
-        message: 'You can claim again in a few hours',
-        canClaimAgainAt: nextClaimTime,
-        credits: userCredits.credits || 0,
-      })
-    }
-
-    // Award 1 credit
-    const updated = await db.userCredits.update({
+    let existing = await db.userCredits.findUnique({
       where: { userId: user.id },
-      data: {
-        credits: { increment: 1 },
-        lastDailyClaim: now,
-      },
     })
 
-    logger.info('DAILY_CLAIM', `User ${user.id} claimed credit. Balance: ${userCredits.credits || 0} -> ${updated.credits}`)
+    if (!existing) {
+      try {
+        const created = await db.userCredits.create({
+          data: {
+            userId: user.id,
+            credits: 1,
+            isPremium: false,
+            lastDailyClaim: now,
+          },
+        })
+        logger.info('DAILY_CLAIM', `User ${user.id} claimed first credit`)
+        return NextResponse.json({
+          success: true,
+          credits: created.credits,
+          message: 'Claimed 1 free credit!',
+          canClaimAgainAt: getNextClaimTime(now),
+        })
+      } catch (error: unknown) {
+        if (!isUniqueConstraintViolation(error)) throw error
+        claimResult = await tryAtomicClaim()
+        if (claimResult.count > 0) {
+          const row = await db.userCredits.findUnique({
+            where: { userId: user.id },
+          })
+          return NextResponse.json({
+            success: true,
+            credits: row?.credits ?? 0,
+            message: 'Claimed 1 free credit!',
+            canClaimAgainAt: getNextClaimTime(now),
+          })
+        }
+        existing = await db.userCredits.findUnique({
+          where: { userId: user.id },
+        })
+      }
+    }
 
+    if (!existing) {
+      return NextResponse.json(
+        { error: 'Failed to claim credit' },
+        { status: 500 }
+      )
+    }
+
+    const lastClaim = existing.lastDailyClaim
+    const nextClaimTime = lastClaim ? getNextClaimTime(lastClaim) : getNextClaimTime(now)
     return NextResponse.json({
-      success: true,
-      credits: updated.credits,
-      message: 'Claimed 1 free credit!',
-      canClaimAgainAt: getNextClaimTime(now),
+      success: false,
+      message: 'You can claim again in a few hours',
+      canClaimAgainAt: nextClaimTime,
+      credits: existing.credits || 0,
     })
   } catch (error) {
     logger.error('DAILY_CLAIM', 'Error claiming credit:', error)

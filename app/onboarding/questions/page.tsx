@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -13,6 +13,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 export default function OnboardingQuestionsPage() {
   const router = useRouter()
   const [step, setStep] = useState(1)
+  const DRAFT_KEY = 'nexus_onboarding_questions_draft_v1'
   const [formData, setFormData] = useState({
     // Founder Profile
     background: '',
@@ -48,6 +49,24 @@ export default function OnboardingQuestionsPage() {
     elevatorPitch: '',
   })
 
+  // Restore onboarding progress on refresh/return.
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(DRAFT_KEY)
+      if (!raw) return
+      const parsed = JSON.parse(raw) as { step?: unknown; formData?: unknown }
+
+      const sRaw = parsed?.step
+      const s =
+        typeof sRaw === 'number' ? sRaw : typeof sRaw === 'string' ? parseInt(sRaw, 10) : NaN
+      if (Number.isFinite(s) && [1, 2, 3, 4, 5].includes(s)) setStep(s)
+
+      if (parsed?.formData && typeof parsed.formData === 'object') {
+        setFormData(parsed.formData as any)
+      }
+    } catch {}
+  }, [])
+
   const updateField = (field: string, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }))
   }
@@ -70,12 +89,23 @@ export default function OnboardingQuestionsPage() {
       })
       
       if (response.ok) {
+        try { localStorage.removeItem(DRAFT_KEY) } catch {}
         router.push('/founder/discover')
       }
     } catch (error) {
       console.error('Error saving onboarding:', error)
     }
   }
+
+  // Autosave progress.
+  useEffect(() => {
+    const t = setTimeout(() => {
+      try {
+        localStorage.setItem(DRAFT_KEY, JSON.stringify({ step, formData }))
+      } catch {}
+    }, 400)
+    return () => clearTimeout(t)
+  }, [step, formData])
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 py-12 px-4">

@@ -10,14 +10,14 @@ import { db } from '@/lib/db'
 import { researchVCsBatch } from '@/scripts/auto-research-vcs'
 import { getLiveInvestorPulse } from '@/lib/exa-service'
 import { logger } from '@/lib/logger'
-import { ADMIN_EMAIL } from '@/lib/constants'
+import { isAdminEmail } from '@/lib/constants'
 
 export const dynamic = 'force-dynamic'
 
 export async function POST(request: NextRequest) {
   try {
     const user = await getCurrentUser(false)
-    if (!user || user.email !== ADMIN_EMAIL) {
+    if (!user || !isAdminEmail(user.email)) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 

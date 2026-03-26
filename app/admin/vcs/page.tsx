@@ -22,6 +22,7 @@ import {
 } from "lucide-react"
 import Link from "next/link"
 import { parseJSON } from "@/lib/utils"
+import { toast } from '@/components/ui/toast-simple'
 
 interface Investor {
   id: string
@@ -96,11 +97,11 @@ export default function AdminVCsPage() {
       if (res.ok) {
         await loadData()
       } else {
-        alert('Failed to approve VC claim')
+        toast.error('Failed to approve VC claim')
       }
     } catch (error) {
       console.error('Error approving claim:', error)
-      alert('Error approving claim')
+      toast.error('Error approving claim')
     }
   }
 
@@ -118,11 +119,11 @@ export default function AdminVCsPage() {
       if (res.ok) {
         await loadData()
       } else {
-        alert('Failed to reject VC claim')
+        toast.error('Failed to reject VC claim')
       }
     } catch (error) {
       console.error('Error rejecting claim:', error)
-      alert('Error rejecting claim')
+      toast.error('Error rejecting claim')
     }
   }
 
@@ -137,11 +138,11 @@ export default function AdminVCsPage() {
       if (res.ok) {
         await loadData()
       } else {
-        alert('Failed to update verification status')
+        toast.error('Failed to update verification status')
       }
     } catch (error) {
       console.error('Error toggling verification:', error)
-      alert('Error updating verification')
+      toast.error('Error updating verification')
     }
   }
 
@@ -158,11 +159,11 @@ export default function AdminVCsPage() {
         await loadData()
       } else {
         const data = await res.json().catch(() => ({}))
-        alert(data.error || 'Failed to delete VC')
+        toast.error(data.error || 'Failed to delete VC')
       }
     } catch (error) {
       console.error('Error deleting VC:', error)
-      alert('Error deleting VC')
+      toast.error('Error deleting VC')
     }
   }
 

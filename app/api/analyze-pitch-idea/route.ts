@@ -4,7 +4,7 @@ import { getCurrentUser } from '@/lib/auth'
 import { aiNativeMatchVCs } from '@/lib/ai-native-matching'
 import { logger } from '@/lib/logger'
 import { validatePitchIdea } from '@/lib/content-validator'
-import { ADMIN_EMAIL, CREDIT_COSTS } from '@/lib/constants'
+import { isAdminEmail, CREDIT_COSTS } from '@/lib/constants'
 import { rateLimitMiddleware, RATE_LIMITS } from '@/lib/rate-limit'
 import { parseJSON } from '@/lib/utils'
 import { getComprehensiveFounderContext, buildAIPromptContext } from '@/lib/founder-context'
@@ -220,7 +220,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check credits (admin bypass) - but don't deduct yet
-    if (user.email !== ADMIN_EMAIL) {
+    if (!isAdminEmail(user.email)) {
       const userCredits = await db.userCredits.findUnique({
         where: { userId: user.id },
       })
@@ -336,7 +336,7 @@ Be specific and actionable.`
       // (rest of handler expects `analysis` to exist below)
 
       // Deduct credits AFTER successful analysis (admin bypass)
-      if (user.email !== ADMIN_EMAIL) {
+      if (!isAdminEmail(user.email)) {
         try {
           await db.userCredits.update({
             where: { userId: user.id },

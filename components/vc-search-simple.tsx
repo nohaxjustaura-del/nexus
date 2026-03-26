@@ -81,7 +81,7 @@ function VCSearchSimple() {
           placeholder="Search by firm name, sector, stage, or location..."
           value={searchQuery}
           onChange={(e) => handleSearch(e.target.value)}
-          className="pl-10 pr-10 h-12 text-base border-2 focus:border-primary transition-colors"
+          className="pl-10 pr-10 h-12 text-base border border-border bg-background focus-visible:ring-1 focus-visible:ring-foreground/20"
           autoComplete="off"
         />
         {searchQuery && (
@@ -97,23 +97,26 @@ function VCSearchSimple() {
         )}
       </div>
       {!searchQuery && (
-        <div className="mt-2 flex flex-wrap gap-2 text-xs text-slate-500">
-          <span>Try searching for:</span>
+        <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+          <span>Try:</span>
           <button
+            type="button"
             onClick={() => handleSearch('AI')}
-            className="px-2 py-1 rounded-md bg-muted hover:bg-slate-200 transition-colors"
+            className="px-2.5 py-1 rounded-md border border-border bg-muted/50 hover:bg-muted transition-colors text-foreground/80"
           >
             AI
           </button>
           <button
+            type="button"
             onClick={() => handleSearch('Seed')}
-            className="px-2 py-1 rounded-md bg-muted hover:bg-slate-200 transition-colors"
+            className="px-2.5 py-1 rounded-md border border-border bg-muted/50 hover:bg-muted transition-colors text-foreground/80"
           >
             Seed
           </button>
           <button
+            type="button"
             onClick={() => handleSearch('San Francisco')}
-            className="px-2 py-1 rounded-md bg-muted hover:bg-slate-200 transition-colors"
+            className="px-2.5 py-1 rounded-md border border-border bg-muted/50 hover:bg-muted transition-colors text-foreground/80"
           >
             San Francisco
           </button>

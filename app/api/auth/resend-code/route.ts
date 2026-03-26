@@ -71,7 +71,6 @@ export async function POST(request: NextRequest) {
     const emailResult = await sendMagicLinkEmail(normalizedEmail, {
       magicLink: oneTapLink,
       isNew: !existingUser,
-      includeOtp: false,
     })
 
     if (!emailResult.success) {
@@ -108,7 +107,7 @@ export async function POST(request: NextRequest) {
     applyAuthCookies(res)
     return res
   } catch (error) {
-    console.error('Resend code error:', error)
-    return NextResponse.json({ error: 'Failed to resend code. Please try again.' }, { status: 500 })
+    console.error('Resend sign-in link error:', error)
+    return NextResponse.json({ error: 'Failed to resend sign-in link. Please try again.' }, { status: 500 })
   }
 }

@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { ArrowLeft, Rocket, Loader2, CheckCircle, Upload } from "lucide-react"
 import { useState } from "react"
+import { toast } from '@/components/ui/toast-simple'
 
 interface Step5VerificationProps {
   idFile: File | null
@@ -79,8 +80,12 @@ export function Step5Verification({
                 const data = await res.json()
                 if (!res.ok) throw new Error(data.error || 'Upload failed')
                 setIdUploaded(true)
+                toast.success(
+                  "We’ve received your ID. Our team will verify your account—please check back in a little while.",
+                  8000
+                )
               } catch (e: any) {
-                alert(e.message || 'Upload failed')
+                toast.error(e.message || 'Upload failed')
               } finally {
                 setIdUploading(false)
               }
@@ -109,7 +114,7 @@ export function Step5Verification({
           <Button 
             onClick={async () => {
               if (!idUploaded) {
-                alert('Please upload your ID before continuing.')
+                toast.warning('Please upload your ID before continuing.')
                 return
               }
               try {

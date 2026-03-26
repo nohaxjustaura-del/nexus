@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { getCurrentUser } from '@/lib/auth'
-import { ADMIN_EMAIL } from '@/lib/constants'
+import { isAdminEmail } from '@/lib/constants'
 import { logger } from '@/lib/logger'
 
 export const runtime = 'nodejs'
@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
   try {
     const user = await getCurrentUser()
 
-    if (!user || user.email !== ADMIN_EMAIL) {
+    if (!user || !isAdminEmail(user.email)) {
       return NextResponse.json(
         { error: 'Forbidden. Admin access required.' },
         { status: 403, headers: { 'Content-Type': 'application/json' } }

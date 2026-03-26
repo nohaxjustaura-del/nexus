@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Gift, Check, Clock } from 'lucide-react'
@@ -12,6 +12,7 @@ export default function DailyClaim() {
   const [credits, setCredits] = useState(0)
   const [nextClaimTime, setNextClaimTime] = useState<string | null>(null)
   const [mounted, setMounted] = useState(false)
+  const claimInFlight = useRef(false)
 
   useEffect(() => {
     setMounted(true)
@@ -20,7 +21,7 @@ export default function DailyClaim() {
 
   const checkClaimStatus = async () => {
     try {
-      const res = await fetch('/api/claim-daily')
+      const res = await fetch('/api/claim-daily', { credentials: 'include' })
       const data = await res.json()
       
       if (res.ok) {
@@ -34,12 +35,15 @@ export default function DailyClaim() {
   }
 
   const handleClaim = async () => {
+    if (!canClaim || claiming || claimInFlight.current) return
+    claimInFlight.current = true
     setClaiming(true)
     setMessage('')
 
     try {
       const res = await fetch('/api/claim-daily', {
         method: 'POST',
+        credentials: 'include',
       })
       const data = await res.json()
 
@@ -61,6 +65,7 @@ export default function DailyClaim() {
     } catch (error) {
       setMessage('Failed to claim. Please try again.')
     } finally {
+      claimInFlight.current = false
       setClaiming(false)
     }
   }

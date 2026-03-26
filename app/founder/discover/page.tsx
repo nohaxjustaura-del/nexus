@@ -447,66 +447,63 @@ export default async function DiscoverPage({
   }
 
   return (
-    <div className="min-h-screen bg-white" data-page="discover">
+    <div className="min-h-screen bg-background text-foreground" data-page="discover">
       <div className="container mx-auto max-w-7xl px-4 py-6 md:py-8">
-        {/* Clean Title */}
         <div className="mb-8">
-          <h1 className="text-3xl md:text-4xl font-bold text-slate-900 mb-2">
+          <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-foreground mb-2">
             1,002 Verified Investors
           </h1>
-          <p className="text-slate-600 text-lg">
+          <p className="text-muted-foreground text-base md:text-lg">
             Find the right investors for your startup
           </p>
         </div>
 
-        {/* Clean Tab Navigation */}
-        <div className="mb-6 border-b border-slate-200">
-          <nav className="flex gap-6 -mb-px">
+        <div className="mb-6 border-b border-border">
+          <nav className="flex flex-wrap gap-x-6 gap-y-1 -mb-px">
             <Link
               href="/founder/discover"
-              className="px-1 py-3 text-sm font-semibold border-b-2 border-blue-600 text-blue-600 transition-colors"
+              className="px-1 py-3 text-sm font-semibold border-b-2 border-foreground text-foreground transition-colors"
             >
               Discover
             </Link>
             <Link
               href="/founder/matches"
-              className="px-1 py-3 text-sm font-medium text-slate-600 hover:text-slate-900 border-b-2 border-transparent hover:border-slate-300 transition-colors"
+              className="px-1 py-3 text-sm font-medium text-muted-foreground hover:text-foreground border-b-2 border-transparent hover:border-border transition-colors"
             >
               Matches
             </Link>
             <Link
               href="/founder/bookmarks"
-              className="px-1 py-3 text-sm font-medium text-slate-600 hover:text-slate-900 border-b-2 border-transparent hover:border-slate-300 transition-colors"
+              className="px-1 py-3 text-sm font-medium text-muted-foreground hover:text-foreground border-b-2 border-transparent hover:border-border transition-colors"
             >
               Bookmarks
             </Link>
             <Link
               href="/founder/my-analyses"
-              className="px-1 py-3 text-sm font-medium text-slate-600 hover:text-slate-900 border-b-2 border-transparent hover:border-slate-300 transition-colors"
+              className="px-1 py-3 text-sm font-medium text-muted-foreground hover:text-foreground border-b-2 border-transparent hover:border-border transition-colors"
             >
               My Analyses
             </Link>
           </nav>
         </div>
 
-        {/* Toggle Switch */}
-        <div className="mb-6 flex items-center gap-2">
+        <div className="mb-6 inline-flex rounded-md border border-border p-0.5 bg-muted/40">
           <Link
             href="/founder/discover"
-            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+            className={`px-4 py-2 rounded-sm text-sm font-medium transition-colors ${
               !viewAll
-                ? 'bg-blue-600 text-white'
-                : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                ? 'bg-foreground text-background'
+                : 'text-muted-foreground hover:text-foreground'
             }`}
           >
             Tailored
           </Link>
           <Link
             href="/founder/discover?all=1"
-            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+            className={`px-4 py-2 rounded-sm text-sm font-medium transition-colors ${
               viewAll
-                ? 'bg-blue-600 text-white'
-                : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                ? 'bg-foreground text-background'
+                : 'text-muted-foreground hover:text-foreground'
             }`}
           >
             All ({investors.length})
@@ -514,17 +511,15 @@ export default async function DiscoverPage({
         </div>
 
         {verificationBanner && (
-          <Card className="mb-4 border-yellow-300 bg-yellow-50">
-            <CardContent className="py-4 text-sm text-yellow-800">
-              Your identity verification is <strong>{verificationBanner.status}</strong>. You can still browse matches; some actions may require approval.
+          <Card className="mb-4 border-border bg-muted/40">
+            <CardContent className="py-4 text-sm text-muted-foreground">
+              Your identity verification is <strong className="text-foreground">{verificationBanner.status}</strong>. You can still browse matches; some actions may require approval.
             </CardContent>
           </Card>
         )}
 
-
-        {/* Results count */}
         <div className="mb-6">
-          <p className="text-sm text-slate-600">
+          <p className="text-sm text-muted-foreground">
             Showing {filteredInvestors.length} {filteredInvestors.length === 1 ? 'investor' : 'investors'}
             {!viewAll && backgroundReasons.length > 0 && (
               <span className="ml-1">• Tailored to {backgroundReasons[0].toLowerCase()}</span>

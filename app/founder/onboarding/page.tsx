@@ -9,6 +9,7 @@ import { Step2StartupDetails } from "@/components/onboarding/step-2-startup-deta
 import { Step3Preferences } from "@/components/onboarding/step-3-preferences"
 import { Step5Verification } from "@/components/onboarding/step-5-verification"
 import { CLIENT_STORAGE } from '@/lib/client-storage-keys'
+import { toast } from '@/components/ui/toast-simple'
 
 type OnboardingFormData = {
   name: string
@@ -30,6 +31,11 @@ type OnboardingFormData = {
   ethicsTags: string[]
   personalityTags: string[]
   valueAddNeeds: string[]
+  /**
+   * Persisted onboarding progress (saved into /api/onboarding/founder/draft).
+   * We store this in the existing draft JSON to avoid extra DB migrations.
+   */
+  onboardingStep?: number
   geoPreference: 'us-only' | 'remote-ok'
   decisionSpeedDays: string
   targetOwnershipMax: string
@@ -73,6 +79,7 @@ export default function OnboardingPage() {
     ethicsTags: [],
     personalityTags: [],
     valueAddNeeds: [],
+    onboardingStep: 1,
     geoPreference: 'us-only',
     decisionSpeedDays: '',
     targetOwnershipMax: '',
@@ -85,6 +92,20 @@ export default function OnboardingPage() {
     needsImmigrationSupport: false,
     universityAffiliation: '',
   })
+
+  const normalizeOnboardingStep = (raw: unknown): number | null => {
+    const n =
+      typeof raw === 'number'
+        ? raw
+        : typeof raw === 'string'
+          ? parseInt(raw, 10)
+          : NaN
+
+    if (!Number.isFinite(n)) return null
+    if (n === 4) return 5 // the UI skips "step 4"
+    if ([1, 2, 3, 5].includes(n)) return n
+    return null
+  }
 
   // Load existing profile
   useEffect(() => {
@@ -115,12 +136,21 @@ export default function OnboardingPage() {
               personalityTags: data.profile.personalityTags || [],
               valueAddNeeds: data.profile.valueAddNeeds || [],
             }))
+
+            // Verification upload happens during step 5.
+            // If the backend says we already uploaded an ID, resume there.
+            setIdUploaded(Boolean(data.verification?.uploaded))
+            setStep(5)
           } else {
             try {
               const draftRes = await fetch('/api/onboarding/founder/draft', { credentials: 'include' })
               if (draftRes.ok) {
                 const draftData = await draftRes.json()
                 if (draftData?.exists && draftData?.draft && typeof draftData.draft === 'object') {
+                  const draft = draftData.draft as Partial<OnboardingFormData> & { onboardingStep?: unknown }
+                  const stepFromDraft = normalizeOnboardingStep(draft.onboardingStep)
+                  if (stepFromDraft) setStep(stepFromDraft)
+
                   setFormData(prev => ({ ...prev, ...(draftData.draft as Partial<OnboardingFormData>) }))
                   return
                 }
@@ -165,6 +195,14 @@ export default function OnboardingPage() {
   // Skip step 4
   useEffect(() => {
     if (step === 4) setStep(5)
+  }, [step])
+
+  // Persist the effective step into the existing onboarding draft JSON.
+  useEffect(() => {
+    setFormData(prev => {
+      if (prev.onboardingStep === step) return prev
+      return { ...prev, onboardingStep: step }
+    })
   }, [step])
 
   const toggleArrayItem = useCallback((key: keyof OnboardingFormData, value: string) => {
@@ -267,7 +305,7 @@ export default function OnboardingPage() {
       // Redirect to discover after successful onboarding
       router.push('/founder/discover')
     } catch (error: any) {
-      alert(error?.message || 'Failed to save profile. Please try again.')
+      toast.error(error?.message || 'Failed to save profile. Please try again.')
       setSaving(false)
     }
   }

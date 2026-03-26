@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getCurrentUser } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { logger } from '@/lib/logger'
-import { ADMIN_EMAIL } from '@/lib/constants'
+import { isAdminEmail } from '@/lib/constants'
 
 export const dynamic = 'force-dynamic'
 
@@ -33,7 +33,7 @@ export async function GET(_request: NextRequest) {
       approved = false
     }
 
-    if (user.email === ADMIN_EMAIL && !approved) {
+    if (isAdminEmail(user.email) && !approved) {
       try {
         await db.userApproval.upsert({
           where: { email: user.email },
@@ -55,7 +55,7 @@ export async function GET(_request: NextRequest) {
       }
     }
 
-    const isAdmin = user.email === ADMIN_EMAIL
+    const isAdmin = isAdminEmail(user.email)
     const isVerified = isAdmin || (user.emailVerified && approved)
 
     if (!isVerified) {
@@ -64,6 +64,7 @@ export async function GET(_request: NextRequest) {
         verified: false,
         email: user.email,
         userEmail: user.email,
+        isAdmin,
         needsApproval: !approved,
         user: {
           id: user.id,
@@ -80,6 +81,7 @@ export async function GET(_request: NextRequest) {
       verified: true,
       email: user.email,
       userEmail: user.email,
+      isAdmin,
       user: {
         id: user.id,
         email: user.email,

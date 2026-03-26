@@ -15,6 +15,7 @@ import {
   Loader2
 } from "lucide-react"
 import Link from "next/link"
+import { toast } from '@/components/ui/toast-simple'
 
 interface Bookmark {
   id: string
@@ -71,7 +72,7 @@ export default function BookmarksPage() {
         setBookmarks(prev => prev.filter(b => b.id !== bookmarkId))
       }
     } catch (e) {
-      alert('Failed to remove bookmark')
+      toast.error('Failed to remove bookmark')
     } finally {
       setDeleting(null)
     }

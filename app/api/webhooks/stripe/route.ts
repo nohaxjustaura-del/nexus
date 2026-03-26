@@ -5,6 +5,7 @@ import Stripe from 'stripe'
 
 // Disable body parsing for webhook
 export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
 
 export async function POST(request: NextRequest) {
   const body = await request.text()

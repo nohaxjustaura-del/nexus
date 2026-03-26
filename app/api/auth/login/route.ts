@@ -9,7 +9,7 @@ import {
   formatResendErrorMessage,
   sendMagicLinkEmail,
 } from '@/lib/email'
-import { ADMIN_EMAIL } from '@/lib/constants'
+import { isAdminEmail } from '@/lib/constants'
 
 export const dynamic = 'force-dynamic'
 
@@ -51,37 +51,131 @@ export async function POST(request: NextRequest) {
     const { supabase, applyAuthCookies } = createSupabaseAuthRouteClient(request)
     const adminClient = createSupabaseAdminClient()
 
-    // Admin bypass: generate link, verify OTP server-side, and return an
+    // Admin bypass: generate link, verify OTP or token_hash server-side, and return an
     // already-authenticated session so the admin never needs to check email.
-    if (normalizedEmail === ADMIN_EMAIL.toLowerCase()) {
+    if (isAdminEmail(normalizedEmail)) {
       try {
-        const { data: linkData, error: linkError } = await adminClient.auth.admin.generateLink({
+        let { data: linkData, error: linkError } = await adminClient.auth.admin.generateLink({
           type: 'magiclink',
           email: normalizedEmail,
         })
 
+        // If the auth user does not exist yet, create a confirmed user and retry (some projects return "not found").
+        if (linkError) {
+          const msg = (linkError.message || '').toLowerCase()
+          const notFound =
+            msg.includes('user not found') ||
+            msg.includes('no user found') ||
+            msg.includes('not found') ||
+            (linkError as { status?: number }).status === 404
+          if (notFound) {
+            const { error: createErr } = await adminClient.auth.admin.createUser({
+              email: normalizedEmail,
+              email_confirm: true,
+            })
+            if (
+              createErr &&
+              !String(createErr.message || '')
+                .toLowerCase()
+                .includes('already been registered')
+            ) {
+              console.error('Admin bypass createUser error:', createErr)
+              return NextResponse.json(
+                {
+                  error: 'Admin login failed',
+                  ...(process.env.NODE_ENV === 'development'
+                    ? { details: createErr.message, step: 'createUser' }
+                    : {}),
+                },
+                { status: 500 }
+              )
+            }
+            // Always retry generateLink after create (or "already registered") — first error may be transient.
+            const retry = await adminClient.auth.admin.generateLink({
+              type: 'magiclink',
+              email: normalizedEmail,
+            })
+            linkData = retry.data
+            linkError = retry.error
+          }
+        }
+
         if (linkError || !linkData) {
           console.error('Admin bypass generateLink error:', linkError)
-          return NextResponse.json({ error: 'Admin login failed' }, { status: 500 })
+          return NextResponse.json(
+            {
+              error: 'Admin login failed',
+              ...(process.env.NODE_ENV === 'development'
+                ? { details: linkError?.message, code: (linkError as { code?: string }).code }
+                : {}),
+            },
+            { status: 500 }
+          )
         }
 
-        const otp = linkData.properties?.email_otp
-        if (!otp) {
-          return NextResponse.json({ error: 'Admin login failed: no OTP generated' }, { status: 500 })
+        const props = linkData.properties
+        const emailOtp = props?.email_otp?.trim() || ''
+        const tokenHash =
+          typeof props?.hashed_token === 'string' && props.hashed_token.length > 0
+            ? props.hashed_token
+            : null
+
+        let verifiedUser = null as Awaited<ReturnType<typeof supabase.auth.verifyOtp>>['data']['user']
+        let verifyError: Awaited<ReturnType<typeof supabase.auth.verifyOtp>>['error'] | null = null
+
+        // Prefer numeric OTP when present; Supabase may omit email_otp on some projects — use hashed_token.
+        if (emailOtp) {
+          for (const type of ['email', 'magiclink'] as const) {
+            const { data, error } = await supabase.auth.verifyOtp({
+              email: normalizedEmail,
+              token: emailOtp,
+              type,
+            })
+            if (!error && data.user) {
+              verifiedUser = data.user
+              verifyError = null
+              break
+            }
+            verifyError = error
+          }
         }
 
-        const { data: verifyData, error: verifyError } = await supabase.auth.verifyOtp({
-          email: normalizedEmail,
-          token: otp,
-          type: 'email',
-        })
-
-        if (verifyError || !verifyData.user) {
-          console.error('Admin bypass verifyOtp error:', verifyError)
-          return NextResponse.json({ error: 'Admin login verification failed' }, { status: 500 })
+        if (!verifiedUser && tokenHash) {
+          for (const type of ['email', 'magiclink', 'invite'] as const) {
+            const { data, error } = await supabase.auth.verifyOtp({
+              token_hash: tokenHash,
+              type,
+            })
+            if (!error && data.user) {
+              verifiedUser = data.user
+              verifyError = null
+              break
+            }
+            verifyError = error
+          }
         }
 
-        const user = await syncPrismaUserFromAuth(verifyData.user)
+        if (!verifiedUser) {
+          console.error('Admin bypass verifyOtp error:', verifyError, {
+            hadOtp: Boolean(emailOtp),
+            hadTokenHash: Boolean(tokenHash),
+          })
+          return NextResponse.json(
+            {
+              error: 'Admin login verification failed',
+              ...(process.env.NODE_ENV === 'development'
+                ? {
+                    details: verifyError?.message,
+                    hadOtp: Boolean(emailOtp),
+                    hadTokenHash: Boolean(tokenHash),
+                  }
+                : {}),
+            },
+            { status: 500 }
+          )
+        }
+
+        const user = await syncPrismaUserFromAuth(verifiedUser)
 
         const res = NextResponse.json({
           success: true,
@@ -94,7 +188,15 @@ export async function POST(request: NextRequest) {
         return res
       } catch (adminErr: any) {
         console.error('Admin bypass error:', adminErr)
-        return NextResponse.json({ error: 'Admin login failed' }, { status: 500 })
+        return NextResponse.json(
+          {
+            error: 'Admin login failed',
+            ...(process.env.NODE_ENV === 'development'
+              ? { details: adminErr?.message, step: 'exception' }
+              : {}),
+          },
+          { status: 500 }
+        )
       }
     }
 
@@ -160,10 +262,9 @@ export async function POST(request: NextRequest) {
     }
 
     const magicLink = linkData.properties?.action_link
-    const otp = linkData.properties?.email_otp
     const tokenHash = linkData.properties?.hashed_token
-    if (!magicLink || !otp) {
-      console.error('Login generateLink: missing action_link or email_otp', linkData.properties)
+    if (!magicLink) {
+      console.error('Login generateLink: missing action_link', linkData.properties)
       return NextResponse.json(
         { error: 'Failed to generate sign-in link. Please try again.' },
         { status: 500 }
@@ -177,7 +278,6 @@ export async function POST(request: NextRequest) {
 
     const emailResult = await sendMagicLinkEmail(normalizedEmail, {
       magicLink: oneTapLink,
-      otp,
       isNew: false,
     })
     // #region agent log

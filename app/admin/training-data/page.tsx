@@ -24,7 +24,6 @@ import {
   Mic,
 } from 'lucide-react'
 import Link from 'next/link'
-import { ADMIN_EMAIL } from '@/lib/constants'
 
 interface TrainingDataExport {
   exportedAt: string
@@ -69,7 +68,7 @@ export default function TrainingDataPage() {
 
       // The auth endpoint returns email as userEmail or user.email, not top-level email
       const userEmail = auth?.userEmail || auth?.user?.email || auth?.email
-      if (!userEmail || userEmail !== ADMIN_EMAIL) {
+      if (!userEmail || !auth?.isAdmin) {
         setError(`Access denied. You must be logged in as the admin. Current: ${userEmail || 'not logged in'}`)
         setLoading(false)
         return

@@ -7,7 +7,6 @@ import { Button } from '@/components/ui/button'
 import { Download, Database, FileText, FileJson, FileType, Loader2, CheckCircle2, Building2, Shield } from 'lucide-react'
 import { toast } from '@/components/ui/toast-simple'
 import Link from 'next/link'
-import { ADMIN_EMAIL } from '@/lib/constants'
 
 export default function VCDatabasePage() {
   const router = useRouter()
@@ -27,7 +26,7 @@ export default function VCDatabasePage() {
         
         if (response.ok) {
           const data = await response.json()
-          if (data.user?.email === ADMIN_EMAIL) {
+          if (data.isAdmin === true) {
             setIsAdmin(true)
           } else {
             setIsAdmin(false)

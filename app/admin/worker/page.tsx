@@ -7,6 +7,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { toast } from '@/components/ui/toast-simple'
 
 interface Job {
   id: string
@@ -56,7 +57,7 @@ export default function WorkerDashboard() {
       // Refresh status after trigger
       setTimeout(fetchStatus, 1000)
     } catch (err: any) {
-      alert(`Failed to trigger job: ${err.message}`)
+      toast.error(`Failed to trigger job: ${err.message}`)
     } finally {
       setTriggering(null)
     }

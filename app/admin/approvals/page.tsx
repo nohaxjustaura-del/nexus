@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { ADMIN_EMAIL } from '@/lib/constants'
+import { toast } from '@/components/ui/toast-simple'
 
 type Approval = {
   id: string
@@ -29,7 +29,7 @@ export default function AdminApprovalsPage() {
         // Basic admin gate (client-side): let server still enforce permissions
         const auth = await fetch('/api/auth/check', { credentials: 'include', headers: { 'Cache-Control': 'no-store' } }).then(r => r.json()).catch(() => ({}))
         const userEmail = auth?.userEmail || auth?.user?.email || auth?.email
-        if (!userEmail || userEmail !== ADMIN_EMAIL) {
+        if (!userEmail || !auth?.isAdmin) {
           router.replace('/')
           return
         }
@@ -61,7 +61,7 @@ export default function AdminApprovalsPage() {
       if (!res.ok) throw new Error(data?.error || 'Approve failed')
       setApprovals(prev => prev.map(a => a.email === email ? { ...a, status: 'approved' } : a))
     } catch (e: any) {
-      alert(e?.message || 'Approve failed')
+      toast.error(e?.message || 'Approve failed')
     } finally {
       setSubmitting(null)
     }

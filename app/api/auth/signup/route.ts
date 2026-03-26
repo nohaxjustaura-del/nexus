@@ -66,10 +66,9 @@ export async function POST(request: NextRequest) {
     }
 
     const magicLink = linkData.properties?.action_link
-    const otp = linkData.properties?.email_otp
     const tokenHash = linkData.properties?.hashed_token
-    if (!magicLink || !otp) {
-      console.error('Signup generateLink: missing action_link or email_otp', linkData.properties)
+    if (!magicLink) {
+      console.error('Signup generateLink: missing action_link', linkData.properties)
       return NextResponse.json(
         { error: 'Failed to generate sign-in link. Please try again.' },
         { status: 500 }
@@ -83,7 +82,6 @@ export async function POST(request: NextRequest) {
 
     const emailResult = await sendMagicLinkEmail(normalizedEmail, {
       magicLink: oneTapLink,
-      otp,
       isNew: true,
     })
 

@@ -20,6 +20,7 @@ import {
 } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
+import { toast } from '@/components/ui/toast-simple'
 
 export function PitchDeckAnalysisTab() {
   const router = useRouter()
@@ -160,13 +161,13 @@ export function PitchDeckAnalysisTab() {
           setCredits(creditsData)
         }
       } else if (response.status === 402) {
-        alert('You need credits or premium to unlock top matches. Please purchase credits or upgrade to premium.')
+        toast.error('You need credits or premium to unlock top matches. Please purchase credits or upgrade to premium.')
       } else {
-        alert(data.error || 'Failed to unlock top matches')
+        toast.error(data.error || 'Failed to unlock top matches')
       }
     } catch (err) {
       console.error('Error unlocking matches:', err)
-      alert('Failed to unlock top matches')
+      toast.error('Failed to unlock top matches')
     } finally {
       setUnlocking(false)
     }
@@ -231,7 +232,7 @@ export function PitchDeckAnalysisTab() {
                       const data = await response.json()
                       if (!response.ok) {
                         if (response.status === 402) {
-                          alert('Insufficient credits. Founder feedback costs 200 credits.')
+                          toast.error('Insufficient credits. Founder feedback costs 200 credits.')
                           return
                         }
                         throw new Error(data.error || 'Failed to get founder feedback')
@@ -243,7 +244,7 @@ export function PitchDeckAnalysisTab() {
                         setCredits(creditsData)
                       }
                     } catch (err) {
-                      alert(err instanceof Error ? err.message : 'Failed to get founder feedback')
+                      toast.error(err instanceof Error ? err.message : 'Failed to get founder feedback')
                     } finally {
                       setRequestingFeedback(false)
                     }

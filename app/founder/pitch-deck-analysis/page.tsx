@@ -32,6 +32,7 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { loadStripe } from '@stripe/stripe-js'
 import SmartMatchResults from '@/components/smart-match-results'
+import { toast } from '@/components/ui/toast-simple'
 
 interface PitchAnalysisResult {
   pitchDeckId: string
@@ -267,13 +268,13 @@ export default function PitchDeckAnalysisPage() {
           setCredits(creditsData)
         }
       } else if (response.status === 402) {
-        alert('You need credits or premium to unlock top matches. Please purchase credits or upgrade to premium.')
+        toast.error('You need credits or premium to unlock top matches. Please purchase credits or upgrade to premium.')
       } else {
-        alert(data.error || 'Failed to unlock top matches')
+        toast.error(data.error || 'Failed to unlock top matches')
       }
     } catch (err) {
       console.error('Error unlocking matches:', err)
-      alert('Failed to unlock top matches')
+      toast.error('Failed to unlock top matches')
     } finally {
       setUnlocking(false)
     }

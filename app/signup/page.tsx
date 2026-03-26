@@ -110,7 +110,7 @@ export default function SignUpPage() {
       if (err.message?.includes('JSON')) {
         setError('Server error: Please check your connection and try again.')
       } else {
-        setError(err.message || 'Failed to send verification code. Please try again.')
+        setError(err.message || 'Failed to send sign-in link. Please try again.')
       }
       setLoading(false)
     }
@@ -178,7 +178,7 @@ export default function SignUpPage() {
             </div>
 
             {error && (
-              <div className="p-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded-md">
+              <div className="rounded-lg border border-destructive/25 bg-destructive/10 px-3 py-2.5 text-sm text-destructive">
                 {error}
               </div>
             )}

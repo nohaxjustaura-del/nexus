@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { getCurrentUser } from '@/lib/auth'
-import { ADMIN_EMAIL } from '@/lib/constants'
+import { isAdminEmail } from '@/lib/constants'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Admin and premium users get free access - just record the purchase without deducting credits
-    const isAdmin = user.email === ADMIN_EMAIL
+    const isAdmin = isAdminEmail(user.email)
     const isPremium = userCredits.isPremium || isAdmin
 
     if (isPremium) {

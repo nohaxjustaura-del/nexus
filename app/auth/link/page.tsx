@@ -13,7 +13,7 @@ export default function AuthLinkPage() {
   const next = params.get('next') || '/founder/onboarding'
   const email = params.get('email') || ''
 
-  const continueHref = `/api/auth/callback?token_hash=${encodeURIComponent(tokenHash)}&type=${encodeURIComponent(type)}&next=${encodeURIComponent(next)}`
+  const continueHref = `/api/auth/callback?confirm=1&token_hash=${encodeURIComponent(tokenHash)}&type=${encodeURIComponent(type)}&next=${encodeURIComponent(next)}`
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-primary/5 to-background p-4">

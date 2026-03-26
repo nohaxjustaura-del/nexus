@@ -10,6 +10,7 @@ import { Upload, Sparkles, TrendingUp, AlertCircle, CheckCircle, Lightbulb, Targ
 import Link from "next/link"
 import SmartMatchResults from '@/components/smart-match-results'
 import AnalysisDashboard from '@/components/analysis/AnalysisDashboard'
+import { toast } from '@/components/ui/toast-simple'
 
 export function PitchIdeaAnalysisTab() {
   const [ideaText, setIdeaText] = useState('')
@@ -316,7 +317,7 @@ export function PitchIdeaAnalysisTab() {
 
       if (!response.ok) {
         if (response.status === 402) {
-          alert('Insufficient credits. Founder feedback costs 200 credits.')
+          toast.error('Insufficient credits. Founder feedback costs 200 credits.')
           return
         }
         throw new Error(data.error || 'Failed to get founder feedback')
@@ -330,7 +331,7 @@ export function PitchIdeaAnalysisTab() {
         setCredits(creditsData)
       }
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Failed to get founder feedback')
+      toast.error(err instanceof Error ? err.message : 'Failed to get founder feedback')
     } finally {
       setRequestingFeedback(false)
     }

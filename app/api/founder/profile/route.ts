@@ -18,9 +18,11 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Check if founder profile exists
+    const sessionEmail = user.email.toLowerCase().trim()
+
+    // Check if founder profile exists (must match auth email — same key as verify-id)
     const founder = await db.founder.findUnique({
-      where: { email: user.email },
+      where: { email: sessionEmail },
     }).catch((err) => {
       console.error('Error fetching founder profile:', err)
       return null
@@ -33,8 +35,15 @@ export async function GET(request: NextRequest) {
       )
     }
 
+    const founderVerification = await db.founderVerification.findUnique({
+      where: { email: sessionEmail },
+    }).catch(() => null)
+
     return NextResponse.json({
       exists: true,
+      verification: founderVerification
+        ? { uploaded: true, status: founderVerification.status }
+        : { uploaded: false, status: null },
       founder: {
         name: founder.name,
         email: founder.email,
@@ -189,8 +198,20 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Normalize email
-    const normalizedEmail = email.toLowerCase().trim()
+    // Founder row must use the authenticated account email (verify-id and other routes key on session user)
+    const sessionEmail = user.email.toLowerCase().trim()
+    if (!sessionEmail) {
+      return NextResponse.json({ error: 'Account email missing' }, { status: 400 })
+    }
+    const normalizedEmail = sessionEmail
+
+    const formEmailNorm = email ? String(email).toLowerCase().trim() : ''
+    const mergedAltEmail =
+      (altEmail && String(altEmail).trim())
+        ? String(altEmail).trim()
+        : formEmailNorm && formEmailNorm !== sessionEmail
+          ? formEmailNorm
+          : null
 
     // Check if founder already exists
     const existingFounder = await db.founder.findUnique({
@@ -262,7 +283,7 @@ export async function POST(request: NextRequest) {
         create: {
           email: normalizedEmail,
           phone: phone || null,
-          altEmail: altEmail || null,
+          altEmail: mergedAltEmail,
           website: website || null,
           linkedin: linkedin || null,
           city: city || null,
@@ -274,7 +295,7 @@ export async function POST(request: NextRequest) {
         },
         update: {
           phone: phone || null,
-          altEmail: altEmail || null,
+          altEmail: mergedAltEmail,
           website: website || null,
           linkedin: linkedin || null,
           city: city || null,

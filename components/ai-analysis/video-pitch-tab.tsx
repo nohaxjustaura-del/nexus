@@ -11,6 +11,7 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import SmartMatchResults from '@/components/smart-match-results'
 import AnalysisDashboard from '@/components/analysis/AnalysisDashboard'
+import { toast } from '@/components/ui/toast-simple'
 
 export function VideoPitchAnalysisTab() {
   const router = useRouter()
@@ -221,13 +222,13 @@ export function VideoPitchAnalysisTab() {
           setCredits(creditsData)
         }
       } else if (response.status === 402) {
-        alert('You need credits or premium to unlock top matches. Please purchase credits or upgrade to premium.')
+        toast.error('You need credits or premium to unlock top matches. Please purchase credits or upgrade to premium.')
       } else {
-        alert(data.error || 'Failed to unlock top matches')
+        toast.error(data.error || 'Failed to unlock top matches')
       }
     } catch (err) {
       console.error('Error unlocking matches:', err)
-      alert('Failed to unlock top matches')
+      toast.error('Failed to unlock top matches')
     } finally {
       setUnlocking(false)
     }

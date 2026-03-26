@@ -4,6 +4,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { AdvancedFilters } from "./advanced-filters"
+import { toast } from '@/components/ui/toast-simple'
 
 const filterSelectClass =
   "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
@@ -61,7 +62,7 @@ export function FilterForm() {
       const minVal = parseInt(min)
       const maxVal = parseInt(max)
       if (!isNaN(minVal) && !isNaN(maxVal) && minVal > maxVal) {
-        alert('Minimum check size cannot be greater than maximum check size')
+        toast.error('Minimum check size cannot be greater than maximum check size')
         return
       }
     }

@@ -5,7 +5,7 @@ import { analyzeVideoPitch, VideoPitchFeatures } from '@/lib/ai'
 import { intelligentMatchVCs } from '@/lib/intelligent-matching'
 import { aiNativeMatchVCs } from '@/lib/ai-native-matching'
 import { validateVideoPitch } from '@/lib/content-validator'
-import { ADMIN_EMAIL, CREDIT_COSTS } from '@/lib/constants'
+import { isAdminEmail, CREDIT_COSTS } from '@/lib/constants'
 import { generatePitchEmbedding, rankVCsForPitch } from '@/lib/embeddings'
 import { parseJSON } from '@/lib/utils'
 import { logger } from '@/lib/logger'
@@ -111,7 +111,7 @@ export async function POST(request: NextRequest) {
     
     // Skip credit check for admin
     let userCredits = null
-    if (user.email !== ADMIN_EMAIL) {
+    if (!isAdminEmail(user.email)) {
       userCredits = await db.userCredits.findUnique({
         where: { userId: user.id },
       })
@@ -153,7 +153,7 @@ export async function POST(request: NextRequest) {
     // Require payment verification only if user is not Premium and doesn't have enough credits
     // Premium users or users with sufficient credits don't need payment verification
     const hasEnoughCredits = userCredits?.isPremium || (userCredits && (userCredits.credits ?? 0) >= CREDIT_COST)
-    if (!paymentVerified && !hasEnoughCredits && user.email !== ADMIN_EMAIL) {
+    if (!paymentVerified && !hasEnoughCredits && !isAdminEmail(user.email)) {
       return NextResponse.json({
         error: 'Payment required',
         requiresPayment: true,
@@ -804,7 +804,7 @@ export async function POST(request: NextRequest) {
     })
 
     // Deduct credits AFTER successful analysis (admin bypass)
-    if (user.email !== ADMIN_EMAIL) {
+    if (!isAdminEmail(user.email)) {
       try {
         await db.userCredits.update({
           where: { userId: user.id },

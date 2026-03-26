@@ -19,11 +19,14 @@ const nextConfig = {
     } : false,
   },
   
-  // Experimental features for better performance
-  // Temporarily disabled to fix webpack module loading issues
-  // experimental: {
-  //   optimizePackageImports: ['lucide-react'],
-  // },
+  experimental: {
+    // Tree-shake icon and Radix entry points (smaller client bundles)
+    optimizePackageImports: [
+      'lucide-react',
+      '@radix-ui/react-select',
+      '@radix-ui/react-checkbox',
+    ],
+  },
   
   // Webpack config removed to fix module loading errors
   // If needed, add back with minimal configuration
@@ -53,15 +56,6 @@ const nextConfig = {
           {
             key: 'Permissions-Policy',
             value: 'camera=(), microphone=(self), geolocation=()'
-          }
-        ],
-      },
-      {
-        source: '/api/:path*',
-        headers: [
-          {
-            key: 'Cache-Control',
-            value: 'public, s-maxage=60, stale-while-revalidate=300'
           }
         ],
       },
