@@ -9,7 +9,7 @@ export async function POST(request: NextRequest) {
     const { data, error } = await supabase.auth.refreshSession()
 
     if (error || !data.session) {
-      return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
+      return NextResponse.json({ success: false, error: 'Not authenticated' })
     }
 
     const res = NextResponse.json({

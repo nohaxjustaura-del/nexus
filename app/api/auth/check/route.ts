@@ -11,7 +11,7 @@ export async function GET(_request: NextRequest) {
     const user = await getCurrentUser()
 
     if (!user) {
-      const res = NextResponse.json({ authenticated: false, verified: false }, { status: 401 })
+      const res = NextResponse.json({ authenticated: false, verified: false })
       res.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate')
       return res
     }
@@ -95,7 +95,7 @@ export async function GET(_request: NextRequest) {
     return res
   } catch (error) {
     logger.error('AUTH_CHECK', 'Error checking auth', error)
-    const res = NextResponse.json({ authenticated: false, verified: false }, { status: 401 })
+    const res = NextResponse.json({ authenticated: false, verified: false })
     res.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate')
     return res
   }
