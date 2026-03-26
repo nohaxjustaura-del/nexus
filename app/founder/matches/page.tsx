@@ -38,7 +38,7 @@ export default async function MatchesPage({
     user = null
   }
   
-  // Check if user has completed any pitch analysis (resume, video pitch, etc.)
+  // Check if user has completed ANY AI analysis (resume, video pitch, etc.)
   let hasAnalysis = false
   let latestAnalysis: any = null
   let topMatches: any[] = []
@@ -171,17 +171,17 @@ export default async function MatchesPage({
     }
   }
 
-  // If no analysis, show prompt to run pitch analysis
+  // If no analysis, show prompt to use AI analyzer
   if (!hasAnalysis) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-muted/50 via-background to-primary/5">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50/30">
         <div className="container mx-auto max-w-6xl px-4 py-4 md:py-6">
           {/* Tab Navigation */}
           <div className="mb-4 border-b">
             <nav className="flex items-center gap-1 -mb-px">
               <Link
                 href="/founder/discover"
-                className="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+                className="px-4 py-2 text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors"
               >
                 Discover
               </Link>
@@ -193,13 +193,13 @@ export default async function MatchesPage({
               </Link>
               <Link
                 href="/founder/bookmarks"
-                className="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+                className="px-4 py-2 text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors"
               >
                 Bookmarks
               </Link>
               <Link
                 href="/founder/my-analyses"
-                className="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+                className="px-4 py-2 text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors"
               >
                 My Analyses
               </Link>
@@ -207,7 +207,7 @@ export default async function MatchesPage({
           </div>
 
           {/* Locked Content */}
-          <Card className="border-2 border-primary/20 bg-gradient-to-br from-primary/5 via-primary/5 to-purple-500/10">
+          <Card className="border-2 border-primary/20 bg-gradient-to-br from-primary/5 via-blue-50/50 to-purple-50/30">
             <CardContent className="pt-12 pb-12 text-center">
               <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-primary/10">
                 <Lock className="h-10 w-10 text-primary" />
@@ -216,20 +216,20 @@ export default async function MatchesPage({
                 Unlock Your Personalized VC Matches
               </CardTitle>
               <CardDescription className="mb-6 text-lg">
-                Get compatibility scores and detailed match explanations by running pitch analysis in NEXUS
+                Get AI-powered compatibility scores and detailed match explanations by using our AI analysis features
               </CardDescription>
               
               <div className="mx-auto mb-8 max-w-2xl space-y-4 text-left">
-                <div className="flex items-start gap-4 rounded-lg border bg-card/50 p-4">
+                <div className="flex items-start gap-4 rounded-lg border bg-white/50 p-4">
                   <Sparkles className="mt-1 h-6 w-6 shrink-0 text-primary" />
                   <div>
-                    <h3 className="mb-1 font-semibold">Pitch analysis</h3>
+                    <h3 className="mb-1 font-semibold">AI-Powered Analysis</h3>
                     <p className="text-sm text-muted-foreground">
-                      Use pitch tools (resume, video review, and more) to get personalized VC matches with evidence-based compatibility scores
+                      Use our AI analysis tools (resume analysis, video pitch review, etc.) to get personalized VC matches with evidence-based compatibility scores
                     </p>
                   </div>
                 </div>
-                <div className="flex items-start gap-4 rounded-lg border bg-card/50 p-4">
+                <div className="flex items-start gap-4 rounded-lg border bg-white/50 p-4">
                   <Target className="mt-1 h-6 w-6 shrink-0 text-primary" />
                   <div>
                     <h3 className="mb-1 font-semibold">Detailed Match Breakdown</h3>
@@ -238,7 +238,7 @@ export default async function MatchesPage({
                     </p>
                   </div>
                 </div>
-                <div className="flex items-start gap-4 rounded-lg border bg-card/50 p-4">
+                <div className="flex items-start gap-4 rounded-lg border bg-white/50 p-4">
                   <TrendingUp className="mt-1 h-6 w-6 shrink-0 text-primary" />
                   <div>
                     <h3 className="mb-1 font-semibold">Actionable Insights</h3>
@@ -253,7 +253,7 @@ export default async function MatchesPage({
                 <Link href="/founder/ai-analysis">
                   <Button size="lg" className="bg-gradient-to-r from-primary to-blue-600 hover:from-primary/90 hover:to-blue-600/90 shadow-lg">
                     <Sparkles className="mr-2 h-5 w-5" />
-                    Run pitch analysis
+                    Use AI Analysis
                   </Button>
                 </Link>
                 <Link href="/founder/discover">
@@ -279,7 +279,7 @@ export default async function MatchesPage({
             <nav className="flex items-center gap-1 -mb-px">
               <Link
                 href="/founder/discover"
-                className="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+                className="px-4 py-2 text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors"
               >
                 Discover
               </Link>
@@ -291,13 +291,13 @@ export default async function MatchesPage({
               </Link>
               <Link
                 href="/founder/bookmarks"
-                className="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+                className="px-4 py-2 text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors"
               >
                 Bookmarks
               </Link>
               <Link
                 href="/founder/my-analyses"
-                className="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+                className="px-4 py-2 text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors"
               >
                 My Analyses
               </Link>
@@ -315,7 +315,7 @@ export default async function MatchesPage({
                 <Link href="/founder/ai-analysis">
                   <Button>
                     <Sparkles className="mr-2 h-4 w-4" />
-                    Run pitch analysis
+                    Use AI Analysis
                   </Button>
                 </Link>
                 <Link href="/founder/discover">
@@ -366,7 +366,7 @@ export default async function MatchesPage({
           <nav className="flex items-center gap-1 -mb-px">
             <Link
               href="/founder/discover"
-              className="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+              className="px-4 py-2 text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors"
             >
               Discover
             </Link>
@@ -378,13 +378,13 @@ export default async function MatchesPage({
             </Link>
             <Link
               href="/founder/bookmarks"
-              className="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+              className="px-4 py-2 text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors"
             >
               Bookmarks
             </Link>
             <Link
               href="/founder/my-analyses"
-              className="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+              className="px-4 py-2 text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors"
             >
               My Analyses
             </Link>

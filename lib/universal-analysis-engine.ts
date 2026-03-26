@@ -15,7 +15,7 @@
  *
  * Scoring Pillars:
  *   Market Heat        (30%)  - competitive saturation, white-space, funding velocity
- *   Moat Integrity     (25%)  - defensibility vs. commoditized models, inference margins, MCP risks
+ *   Moat Integrity     (25%)  - defensibility against GPT-5/6, inference margins, MCP risks
  *   Founder-Market Fit (20%)  - pedigree, technical depth, domain credibility
  *   Strategic Momentum (25%)  - traction velocity by 2026 standards
  *   Execution          (only VIDEO/DECK) - clarity, communication, presentation quality
@@ -158,11 +158,11 @@ You will receive:
 
 Evaluation Pillars:
 
-MARKET HEAT (30%): Use the Exa market data to identify if this is a Red Ocean or Blue Ocean. Quote specific competitor names and funding rounds from the SATURATION section. Identify Goliaths from the INCUMBENTS section - name the established giants that already own the customer relationship and assess whether their platform roadmap or recent acquisitions could crush this startup. Reference macro catalysts from the CATALYSTS section. If the market data is thin, flag the uncertainty.
+MARKET HEAT (30%): Use the Exa market data to identify if this is a Red Ocean or Blue Ocean. Quote specific competitor names and funding rounds from the SATURATION section. Identify Goliaths from the INCUMBENTS section - name the established giants that already own the customer relationship and assess whether their AI roadmap or recent acquisitions could crush this startup. Reference macro catalysts from the CATALYSTS section. If the market data is thin, flag the uncertainty.
 
-MOAT INTEGRITY (25%): Analyze "Inference Margins" and "Agentic Autonomy." Does this idea survive another wave of commoditized foundation models? Look for MCP (Model Context Protocol) risks - can a foundation model simply add this as a feature? Evaluate defensibility through data moats, network effects, or regulatory capture.
+MOAT INTEGRITY (25%): Analyze "Inference Margins" and "Agentic Autonomy." Does this idea survive a GPT-5/6 release? Look for MCP (Model Context Protocol) risks - can a foundation model simply add this as a feature? Evaluate defensibility through data moats, network effects, or regulatory capture.
 
-FOUNDER-MARKET FIT (20%): Does the dossier show the pedigree and technical depth required for this niche? Evaluate education, domain expertise, prior experience, and unique unfair advantages. A deeply technical founder with relevant research credibility is different from a non-technical founder in the same space.
+FOUNDER-MARKET FIT (20%): Does the dossier show the pedigree and technical depth required for this niche? Evaluate education, domain expertise, prior experience, and unique unfair advantages. A Stanford AI PhD building an AI company is different from a non-technical founder in the same space.
 
 STRATEGIC MOMENTUM (25%): Look at the TRACTION section of the dossier. Is the velocity sufficient for 2026 standards? Reference the GRAVEYARD section to identify whether this startup is repeating patterns of failure. Evaluate burn rate implied by team size vs. funding ask.${executionClause}
 

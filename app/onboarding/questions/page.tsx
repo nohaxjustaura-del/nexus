@@ -78,13 +78,13 @@ export default function OnboardingQuestionsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary/10 to-primary/10 py-12 px-4">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 py-12 px-4">
       <div className="max-w-3xl mx-auto">
         <div className="mb-8">
-          <h1 className="text-4xl font-bold text-foreground mb-2">
+          <h1 className="text-4xl font-bold text-slate-900 mb-2">
             Let's Find Your Perfect Investors 🎯
           </h1>
-          <p className="text-lg text-muted-foreground">
+          <p className="text-lg text-slate-600">
             Answer these questions so we can match you with the best VCs, accelerators, and funding programs
           </p>
         </div>
@@ -92,7 +92,7 @@ export default function OnboardingQuestionsPage() {
         {/* Progress Bar */}
         <div className="mb-8">
           <div className="flex justify-between mb-2">
-            <span className="text-sm font-medium text-foreground/85">Step {step} of 5</span>
+            <span className="text-sm font-medium text-slate-700">Step {step} of 5</span>
             <span className="text-sm text-slate-500">{Math.round((step / 5) * 100)}% complete</span>
           </div>
           <div className="w-full bg-slate-200 rounded-full h-2">
@@ -108,8 +108,8 @@ export default function OnboardingQuestionsPage() {
           {step === 1 && (
             <div className="space-y-6">
               <div>
-                <h2 className="text-2xl font-bold text-foreground mb-4">About You (The Founder)</h2>
-                <p className="text-muted-foreground mb-6">Help us understand your background and experience</p>
+                <h2 className="text-2xl font-bold text-slate-900 mb-4">About You (The Founder)</h2>
+                <p className="text-slate-600 mb-6">Help us understand your background and experience</p>
               </div>
 
               <div>
@@ -184,8 +184,8 @@ export default function OnboardingQuestionsPage() {
           {step === 2 && (
             <div className="space-y-6">
               <div>
-                <h2 className="text-2xl font-bold text-foreground mb-4">Your Startup</h2>
-                <p className="text-muted-foreground mb-6">Tell us about what you're building</p>
+                <h2 className="text-2xl font-bold text-slate-900 mb-4">Your Startup</h2>
+                <p className="text-slate-600 mb-6">Tell us about what you're building</p>
               </div>
 
               <div>
@@ -204,7 +204,7 @@ export default function OnboardingQuestionsPage() {
                   id="oneLiner"
                   value={formData.oneLiner}
                   onChange={(e) => updateField('oneLiner', e.target.value)}
-                  placeholder="e.g., automated code review for open source projects"
+                  placeholder="e.g., AI-powered code review for open source projects"
                 />
                 <p className="text-xs text-slate-500 mt-1">Make it clear and specific</p>
               </div>
@@ -247,8 +247,8 @@ export default function OnboardingQuestionsPage() {
           {step === 3 && (
             <div className="space-y-6">
               <div>
-                <h2 className="text-2xl font-bold text-foreground mb-4">Sector & Stage</h2>
-                <p className="text-muted-foreground mb-6">Help us categorize your startup</p>
+                <h2 className="text-2xl font-bold text-slate-900 mb-4">Sector & Stage</h2>
+                <p className="text-slate-600 mb-6">Help us categorize your startup</p>
               </div>
 
               <div>
@@ -309,8 +309,8 @@ export default function OnboardingQuestionsPage() {
           {step === 4 && (
             <div className="space-y-6">
               <div>
-                <h2 className="text-2xl font-bold text-foreground mb-4">Traction & Metrics</h2>
-                <p className="text-muted-foreground mb-6">Show us what you've achieved so far</p>
+                <h2 className="text-2xl font-bold text-slate-900 mb-4">Traction & Metrics</h2>
+                <p className="text-slate-600 mb-6">Show us what you've achieved so far</p>
               </div>
 
               <div>
@@ -360,8 +360,8 @@ export default function OnboardingQuestionsPage() {
           {step === 5 && (
             <div className="space-y-6">
               <div>
-                <h2 className="text-2xl font-bold text-foreground mb-4">Fundraising Goals</h2>
-                <p className="text-muted-foreground mb-6">Tell us about your fundraising plans</p>
+                <h2 className="text-2xl font-bold text-slate-900 mb-4">Fundraising Goals</h2>
+                <p className="text-slate-600 mb-6">Tell us about your fundraising plans</p>
               </div>
 
               <div>

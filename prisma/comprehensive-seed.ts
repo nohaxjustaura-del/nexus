@@ -6549,7 +6549,7 @@ export const comprehensiveVCs = [
     leadFollow: 'lead',
     fundSize: '$500K-$3M+',
     fundType: 'institutional',
-    thesis: '"VC built like a tech company": heavy ML + data platform to source & support founders. Strong fit if you lean into data and ML.',
+    thesis: '"VC built like a tech company": heavy ML + data platform to source & support founders. Very AI-native; good match if you lean into data + AI.',
     proofPoints: JSON.stringify({
       'General': ['ML/data platform', 'AI-native', 'Tech-forward VC', 'Data-driven sourcing']
     }),

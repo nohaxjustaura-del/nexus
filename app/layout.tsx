@@ -34,8 +34,8 @@ export const metadata: Metadata = {
     default: BRAND_DEFAULT_TITLE,
     template: BRAND_TITLE_TEMPLATE,
   },
-  description: "Platform connecting founders with 1,002 verified investors. Get matched with VCs who actually fund startups like yours through structured analysis of your pitch idea, deck, and video pitch.",
-  keywords: ["venture capital", "VC matching", "founder", "investor", "startup funding", "investor matching", "pitch deck", "fundraising"],
+  description: "AI-powered platform connecting founders with 1,002 verified investors. Get matched with VCs who actually fund startups like yours through intelligent analysis of your pitch idea, deck, and video pitch.",
+  keywords: ["venture capital", "VC matching", "founder", "investor", "startup funding", "AI matching", "pitch deck", "fundraising"],
   authors: [{ name: BRAND_NAME, url: siteUrl }],
   creator: BRAND_NAME,
   publisher: BRAND_NAME,
@@ -50,7 +50,7 @@ export const metadata: Metadata = {
     url: siteUrl,
     siteName: BRAND_NAME,
     title: BRAND_DEFAULT_TITLE,
-    description: "Platform connecting founders with 1,002 verified investors. Matching through pitch analysis and evidence-based recommendations.",
+    description: "AI-powered platform connecting founders with 1,002 verified investors. Smart matching through pitch analysis and evidence-based recommendations.",
     images: [
       {
         url: "/og-image.png",
@@ -63,7 +63,7 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: BRAND_DEFAULT_TITLE,
-    description: "Platform connecting founders with compatible VCs",
+    description: "AI-powered platform connecting founders with compatible VCs",
     images: ["/og-image.png"],
   },
   robots: {
@@ -89,7 +89,6 @@ export const viewport = {
   width: 'device-width',
   initialScale: 1,
   maximumScale: 5,
-  themeColor: '#09090b',
 }
 
 export default function RootLayout({
@@ -98,10 +97,8 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" className={cn("dark scroll-smooth", dmSans.variable, outfit.variable)}>
-      <body className={cn("flex min-h-screen flex-col bg-background font-sans antialiased selection:bg-primary/25 selection:text-foreground")} suppressHydrationWarning>
-        <div className="pointer-events-none fixed inset-0 -z-10 bg-page-mesh" aria-hidden />
-        <div className="pointer-events-none fixed inset-0 -z-10 bg-noise opacity-[0.4]" aria-hidden />
+    <html lang="en" className={cn("scroll-smooth", dmSans.variable, outfit.variable)}>
+      <body className={cn("min-h-screen bg-background font-sans antialiased")} suppressHydrationWarning>
         <SessionKeeper />
         
         {/* Skip to main content - Accessibility */}
@@ -112,23 +109,23 @@ export default function RootLayout({
           Skip to main content
         </a>
 
-        <header className="sticky top-0 z-50 no-print border-b border-border/30 bg-background/70 backdrop-blur-2xl supports-[backdrop-filter]:bg-background/55">
-          <div className="mx-auto flex h-[3.25rem] max-w-6xl items-center justify-between px-5 sm:h-14 sm:px-8 lg:px-10">
+        <header className="sticky top-0 z-50 no-print border-b border-border/80 bg-background/75 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60">
+          <div className="container mx-auto max-w-7xl flex h-14 sm:h-16 items-center justify-between px-4 sm:px-6">
             <Link
               href="/"
-              className="flex items-center gap-2.5 rounded-lg -ml-1 px-1 py-0.5 hover:bg-muted/60 transition-colors group"
+              className="flex items-center gap-2.5 rounded-lg -ml-1 px-1 py-0.5 hover:bg-foreground/[0.03] transition-colors group"
             >
-              <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-none ring-1 ring-primary/25">
+              <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm ring-1 ring-primary/20">
                 <Orbit className="h-5 w-5" strokeWidth={2} aria-hidden />
               </span>
               <span className="font-heading text-lg font-semibold tracking-tight text-foreground">{BRAND_NAME}</span>
             </Link>
 
-            <nav className="hidden lg:flex items-center gap-1 text-sm" role="navigation" aria-label="Main navigation" suppressHydrationWarning>
-              <ProtectedNavLink href="/founder/discover" className="rounded-full px-3.5 py-2 font-medium text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground">Discover</ProtectedNavLink>
-              <ProtectedNavLink href="/founder/ai-analysis" className="rounded-full px-3.5 py-2 font-medium text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground">Pitch analysis</ProtectedNavLink>
-              <ProtectedNavLink href="/pricing" publicRoute className="rounded-full px-3.5 py-2 font-medium text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground">Pricing</ProtectedNavLink>
-              <div className="ml-2 pl-4 border-l border-border/50" suppressHydrationWarning>
+            <nav className="hidden lg:flex items-center gap-0.5 text-sm" role="navigation" aria-label="Main navigation" suppressHydrationWarning>
+              <ProtectedNavLink href="/founder/discover" className="text-muted-foreground hover:text-foreground px-3 py-2 rounded-md transition-colors font-medium">Discover</ProtectedNavLink>
+              <ProtectedNavLink href="/founder/ai-analysis" className="text-muted-foreground hover:text-foreground px-3 py-2 rounded-md transition-colors font-medium">AI Analysis</ProtectedNavLink>
+              <ProtectedNavLink href="/pricing" publicRoute className="text-muted-foreground hover:text-foreground px-3 py-2 rounded-md transition-colors font-medium">Pricing</ProtectedNavLink>
+              <div className="ml-3 pl-3 border-l border-border" suppressHydrationWarning>
                 <NavAuth />
               </div>
             </nav>
@@ -137,7 +134,7 @@ export default function RootLayout({
             <div className="lg:hidden flex items-center gap-2">
               <MobileNav links={[
                 { href: "/founder/discover", label: "Discover VCs" },
-                { href: "/founder/ai-analysis", label: "Pitch analysis" },
+                { href: "/founder/ai-analysis", label: "AI Analysis" },
                 { href: "/pricing", label: "Pricing" },
                 { href: "/vc/claim", label: "For VCs" }
               ]} />
@@ -146,11 +143,12 @@ export default function RootLayout({
           </div>
         </header>
         
-        <main id="main-content" className="relative flex w-full flex-1 flex-col">
+        <main id="main-content" className="flex-1">
           {children}
         </main>
-        <footer className="mt-auto border-t border-border/30 bg-muted/15 py-16 no-print backdrop-blur-sm" role="contentinfo">
-          <div className="mx-auto max-w-6xl px-5 sm:px-8 lg:px-10">
+        {/* Global Footer - Clean & Modern */}
+        <footer className="mt-auto border-t border-border py-14 no-print bg-muted/30" role="contentinfo">
+          <div className="container mx-auto max-w-6xl px-4">
             <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-2 mb-10">
               <Link href="/privacy" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Privacy</Link>
               <Link href="/terms" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Terms</Link>
@@ -162,7 +160,7 @@ export default function RootLayout({
 
             <div className="flex flex-col items-center gap-4 mb-6">
               <div className="flex items-center gap-2.5">
-                <span className="flex h-8 w-8 items-center justify-center rounded-md bg-primary/15 text-primary">
+                <span className="flex h-8 w-8 items-center justify-center rounded-md bg-primary/10 text-primary">
                   <Orbit className="h-4 w-4" strokeWidth={2} />
                 </span>
                 <span className="font-heading font-semibold text-foreground">{BRAND_NAME}</span>

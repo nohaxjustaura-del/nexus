@@ -80,7 +80,7 @@ export default function PricingPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background via-muted/20 to-background">
+    <div className="min-h-screen bg-gradient-to-b from-white via-slate-50/30 to-white">
       <div className="container mx-auto max-w-7xl px-4 py-8 md:py-10">
         <div className="mb-8 text-center">
           <h1 className="text-4xl md:text-5xl font-bold mb-4 bg-gradient-to-r from-primary via-blue-600 to-purple-600 bg-clip-text text-transparent">
@@ -252,7 +252,7 @@ export default function PricingPage() {
               <ul className="space-y-2 text-sm text-muted-foreground mb-6 flex-grow">
                 <li className="flex items-center gap-2">
                   <CheckCircle className="h-4 w-4 text-primary shrink-0" />
-                  <span><strong>Unlimited pitch analyses</strong></span>
+                  <span><strong>Unlimited AI analyses</strong></span>
                 </li>
                 <li className="flex items-center gap-2">
                   <CheckCircle className="h-4 w-4 text-primary shrink-0" />
@@ -301,7 +301,7 @@ export default function PricingPage() {
           <CardContent>
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               {/* FREE FEATURES FIRST */}
-              <div className="flex items-center justify-between rounded-lg border-2 p-4 bg-emerald-500/10 border-emerald-500/30">
+              <div className="flex items-center justify-between rounded-lg border-2 p-4 bg-green-50 border-green-200">
                 <div className="flex items-center gap-3">
                   <CheckCircle className="h-5 w-5 text-green-600 shrink-0" />
                   <div>
@@ -312,7 +312,7 @@ export default function PricingPage() {
                 <Badge className="text-base px-3 py-1 bg-green-100 text-green-700 shrink-0">Free</Badge>
               </div>
 
-              <div className="flex items-center justify-between rounded-lg border-2 p-4 bg-emerald-500/10 border-emerald-500/30">
+              <div className="flex items-center justify-between rounded-lg border-2 p-4 bg-green-50 border-green-200">
                 <div className="flex items-center gap-3">
                   <CheckCircle className="h-5 w-5 text-green-600 shrink-0" />
                   <div>
@@ -340,7 +340,7 @@ export default function PricingPage() {
                   <Sparkles className="h-5 w-5 text-primary shrink-0" />
                   <div>
                     <div className="font-medium">Pitch Idea Analysis</div>
-                    <div className="text-sm text-muted-foreground">Structured feedback</div>
+                    <div className="text-sm text-muted-foreground">AI-powered feedback</div>
                   </div>
                 </div>
                 <Badge variant="secondary" className="text-base px-3 py-1 shrink-0">15</Badge>
@@ -351,7 +351,7 @@ export default function PricingPage() {
                   <Sparkles className="h-5 w-5 text-primary shrink-0" />
                   <div>
                     <div className="font-medium">Pitch Deck Analysis</div>
-                    <div className="text-sm text-muted-foreground">Deck review</div>
+                    <div className="text-sm text-muted-foreground">AI-powered deck review</div>
                   </div>
                 </div>
                 <Badge variant="secondary" className="text-base px-3 py-1 shrink-0">30</Badge>
@@ -368,7 +368,7 @@ export default function PricingPage() {
                 <Badge variant="secondary" className="text-base px-3 py-1 shrink-0">50</Badge>
               </div>
 
-              <div className="flex items-center justify-between rounded-lg border-2 border-purple-500/30 p-4 hover:border-purple-400 transition-colors bg-gradient-to-r from-purple-500/12 to-pink-50">
+              <div className="flex items-center justify-between rounded-lg border-2 border-purple-200 p-4 hover:border-purple-400 transition-colors bg-gradient-to-r from-purple-50 to-pink-50">
                 <div className="flex items-center gap-3">
                   <UserCheck className="h-5 w-5 text-purple-600 shrink-0" />
                   <div>
@@ -379,7 +379,7 @@ export default function PricingPage() {
                 <Badge variant="secondary" className="text-base px-3 py-1 bg-purple-100 text-purple-700 shrink-0">200</Badge>
               </div>
 
-              <div className="flex items-center justify-between rounded-lg border-2 border-primary/25 p-4 hover:border-blue-400 transition-colors bg-gradient-to-r from-primary/10 to-primary/10">
+              <div className="flex items-center justify-between rounded-lg border-2 border-blue-200 p-4 hover:border-blue-400 transition-colors bg-gradient-to-r from-blue-50 to-indigo-50">
                 <div className="flex items-center gap-3">
                   <Calendar className="h-5 w-5 text-blue-600 shrink-0" />
                   <div>
@@ -387,7 +387,7 @@ export default function PricingPage() {
                     <div className="text-sm text-muted-foreground">Book time with mentors or experts</div>
                   </div>
                 </div>
-                <Badge variant="secondary" className="text-base px-3 py-1 bg-blue-100 text-primary shrink-0">400</Badge>
+                <Badge variant="secondary" className="text-base px-3 py-1 bg-blue-100 text-blue-700 shrink-0">400</Badge>
               </div>
             </div>
           </CardContent>

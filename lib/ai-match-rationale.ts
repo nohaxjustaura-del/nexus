@@ -9,7 +9,7 @@
  * 3. Connecting to VC's recent investments, batch trends, portfolio patterns
  * 
  * Example outputs:
- * - "Dorm Room Fund backed 3 AI-native SMB tools in W25. Your expense automation
+ * - "Dorm Room Fund backed 3 AI-native SMB tools in W25 - your expense automation 
  *    fits their recent pattern. As a student founder, you're exactly their target."
  * - "Berkeley SkyDeck just accelerated 2 fintech startups from Cal students last batch.
  *    Your SMB finance tool + Berkeley affiliation = perfect fit."
@@ -90,7 +90,6 @@ REQUIREMENTS:
 3. USE FOUNDER DATA: Reference student status, university, location, or unique background
 4. MAKE IT FEEL INSIGHTFUL: Should feel like insider knowledge, not generic matching
 5. Keep it 1-2 sentences, conversational, under 80 words
-6. Do not use em dashes. Use commas or periods instead.
 
 FOUNDER DETAILS:
 - Pitch: "${input.pitchIdea.substring(0, 400)}"
@@ -124,7 +123,7 @@ ${specificContext}
 MATCH SCORE: ${input.matchScore}/100
 
 EXAMPLES OF GREAT RATIONALES:
-✅ "Dorm Room Fund just backed 3 AI-native SMB tools in W25 (like Expensify alternatives). Your expense automation fits their recent pattern perfectly. As a student founder, you're exactly their target demographic."
+✅ "Dorm Room Fund just backed 3 AI-native SMB tools in W25 (like Expensify alternatives) - your expense automation fits their recent pattern perfectly. As a student founder, you're exactly their target demographic."
 
 ✅ "Berkeley SkyDeck accelerated 2 fintech startups from Cal students last batch. Your SMB finance tool + Berkeley affiliation = perfect fit for their university-focused program."
 
@@ -236,7 +235,7 @@ function detectPitchDomain(pitch: string, sectors: string[]): string {
     return 'Developer tools/infrastructure'
   }
   if (lowerPitch.includes('ai') || lowerPitch.includes('automation') || lowerPitch.includes('machine learning')) {
-    return 'Workflow automation'
+    return 'AI-powered automation'
   }
   
   return 'Technology'
@@ -256,12 +255,12 @@ function buildSpecificContext(
   // Student-specific insights
   if (input.isStudent) {
     if (input.vcFirmName.match(/Dorm Room|Student|Neo|1517/i)) {
-      context.push(`✓ ${input.vcFirmName} SPECIALIZES in student founders; that is their core focus`)
+      context.push(`✓ ${input.vcFirmName} SPECIALIZES in student founders - this is their core focus`)
     }
     if (input.founderEducation?.match(/Berkeley|Stanford|MIT|Harvard|Waterloo/i)) {
       const uni = input.founderEducation.match(/(Berkeley|Stanford|MIT|Harvard|Waterloo)/i)?.[0]
       if (input.vcFirmName.toLowerCase().includes(uni?.toLowerCase() || '')) {
-        context.push(`✓ ${input.vcFirmName} has strong ${uni} ties (university match)`)
+        context.push(`✓ ${input.vcFirmName} has strong ${uni} ties - university match`)
       }
       if (input.vcFirmName.match(/SkyDeck/i) && uni === 'Berkeley') {
         context.push(`✓ Berkeley SkyDeck = perfect match for Cal students`)
@@ -274,12 +273,12 @@ function buildSpecificContext(
     keywords.some(k => k.toLowerCase().includes(s.toLowerCase()) || s.toLowerCase().includes(k.toLowerCase()))
   )
   if (hotSectorMatch) {
-    context.push(`✓ ${hotSectorMatch} is hot in ${trends.batch}; strong timing`)
+    context.push(`✓ ${hotSectorMatch} is hot in ${trends.batch} - strong timing`)
   }
   
   // Stage alignment
   if (input.founderStage === 'pre-seed' && input.vcStages.includes('Pre-Seed')) {
-    context.push(`✓ Both at pre-seed stage; strong timing fit`)
+    context.push(`✓ Both at pre-seed stage - perfect timing`)
   }
   
   // Check size fit
@@ -291,12 +290,12 @@ function buildSpecificContext(
   if (domain.includes('AI') || keywords.includes('AI-native')) {
     const aiTrend = trends.emergingPatterns.find(p => p.toLowerCase().includes('ai'))
     if (aiTrend) {
-      context.push(`✓ AI-native products are trending ("${aiTrend}" pattern)`)
+      context.push(`✓ AI-native products are trending - "${aiTrend}" pattern`)
     }
   }
   
   if (domain.includes('SMB') || keywords.includes('SMB-focused')) {
-    context.push(`✓ SMB tooling is evergreen. VCs love "boring" but profitable solutions`)
+    context.push(`✓ SMB tooling is evergreen - VCs love "boring" but profitable solutions`)
   }
   
   return context.length > 0 ? context.join('\n') : 'Standard VC match based on stage/sector fit'
@@ -312,7 +311,7 @@ function fallbackRationale(input: MatchRationaleInput): string {
   // 1. Special focus matches (most specific)
   if (input.isStudent) {
     if (input.vcFirmName.match(/Dorm Room|Student/i)) {
-      parts.push(`${input.vcFirmName} specializes in student founders at the ${input.founderStage} stage. You're their core demographic.`)
+      parts.push(`${input.vcFirmName} specializes in student founders at the ${input.founderStage} stage - you're their core demographic.`)
       return parts.join(' ')
     }
     if (input.vcFirmName.match(/1517/i)) {
@@ -324,7 +323,7 @@ function fallbackRationale(input: MatchRationaleInput): string {
       return parts.join(' ')
     }
     if (input.vcFirmName.match(/SkyDeck/i) && input.founderEducation?.includes('Berkeley')) {
-      parts.push(`${input.vcFirmName} is Berkeley's official accelerator: a strong match for Cal students building ${input.founderSectors[0] || 'tech'} products.`)
+      parts.push(`${input.vcFirmName} is Berkeley's official accelerator - perfect match for Cal students building ${input.founderSectors[0] || 'tech'} products.`)
       return parts.join(' ')
     }
   }
@@ -347,7 +346,7 @@ function fallbackRationale(input: MatchRationaleInput): string {
   if (input.fundingNeed >= input.vcCheckMin && input.fundingNeed <= input.vcCheckMax) {
     parts.push(`Your $${input.fundingNeed}K need fits their $${input.vcCheckMin}K-${input.vcCheckMax}K check range.`)
   } else if (input.fundingNeed < input.vcCheckMin) {
-    parts.push(`Consider raising more; they typically write $${input.vcCheckMin}K+ checks.`)
+    parts.push(`Consider raising more - they typically write $${input.vcCheckMin}K+ checks.`)
   } else {
     parts.push(`Note: You're seeking $${input.fundingNeed}K but they cap at $${input.vcCheckMax}K.`)
   }

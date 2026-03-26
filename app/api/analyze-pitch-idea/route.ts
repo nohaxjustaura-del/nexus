@@ -739,7 +739,7 @@ Be specific and actionable.`
       const status = String(msg).includes('429') ? 429 : 500
       return NextResponse.json(
         {
-          error: 'Analysis failed',
+          error: 'AI Analysis Failed',
           message: msg,
           provider: 'gemini',
         },

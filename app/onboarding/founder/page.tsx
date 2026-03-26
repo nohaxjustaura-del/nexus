@@ -177,13 +177,13 @@ export default function FounderOnboarding() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-muted/50 via-primary/5 to-primary/10">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
       <div className="max-w-3xl mx-auto px-4 py-12">
         {/* Header */}
         <div className="text-center mb-12">
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-indigo-100 text-indigo-700 mb-4">
             <Sparkles className="w-4 h-4" />
-            <span className="text-sm font-semibold">Founder onboarding</span>
+            <span className="text-sm font-semibold">AI Fund Coach Onboarding</span>
           </div>
           <h1 className="text-4xl font-bold text-gray-900 mb-3">
             Tell Us About Your Startup
@@ -194,7 +194,7 @@ export default function FounderOnboarding() {
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="bg-card rounded-2xl shadow-lg border border-border p-8 space-y-8">
+        <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow-lg border border-gray-200 p-8 space-y-8">
           {/* Section 1: Founder */}
           <div className="space-y-6">
             <h2 className="text-2xl font-bold text-gray-900 border-b pb-3">1. About You</h2>
@@ -259,7 +259,7 @@ export default function FounderOnboarding() {
                 id="startupName"
                 value={formData.startupName}
                 onChange={(e) => updateField('startupName', e.target.value)}
-                placeholder="Acme Labs"
+                placeholder="Acme AI"
                 required
                 className="mt-2"
               />

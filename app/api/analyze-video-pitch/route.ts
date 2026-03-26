@@ -321,7 +321,7 @@ export async function POST(request: NextRequest) {
         message: 'Could not transcribe video audio.',
         whatWentWrong: 'The video audio could not be transcribed',
         whyItFailed: errorMessage.includes('API key') 
-          ? 'Transcription service not configured properly'
+          ? 'AI service not configured properly'
           : errorMessage.includes('too short')
           ? 'Video audio is too short or unclear'
           : errorMessage,
@@ -363,7 +363,7 @@ export async function POST(request: NextRequest) {
       if (!assignedReviewerId) {
         return NextResponse.json({
           error: 'No reviewers available',
-          message: 'No reviewers are currently available. Please try instant analysis instead.',
+          message: 'No reviewers are currently available. Please try AI analysis instead.',
         }, { 
           status: 503,
           headers: { 'Content-Type': 'application/json' },
@@ -485,13 +485,13 @@ export async function POST(request: NextRequest) {
         errorCode === 'ETIMEDOUT'
       
       let errorDetails: any = {
-        error: isNetworkError ? 'ERROR_OPENAI' : 'Analysis failed',
+        error: isNetworkError ? 'ERROR_OPENAI' : 'AI Analysis Failed',
         message: isNetworkError 
           ? 'Unable to reach the model provider'
-          : 'Failed to analyze video pitch',
+          : 'Failed to analyze video pitch with AI',
         whatWentWrong: isNetworkError
-          ? 'We\'re having trouble connecting to the analysis service'
-          : 'The analysis service could not process your video pitch',
+          ? 'We\'re having trouble connecting to the AI service'
+          : 'The AI service could not process your video pitch',
         whyItFailed: isNetworkError
           ? 'This might be temporary - please try again in a moment'
           : errorMessage,
@@ -499,7 +499,7 @@ export async function POST(request: NextRequest) {
           ? [
               'Wait a moment and try again',
               'Check your internet connection',
-              'If the problem persists, the analysis service may be temporarily unavailable',
+              'If the problem persists, the AI service may be temporarily unavailable',
               'Contact support if the issue continues',
             ]
           : [
@@ -514,22 +514,22 @@ export async function POST(request: NextRequest) {
       // Check for specific error types
       if (errorMessage.includes('API key') || errorCode === 'invalid_api_key' || errorMessage.includes('No AI API key')) {
         errorDetails.error = 'ERROR_OPENAI'
-        errorDetails.whatWentWrong = 'Analysis service configuration error'
-        errorDetails.whyItFailed = 'Invalid or missing API key for the analysis service'
+        errorDetails.whatWentWrong = 'AI service configuration error'
+        errorDetails.whyItFailed = 'Invalid or missing API key for AI service'
         errorDetails.howToFix = [
           'This is a server configuration issue',
           'Contact support to resolve',
         ]
       } else if (errorCode === 'insufficient_quota' || errorMessage.includes('quota')) {
-        errorDetails.whatWentWrong = 'Analysis service quota exceeded'
-        errorDetails.whyItFailed = 'The analysis service has no credits remaining'
+        errorDetails.whatWentWrong = 'AI service quota exceeded'
+        errorDetails.whyItFailed = 'The AI service has no credits remaining'
         errorDetails.howToFix = [
           'This is a server configuration issue',
-          'Contact support to add credits to the analysis service',
+          'Contact support to add credits to the AI service',
         ]
       } else if (errorMessage.includes('rate limit') || errorCode === 'rate_limit_exceeded') {
-        errorDetails.whatWentWrong = 'Analysis service rate limit exceeded'
-        errorDetails.whyItFailed = 'Too many requests to the analysis service'
+        errorDetails.whatWentWrong = 'AI service rate limit exceeded'
+        errorDetails.whyItFailed = 'Too many requests to the AI service'
         errorDetails.howToFix = [
           'Try again in a few moments',
           'The service will be available shortly',

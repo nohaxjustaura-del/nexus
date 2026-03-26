@@ -109,7 +109,7 @@ export function VideoPitchAnalysisTab() {
     
     // Check if user has enough credits (skip check if premium)
     if (!credits.isPremium && (credits.credits ?? 0) < currentCreditCost) {
-      setError(`Insufficient credits. ${reviewType === 'ai' ? 'Instant' : 'Reviewer'} video pitch analysis costs ${currentCreditCost} credits. You have ${credits.credits ?? 0} credits. Please purchase credits or upgrade to premium.`)
+      setError(`Insufficient credits. ${reviewType === 'ai' ? 'AI' : 'Reviewer'} video pitch analysis costs ${currentCreditCost} credits. You have ${credits.credits ?? 0} credits. Please purchase credits or upgrade to premium.`)
       return
     }
     
@@ -237,28 +237,28 @@ export function VideoPitchAnalysisTab() {
   return (
     <div className="space-y-6">
       {/* Explanation Section */}
-      <Card className="mx-auto max-w-4xl w-full border-2 border-primary/20 bg-gradient-to-br from-primary/5 via-background to-primary/5">
+      <Card className="mx-auto max-w-4xl w-full border-2 border-primary/20 bg-gradient-to-br from-primary/5 via-background to-blue-50/30">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Sparkles className="h-5 w-5 text-primary" />
             How Video Pitch Analysis Works
           </CardTitle>
           <CardDescription className="text-base">
-            Get insights tailored to your video pitch
+            Get AI-powered insights tailored to your video pitch
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid md:grid-cols-3 gap-4">
-            <div className="p-4 rounded-lg bg-card/60 border border-primary/10">
+            <div className="p-4 rounded-lg bg-white/60 border border-primary/10">
               <div className="flex items-center gap-2 mb-2">
                 <Target className="h-5 w-5 text-primary" />
                 <h4 className="font-semibold text-sm">Perfect VC Matches</h4>
               </div>
               <p className="text-xs text-muted-foreground">
-                NEXUS reviews your video pitch and surfaces VCs that fit your presentation style, content, and startup profile.
+                Our AI analyzes your video pitch and finds VCs that are the perfect fit for your presentation style, content, and startup profile.
               </p>
             </div>
-            <div className="p-4 rounded-lg bg-card/60 border border-primary/10">
+            <div className="p-4 rounded-lg bg-white/60 border border-primary/10">
               <div className="flex items-center gap-2 mb-2">
                 <TrendingUp className="h-5 w-5 text-primary" />
                 <h4 className="font-semibold text-sm">Tailored Recommendations</h4>
@@ -267,7 +267,7 @@ export function VideoPitchAnalysisTab() {
                 Get personalized suggestions on what to improve in your video pitch and how to better present your startup to each VC.
               </p>
             </div>
-            <div className="p-4 rounded-lg bg-card/60 border border-primary/10">
+            <div className="p-4 rounded-lg bg-white/60 border border-primary/10">
               <div className="flex items-center gap-2 mb-2">
                 <Lightbulb className="h-5 w-5 text-primary" />
                 <h4 className="font-semibold text-sm">Actionable Insights</h4>
@@ -342,7 +342,7 @@ export function VideoPitchAnalysisTab() {
         )}
 
         {/* Review Type Selection */}
-        <div className="rounded-lg border-2 border-border bg-card p-6">
+        <div className="rounded-lg border-2 border-slate-200 bg-white p-6">
           <Label className="text-base font-semibold mb-4 block">Choose Review Type</Label>
           <div className="grid gap-4 md:grid-cols-2">
             <div
@@ -350,20 +350,20 @@ export function VideoPitchAnalysisTab() {
               className={`cursor-pointer rounded-xl border-2 p-4 transition-all ${
                 reviewType === 'ai'
                   ? 'border-primary bg-primary/5'
-                  : 'border-border hover:border-border'
+                  : 'border-slate-200 hover:border-slate-300'
               }`}
             >
               <div className="flex items-start gap-3">
-                <div className={`rounded-lg p-2 ${reviewType === 'ai' ? 'bg-primary/10' : 'bg-muted'}`}>
-                  <Sparkles className={`h-5 w-5 ${reviewType === 'ai' ? 'text-primary' : 'text-muted-foreground'}`} />
+                <div className={`rounded-lg p-2 ${reviewType === 'ai' ? 'bg-primary/10' : 'bg-slate-100'}`}>
+                  <Sparkles className={`h-5 w-5 ${reviewType === 'ai' ? 'text-primary' : 'text-slate-600'}`} />
                 </div>
                 <div className="flex-1">
                   <div className="flex items-center justify-between mb-1">
-                    <h3 className="font-semibold">Instant analysis</h3>
+                    <h3 className="font-semibold">AI Analysis</h3>
                     <Badge variant="secondary" className="text-xs">50 credits</Badge>
                   </div>
                   <p className="text-sm text-muted-foreground mb-2">
-                    Instant scoring with compatibility breakdown
+                    Instant AI-powered analysis with compatibility scores
                   </p>
                   <ul className="text-xs text-muted-foreground space-y-1">
                     <li className="flex items-center gap-1">
@@ -388,12 +388,12 @@ export function VideoPitchAnalysisTab() {
               className={`cursor-pointer rounded-xl border-2 p-4 transition-all ${
                 reviewType === 'reviewer'
                   ? 'border-primary bg-primary/5'
-                  : 'border-border hover:border-border'
+                  : 'border-slate-200 hover:border-slate-300'
               }`}
             >
               <div className="flex items-start gap-3">
-                <div className={`rounded-lg p-2 ${reviewType === 'reviewer' ? 'bg-primary/10' : 'bg-muted'}`}>
-                  <User className={`h-5 w-5 ${reviewType === 'reviewer' ? 'text-primary' : 'text-muted-foreground'}`} />
+                <div className={`rounded-lg p-2 ${reviewType === 'reviewer' ? 'bg-primary/10' : 'bg-slate-100'}`}>
+                  <User className={`h-5 w-5 ${reviewType === 'reviewer' ? 'text-primary' : 'text-slate-600'}`} />
                 </div>
                 <div className="flex-1">
                   <div className="flex items-center justify-between mb-1">
@@ -437,7 +437,7 @@ export function VideoPitchAnalysisTab() {
                     className={`cursor-pointer rounded-lg border-2 p-3 transition-all ${
                       selectedReviewer === reviewer.id
                         ? 'border-primary bg-primary/5'
-                        : 'border-border hover:border-border'
+                        : 'border-slate-200 hover:border-slate-300'
                     }`}
                   >
                     <div className="flex items-center justify-between">
@@ -477,14 +477,14 @@ export function VideoPitchAnalysisTab() {
             <div className="text-sm">
               <div className="font-semibold flex items-center gap-2">
                 <Sparkles className="h-4 w-4 text-primary" />
-                {reviewType === 'ai' ? 'Video pitch analysis' : 'VC-Accepted Reviewer Review'}
+                {reviewType === 'ai' ? 'AI Video Pitch Analysis' : 'VC-Accepted Reviewer Review'}
               </div>
               <div className="text-muted-foreground">
                 Cost: {reviewType === 'ai' ? VIDEO_AI_CREDIT_COST : VIDEO_REVIEWER_CREDIT_COST} credits
                 {reviewType === 'reviewer' && ' • 2-3 day turnaround'}
                 {credits && (
                   <span className="ml-2">
-                    • You have: <span className="font-semibold text-foreground">{credits.credits ?? 0}</span> credits
+                    • You have: <span className="font-semibold text-slate-900">{credits.credits ?? 0}</span> credits
                     {credits.isPremium && <Badge variant="secondary" className="ml-2 text-xs">Premium</Badge>}
                   </span>
                 )}
@@ -574,12 +574,12 @@ export function VideoPitchAnalysisTab() {
                       <div className="text-3xl font-bold text-primary">{result.overallScore || 0}/100</div>
                       <div className="text-xs text-muted-foreground mt-1">Combined presentation & content</div>
                     </div>
-                    <div className="p-4 rounded-lg bg-gradient-to-br from-primary/10 to-primary/10 border border-primary/25">
+                    <div className="p-4 rounded-lg bg-gradient-to-br from-blue-50 to-blue-100/50 border border-blue-200">
                       <div className="text-sm text-muted-foreground mb-1">Presentation Score</div>
                       <div className="text-3xl font-bold text-blue-600">{result.presentationScore || 0}/100</div>
                       <div className="text-xs text-muted-foreground mt-1">Delivery, clarity, engagement</div>
                     </div>
-                    <div className="p-4 rounded-lg bg-gradient-to-br from-green-50 to-green-100/50 border border-emerald-500/30">
+                    <div className="p-4 rounded-lg bg-gradient-to-br from-green-50 to-green-100/50 border border-green-200">
                       <div className="text-sm text-muted-foreground mb-1">Content Score</div>
                       <div className="text-3xl font-bold text-green-600">{result.contentScore || 0}/100</div>
                       <div className="text-xs text-muted-foreground mt-1">Substance, metrics, market fit</div>
@@ -596,7 +596,7 @@ export function VideoPitchAnalysisTab() {
 
             {/* Strengths & Weaknesses */}
             <div className="grid md:grid-cols-2 gap-4">
-              <div className="p-4 rounded-lg border border-emerald-500/30 bg-emerald-500/10">
+              <div className="p-4 rounded-lg border border-green-200 bg-green-50/50">
                 <h3 className="font-semibold mb-3 flex items-center gap-2">
                   <CheckCircle className="h-4 w-4 text-green-600" />
                   Strengths
@@ -610,7 +610,7 @@ export function VideoPitchAnalysisTab() {
                   ))}
                 </ul>
               </div>
-              <div className="p-4 rounded-lg border border-orange-500/30 bg-orange-500/10">
+              <div className="p-4 rounded-lg border border-orange-200 bg-orange-50/50">
                 <h3 className="font-semibold mb-3 flex items-center gap-2">
                   <AlertCircle className="h-4 w-4 text-orange-600" />
                   Areas for Improvement
@@ -628,7 +628,7 @@ export function VideoPitchAnalysisTab() {
 
             {/* Improvements */}
             {result.improvements && result.improvements.length > 0 && (
-              <div className="p-4 rounded-lg border border-primary/25 bg-primary/12">
+              <div className="p-4 rounded-lg border border-blue-200 bg-blue-50/50">
                 <h3 className="font-semibold mb-3 flex items-center gap-2">
                   <Lightbulb className="h-4 w-4 text-blue-600" />
                   Actionable Suggestions
@@ -668,13 +668,13 @@ export function VideoPitchAnalysisTab() {
                               </Badge>
                               {vc.priority === 'elite' && <Crown className="h-4 w-4 text-yellow-500" />}
                               {vc.livePulse && vc.livePulse.signalStrength > 1 && (
-                                <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 rounded-full px-2 py-0.5">
+                                <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-full px-2 py-0.5">
                                   <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
                                   Live
                                 </span>
                               )}
                               {vc.livePulse && vc.livePulse.signalStrength <= 1 && (
-                                <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-700 bg-amber-500/10 border border-amber-500/30 rounded-full px-2 py-0.5">
+                                <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded-full px-2 py-0.5">
                                   Potentially Inactive
                                 </span>
                               )}
@@ -682,22 +682,22 @@ export function VideoPitchAnalysisTab() {
                             <p className="text-sm text-muted-foreground mb-2">{vc.scoreMeaning}</p>
                             <p className="text-sm mb-2">{vc.whyApply}</p>
                             {vc.livePulse && (
-                              <div className="mt-3 p-3 rounded-lg bg-gradient-to-br from-primary/10 to-primary/10 border border-primary/25 space-y-1.5">
+                              <div className="mt-3 p-3 rounded-lg bg-gradient-to-br from-indigo-50 to-blue-50 border border-indigo-200/60 space-y-1.5">
                                 <h5 className="text-xs font-semibold text-indigo-700 flex items-center gap-1.5">
                                   <TrendingUp className="h-3 w-3" />
                                   Live VC Intelligence
                                 </h5>
                                 {vc.livePulse.summary?.recentPortfolio && (
-                                  <p className="text-xs text-foreground/85">{vc.livePulse.summary.recentPortfolio}</p>
+                                  <p className="text-xs text-slate-700">{vc.livePulse.summary.recentPortfolio}</p>
                                 )}
                                 {vc.livePulse.summary?.currentHeat && (
-                                  <p className="text-xs text-foreground/85">{vc.livePulse.summary.currentHeat}</p>
+                                  <p className="text-xs text-slate-700">{vc.livePulse.summary.currentHeat}</p>
                                 )}
                                 {vc.livePulse.summary?.founderAlignment && (
-                                  <p className="text-xs text-foreground/85">{vc.livePulse.summary.founderAlignment}</p>
+                                  <p className="text-xs text-slate-700">{vc.livePulse.summary.founderAlignment}</p>
                                 )}
                                 {!vc.livePulse.summary?.recentPortfolio && !vc.livePulse.summary?.currentHeat && !vc.livePulse.summary?.founderAlignment && (
-                                  <p className="text-xs text-muted-foreground">Enrichment data unavailable for this investor.</p>
+                                  <p className="text-xs text-slate-600">Enrichment data unavailable for this investor.</p>
                                 )}
                               </div>
                             )}
@@ -723,7 +723,7 @@ export function VideoPitchAnalysisTab() {
                 </h3>
                 <div className="space-y-2 max-h-96 overflow-y-auto">
                   {result.matchedVCs.map((vc: any, i: number) => (
-                    <div key={i} className="p-3 rounded-lg border bg-card hover:bg-muted/50 transition-colors">
+                    <div key={i} className="p-3 rounded-lg border bg-white hover:bg-slate-50 transition-colors">
                       <div className="flex items-center justify-between">
                         <div className="flex-1">
                           <div className="flex items-center gap-2">
@@ -732,13 +732,13 @@ export function VideoPitchAnalysisTab() {
                               {vc.scoreSymbol} {vc.score}
                             </Badge>
                             {vc.livePulse && vc.livePulse.signalStrength > 1 && (
-                              <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 rounded-full px-1.5 py-0.5">
+                              <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-full px-1.5 py-0.5">
                                 <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
                                 Live
                               </span>
                             )}
                             {vc.livePulse && vc.livePulse.signalStrength <= 1 && (
-                              <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-700 bg-amber-500/10 border border-amber-500/30 rounded-full px-1.5 py-0.5">
+                              <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded-full px-1.5 py-0.5">
                                 Potentially Inactive
                               </span>
                             )}
@@ -752,15 +752,15 @@ export function VideoPitchAnalysisTab() {
                             <p className="text-xs text-muted-foreground mt-1">{vc.whyApply}</p>
                           )}
                           {vc.livePulse && (
-                            <div className="mt-2 p-2 rounded bg-primary/10/70 border border-indigo-100 space-y-0.5">
+                            <div className="mt-2 p-2 rounded bg-indigo-50/70 border border-indigo-100 space-y-0.5">
                               {vc.livePulse.summary?.recentPortfolio && (
-                                <p className="text-xs text-muted-foreground">{vc.livePulse.summary.recentPortfolio}</p>
+                                <p className="text-xs text-slate-600">{vc.livePulse.summary.recentPortfolio}</p>
                               )}
                               {vc.livePulse.summary?.currentHeat && (
-                                <p className="text-xs text-muted-foreground">{vc.livePulse.summary.currentHeat}</p>
+                                <p className="text-xs text-slate-600">{vc.livePulse.summary.currentHeat}</p>
                               )}
                               {vc.livePulse.summary?.founderAlignment && (
-                                <p className="text-xs text-muted-foreground">{vc.livePulse.summary.founderAlignment}</p>
+                                <p className="text-xs text-slate-600">{vc.livePulse.summary.founderAlignment}</p>
                               )}
                               {!vc.livePulse.summary?.recentPortfolio && !vc.livePulse.summary?.currentHeat && !vc.livePulse.summary?.founderAlignment && (
                                 <p className="text-xs text-slate-500">Enrichment data unavailable.</p>

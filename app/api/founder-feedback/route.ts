@@ -105,7 +105,7 @@ export async function POST(request: NextRequest) {
     const aiClient = getAIClient()
     if (!aiClient) {
       return NextResponse.json(
-        { error: 'Analysis service not configured', message: 'Please set OPENROUTER_API_KEY or OPENAI_API_KEY' },
+        { error: 'AI service not configured', message: 'Please set OPENROUTER_API_KEY or OPENAI_API_KEY' },
         { status: 503 }
       )
     }

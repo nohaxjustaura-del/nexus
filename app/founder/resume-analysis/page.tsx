@@ -20,8 +20,8 @@ export default function ResumeAnalysisDisabledPage() {
   }, [router])
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-muted/50 via-background to-primary/5 flex items-center justify-center p-4">
-      <Card className="max-w-2xl w-full border-2 border-orange-500/30">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50/30 flex items-center justify-center p-4">
+      <Card className="max-w-2xl w-full border-2 border-orange-200">
         <CardHeader>
           <div className="flex items-center gap-3 mb-2">
             <div className="p-3 rounded-full bg-orange-100">
@@ -36,10 +36,10 @@ export default function ResumeAnalysisDisabledPage() {
           </div>
         </CardHeader>
         <CardContent className="space-y-6">
-          <div className="p-4 rounded-lg bg-orange-500/10 border border-orange-500/30">
-            <p className="text-foreground/85">
+          <div className="p-4 rounded-lg bg-orange-50 border border-orange-200">
+            <p className="text-slate-700">
               We've found that resumes don't effectively capture what makes founders and their startups compelling to investors. 
-              Instead, we now offer two better ways to get structured feedback and VC matches:
+              Instead, we now offer two better ways to get AI-powered feedback and VC matches:
             </p>
           </div>
 
@@ -74,7 +74,7 @@ export default function ResumeAnalysisDisabledPage() {
                     <h3 className="font-semibold text-lg">Pitch Deck Analysis</h3>
                   </div>
                   <p className="text-sm text-muted-foreground mb-4">
-                    Upload your pitch deck and receive detailed feedback on your slides, messaging, and storytelling. 
+                    Upload your pitch deck and receive AI-powered feedback on your slides, messaging, and storytelling. 
                     Get VC recommendations too.
                   </p>
                   <Button className="w-full">
