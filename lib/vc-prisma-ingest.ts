@@ -7,6 +7,7 @@ import {
 } from '@/lib/vc-research-normalize'
 import type { VCResearchResult } from '../scripts/auto-research-vcs'
 import { researchVC, updateVCInDatabase } from '../scripts/auto-research-vcs'
+import { syncInvestorEmbeddingById } from '@/lib/vc-embedding-sync'
 
 function placeholderEmail(firmName: string): string {
   const slug = firmName
@@ -65,6 +66,8 @@ export async function createInvestorFromResearch(research: VCResearchResult): Pr
       discoverable: true,
     },
   })
+
+  await syncInvestorEmbeddingById(inv.id)
 
   return { id: inv.id }
 }

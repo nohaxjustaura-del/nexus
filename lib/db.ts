@@ -20,8 +20,20 @@ function withSafePooling(url?: string) {
   let out = url
   try {
     const u = new URL(url)
-    const host = u.hostname
-    const isSupabasePooler = host.includes("pooler.supabase.com")
+    const isSupabasePooler = u.hostname.includes("pooler.supabase.com")
+    const effectivePort = u.port || "5432"
+
+    // Session pooler (5432) → very low max clients → MaxClientsInSessionMode under serverless load.
+    // Transaction pooler (6543) + pgbouncer=true is the supported Prisma + Supabase setup.
+    if (isSupabasePooler && effectivePort === "5432") {
+      u.port = "6543"
+      u.searchParams.set("pgbouncer", "true")
+      if (process.env.NODE_ENV !== "production") {
+        console.warn(
+          "[db] DATABASE_URL used Supabase Session pooler (:5432); switched to Transaction pooler (:6543) + pgbouncer=true. Prefer setting the Transaction URI in env (Supabase → Connect → Transaction pooler).",
+        )
+      }
+    }
 
     // Transaction pooler (typical port 6543): Prisma needs pgbouncer=true
     if (
@@ -33,16 +45,6 @@ function withSafePooling(url?: string) {
 
     if (!u.searchParams.has("connection_limit")) {
       u.searchParams.set("connection_limit", "1")
-    }
-
-    if (
-      process.env.NODE_ENV !== "production" &&
-      u.hostname.includes("pooler.supabase.com") &&
-      u.port === "5432"
-    ) {
-      console.warn(
-        "[db] DATABASE_URL uses Supabase Session pooler (port 5432). For Next.js + workers, switch to the Transaction pooler URI (port 6543) in Supabase → Settings → Database → Connection string.",
-      )
     }
 
     out = u.toString()
@@ -67,4 +69,5 @@ export const db = globalForPrisma.prisma ?? new PrismaClient({
     : ['error'],
 })
 
-if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = db
+// Reuse across hot reload (dev) and within the same serverless isolate (prod).
+globalForPrisma.prisma = db

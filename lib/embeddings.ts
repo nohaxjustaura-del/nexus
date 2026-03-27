@@ -292,7 +292,7 @@ export async function generatePitchEmbedding(pitch: PitchFeatures): Promise<numb
 // VC EMBEDDING
 // ============================================================================
 
-interface VCProfile {
+export interface VCProfile {
   firmName: string
   fundType?: string
   stages?: string[]

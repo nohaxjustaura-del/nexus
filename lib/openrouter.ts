@@ -60,6 +60,21 @@ export function getOpenRouterClient(): OpenAI | null {
 }
 
 /**
+ * Direct OpenAI API (api.openai.com). Used when OpenRouter and Ollama are not configured
+ * so pitch scoring and JSON extraction still work with only `OPENAI_API_KEY`.
+ */
+export function getOpenAIDirectClient(): OpenAI | null {
+  const apiKey = process.env.OPENAI_API_KEY?.trim()
+  if (!apiKey) return null
+  try {
+    return new OpenAI({ apiKey })
+  } catch (error) {
+    console.error('[OpenAI] Failed to initialize client:', error)
+    return null
+  }
+}
+
+/**
  * Preferred LLM: OpenRouter when `OPENROUTER_API_KEY` is set (default), else Ollama.
  * Override with `LLM_PREFER_OLLAMA=1` to use local Ollama first when both are configured.
  */
@@ -129,10 +144,14 @@ export function getModelName(model: string = 'gpt-4o'): string {
 }
 
 /**
- * True if VC-style JSON extraction can run (OpenRouter credits or local Ollama).
+ * True if VC-style JSON extraction can run (OpenRouter, local Ollama, or direct OpenAI).
  */
 export function hasVcLlmConfigured(): boolean {
-  return !!(process.env.OLLAMA_BASE_URL?.trim() || process.env.OPENROUTER_API_KEY?.trim())
+  return !!(
+    process.env.OLLAMA_BASE_URL?.trim() ||
+    process.env.OPENROUTER_API_KEY?.trim() ||
+    process.env.OPENAI_API_KEY?.trim()
+  )
 }
 
 /**
@@ -172,7 +191,9 @@ export function getScoringOpenRouterModel(): string {
 export function getScoringLlmClient(): OpenAI | null {
   const or = getOpenRouterClient()
   if (or) return or
-  return getLlmClient()
+  const llm = getLlmClient()
+  if (llm) return llm
+  return getOpenAIDirectClient()
 }
 
 /**
@@ -221,14 +242,23 @@ export async function openrouterGenerateText(
     model?: string
   } = {}
 ): Promise<string> {
-  const client = getLlmClient()
+  const llm = getLlmClient()
+  const openAI = llm ? null : getOpenAIDirectClient()
+  const client = llm ?? openAI
   if (!client) {
-    throw new Error('No LLM configured. Set OLLAMA_BASE_URL (local Ollama) or OPENROUTER_API_KEY.')
+    throw new Error(
+      'No LLM configured. Set OLLAMA_BASE_URL, OPENROUTER_API_KEY, or OPENAI_API_KEY.',
+    )
   }
 
-  const model = options.model ?? getVcExtractionModel()
+  const viaOpenAIDirect = !!openAI
+  const model =
+    options.model ??
+    (viaOpenAIDirect
+      ? process.env.OPENAI_MODEL?.trim() || 'gpt-4o-mini'
+      : getVcExtractionModel())
 
-  const tag = isUsingOllama() ? 'OLLAMA' : 'OPENROUTER'
+  const tag = isUsingOllama() ? 'OLLAMA' : viaOpenAIDirect ? 'OPENAI' : 'OPENROUTER'
   console.log(`[${tag}] 🤖 Using model: ${model}`)
 
   const response = await client.chat.completions.create({
@@ -298,18 +328,27 @@ export async function openrouterGenerateJson<T = any>(options: {
 }): Promise<T> {
   const openRouterClient = getOpenRouterClient()
   const forceOr = options.forceOpenRouter === true && !!openRouterClient
-  const client = forceOr ? openRouterClient! : getLlmClient()
+  const llm = getLlmClient()
+  const openAIDirect = !forceOr && !llm ? getOpenAIDirectClient() : null
+  const client = forceOr ? openRouterClient! : (llm ?? openAIDirect)
   if (!client) {
-    throw new Error('No LLM configured. Set OLLAMA_BASE_URL (local Ollama) or OPENROUTER_API_KEY.')
+    throw new Error(
+      'No LLM configured. Set OLLAMA_BASE_URL, OPENROUTER_API_KEY, or OPENAI_API_KEY.',
+    )
   }
 
+  const resolvedViaOpenAIDirect = !!openAIDirect && client === openAIDirect
   const effectiveUsingOllama = forceOr ? false : isUsingOllama()
 
   const primaryModel =
     options.model ??
-    (forceOr ? getScoringOpenRouterModel() : getVcExtractionModel())
+    (resolvedViaOpenAIDirect
+      ? process.env.OPENAI_MODEL?.trim() || 'gpt-4o-mini'
+      : forceOr
+        ? getScoringOpenRouterModel()
+        : getVcExtractionModel())
   const retryOnParseError = options.retryOnParseError !== false
-  const logTag = effectiveUsingOllama ? 'OLLAMA' : 'OPENROUTER'
+  const logTag = effectiveUsingOllama ? 'OLLAMA' : resolvedViaOpenAIDirect ? 'OPENAI' : 'OPENROUTER'
 
   const run = async (model: string): Promise<T> => {
     console.log(`[${logTag}] 🤖 Using model: ${model}`)
@@ -347,6 +386,8 @@ export async function openrouterGenerateJson<T = any>(options: {
         max_tokens: maxTok,
       }
       if (ollamaStrict) {
+        baseParams.response_format = { type: 'json_object' }
+      } else if (resolvedViaOpenAIDirect) {
         baseParams.response_format = { type: 'json_object' }
       }
       if (effectiveUsingOllama) {
@@ -392,6 +433,7 @@ export async function openrouterGenerateJson<T = any>(options: {
       /model ['"][^'"]+['"] not found|not_found_error/i.test(msg)
     const canFallback404 =
       !effectiveUsingOllama &&
+      !resolvedViaOpenAIDirect &&
       getOpenRouterClient() &&
       retryOnParseError &&
       primaryModel !== VC_EXTRACTION_FALLBACK_MODEL &&
@@ -405,6 +447,7 @@ export async function openrouterGenerateJson<T = any>(options: {
     }
     const canFallbackOpenRouter =
       !effectiveUsingOllama &&
+      !resolvedViaOpenAIDirect &&
       getOpenRouterClient() &&
       retryOnParseError &&
       primaryModel !== VC_EXTRACTION_FALLBACK_MODEL

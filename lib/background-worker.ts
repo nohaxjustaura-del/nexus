@@ -168,7 +168,7 @@ export const WORKER_JOB_UI_META: Record<string, { summary: string; cadence: stri
   },
   'embeddings-rebuild': {
     summary:
-      'Regenerates Voyage embeddings and rebuilds the FAISS index backing semantic investor search.',
+      'Regenerates Voyage embeddings and rebuilds the FAISS index backing semantic investor search. Individual public investors also refresh on research writes when VOYAGE_API_KEY is set (see lib/vc-embedding-sync.ts).',
     cadence:
       'Every 24 hours. Not run immediately on worker startup (timer only); use Admin “Run now” or npm run embeddings:rebuild for an on-demand rebuild.',
   },

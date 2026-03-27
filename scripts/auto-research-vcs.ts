@@ -6,6 +6,7 @@
  */
 
 import { db } from '../lib/db'
+import { syncInvestorEmbeddingById } from '../lib/vc-embedding-sync'
 import { isLikelyRealFirmName } from '../lib/firm-name-quality'
 import { openrouterGenerateJson, hasOpenRouterKey, getVcExtractionModel } from '../lib/openrouter'
 import { normalizeResearchForDb } from '../lib/vc-research-normalize'
@@ -391,6 +392,9 @@ export async function updateVCInDatabaseThesisOnly(research: VCResearchResult): 
       await db.investor.update({ where: { id: existing.id }, data: { verified: true } })
       console.log(`   ℹ️ No thesis slot to fill for ${research.firmName}`)
     }
+    if (fieldsUpdated > 0) {
+      await syncInvestorEmbeddingById(existing.id)
+    }
     return true
   } catch (error: any) {
     console.error(`   ❌ Error updating database:`, error.message)
@@ -464,6 +468,9 @@ export async function updateVCInDatabaseProfileOnly(research: VCResearchResult):
     } else {
       await db.investor.update({ where: { id: existing.id }, data: { verified: true } })
       console.log(`   ℹ️ No empty profile fields for ${research.firmName}`)
+    }
+    if (fieldsUpdated > 0) {
+      await syncInvestorEmbeddingById(existing.id)
     }
     return true
   } catch (error: any) {
@@ -557,6 +564,10 @@ async function updateVCInDatabase(research: VCResearchResult): Promise<boolean> 
         where: { id: existing.id },
         data: { verified: true },
       })
+    }
+
+    if (fieldsUpdated > 0) {
+      await syncInvestorEmbeddingById(existing.id)
     }
 
     return true
