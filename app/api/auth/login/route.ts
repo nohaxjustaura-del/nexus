@@ -112,20 +112,17 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const magicLink = linkData.properties?.action_link
     const tokenHash = linkData.properties?.hashed_token
-    if (!magicLink) {
-      console.error('Login generateLink: missing action_link', linkData.properties)
+    // Never email Supabase action_link: it redirects with ?code= and exchangeCodeForSession fails without a PKCE cookie.
+    if (!tokenHash || typeof tokenHash !== 'string') {
+      console.error('Login generateLink: missing hashed_token', linkData.properties)
       return NextResponse.json(
         { error: 'Failed to generate sign-in link. Please try again.' },
         { status: 500 }
       )
     }
 
-    const oneTapLink =
-      tokenHash && typeof tokenHash === 'string'
-        ? `${siteUrl}/auth/link?token_hash=${encodeURIComponent(tokenHash)}&type=magiclink&next=${encodeURIComponent('/founder/onboarding')}&email=${encodeURIComponent(normalizedEmail)}`
-        : magicLink
+    const oneTapLink = `${siteUrl}/auth/link?token_hash=${encodeURIComponent(tokenHash)}&type=magiclink&next=${encodeURIComponent('/founder/onboarding')}&email=${encodeURIComponent(normalizedEmail)}`
 
     const emailResult = await sendMagicLinkEmail(normalizedEmail, {
       magicLink: oneTapLink,

@@ -71,20 +71,17 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const magicLink = linkData.properties?.action_link
     const tokenHash = linkData.properties?.hashed_token
-    if (!magicLink) {
-      console.error('Resend-code generateLink: missing action_link', linkData.properties)
+    const linkType = existingUser ? 'magiclink' : 'invite'
+    if (!tokenHash || typeof tokenHash !== 'string') {
+      console.error('Resend-code generateLink: missing hashed_token', linkData.properties)
       return NextResponse.json(
         { error: 'Failed to generate sign-in link. Please try again.' },
         { status: 500 }
       )
     }
 
-    const oneTapLink =
-      tokenHash && typeof tokenHash === 'string'
-        ? `${siteUrl}/auth/link?token_hash=${encodeURIComponent(tokenHash)}&type=${existingUser ? 'magiclink' : 'invite'}&next=${encodeURIComponent('/founder/onboarding')}&email=${encodeURIComponent(normalizedEmail)}`
-        : magicLink
+    const oneTapLink = `${siteUrl}/auth/link?token_hash=${encodeURIComponent(tokenHash)}&type=${linkType}&next=${encodeURIComponent('/founder/onboarding')}&email=${encodeURIComponent(normalizedEmail)}`
 
     const emailResult = await sendMagicLinkEmail(normalizedEmail, {
       magicLink: oneTapLink,

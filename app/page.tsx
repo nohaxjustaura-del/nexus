@@ -36,8 +36,9 @@ export default function Home() {
 
   useLayoutEffect(() => {
     if (typeof window === 'undefined') return
-    const code = new URLSearchParams(window.location.search).get('code')
-    if (code) {
+    const q = new URLSearchParams(window.location.search)
+    // Supabase may send ?code= (PKCE) or ?token_hash= (email link) to Site URL; forward both to the API handler.
+    if (q.get('code') || q.get('token_hash')) {
       router.replace(`/api/auth/callback${window.location.search}`)
     }
   }, [router])

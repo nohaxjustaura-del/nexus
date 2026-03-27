@@ -26,10 +26,12 @@ export async function GET(request: NextRequest) {
     const referer = request.headers.get('referer') || ''
     const secFetchUser = request.headers.get('sec-fetch-user') || ''
     const secFetchSite = request.headers.get('sec-fetch-site') || ''
+    const oauthError = requestUrl.searchParams.get('error')
+    const oauthErrorDescription = requestUrl.searchParams.get('error_description')
     const code = requestUrl.searchParams.get('code')
     const tokenHash = requestUrl.searchParams.get('token_hash')
     const tokenType = requestUrl.searchParams.get('type') || 'email'
-  const confirm = requestUrl.searchParams.get('confirm') || ''
+    const confirm = requestUrl.searchParams.get('confirm') || ''
     const nextPath = requestUrl.searchParams.get('next') || '/founder/onboarding'
     const safeNext = nextPath.startsWith('/') ? nextPath : '/'
   // #region agent log
@@ -51,6 +53,15 @@ export async function GET(request: NextRequest) {
     },
   })
   // #endregion
+
+    if (oauthError) {
+      const login = new URL('/login', request.url)
+      login.searchParams.set('oauth_error', oauthError)
+      if (oauthErrorDescription) {
+        login.searchParams.set('oauth_error_description', oauthErrorDescription.slice(0, 400))
+      }
+      return NextResponse.redirect(login)
+    }
 
     if (!code && !tokenHash) {
       const v = new URL('/verify', request.url)
@@ -88,8 +99,11 @@ export async function GET(request: NextRequest) {
       const { error } = await supabase.auth.exchangeCodeForSession(code)
       if (error) callbackError = error
     } else if (tokenHash) {
-      // Supports direct one-tap links with token_hash generated from Admin API.
-      const attemptedTypes = Array.from(new Set([tokenType, 'email', 'magiclink', 'invite']))
+      // Admin generateLink magiclink tokens often verify as type "email"; invite tokens need "invite" first.
+      const attemptedTypes =
+        tokenType === 'magiclink'
+          ? [...new Set(['email', 'magiclink', 'invite'] as const)]
+          : [...new Set([tokenType, 'email', 'magiclink', 'invite'] as const)]
       for (const t of attemptedTypes) {
         const { error } = await supabase.auth.verifyOtp({
           token_hash: tokenHash,
