@@ -1,0 +1,12 @@
+# Railway: deploy this repo as the FAISS ranking API (not the Next.js app).
+# Dashboard → New Project → GitHub → select NEXUS.
+# If Railway still builds as Node: Settings → Build → Dockerfile path → Dockerfile.faiss
+# Or leave this file; Railway often auto-detects [build].dockerfilePath when present.
+
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile.faiss"
+
+[deploy]
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 10

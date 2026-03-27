@@ -24,6 +24,7 @@ import { getAIClient } from '@/lib/ai'
 import { getModelName } from '@/lib/openrouter'
 import { parseJSON } from '@/lib/utils'
 import {
+  countInvestorEmbeddingFilters,
   generatePitchEmbedding,
   investorsToRankableEmbeddings,
   rankVCsForPitch,
@@ -335,19 +336,39 @@ export async function runMatchingPipeline(
 
   const intersectRankedWithDb = (
     ranked: Awaited<ReturnType<typeof rankVCsForPitch>>,
-  ): VCProfile[] => {
+  ): {
+    matched: VCProfile[]
+    dbNameHits: number
+    noDbRow: number
+  } => {
     const matched: VCProfile[] = []
+    let dbNameHits = 0
+    let noDbRow = 0
     for (const r of ranked) {
       const m = allVCsByName.get((r.firmName ?? '').toLowerCase())
-      if (m && matched.length < 20) matched.push(m as VCProfile)
+      if (m) {
+        dbNameHits++
+        if (matched.length < 20) matched.push(m as VCProfile)
+      } else {
+        noDbRow++
+      }
     }
-    return matched
+    return { matched, dbNameHits, noDbRow }
   }
 
   try {
     const pitchCtx = buildPitchContext(founder, pitchAnalysis, transcript, founderSignal.pitchKeywords)
     const pitchEmbedding = await generatePitchEmbedding(pitchCtx as any)
+    const embFilter = countInvestorEmbeddingFilters(mainstream, pitchEmbedding.length)
     const fallbackRows = investorsToRankableEmbeddings(mainstream, pitchEmbedding.length)
+    console.log(
+      `[FAISS] embedding filters (mainstream VCs, pitch_dim=${pitchEmbedding.length}): ` +
+        `input=${embFilter.input} rankable=${embFilter.rankable} ` +
+        `missing=${embFilter.missingEmbedding} parse_err=${embFilter.parseError} wrong_dim=${embFilter.wrongDimension}`,
+    )
+    console.log(
+      `[FAISS] DB lookup map: public+discoverable rows=${allPublicVCs.length} (firmName → Investor for neighbor intersection)`,
+    )
 
     async function rankAndIntersect(
       mode: 'faiss' | 'memory',
@@ -357,7 +378,12 @@ export async function runMatchingPipeline(
           mode === 'faiss'
             ? await rankVCsForPitch(pitchEmbedding, [], 50, true)
             : await rankVCsForPitch(pitchEmbedding, fallbackRows, 50, false)
-        const matched = intersectRankedWithDb(ranked)
+        const { matched, dbNameHits, noDbRow } = intersectRankedWithDb(ranked)
+        console.log(
+          `[FAISS] Step5 ${mode === 'faiss' ? 'FAISS' : 'memory'} funnel: ` +
+            `neighbors=${ranked.length} db_firmName_hits=${dbNameHits} no_pg_row=${noDbRow} ` +
+            `pool_cap20=${matched.length}`,
+        )
         logger.log(
           `[ORCHESTRATOR] Step 5 — ${mode === 'faiss' ? 'FAISS' : 'in-memory'}: ` +
             `${ranked.length} → ${matched.length} after DB name filter`,
@@ -379,6 +405,9 @@ export async function runMatchingPipeline(
 
     let picked = await rankAndIntersect('faiss')
     if (!picked && fallbackRows.length >= 5) {
+      console.log(
+        `[FAISS] Step5 fallback: FAISS path yielded <5 pool VCs → in-memory cosine (${fallbackRows.length} rankable rows)`,
+      )
       logger.log(
         `[ORCHESTRATOR] Step 5 — Falling back to in-memory cosine rank ` +
           `(${fallbackRows.length} VCs with ${pitchEmbedding.length}-dim embeddings in DB)`,

@@ -1,0 +1,11 @@
+# Slimmer FAISS image (context = repo root)
+node_modules
+.next
+out
+.git
+.env
+.env.*
+*.md
+coverage
+prisma/migrations
+.vercel

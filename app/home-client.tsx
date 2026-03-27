@@ -229,19 +229,18 @@ export default function HomeClient({ verifiedInvestorCountLabel }: HomeClientPro
 
         <section
           className="border-b border-border/30 px-4 py-14 sm:px-6 sm:py-16 md:py-20"
-          aria-labelledby="home-flow-heading"
+          aria-labelledby="home-how-heading"
         >
           <div className="mx-auto max-w-7xl lg:px-2">
             <div className="max-w-2xl">
               <h2
-                id="home-flow-heading"
+                id="home-how-heading"
                 className="font-heading text-xl font-semibold tracking-tight text-foreground sm:text-2xl"
               >
-                What you get after an upload
+                How it works
               </h2>
               <p className="mt-2 text-sm leading-relaxed text-muted-foreground sm:text-[15px]">
-                You see the same rubric-style breakdown as below, plus an ordered shortlist with per-investor notes.
-                Edit intro copy before you send anything.
+                Upload once, review scores and your ranked shortlist, then edit intro copy before you send anything.
               </p>
             </div>
 

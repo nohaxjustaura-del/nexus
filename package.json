@@ -49,7 +49,8 @@
     "embeddings:rebuild": "tsx scripts/rebuild-embeddings-auto.ts",
     "faiss:install": "cd faiss-service && python -m pip install -r requirements.txt",
     "faiss:start": "cd faiss-service && python faiss_api.py",
-    "faiss:build": "cd faiss-service && python build_index.py"
+    "faiss:build": "cd faiss-service && python build_index.py",
+    "check-faiss": "tsx scripts/check-faiss.ts"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
@@ -71,7 +72,7 @@
     "jose": "^6.1.1",
     "jsonwebtoken": "^9.0.2",
     "lucide-react": "^0.344.0",
-    "next": "^14.2.33",
+    "next": "^14.2.35",
     "openai": "^4.28.0",
     "pdf-parse": "^2.4.5",
     "pdfkit": "^0.17.2",
@@ -94,7 +95,7 @@
     "baseline-browser-mapping": "^2.9.14",
     "critters": "^0.0.20",
     "eslint": "^8.56.0",
-    "eslint-config-next": "14.2.0",
+    "eslint-config-next": "^14.2.35",
     "postcss": "^8.4.35",
     "prisma": "5.22.0",
     "tailwindcss": "^3.4.1",

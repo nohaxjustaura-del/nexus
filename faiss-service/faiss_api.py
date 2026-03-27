@@ -31,6 +31,27 @@ app.add_middleware(
 # Global cache for loaded data
 vc_index = None
 vc_rows = None
+# (index mtime, json mtime) — when either file changes on disk, reload
+_loaded_signature: tuple[float, float] | None = None
+
+
+def _auto_reload_enabled() -> bool:
+    return os.environ.get("FAISS_DISABLE_AUTO_RELOAD", "").strip().lower() not in (
+        "1",
+        "true",
+        "yes",
+    )
+
+
+def _data_files_signature() -> tuple[float, float]:
+    if not VC_INDEX_PATH.exists():
+        raise FileNotFoundError(f"VC index not found: {VC_INDEX_PATH}")
+    if not VC_DATA_PATH.exists():
+        raise FileNotFoundError(f"VC data not found: {VC_DATA_PATH}")
+    return (
+        VC_INDEX_PATH.stat().st_mtime,
+        VC_DATA_PATH.stat().st_mtime,
+    )
 
 
 class RankRequest(BaseModel):
@@ -45,20 +66,25 @@ class RankedVC(BaseModel):
     metadata: Dict[str, Any]
 
 
-def load_data():
-    """Load FAISS index and VC data"""
-    global vc_index, vc_rows
-    
-    if vc_index is not None and vc_rows is not None:
-        return  # Already loaded
-    
-    if not VC_INDEX_PATH.exists():
-        raise FileNotFoundError(f"VC index not found: {VC_INDEX_PATH}")
-    if not VC_DATA_PATH.exists():
-        raise FileNotFoundError(f"VC data not found: {VC_DATA_PATH}")
-    
+def load_data(force: bool = False):
+    """Load FAISS index and VC data. Reloads when index/json files change (unless FAISS_DISABLE_AUTO_RELOAD=1)."""
+    global vc_index, vc_rows, _loaded_signature
+
+    sig = _data_files_signature()
+    if (
+        not force
+        and _auto_reload_enabled()
+        and vc_index is not None
+        and vc_rows is not None
+        and _loaded_signature == sig
+    ):
+        return
+    if not force and not _auto_reload_enabled() and vc_index is not None and vc_rows is not None:
+        return
+
     # Load FAISS index
-    print(f"Loading FAISS index from {VC_INDEX_PATH}")
+    tag = " (reload)" if vc_index is not None else ""
+    print(f"Loading FAISS index from {VC_INDEX_PATH}{tag}")
     vc_index = faiss.read_index(str(VC_INDEX_PATH))
     
     # Load VC data
@@ -69,6 +95,7 @@ def load_data():
             if line.strip():
                 vc_rows.append(json.loads(line))
     
+    _loaded_signature = sig
     print(f"Loaded {len(vc_rows)} VC profiles and index with {vc_index.ntotal} vectors")
 
 
@@ -86,8 +113,28 @@ async def startup_event():
 @app.get("/health")
 async def health():
     """Health check endpoint"""
+    load_data()
+    sig = _loaded_signature
     return {
         "status": "healthy",
+        "vc_count": len(vc_rows) if vc_rows else 0,
+        "index_size": vc_index.ntotal if vc_index else 0,
+        "auto_reload": _auto_reload_enabled(),
+        "index_path": str(VC_INDEX_PATH),
+        "data_path": str(VC_DATA_PATH),
+        "files_mtime": {
+            "vc_index.faiss": sig[0] if sig else None,
+            "vcs_embedding_inputs_trimmed.json": sig[1] if sig else None,
+        },
+    }
+
+
+@app.post("/reload")
+async def reload_index():
+    """Force reload index + VC rows from disk (same as detecting file mtime change)."""
+    load_data(force=True)
+    return {
+        "ok": True,
         "vc_count": len(vc_rows) if vc_rows else 0,
         "index_size": vc_index.ntotal if vc_index else 0,
     }
@@ -104,9 +151,8 @@ async def rank_vcs(request: RankRequest):
     Returns:
         List of ranked VCs with similarity scores
     """
-    if vc_index is None or vc_rows is None:
-        load_data()
-    
+    load_data()
+
     if not request.pitch_embedding:
         raise HTTPException(status_code=400, detail="pitch_embedding is required")
     
@@ -130,8 +176,16 @@ async def rank_vcs(request: RankRequest):
         faiss.normalize_L2(pitch_vec)
         
         # Search in FAISS index
-        top_k = min(request.top_k, vc_index.ntotal)
+        ntotal = int(vc_index.ntotal)
+        requested_k = int(request.top_k)
+        top_k = min(requested_k, ntotal)
         scores, indices = vc_index.search(pitch_vec, top_k)
+        raw_idx = indices[0].tolist()
+        invalid_idx = sum(1 for i in raw_idx if i < 0)
+        print(
+            f"[FAISS] /rank search: index_vectors={ntotal} json_rows={len(vc_rows)} "
+            f"requested_top_k={requested_k} effective_k={top_k} invalid_index_slots={invalid_idx}"
+        )
     except HTTPException:
         raise
     except Exception as e:
@@ -141,38 +195,46 @@ async def rank_vcs(request: RankRequest):
             detail=f"FAISS search failed: {str(e)}"
         )
     
-    # Build results
+    # Build results (skip out-of-range indices; should not happen if index/json stay in sync)
     results = []
+    skipped_oob = 0
     for rank, (idx, score) in enumerate(zip(indices[0], scores[0]), start=1):
-        if idx < len(vc_rows):
-            vc = vc_rows[idx]
-            meta = vc.get("metadata", {})
-            
-            # Extract ID (use firm name as fallback)
-            vc_id = vc.get("id") or vc.get("firm_name", f"vc_{idx}").lower().replace(" ", "_")
-            
-            results.append(RankedVC(
-                id=vc_id,
-                firm_name=vc.get("firm_name", "Unknown"),
-                similarity=float(score),
-                metadata={
-                    "stages": meta.get("stages", []),
-                    "sectors": meta.get("sectors", []),
-                    "geography": meta.get("geography", []),
-                    "check_size": meta.get("check_size", {}),
-                    "investor_type": meta.get("investor_type", "N/A"),
-                    "thesis": vc.get("thesis", ""),
-                }
-            ))
-    
+        if idx < 0:
+            continue
+        if idx >= len(vc_rows):
+            skipped_oob += 1
+            continue
+        vc = vc_rows[idx]
+        meta = vc.get("metadata", {})
+
+        # Extract ID (use firm name as fallback)
+        vc_id = vc.get("id") or vc.get("firm_name", f"vc_{idx}").lower().replace(" ", "_")
+
+        results.append(RankedVC(
+            id=vc_id,
+            firm_name=vc.get("firm_name", "Unknown"),
+            similarity=float(score),
+            metadata={
+                "stages": meta.get("stages", []),
+                "sectors": meta.get("sectors", []),
+                "geography": meta.get("geography", []),
+                "check_size": meta.get("check_size", {}),
+                "investor_type": meta.get("investor_type", "N/A"),
+                "thesis": vc.get("thesis", ""),
+            }
+        ))
+
+    print(
+        f"[FAISS] /rank response: neighbors_built={len(results)} skipped_oob_index={skipped_oob}"
+    )
+
     return results
 
 
 @app.get("/vc-count")
 async def get_vc_count():
     """Get total number of VCs in the index"""
-    if vc_index is None:
-        load_data()
+    load_data()
     return {"count": len(vc_rows) if vc_rows else 0}
 
 

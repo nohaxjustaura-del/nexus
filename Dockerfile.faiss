@@ -1,0 +1,22 @@
+# FAISS API only — use this on Railway (see railway.toml).
+# Build context must be the repository root (contains faiss-data/ + faiss-service/).
+FROM python:3.12-slim
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY faiss-service/requirements.txt /app/faiss-service/requirements.txt
+RUN pip install --no-cache-dir -r /app/faiss-service/requirements.txt
+
+COPY faiss-service /app/faiss-service
+COPY faiss-data /app/faiss-data
+
+WORKDIR /app/faiss-service
+
+ENV PYTHONUNBUFFERED=1
+EXPOSE 8001
+
+# Railway sets PORT; local fallback 8001
+CMD ["sh", "-c", "exec python -m uvicorn faiss_api:app --host 0.0.0.0 --port ${PORT:-8001}"]

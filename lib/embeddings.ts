@@ -5,8 +5,8 @@
  * Legacy rows in DB may store 3072-dim vectors from another provider — they cannot be converted
  * to Voyage space; run `npm run generate-vc-embeddings` to replace them with 1024-d Voyage vectors.
  *
- * Rate limits: default ~21s between requests (3 RPM free tier). Set VOYAGE_MIN_REQUEST_INTERVAL_MS
- * to a lower value (e.g. 50) when your Voyage org allows higher RPM; use 0 to disable spacing (watch TPM/429).
+ * Rate limits: default ~21s between request starts (3 RPM free tier). For paid tiers set
+ * VOYAGE_TARGET_RPM=2000 (or VOYAGE_MIN_REQUEST_INTERVAL_MS=30). Use 0 to disable spacing (watch TPM/429).
  */
 
 import './load-env'
@@ -16,21 +16,47 @@ const EMBEDDING_MODEL = 'voyage-3'
 const EMBEDDING_DIMENSIONS = 1024
 
 function resolveVoyageMinIntervalMs(): number {
-  const raw = process.env.VOYAGE_MIN_REQUEST_INTERVAL_MS
-  if (raw === undefined || String(raw).trim() === '') {
-    return 21_000
+  const rawInterval = process.env.VOYAGE_MIN_REQUEST_INTERVAL_MS
+  if (rawInterval !== undefined && String(rawInterval).trim() !== '') {
+    const n = Number(rawInterval)
+    if (Number.isFinite(n) && n >= 0) {
+      return n
+    }
   }
-  const n = Number(raw)
-  if (!Number.isFinite(n) || n < 0) {
-    return 21_000
+  const rawRpm = process.env.VOYAGE_TARGET_RPM
+  if (rawRpm !== undefined && String(rawRpm).trim() !== '') {
+    const rpm = Number(rawRpm)
+    if (Number.isFinite(rpm) && rpm > 0) {
+      return Math.max(0, Math.ceil(60_000 / rpm))
+    }
   }
-  return n
+  return 21_000
 }
 
 /** Minimum delay between Voyage embedding HTTP requests (same for single + batch calls). */
 export const VOYAGE_EMBEDDINGS_MIN_INTERVAL_MS = resolveVoyageMinIntervalMs()
 
 const VOYAGE_429_MAX_ATTEMPTS = 5
+
+/** Min time between embedding HTTP request starts (global per process). */
+let voyageEmbeddingNextStartAt = 0
+let voyageEmbeddingScheduleChain: Promise<void> = Promise.resolve()
+
+async function awaitVoyageEmbeddingRequestSlot(): Promise<void> {
+  const minMs = VOYAGE_EMBEDDINGS_MIN_INTERVAL_MS
+  if (minMs <= 0) return
+
+  const run = voyageEmbeddingScheduleChain.then(async () => {
+    const now = Date.now()
+    const wait = Math.max(0, voyageEmbeddingNextStartAt - now)
+    if (wait > 0) {
+      await new Promise<void>(r => setTimeout(r, wait))
+    }
+    voyageEmbeddingNextStartAt = Date.now() + minMs
+  })
+  voyageEmbeddingScheduleChain = run.catch(() => {})
+  await run
+}
 
 function getVoyageApiKey(): string {
   const apiKey = process.env.VOYAGE_API_KEY
@@ -48,6 +74,7 @@ async function postVoyageEmbeddings(body: Record<string, unknown>): Promise<Resp
   let last429Body = ''
 
   for (let attempt = 0; attempt < VOYAGE_429_MAX_ATTEMPTS; attempt++) {
+    await awaitVoyageEmbeddingRequestSlot()
     const res = await fetch('https://api.voyageai.com/v1/embeddings', {
       method: 'POST',
       headers: {
@@ -444,6 +471,47 @@ export function investorsToRankableEmbeddings(
   return out
 }
 
+/** Same inclusion rules as investorsToRankableEmbeddings — for logging funnel counts only. */
+export function countInvestorEmbeddingFilters(
+  investors: Parameters<typeof investorsToRankableEmbeddings>[0],
+  pitchEmbeddingLength: number,
+): {
+  input: number
+  rankable: number
+  missingEmbedding: number
+  parseError: number
+  wrongDimension: number
+} {
+  let missingEmbedding = 0
+  let parseError = 0
+  let wrongDimension = 0
+  for (const inv of investors) {
+    if (!inv.embedding?.trim()) {
+      missingEmbedding++
+      continue
+    }
+    let emb: number[]
+    try {
+      emb = JSON.parse(inv.embedding as string)
+    } catch {
+      parseError++
+      continue
+    }
+    if (!Array.isArray(emb) || emb.length !== pitchEmbeddingLength) {
+      wrongDimension++
+      continue
+    }
+  }
+  const input = investors.length
+  return {
+    input,
+    rankable: input - missingEmbedding - parseError - wrongDimension,
+    missingEmbedding,
+    parseError,
+    wrongDimension,
+  }
+}
+
 /** After a dimension mismatch from the FAISS service, skip HTTP calls until process restart. */
 let faissSkipDueToDimensionMismatch = false
 let faissDimensionMismatchLogged = false
@@ -517,6 +585,10 @@ export async function rankVCsWithFAISS(
 
     const results = await response.json()
 
+    console.log(
+      `[FAISS] client /rank ok: pitch_dim=${pitchEmbedding.length} requested_top_k=${topK} neighbors_returned=${Array.isArray(results) ? results.length : 0}`,
+    )
+
     // Convert FAISS API response to RankedVC format
     return results.map((vc: any) => ({
       id: vc.id,
@@ -570,8 +642,11 @@ export async function rankVCsForPitch(
   // Sort by similarity (descending)
   scored.sort((a, b) => b.similarity - a.similarity)
 
-  // Return top K
-  return scored.slice(0, topK)
+  const top = scored.slice(0, topK)
+  console.log(
+    `[FAISS] in-memory cosine: scored ${vcEmbeddings.length} VC embeddings → returning top_${topK}=${top.length}`,
+  )
+  return top
 }
 
 // ============================================================================
@@ -580,22 +655,15 @@ export async function rankVCsForPitch(
 
 /**
  * Generate embeddings for multiple texts in batch.
- * Each HTTP call counts toward RPM. Restricted tier: 3 RPM — wait VOYAGE_EMBEDDINGS_MIN_INTERVAL_MS
- * between requests; each request may include up to BATCH_SIZE strings (default 3).
+ * Spacing between HTTP calls is enforced inside postVoyageEmbeddings via VOYAGE_TARGET_RPM /
+ * VOYAGE_MIN_REQUEST_INTERVAL_MS. Each request may include up to BATCH_SIZE strings (default 3).
  */
 export async function generateBatchEmbeddings(texts: string[]): Promise<number[][]> {
-  /** One HTTP request can include multiple strings; 3 RPM = one request every ≥~20s on free tier. */
   const BATCH_SIZE = 3
-  const BATCH_DELAY_MS = VOYAGE_EMBEDDINGS_MIN_INTERVAL_MS
 
   const embeddings: number[][] = []
 
   for (let i = 0; i < texts.length; i += BATCH_SIZE) {
-    if (i > 0) {
-      console.log(`[EMBEDDINGS] Rate-limit pause (${Math.ceil(BATCH_DELAY_MS / 1000)}s) before batch ${Math.floor(i / BATCH_SIZE) + 1}...`)
-      await new Promise(resolve => setTimeout(resolve, BATCH_DELAY_MS))
-    }
-
     const batch = texts.slice(i, i + BATCH_SIZE)
 
     const res = await postVoyageEmbeddings({

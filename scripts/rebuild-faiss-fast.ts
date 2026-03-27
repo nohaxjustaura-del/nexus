@@ -3,7 +3,7 @@
  * This is faster than rebuilding from database
  */
 
-import { generateVCEmbedding } from '../lib/embeddings'
+import { generateVCEmbedding, VOYAGE_EMBEDDINGS_MIN_INTERVAL_MS } from '../lib/embeddings'
 import { readFileSync, writeFileSync, existsSync } from 'fs'
 import { join } from 'path'
 import { execSync } from 'child_process'
@@ -24,12 +24,14 @@ async function main() {
 
   console.log(`Found ${vcRows.length} VCs in JSON file\n`)
   console.log('🔄 Generating 1024-dimensional embeddings (Voyage AI)...\n')
-  console.log('⚠️  Voyage AI rate limits: 3 RPM, 10K TPM\n')
+  if (VOYAGE_EMBEDDINGS_MIN_INTERVAL_MS >= 1000) {
+    console.log(
+      `⚠️  Voyage spacing: ${Math.round(VOYAGE_EMBEDDINGS_MIN_INTERVAL_MS / 1000)}s between requests. Set VOYAGE_TARGET_RPM=2000 for higher tiers.\n`,
+    )
+  }
 
   const embeddings: number[][] = []
   const vcData: any[] = []
-
-  let apiCalls = 0
 
   for (let i = 0; i < vcRows.length; i++) {
     const vc = vcRows[i]
@@ -55,7 +57,6 @@ async function main() {
       }
 
       const embedding = await generateVCEmbedding(vcProfile)
-      apiCalls++
 
       if (embedding.length !== 1024) {
         console.log(`⚠️  Warning: ${vc.firm_name} has dimension ${embedding.length}, expected 1024`)
@@ -74,15 +75,6 @@ async function main() {
       vcData.push(vcEntry)
     } catch (error: any) {
       console.error(`❌ Error processing ${vc.firm_name}:`, error.message)
-      apiCalls++
-    }
-
-    // Rate limiting OUTSIDE try/catch  -  applies after every API call
-    if (apiCalls > 0 && apiCalls % 3 === 0) {
-      console.log(`⏳ Rate-limit pause (60s) after ${apiCalls} API calls...`)
-      await new Promise(resolve => setTimeout(resolve, 60_000))
-    } else if (apiCalls > 0) {
-      await new Promise(resolve => setTimeout(resolve, 500))
     }
   }
 

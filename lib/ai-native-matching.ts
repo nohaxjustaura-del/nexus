@@ -463,8 +463,17 @@ export async function aiNativeMatchVCs(
       try {
         // Ask FAISS for more than 20 so we can intersect with stage-filtered set
         const faissResults = await rankVCsForPitch(pitchEmbedding, [], 50, true)
-        vectorMatches = faissResults.filter(r => stageFilteredIds.has(r.id)).slice(0, 15)
-        logger.log(`[AI-NATIVE] Phase 2 — FAISS: ${faissResults.length} results, ${vectorMatches.length} after stage filter`)
+        const inStage = faissResults.filter((r) => stageFilteredIds.has(r.id))
+        const inStageCount = inStage.length
+        const notInStageCount = faissResults.length - inStageCount
+        vectorMatches = inStage.slice(0, 15)
+        console.log(
+          `[FAISS] AI-NATIVE Phase2 funnel: neighbors=${faissResults.length} ` +
+            `in_stage_set=${inStageCount} not_in_stage=${notInStageCount} after_top15=${vectorMatches.length}`,
+        )
+        logger.log(
+          `[AI-NATIVE] Phase 2 — FAISS: ${faissResults.length} results, ${vectorMatches.length} after stage filter`,
+        )
       } catch (faissErr: any) {
         logger.warn('[AI-NATIVE] FAISS failed, falling back to stage-filtered set:', faissErr?.message)
       }

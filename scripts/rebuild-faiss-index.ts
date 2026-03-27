@@ -5,11 +5,16 @@
  * 2. Builds FAISS index from those embeddings
  * 
  * Usage: npm run rebuild-faiss-index
- * Rate limits: 3 RPM, 10K TPM
+ * Rate limits: set VOYAGE_TARGET_RPM=2000 or VOYAGE_MIN_REQUEST_INTERVAL_MS=30 for paid Voyage tiers;
+ * default spacing is ~21s (free tier 3 RPM). See lib/embeddings.ts.
  */
 
 import { db } from '../lib/db'
-import { generateVCEmbedding, buildVCEmbeddingText } from '../lib/embeddings'
+import {
+  generateVCEmbedding,
+  buildVCEmbeddingText,
+  VOYAGE_EMBEDDINGS_MIN_INTERVAL_MS,
+} from '../lib/embeddings'
 import { parseJSON } from '../lib/utils'
 import { writeFileSync } from 'fs'
 import { join } from 'path'
@@ -17,7 +22,17 @@ import { execSync } from 'child_process'
 
 async function main() {
   console.log('🚀 Rebuilding FAISS index with 1024-dimensional embeddings (Voyage AI)...\n')
-  console.log('⚠️  Voyage AI free tier: 3 req/min  -  this will take a while for large datasets\n')
+  if (VOYAGE_EMBEDDINGS_MIN_INTERVAL_MS <= 0) {
+    console.log('ℹ️  Voyage spacing: disabled (VOYAGE_MIN_REQUEST_INTERVAL_MS=0); watch for 429s.\n')
+  } else if (VOYAGE_EMBEDDINGS_MIN_INTERVAL_MS >= 1000) {
+    console.log(
+      `⚠️  Voyage spacing: ${Math.round(VOYAGE_EMBEDDINGS_MIN_INTERVAL_MS / 1000)}s between requests (~${Math.round(60000 / VOYAGE_EMBEDDINGS_MIN_INTERVAL_MS)} RPM max). Set VOYAGE_TARGET_RPM=2000 for higher tiers.\n`,
+    )
+  } else {
+    console.log(
+      `ℹ️  Voyage spacing: ${VOYAGE_EMBEDDINGS_MIN_INTERVAL_MS}ms between requests (~${Math.round(60000 / Math.max(1, VOYAGE_EMBEDDINGS_MIN_INTERVAL_MS))} RPM cap).\n`,
+    )
+  }
 
   // Get all verified VCs
   const investors = await db.investor.findMany({
@@ -55,8 +70,6 @@ async function main() {
 
   console.log('🔄 Generating embeddings for all VCs...\n')
 
-  let apiCalls = 0
-
   for (let i = 0; i < investors.length; i++) {
     const investor = investors[i]
     
@@ -81,7 +94,6 @@ async function main() {
       }
 
       const embedding = await generateVCEmbedding(vcProfile)
-      apiCalls++
 
       if (embedding.length !== 1024) {
         console.log(`⚠️  Warning: ${investor.firmName} has dimension ${embedding.length}, expected 1024`)
@@ -112,15 +124,6 @@ async function main() {
       vcData.push(vcEntry)
     } catch (error: any) {
       console.error(`❌ Error processing ${investor.firmName}:`, error.message)
-      apiCalls++
-    }
-
-    // Rate limiting OUTSIDE try/catch  -  applies after every API call
-    if (apiCalls > 0 && apiCalls % 3 === 0) {
-      console.log(`⏳ Rate-limit pause (60s) after ${apiCalls} API calls...`)
-      await new Promise(resolve => setTimeout(resolve, 60_000))
-    } else if (apiCalls > 0) {
-      await new Promise(resolve => setTimeout(resolve, 500))
     }
   }
 
