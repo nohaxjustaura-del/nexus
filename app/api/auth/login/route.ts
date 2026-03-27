@@ -10,33 +10,10 @@ import {
   sendMagicLinkEmail,
 } from '@/lib/email'
 import { isAdminEmail } from '@/lib/constants'
+import { resolveUserApprovalAccess } from '@/lib/user-approval-access'
+import { sendCursorDebugIngest } from '@/lib/cursor-debug-ingest'
 
 export const dynamic = 'force-dynamic'
-
-function debugLog(
-  runId: string,
-  hypothesisId: string,
-  location: string,
-  message: string,
-  data: Record<string, unknown>
-) {
-  fetch('http://127.0.0.1:7464/ingest/8942f439-d0f1-43ea-9e6d-5d7995eef824', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-Debug-Session-Id': '0f3c2c',
-    },
-    body: JSON.stringify({
-      sessionId: '0f3c2c',
-      runId,
-      hypothesisId,
-      location,
-      message,
-      data,
-      timestamp: Date.now(),
-    }),
-  }).catch(() => {})
-}
 
 export async function POST(request: NextRequest) {
   try {
@@ -200,24 +177,48 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Regular users: require manual approval before we send a sign-in link.
+    try {
+      const { approved, status } = await resolveUserApprovalAccess(normalizedEmail)
+      if (!approved) {
+        return NextResponse.json(
+          {
+            error:
+              status === 'rejected'
+                ? 'Your application was not approved. If you have questions, you can reply to our earlier email.'
+                : 'Our team is still verifying your account. We’ll email you as soon as you’re approved.',
+            code: status === 'rejected' ? 'ACCOUNT_REJECTED' : 'ACCOUNT_PENDING_APPROVAL',
+            approvalStatus: status,
+          },
+          { status: 403 }
+        )
+      }
+    } catch (approvalErr) {
+      console.error('Login approval check error:', approvalErr)
+      return NextResponse.json(
+        { error: 'Unable to verify account status. Please try again.' },
+        { status: 500 }
+      )
+    }
+
     // Regular users: generate a magic link + OTP via Supabase Admin API
     // and send the email ourselves through Resend.
     const siteUrl = getSiteUrl(request)
     const callbackUrl = `${siteUrl}/api/auth/callback?next=${encodeURIComponent('/founder/onboarding')}`
     // #region agent log
-    debugLog(
-      'pre-fix-domain-send',
-      'H1,H2',
-      'app/api/auth/login/route.ts:regular-login-pre-generate',
-      'Prepared callback URL for magic link generation',
-      {
+    sendCursorDebugIngest({
+      runId: 'pre-fix-domain-send',
+      hypothesisId: 'H1,H2',
+      location: 'app/api/auth/login/route.ts:regular-login-pre-generate',
+      message: 'Prepared callback URL for magic link generation',
+      data: {
         siteUrl,
         callbackUrl,
         hasResendKey: Boolean(process.env.RESEND_API_KEY),
         hasFromEnv: Boolean(process.env.RESEND_FROM_EMAIL),
         nodeEnv: process.env.NODE_ENV ?? null,
-      }
-    )
+      },
+    })
     // #endregion
 
     const { data: linkData, error: linkError } = await adminClient.auth.admin.generateLink({
@@ -228,19 +229,19 @@ export async function POST(request: NextRequest) {
       },
     })
     // #region agent log
-    debugLog(
-      'pre-fix-domain-send',
-      'H3',
-      'app/api/auth/login/route.ts:regular-login-generate-result',
-      'Supabase generateLink returned',
-      {
+    sendCursorDebugIngest({
+      runId: 'pre-fix-domain-send',
+      hypothesisId: 'H3',
+      location: 'app/api/auth/login/route.ts:regular-login-generate-result',
+      message: 'Supabase generateLink returned',
+      data: {
         hasLinkError: Boolean(linkError),
         linkErrorStatus: (linkError as any)?.status ?? null,
         linkErrorCode: (linkError as any)?.code ?? null,
         hasActionLink: Boolean(linkData?.properties?.action_link),
         otpLen: String(linkData?.properties?.email_otp ?? '').length,
-      }
-    )
+      },
+    })
     // #endregion
 
     if (linkError) {
@@ -281,19 +282,19 @@ export async function POST(request: NextRequest) {
       isNew: false,
     })
     // #region agent log
-    debugLog(
-      'pre-fix-domain-send',
-      'H4,H5',
-      'app/api/auth/login/route.ts:regular-login-send-result',
-      'Magic-link send function returned',
-      {
+    sendCursorDebugIngest({
+      runId: 'pre-fix-domain-send',
+      hypothesisId: 'H4,H5',
+      location: 'app/api/auth/login/route.ts:regular-login-send-result',
+      message: 'Magic-link send function returned',
+      data: {
         sendSuccess: emailResult.success,
         resendTestingRecipientOnly:
           !emailResult.success ? Boolean(emailResult.resendTestingRecipientOnly) : false,
         usedDevConsoleFallback:
           emailResult.success ? Boolean((emailResult as any).devConsoleFallback) : false,
-      }
-    )
+      },
+    })
     // #endregion
 
     if (!emailResult.success) {

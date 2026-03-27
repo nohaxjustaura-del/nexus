@@ -6,8 +6,10 @@ import Link from 'next/link'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import { Mail, Loader2, ArrowLeft } from 'lucide-react'
+import { Mail, Loader2, ArrowLeft, Clock, X } from 'lucide-react'
 import { CLIENT_STORAGE } from '@/lib/client-storage-keys'
+
+type ApprovalModalVariant = 'pending' | 'rejected'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -17,6 +19,10 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [existingAccountBanner, setExistingAccountBanner] = useState(false)
+  const [approvalModal, setApprovalModal] = useState<{ open: boolean; variant: ApprovalModalVariant }>({
+    open: false,
+    variant: 'pending',
+  })
 
   useEffect(() => {
     if (searchParams.get('accountExists') !== '1') return
@@ -27,6 +33,15 @@ export default function LoginPage() {
     if (redirectUrl) next.set('redirect', redirectUrl)
     const qs = next.toString()
     router.replace(qs ? `/login?${qs}` : '/login')
+  }, [searchParams, router, redirectUrl])
+
+  useEffect(() => {
+    if (searchParams.get('pendingApproval') !== '1') return
+    const rejected = searchParams.get('rejected') === '1'
+    setApprovalModal({ open: true, variant: rejected ? 'rejected' : 'pending' })
+    const next = new URLSearchParams()
+    if (redirectUrl) next.set('redirect', redirectUrl)
+    router.replace(next.toString() ? `/login?${next}` : '/login')
   }, [searchParams, router, redirectUrl])
 
   useEffect(() => {
@@ -52,6 +67,15 @@ export default function LoginPage() {
       cancelled = true
     }
   }, [redirectUrl])
+
+  useEffect(() => {
+    if (!approvalModal.open) return
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = prev
+    }
+  }, [approvalModal.open])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -88,6 +112,18 @@ export default function LoginPage() {
       const data = await response.json()
 
       if (!response.ok) {
+        if (
+          data.code === 'ACCOUNT_PENDING_APPROVAL' ||
+          data.code === 'ACCOUNT_REJECTED'
+        ) {
+          setError('')
+          setApprovalModal({
+            open: true,
+            variant: data.code === 'ACCOUNT_REJECTED' ? 'rejected' : 'pending',
+          })
+          setLoading(false)
+          return
+        }
         const errorMsg = data.error || data.message || 'Something went wrong'
         setError(errorMsg)
         setLoading(false)
@@ -137,8 +173,61 @@ export default function LoginPage() {
     }
   }
 
+  const closeApprovalModal = () => setApprovalModal((m) => ({ ...m, open: false }))
+
   return (
-    <div className="flex min-h-[calc(100vh-3.25rem)] items-center justify-center p-5 sm:p-8">
+    <div className="flex min-h-[calc(100vh-3.25rem)] items-center justify-center p-5 sm:p-8 relative">
+      {approvalModal.open && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="approval-modal-title"
+          onClick={closeApprovalModal}
+        >
+          <Card
+            className="relative w-full max-w-md border-border/50 shadow-lg"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              onClick={closeApprovalModal}
+              className="absolute right-3 top-3 rounded-full p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+              aria-label="Close"
+            >
+              <X className="h-4 w-4" />
+            </button>
+            <CardHeader className="space-y-2 text-center pb-2 pt-8">
+              <div className="mx-auto w-12 h-12 rounded-full flex items-center justify-center bg-primary/12 ring-1 ring-border/60">
+                <Clock className="w-6 h-6 text-primary" />
+              </div>
+              <CardTitle id="approval-modal-title" className="font-heading text-xl font-semibold tracking-tight">
+                {approvalModal.variant === 'rejected'
+                  ? 'Application not approved'
+                  : 'Account under review'}
+              </CardTitle>
+              <CardDescription className="text-base text-muted-foreground leading-relaxed px-1">
+                {approvalModal.variant === 'rejected' ? (
+                  <>
+                    Your application was not approved at this time. If you have questions, you can reply to the email
+                    we sent you.
+                  </>
+                ) : (
+                  <>
+                    Thanks for your patience. Our team is still working on verifying your account. We’ll email you as
+                    soon as everything is ready. You don’t need to do anything else right now.
+                  </>
+                )}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="pt-2 pb-6">
+              <Button type="button" className="w-full rounded-full" onClick={closeApprovalModal}>
+                OK
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      )}
       <Card className="w-full max-w-md border-border/35 shadow-none">
         <CardHeader className="space-y-1 text-center">
           <div className="mx-auto w-12 h-12 rounded-full flex items-center justify-center mb-4 bg-primary/15 ring-1 ring-border/60">

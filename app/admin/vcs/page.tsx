@@ -20,7 +20,6 @@ import {
   Eye,
   EyeOff
 } from "lucide-react"
-import Link from "next/link"
 import { parseJSON } from "@/lib/utils"
 import { toast } from '@/components/ui/toast-simple'
 
@@ -202,27 +201,13 @@ export default function AdminVCsPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b">
-        <div className="container mx-auto flex h-16 items-center justify-between px-4">
-          <Link href="/" className="flex items-center gap-2">
-            <Building2 className="h-6 w-6 text-primary" />
-            <span className="text-xl font-bold">NEXUS Admin</span>
-          </Link>
-          <div className="flex items-center gap-4">
-            <Link href="/admin/waitlist">
-              <Button variant="ghost">Waitlist</Button>
-            </Link>
-            <Badge variant="secondary">VC Management</Badge>
-          </div>
-        </div>
-      </header>
-
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto max-w-7xl px-4 py-8 sm:px-6">
         <div className="mb-8">
-          <h1 className="mb-2 text-3xl font-bold">VC Management Dashboard</h1>
-          <p className="text-muted-foreground">
-            Approve VC claims and manage investor profiles
+          <h1 className="font-heading text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
+            VC management
+          </h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Approve claims and manage investor profiles
           </p>
         </div>
 

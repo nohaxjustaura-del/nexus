@@ -33,9 +33,21 @@ interface Step1BasicInfoProps {
   errors: { name?: string; email?: string; age?: string; education?: string; phone?: string }
   setErrors: (errors: { name?: string; email?: string; age?: string; education?: string; phone?: string }) => void
   setStep: (step: number) => void
+  /** Hide Continue — e.g. account profile editor with a single global Save */
+  hideNavigation?: boolean
+  /** Lock primary email to the signed-in account */
+  readOnlyEmail?: boolean
 }
 
-export function Step1BasicInfo({ formData, setFormData, errors, setErrors, setStep }: Step1BasicInfoProps) {
+export function Step1BasicInfo({
+  formData,
+  setFormData,
+  errors,
+  setErrors,
+  setStep,
+  hideNavigation = false,
+  readOnlyEmail = false,
+}: Step1BasicInfoProps) {
   return (
     <Card>
       <CardHeader>
@@ -66,7 +78,14 @@ export function Step1BasicInfo({ formData, setFormData, errors, setErrors, setSt
             value={formData.email}
             onChange={(e) => setFormData({ ...formData, email: e.target.value })}
             placeholder="jane@startup.com"
+            readOnly={readOnlyEmail}
+            className={readOnlyEmail ? 'bg-muted/60 text-muted-foreground cursor-not-allowed' : undefined}
           />
+          {readOnlyEmail && (
+            <p className="text-xs text-muted-foreground">
+              This is your login email. Use “Alternate Email” below for a different contact address.
+            </p>
+          )}
           {errors?.email && <p className="text-xs text-red-600">{errors.email}</p>}
         </div>
 
@@ -265,6 +284,7 @@ export function Step1BasicInfo({ formData, setFormData, errors, setErrors, setSt
           </div>
         </div>
 
+        {!hideNavigation && (
         <Button onClick={() => {
           const nextErrors: { name?: string; email?: string; age?: string; education?: string; phone?: string } = {}
           if (!formData.name?.trim()) {
@@ -293,6 +313,7 @@ export function Step1BasicInfo({ formData, setFormData, errors, setErrors, setSt
           Continue
           <ArrowRight className="ml-2 h-4 w-4" />
         </Button>
+        )}
       </CardContent>
     </Card>
   )

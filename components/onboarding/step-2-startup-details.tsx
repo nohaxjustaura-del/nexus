@@ -33,9 +33,18 @@ interface Step2StartupDetailsProps {
   setErrors: (errors: { stage?: string; sectors?: string; location?: string } | ((prev: any) => any)) => void
   setStep: (step: number) => void
   toggleArrayItem: (key: keyof FormData, value: string) => void
+  hideNavigation?: boolean
 }
 
-export function Step2StartupDetails({ formData, setFormData, errors, setErrors, setStep, toggleArrayItem }: Step2StartupDetailsProps) {
+export function Step2StartupDetails({
+  formData,
+  setFormData,
+  errors,
+  setErrors,
+  setStep,
+  toggleArrayItem,
+  hideNavigation = false,
+}: Step2StartupDetailsProps) {
   return (
     <Card>
       <CardHeader>
@@ -146,6 +155,7 @@ export function Step2StartupDetails({ formData, setFormData, errors, setErrors, 
           </div>
         </div>
 
+        {!hideNavigation && (
         <div className="flex gap-4">
           <Button onClick={() => setStep(1)} variant="outline" className="flex-1 gap-2">
             <ArrowLeft className="h-4 w-4" />
@@ -171,6 +181,7 @@ export function Step2StartupDetails({ formData, setFormData, errors, setErrors, 
             <ArrowRight className="ml-2 h-4 w-4" />
           </Button>
         </div>
+        )}
       </CardContent>
     </Card>
   )

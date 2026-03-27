@@ -1,14 +1,15 @@
 import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { getCurrentUser } from '@/lib/auth'
+import { isAdminEmail } from '@/lib/constants'
 import { logger } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
 
-// Claim cooldown: 12 hours in milliseconds
-const CLAIM_COOLDOWN_MS = 12 * 60 * 60 * 1000
+// One free credit per rolling 24-hour window from last claim
+const CLAIM_COOLDOWN_MS = 24 * 60 * 60 * 1000
 
 function isUniqueConstraintViolation(error: unknown): boolean {
   return (
@@ -28,6 +29,20 @@ export async function POST() {
         { error: 'Unauthorized' },
         { status: 401 }
       )
+    }
+
+    const eligibility = await db.userCredits.findUnique({
+      where: { userId: user.id },
+      select: { isPremium: true },
+    })
+    if (isAdminEmail(user.email) || eligibility?.isPremium) {
+      const row = await db.userCredits.findUnique({ where: { userId: user.id } })
+      return NextResponse.json({
+        success: false,
+        message: 'Daily credits are for free accounts',
+        credits: row?.credits ?? 0,
+        canClaimAgainAt: null,
+      })
     }
 
     const now = new Date()
@@ -115,7 +130,7 @@ export async function POST() {
     const nextClaimTime = lastClaim ? getNextClaimTime(lastClaim) : getNextClaimTime(now)
     return NextResponse.json({
       success: false,
-      message: 'You can claim again in a few hours',
+      message: 'You can claim again after 24 hours',
       canClaimAgainAt: nextClaimTime,
       credits: existing.credits || 0,
     })
@@ -156,13 +171,17 @@ export async function GET() {
 
     const now = new Date()
     const lastClaim = userCredits.lastDailyClaim
-    const canClaim = !lastClaim || canClaimNow(lastClaim, now)
+    const eligibleForDaily =
+      !isAdminEmail(user.email) && !userCredits.isPremium
+    const canClaim =
+      eligibleForDaily && (!lastClaim || canClaimNow(lastClaim, now))
 
     return NextResponse.json({
       canClaim,
       credits: userCredits.credits || 0,
       lastClaim: lastClaim?.toISOString(),
-      canClaimAgainAt: lastClaim ? getNextClaimTime(lastClaim) : null,
+      canClaimAgainAt:
+        eligibleForDaily && lastClaim ? getNextClaimTime(lastClaim) : null,
     })
   } catch (error) {
     logger.error('DAILY_CLAIM', 'Error checking claim status:', error)
@@ -173,13 +192,13 @@ export async function GET() {
   }
 }
 
-// Helper: Check if user can claim now (12 hours must have passed)
+// Helper: Check if user can claim now (24 hours must have passed)
 function canClaimNow(lastClaim: Date, now: Date): boolean {
   const timeSinceLastClaim = now.getTime() - lastClaim.getTime()
   return timeSinceLastClaim >= CLAIM_COOLDOWN_MS
 }
 
-// Helper: Get next claim time (12 hours after last claim)
+// Helper: Get next claim time (24 hours after last claim)
 function getNextClaimTime(lastClaim: Date): string {
   const nextClaim = new Date(lastClaim.getTime() + CLAIM_COOLDOWN_MS)
   return nextClaim.toISOString()

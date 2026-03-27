@@ -80,7 +80,7 @@ export default function PricingPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-white via-slate-50/30 to-white">
+    <div className="min-h-screen bg-background">
       <div className="container mx-auto max-w-7xl px-4 py-8 md:py-10">
         <div className="mb-8 text-center">
           <h1 className="text-4xl md:text-5xl font-bold mb-4 bg-gradient-to-r from-primary via-blue-600 to-purple-600 bg-clip-text text-transparent">

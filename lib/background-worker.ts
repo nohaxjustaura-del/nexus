@@ -4,21 +4,39 @@
  * ===============================================================================
  *
  * Jobs:
- *  1. VC Research     (24h)  -  Web search + AI extraction to fill missing fields
- *  2. Exa Enrichment  (24h)  -  Pre-warm VCEnrichmentCache via Exa for top VCs
- *  3. Embeddings      (24h)  -  Regenerate Voyage AI embeddings + FAISS index
- *  4. Data Validation  (12h)  -  Check data quality, flag gaps, report stats
+ *  1. VC Thesis        (24h tick, monthly window) — dual Exa + OpenRouter; applies thesis only (see data/worker-vc-refresh-state.json)
+ *  2. VC Profile       (24h tick, monthly window) — same retrieval; applies non-thesis fields only
+ *  3. Exa Enrichment   (24h)  -  Pre-warm VCEnrichmentCache via Exa for top VCs
+ *  4. Embeddings          (24h)  -  Regenerate Voyage AI embeddings + FAISS index
+ *  5. Data Validation    (12h)  -  Check data quality, flag gaps, report stats
+ *  6. VC directory sync  (6h)   -  Prisma → Supabase vc_directory for recently updated public rows (heals failed ingest upserts)
  *
  * Removed:
  *  - YC Trends (separate job)  -  YC is just another VC; the research job covers it
  *  - Market Trends  -  was generating analysis and discarding it; replaced by
  *    live Exa enrichment which actually stores and uses its output
+ *
+ * Env tuning (optional):
+ *  - WORKER_VC_RESEARCH_BATCH_SIZE, WORKER_VC_RESEARCH_DELAY_MS, WORKER_VC_RESEARCH_MAX_CONCURRENT
+ *  - WORKER_EXA_UNCACHED_TAKE, WORKER_EXA_STALE_TAKE, WORKER_EXA_ENRICH_DELAY_MS
+ *  - WORKER_THESIS_REFRESH_INTERVAL_MS, WORKER_PROFILE_REFRESH_INTERVAL_MS (default ~30d each)
+ *  - WORKER_VC_DIRECTORY_SYNC_INTERVAL_MS (default 6h)
  */
 
 import { db } from './db'
 import { logger } from './logger'
 import { researchVCsBatch } from '../scripts/auto-research-vcs'
 import { getLiveInvestorPulse } from './exa-service'
+import {
+  readWorkerVcRefreshState,
+  isThesisRefreshDue,
+  isProfileRefreshDue,
+  completeThesisRefreshCycle,
+  completeProfileRefreshCycle,
+  markThesisBatchRan,
+  markProfileBatchRan,
+} from './worker-vc-refresh-state'
+import { syncRecentPublicDiscoverableToVcDirectory } from './vc-supabase-sync'
 
 // ============================================================================
 // TYPES & CONFIGURATION
@@ -27,7 +45,13 @@ import { getLiveInvestorPulse } from './exa-service'
 export interface WorkerJob {
   id: string
   name: string
-  type: 'vc-research' | 'exa-enrichment' | 'embeddings' | 'validation'
+  type:
+    | 'vc-thesis'
+    | 'vc-profile'
+    | 'exa-enrichment'
+    | 'embeddings'
+    | 'validation'
+    | 'vc-directory-sync'
   priority: number
   interval: number
   lastRun?: Date
@@ -48,9 +72,19 @@ const DEFAULT_CONFIG: WorkerConfig = {
   gracefulShutdownTimeout: 30000,
   jobs: [
     {
-      id: 'vc-research-daily',
-      name: 'VC Data Research & Update',
-      type: 'vc-research',
+      id: 'vc-thesis-monthly',
+      name: 'VC Thesis refresh (monthly cycle)',
+      type: 'vc-thesis',
+      priority: 9,
+      interval: 24 * 60 * 60 * 1000,
+      status: 'idle',
+      errorCount: 0,
+      maxErrors: 3,
+    },
+    {
+      id: 'vc-profile-monthly',
+      name: 'VC Profile fields refresh (monthly cycle)',
+      type: 'vc-profile',
       priority: 8,
       interval: 24 * 60 * 60 * 1000,
       status: 'idle',
@@ -87,6 +121,21 @@ const DEFAULT_CONFIG: WorkerConfig = {
       errorCount: 0,
       maxErrors: 5,
     },
+    {
+      id: 'vc-directory-sync',
+      name: 'Supabase VC directory sync (recent Prisma rows)',
+      type: 'vc-directory-sync',
+      priority: 4,
+      interval: (() => {
+        const minMs = 60 * 60 * 1000
+        const fallback = 6 * 60 * 60 * 1000
+        const fromEnv = parseInt(process.env.WORKER_VC_DIRECTORY_SYNC_INTERVAL_MS || '', 10)
+        return Math.max(minMs, Number.isFinite(fromEnv) && fromEnv > 0 ? fromEnv : fallback)
+      })(),
+      status: 'idle',
+      errorCount: 0,
+      maxErrors: 5,
+    },
   ],
 }
 
@@ -103,45 +152,135 @@ let scheduledJobs: Map<string, NodeJS.Timeout> = new Map()
 // ============================================================================
 
 /**
- * Research and update VC data  -  fills ALL missing fields via web search + AI.
- * Targets VCs that are stale (>30 days), missing thesis, or have 0 check sizes.
+ * Thesis-only refresh. Runs only during an open monthly window (see worker-vc-refresh-state.json).
  */
-async function executeVCResearch(): Promise<void> {
-  logger.info('WORKER', '🔍 Starting VC research job...')
+async function executeVCThesisResearch(): Promise<void> {
+  logger.info('WORKER', '📝 Starting VC thesis refresh job...')
 
   try {
+    const state = readWorkerVcRefreshState()
+    if (!isThesisRefreshDue(state)) {
+      logger.info(
+        'WORKER',
+        `⏭️ Thesis cycle not open yet — next eligible after ${state.thesis.nextCycleNotBefore}`,
+      )
+      return
+    }
+
+    const batchTake = Math.min(
+      100,
+      Math.max(5, parseInt(process.env.WORKER_VC_RESEARCH_BATCH_SIZE || '25', 10) || 25),
+    )
+    const delayMs = Math.max(
+      500,
+      parseInt(process.env.WORKER_VC_RESEARCH_DELAY_MS || '2500', 10) || 2500,
+    )
+    const maxConcurrent = Math.min(
+      5,
+      Math.max(1, parseInt(process.env.WORKER_VC_RESEARCH_MAX_CONCURRENT || '2', 10) || 2),
+    )
+
+    const vcsToUpdate = await db.investor.findMany({
+      where: {
+        OR: [{ thesis: { equals: null } }, { thesis: '' }],
+      },
+      select: { firmName: true, thesis: true },
+      take: batchTake,
+      orderBy: { updatedAt: 'asc' },
+    })
+
+    const needingThesis = vcsToUpdate.filter(
+      (v) => !v.thesis || v.thesis.trim().length < 20,
+    )
+
+    if (needingThesis.length === 0) {
+      logger.info('WORKER', '✅ Thesis queue empty — closing monthly thesis cycle')
+      completeThesisRefreshCycle(readWorkerVcRefreshState())
+      return
+    }
+
+    const firmNames = needingThesis.map((vc) => vc.firmName)
+    logger.info('WORKER', `📋 Thesis batch ${firmNames.length}: ${firmNames.slice(0, 5).join(', ')}...`)
+
+    await researchVCsBatch(firmNames, {
+      delayBetweenSearches: delayMs,
+      maxConcurrent,
+      mode: 'thesis',
+    })
+
+    markThesisBatchRan(readWorkerVcRefreshState())
+    logger.info('WORKER', `✅ Thesis batch finished (${firmNames.length} firms); cycle stays open until queue drains`)
+  } catch (error: any) {
+    logger.error('WORKER', 'VC thesis refresh failed:', error.message)
+    throw error
+  }
+}
+
+/**
+ * Profile fields (non-thesis). Separate monthly window in worker-vc-refresh-state.json.
+ */
+async function executeVCProfileResearch(): Promise<void> {
+  logger.info('WORKER', '📋 Starting VC profile fields refresh job...')
+
+  try {
+    const state = readWorkerVcRefreshState()
+    if (!isProfileRefreshDue(state)) {
+      logger.info(
+        'WORKER',
+        `⏭️ Profile cycle not open yet — next eligible after ${state.profile.nextCycleNotBefore}`,
+      )
+      return
+    }
+
+    const batchTake = Math.min(
+      100,
+      Math.max(5, parseInt(process.env.WORKER_VC_RESEARCH_BATCH_SIZE || '25', 10) || 25),
+    )
+    const delayMs = Math.max(
+      500,
+      parseInt(process.env.WORKER_VC_RESEARCH_DELAY_MS || '2500', 10) || 2500,
+    )
+    const maxConcurrent = Math.min(
+      5,
+      Math.max(1, parseInt(process.env.WORKER_VC_RESEARCH_MAX_CONCURRENT || '2', 10) || 2),
+    )
+
     const vcsToUpdate = await db.investor.findMany({
       where: {
         OR: [
-          { updatedAt: { lt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) } },
-          { thesis: { equals: null } },
-          { thesis: '' },
           { checkSizeMin: { equals: 0 } },
-          { portfolio: { equals: null } },
+          { portfolio: null },
           { portfolio: '' },
+          { stages: { equals: '[]' } },
+          { sectors: { equals: '[]' } },
+          // bio is required String in schema (default ""); null is invalid for Prisma filters
+          { bio: '' },
         ],
       },
       select: { firmName: true },
-      take: 20,
+      take: batchTake,
       orderBy: { updatedAt: 'asc' },
     })
 
     if (vcsToUpdate.length === 0) {
-      logger.info('WORKER', '✅ All VCs are up to date')
+      logger.info('WORKER', '✅ Profile queue empty — closing monthly profile cycle')
+      completeProfileRefreshCycle(readWorkerVcRefreshState())
       return
     }
 
-    const firmNames = vcsToUpdate.map(vc => vc.firmName)
-    logger.info('WORKER', `📋 Updating ${firmNames.length} VCs: ${firmNames.slice(0, 5).join(', ')}...`)
+    const firmNames = vcsToUpdate.map((vc) => vc.firmName)
+    logger.info('WORKER', `📋 Profile batch ${firmNames.length}: ${firmNames.slice(0, 5).join(', ')}...`)
 
     await researchVCsBatch(firmNames, {
-      delayBetweenSearches: 3000,
-      maxConcurrent: 2,
+      delayBetweenSearches: delayMs,
+      maxConcurrent,
+      mode: 'profile',
     })
 
-    logger.info('WORKER', `✅ VC research complete: ${firmNames.length} VCs updated`)
+    markProfileBatchRan(readWorkerVcRefreshState())
+    logger.info('WORKER', `✅ Profile batch finished (${firmNames.length} firms); cycle stays open until queue drains`)
   } catch (error: any) {
-    logger.error('WORKER', 'VC research failed:', error.message)
+    logger.error('WORKER', 'VC profile refresh failed:', error.message)
     throw error
   }
 }
@@ -156,6 +295,15 @@ async function executeExaEnrichment(): Promise<void> {
   try {
     // Find VCs that are most likely to be shown to founders:
     // top bookmarked + any without a cache entry yet
+    const uncachedTake = Math.min(
+      80,
+      Math.max(5, parseInt(process.env.WORKER_EXA_UNCACHED_TAKE || '20', 10) || 20),
+    )
+    const staleTake = Math.min(
+      50,
+      Math.max(3, parseInt(process.env.WORKER_EXA_STALE_TAKE || '15', 10) || 15),
+    )
+
     const uncachedVCs = await db.investor.findMany({
       where: {
         isPublic: true,
@@ -163,7 +311,7 @@ async function executeExaEnrichment(): Promise<void> {
         enrichmentCache: { is: null },
       },
       select: { id: true, firmName: true, sectors: true },
-      take: 15,
+      take: uncachedTake,
       orderBy: { updatedAt: 'desc' },
     })
 
@@ -173,7 +321,7 @@ async function executeExaEnrichment(): Promise<void> {
         lastUpdated: { lt: new Date(Date.now() - 24 * 60 * 60 * 1000) },
       },
       select: { investorId: true, investor: { select: { firmName: true, sectors: true } } },
-      take: 10,
+      take: staleTake,
       orderBy: { lastUpdated: 'asc' },
     })
 
@@ -192,6 +340,11 @@ async function executeExaEnrichment(): Promise<void> {
     let enriched = 0
     let failed = 0
 
+    const exaDelayMs = Math.max(
+      500,
+      parseInt(process.env.WORKER_EXA_ENRICH_DELAY_MS || '2000', 10) || 2000,
+    )
+
     // Process sequentially to be gentle on Exa rate limits
     for (const vc of toEnrich) {
       try {
@@ -202,8 +355,7 @@ async function executeExaEnrichment(): Promise<void> {
         await getLiveInvestorPulse(vc.firmName, domain, vc.id)
         enriched++
 
-        // 2s delay between calls
-        await new Promise(resolve => setTimeout(resolve, 2000))
+        await new Promise(resolve => setTimeout(resolve, exaDelayMs))
       } catch (err: any) {
         logger.warn('WORKER', `⚠️ Enrichment failed for ${vc.firmName}:`, err?.message)
         failed++
@@ -238,6 +390,38 @@ async function executeEmbeddingsRebuild(): Promise<void> {
  * Validate data accuracy and report gaps.
  * Does NOT crash on invalid Prisma queries.
  */
+async function executeVCDirectorySync(): Promise<void> {
+  logger.info('WORKER', '📤 Starting Supabase vc_directory sync (recent Prisma investors)...')
+
+  try {
+    const maxRows = Math.min(
+      300,
+      Math.max(30, parseInt(process.env.WORKER_VC_DIRECTORY_SYNC_MAX_ROWS || '120', 10) || 120),
+    )
+    const lookbackHours = Math.max(
+      6,
+      Math.min(168, parseInt(process.env.WORKER_VC_DIRECTORY_SYNC_LOOKBACK_HOURS || '50', 10) || 50),
+    )
+    const result = await syncRecentPublicDiscoverableToVcDirectory({
+      lookbackMs: lookbackHours * 60 * 60 * 1000,
+      maxRows,
+    })
+
+    if (result.skipped) {
+      logger.info('WORKER', `⏭️ VC directory sync skipped: ${result.reason || 'not configured'}`)
+      return
+    }
+
+    logger.info(
+      'WORKER',
+      `✅ VC directory sync: examined ${result.examined}, ok ${result.upserted}, failed ${result.failed}`,
+    )
+  } catch (error: any) {
+    logger.error('WORKER', 'VC directory sync failed:', error.message)
+    throw error
+  }
+}
+
 async function executeDataValidation(): Promise<void> {
   logger.info('WORKER', '🔍 Starting data validation...')
 
@@ -328,8 +512,11 @@ async function executeJob(job: WorkerJob): Promise<void> {
 
   try {
     switch (job.type) {
-      case 'vc-research':
-        await executeVCResearch()
+      case 'vc-thesis':
+        await executeVCThesisResearch()
+        break
+      case 'vc-profile':
+        await executeVCProfileResearch()
         break
       case 'exa-enrichment':
         await executeExaEnrichment()
@@ -339,6 +526,9 @@ async function executeJob(job: WorkerJob): Promise<void> {
         break
       case 'validation':
         await executeDataValidation()
+        break
+      case 'vc-directory-sync':
+        await executeVCDirectorySync()
         break
       default:
         throw new Error(`Unknown job type: ${job.type}`)
@@ -385,8 +575,11 @@ async function startAllJobsImmediate(): Promise<void> {
   for (const job of sortedJobs) {
     // Embeddings rebuild takes hours at 3 RPM  -  only run on the 24h schedule,
     // not on every worker startup. Use `npm run rebuild-faiss-index` for manual runs.
-    if (job.type === 'embeddings') {
-      logger.info('WORKER', `⏭️ Skipping ${job.name} on startup (runs on 24h schedule only)`)
+    if (job.type === 'embeddings' || job.type === 'vc-directory-sync') {
+      logger.info(
+        'WORKER',
+        `⏭️ Skipping ${job.name} on startup (runs on timer only — avoids duplicate load right after deploy)`,
+      )
       scheduleJob(job)
       continue
     }

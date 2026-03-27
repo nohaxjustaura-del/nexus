@@ -180,7 +180,7 @@ export default function FounderOnboarding() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+    <div className="min-h-screen bg-background">
       <div className="max-w-3xl mx-auto px-4 py-12">
         {/* Header */}
         <div className="text-center mb-12">
@@ -197,7 +197,7 @@ export default function FounderOnboarding() {
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow-lg border border-gray-200 p-8 space-y-8">
+        <form onSubmit={handleSubmit} className="bg-card rounded-2xl shadow-lg border border-border p-8 space-y-8">
           {/* Section 1: Founder */}
           <div className="space-y-6">
             <h2 className="text-2xl font-bold text-gray-900 border-b pb-3">1. About You</h2>

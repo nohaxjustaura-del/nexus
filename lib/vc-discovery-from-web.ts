@@ -1,10 +1,9 @@
 /**
- * Discover VC / investment-firm names: Exa scrapes the web; Tavily summarizes (answer) + extracts
- * page text from Exa URLs. No OpenRouter in this path.
+ * Discover VC / investment-firm names: two parallel Exa searches per round (diverse queries),
+ * then heuristic fund-name extraction. No Tavily, no OpenRouter.
  */
 
 import Exa from 'exa-js'
-import { tavily } from '@tavily/core'
 import { db } from '@/lib/db'
 
 const SECTORS = [
@@ -58,7 +57,7 @@ const ANGLES = [
 ]
 
 /**
- * Exa snippet filter + Tavily search startDate.
+ * Exa `startPublishedDate` filter for discovery (optional breadth vs recency).
  */
 export const VC_DISCOVERY_CONTENT_SINCE: string = (() => {
   const e = process.env.VC_DISCOVERY_CONTENT_SINCE?.trim()
@@ -88,21 +87,6 @@ const BLUEPRINTS = [
   'venture capital {angle} {sector} {region}',
   'emerging manager VC {angle} {year} {sector}',
 ]
-
-let tavilyDiscoveryClient: ReturnType<typeof tavily> | null = null
-
-function getTavilyDiscoveryClient(): ReturnType<typeof tavily> | null {
-  if (tavilyDiscoveryClient) return tavilyDiscoveryClient
-  const apiKey = process.env.TAVILY_API_KEY?.trim()
-  if (!apiKey) return null
-  try {
-    tavilyDiscoveryClient = tavily({ apiKey })
-    return tavilyDiscoveryClient
-  } catch (e) {
-    console.error('[VC-DISCOVERY] Tavily init failed:', e)
-    return null
-  }
-}
 
 function shuffleInPlace<T>(arr: T[]): void {
   for (let i = arr.length - 1; i > 0; i--) {
@@ -169,7 +153,7 @@ function nameAllowedByYearWindow(corpus: string, name: string): boolean {
 }
 
 /**
- * Pull fund-like strings from Tavily answer + extracted pages + Exa snippets (no LLM).
+ * Pull fund-like strings from merged Exa passages (no LLM).
  */
 function extractFundNamesHeuristic(corpus: string): string[] {
   const found = new Set<string>()
@@ -202,9 +186,9 @@ export async function loadExistingFirmKeysFromDb(): Promise<Set<string>> {
   return set
 }
 
-/** Discovery requires both: Exa scrapes, Tavily answers + extracts. */
+/** Discovery requires Exa only (two search passes per round). */
 export function isDiscoverySearchConfigured(): boolean {
-  return !!process.env.TAVILY_API_KEY?.trim() && !!process.env.EXA_API_KEY?.trim()
+  return !!process.env.EXA_API_KEY?.trim()
 }
 
 export type ExaScrapeResult = { urls: string[]; textBlock: string }
@@ -241,70 +225,15 @@ export async function exaScrapeQuery(query: string, numResults: number): Promise
   }
 }
 
-/** Tavily search with AI answer (extraction/summary on Tavily side). */
-export async function tavilyAnswerForQuery(query: string, maxResults: number): Promise<string> {
-  const client = getTavilyDiscoveryClient()
-  if (!client) return ''
-  try {
-    const topic = Math.random() < 0.55 ? 'news' : 'finance'
-    const response = await client.search(query, {
-      searchDepth: 'advanced',
-      maxResults,
-      includeAnswer: 'advanced',
-      includeRawContent: false,
-      includeImages: false,
-      topic,
-      startDate: VC_DISCOVERY_CONTENT_SINCE,
-      includeUsage: true,
-    })
-    const cred = response.usage?.credits
-    const n = response.results?.length ?? 0
-    const ans = typeof response.answer === 'string' ? response.answer.trim() : ''
-    console.log(
-      `[VC-DISCOVERY] Tavily answer: ${ans.length} chars (search hits: ${n}${cred != null ? `, ~${cred} credits` : ''})`,
-    )
-    return ans
-  } catch (e) {
-    const msg = e instanceof Error ? e.message : String(e)
-    console.warn('[VC-DISCOVERY] Tavily search/answer failed:', msg)
-    if (/402|403|429|quota|credit|limit|exceeded|payment/i.test(msg)) {
-      console.warn('[VC-DISCOVERY] Tavily may be out of credits or rate limited. See https://tavily.com')
-    }
-    return ''
-  }
-}
+const EXA_SECOND_PASS_SUFFIXES = [
+  'venture fund portfolio companies institutional LPs fundraising',
+  'VC firm lead investor seed Series A recent funding',
+  'emerging manager first fund final close limited partners',
+  'growth equity venture deal flow institutional capital',
+]
 
-/** Tavily extract: pull clean text from Exa URLs (focused query). */
-export async function tavilyExtractFromUrls(urls: string[], seedQuery: string): Promise<string> {
-  const client = getTavilyDiscoveryClient()
-  if (!client || urls.length === 0) return ''
-  const clean = [...new Set(urls)]
-    .filter((u) => /^https?:\/\//i.test(u))
-    .slice(0, 6)
-  if (!clean.length) return ''
-  try {
-    const res = await client.extract(clean, {
-      extractDepth: 'advanced',
-      format: 'text',
-      includeUsage: true,
-      query: `venture capital funds, VC firms, institutional investors, fund names: ${seedQuery.slice(0, 180)}`,
-      timeout: 45,
-    })
-    const cred = res.usage?.credits
-    const parts = res.results.map((r) => {
-      const body = (r.rawContent || '').slice(0, 4500)
-      return `[tavily extract: ${r.title || r.url}]\n${body}`
-    })
-    const failed = res.failedResults?.length ?? 0
-    console.log(
-      `[VC-DISCOVERY] Tavily extract: ${parts.length} page(s), ${failed} failed${cred != null ? `, ~${cred} credits` : ''}`,
-    )
-    return parts.join('\n\n')
-  } catch (e) {
-    const msg = e instanceof Error ? e.message : String(e)
-    console.warn('[VC-DISCOVERY] Tavily extract failed:', msg)
-    return ''
-  }
+function complementaryDiscoveryQuery(primary: string): string {
+  return `${primary} ${pick(EXA_SECOND_PASS_SUFFIXES)}`
 }
 
 /** Vintage years emphasized in queries: current/next year, anchored at 2026+. */
@@ -352,27 +281,23 @@ export type DiscoverCandidatesOptions = {
 }
 
 /**
- * Exa scrapes → Tavily answer + Tavily extract(Exa URLs) → heuristic fund names. No OpenRouter.
+ * Two Exa passes per round (parallel) → merged corpus → heuristic fund names. No OpenRouter.
  */
 export async function discoverCandidateFirmNames(
   existingKeys: Set<string>,
   options: DiscoverCandidatesOptions,
 ): Promise<string[]> {
   if (!isDiscoverySearchConfigured()) {
-    throw new Error(
-      'VC discovery requires both TAVILY_API_KEY and EXA_API_KEY (Exa scrapes, Tavily answers + extracts).',
-    )
+    throw new Error('VC discovery requires EXA_API_KEY (dual Exa search per round).')
   }
 
   const queries = buildRandomDiscoveryQueries(Math.max(1, options.searchRounds))
   const textChunks: string[] = []
 
   console.log(
-    `[VC-DISCOVERY] Pipeline: Exa scrape → Tavily answer + Tavily extract (URLs from Exa). Recency ≥ ${VC_DISCOVERY_CONTENT_SINCE}. No OpenRouter.`,
+    `[VC-DISCOVERY] Pipeline: dual Exa search/pass (parallel). Recency ≥ ${VC_DISCOVERY_CONTENT_SINCE}. No Tavily.`,
   )
-  console.log(
-    `[VC-DISCOVERY] API keys: Tavily=${!!process.env.TAVILY_API_KEY?.trim()}, Exa=${!!process.env.EXA_API_KEY?.trim()}`,
-  )
+  console.log(`[VC-DISCOVERY] Exa key: ${!!process.env.EXA_API_KEY?.trim()}`)
 
   const nResults = Math.max(3, options.resultsPerQuery)
 
@@ -380,20 +305,26 @@ export async function discoverCandidateFirmNames(
     const q = queries[i]!
     console.log(`[VC-DISCOVERY] Round ${i + 1}/${queries.length}: ${q}`)
 
-    const { urls, textBlock } = await exaScrapeQuery(q, nResults)
-    console.log(`[VC-DISCOVERY] Exa scrape: ${urls.length} URL(s), ${textBlock.length} chars`)
+    const q2 = complementaryDiscoveryQuery(q)
+    const [pass1, pass2] = await Promise.all([
+      exaScrapeQuery(q, nResults),
+      exaScrapeQuery(q2, nResults),
+    ])
+    console.log(
+      `[VC-DISCOVERY] Exa dual: pass1 ${pass1.urls.length} URLs, ${pass1.textBlock.length} chars | pass2 ${pass2.urls.length} URLs, ${pass2.textBlock.length} chars`,
+    )
 
-    const answer = await tavilyAnswerForQuery(q, nResults)
-    const extracted = await tavilyExtractFromUrls(urls, q)
-
-    const merged = [textBlock && `--- Exa snippets ---\n${textBlock}`, answer && `--- Tavily answer ---\n${answer}`, extracted && `--- Tavily extract ---\n${extracted}`]
+    const merged = [
+      pass1.textBlock && `--- Exa pass 1 ---\n${pass1.textBlock}`,
+      pass2.textBlock && `--- Exa pass 2 ---\n${pass2.textBlock}`,
+    ]
       .filter(Boolean)
       .join('\n\n')
 
     if (merged.trim()) {
       textChunks.push(`=== Query: ${q} ===\n${merged}`)
     } else {
-      console.warn(`[VC-DISCOVERY] No text for query (check Exa/Tavily quotas and date filter).`)
+      console.warn(`[VC-DISCOVERY] No text for query (check Exa quota and VC_DISCOVERY_CONTENT_SINCE).`)
     }
 
     if (options.delayBetweenQueriesMs > 0 && i < queries.length - 1) {

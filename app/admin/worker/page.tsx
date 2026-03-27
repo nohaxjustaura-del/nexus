@@ -123,6 +123,9 @@ export default function WorkerDashboard() {
   }
 
   const getJobType = (id: string): string => {
+    if (id.includes('vc-thesis')) return 'vc-thesis-research'
+    if (id.includes('vc-profile')) return 'vc-profile-research'
+    if (id.includes('vc-directory')) return 'vc-directory-sync'
     if (id.includes('vc-research')) return 'vc-research'
     if (id.includes('yc-trends')) return 'yc-trends'
     if (id.includes('market-trends')) return 'market-trends'
@@ -215,7 +218,21 @@ export default function WorkerDashboard() {
               disabled={triggering === 'vc-research'}
               className="px-4 py-3 bg-purple-500 text-white rounded hover:bg-purple-600 disabled:bg-gray-600"
             >
-              🔍 Research VCs
+              🔍 Full VC research (manual list)
+            </button>
+            <button
+              onClick={() => triggerJob('vc-thesis-research')}
+              disabled={triggering === 'vc-thesis-research'}
+              className="px-4 py-3 bg-violet-600 text-white rounded hover:bg-violet-700 disabled:bg-gray-600"
+            >
+              📝 Thesis batch
+            </button>
+            <button
+              onClick={() => triggerJob('vc-profile-research')}
+              disabled={triggering === 'vc-profile-research'}
+              className="px-4 py-3 bg-fuchsia-700 text-white rounded hover:bg-fuchsia-800 disabled:bg-gray-600"
+            >
+              📋 Profile fields batch
             </button>
             <button
               onClick={() => triggerJob('yc-trends')}

@@ -1,16 +1,16 @@
 'use client'
 
 import { useState } from 'react'
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Plus, Loader2 } from "lucide-react"
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Plus, Loader2 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 
 export function AddEmailForm() {
   const router = useRouter()
   const [email, setEmail] = useState('')
   const [loading, setLoading] = useState(false)
-  const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null)
+  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -40,7 +40,7 @@ export function AddEmailForm() {
       } else {
         setMessage({ type: 'error', text: data.error || 'Failed to add email' })
       }
-    } catch (error) {
+    } catch {
       setMessage({ type: 'error', text: 'Failed to add email' })
     } finally {
       setLoading(false)
@@ -48,40 +48,24 @@ export function AddEmailForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex gap-2">
-      <Input
-        type="email"
-        placeholder="Enter email address"
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-        className="flex-1"
-        disabled={loading}
-      />
-      <Button type="submit" disabled={loading} size="sm">
-        {loading ? (
-          <Loader2 className="h-4 w-4 animate-spin" />
-        ) : (
-          <>
-            <Plus className="h-4 w-4 mr-1" />
-            Add
-          </>
-        )}
-      </Button>
+    <form onSubmit={handleSubmit} className="flex flex-col gap-3 sm:flex-row sm:items-start">
+      <div className="flex flex-1 flex-col gap-2 sm:flex-row sm:gap-2">
+        <Input
+          type="email"
+          placeholder="Email to add as pending"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          className="flex-1"
+          disabled={loading}
+        />
+        <Button type="submit" disabled={loading} size="sm" className="shrink-0">
+          {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4 sm:mr-1" />}
+          <span className="hidden sm:inline">Add</span>
+        </Button>
+      </div>
       {message && (
-        <div className={`text-sm ${message.type === 'success' ? 'text-green-600' : 'text-red-600'}`}>
-          {message.text}
-        </div>
+        <p className={`text-sm sm:mt-1 ${message.type === 'success' ? 'text-green-600' : 'text-red-600'}`}>{message.text}</p>
       )}
     </form>
   )
 }
-
-
-
-
-
-
-
-
-
-

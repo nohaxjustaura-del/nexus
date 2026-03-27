@@ -144,7 +144,7 @@ export function FounderVerificationReviewPanel({
                       className="mx-auto max-h-[min(70vh,720px)] w-full object-contain"
                     />
                   ) : kind === 'pdf' ? (
-                    <iframe title={`ID PDF ${item.email}`} src={src} className="h-[min(70vh,720px)] w-full bg-white" />
+                    <iframe title={`ID PDF ${item.email}`} src={src} className="h-[min(70vh,720px)] w-full bg-card" />
                   ) : (
                     <div className="flex h-64 flex-col items-center justify-center gap-3 p-4 text-center">
                       <FileText className="h-10 w-10 text-muted-foreground" />

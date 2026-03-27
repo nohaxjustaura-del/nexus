@@ -28,6 +28,15 @@ export async function GET(_request: NextRequest) {
         update: {},
       })
       approved = row.status === 'approved'
+      // Founder ID verification (admin panel) updates FounderVerification, not always UserApproval.
+      if (!approved) {
+        const fv = await db.founderVerification.findUnique({
+          where: { email: user.email },
+        })
+        if (fv?.status === 'approved') {
+          approved = true
+        }
+      }
     } catch (approvalError) {
       logger.error('AUTH_CHECK', 'Approval check error', approvalError)
       approved = false

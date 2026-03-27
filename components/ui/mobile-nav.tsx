@@ -17,7 +17,7 @@ export function MobileNav({ links }: MobileNavProps) {
   const [isOpen, setIsOpen] = useState(false)
 
   return (
-    <div className="md:hidden">
+    <div className="lg:hidden">
       <Button
         variant="ghost"
         size="sm"
@@ -39,8 +39,7 @@ export function MobileNav({ links }: MobileNavProps) {
           />
           <nav 
             className={cn(
-              "fixed top-16 right-0 left-0 bg-card/95 border-b border-border/60 backdrop-blur-xl z-50 animate-slide-down shadow-none",
-              "max-h-[calc(100vh-4rem)] overflow-y-auto"
+              "fixed left-0 right-0 top-14 z-50 max-h-[calc(100vh-3.5rem)] overflow-y-auto border-b border-border/60 bg-card/95 backdrop-blur-xl animate-slide-down shadow-none sm:top-16 sm:max-h-[calc(100vh-4rem)]"
             )}
             role="navigation"
             aria-label="Mobile navigation"

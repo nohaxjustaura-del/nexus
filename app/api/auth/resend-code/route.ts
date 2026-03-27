@@ -9,6 +9,7 @@ import {
   sendMagicLinkEmail,
 } from '@/lib/email'
 import { db } from '@/lib/db'
+import { resolveUserApprovalAccess } from '@/lib/user-approval-access'
 
 export const dynamic = 'force-dynamic'
 
@@ -30,6 +31,23 @@ export async function POST(request: NextRequest) {
     // Determine whether the user already exists in Supabase so we pick the
     // correct link type. Use the Prisma User table as a fast proxy.
     const existingUser = await db.user.findUnique({ where: { email: normalizedEmail } })
+
+    if (existingUser) {
+      const { approved, status } = await resolveUserApprovalAccess(normalizedEmail)
+      if (!approved) {
+        return NextResponse.json(
+          {
+            error:
+              status === 'rejected'
+                ? 'Your application was not approved. If you have questions, you can reply to our earlier email.'
+                : 'Our team is still verifying your account. We’ll email you as soon as you’re approved.',
+            code: status === 'rejected' ? 'ACCOUNT_REJECTED' : 'ACCOUNT_PENDING_APPROVAL',
+            approvalStatus: status,
+          },
+          { status: 403 }
+        )
+      }
+    }
 
     const generateResult = existingUser
       ? await adminClient.auth.admin.generateLink({

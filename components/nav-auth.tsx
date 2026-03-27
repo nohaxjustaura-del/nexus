@@ -94,47 +94,47 @@ export const NavAuth = memo(function NavAuth() {
       <div className="flex items-center gap-3" suppressHydrationWarning>
         {authState.verified && (
           <>
-            <CreditCounter variant="badge" showClaimButton={true} className="hidden lg:flex" />
-            <div className="hidden lg:block h-5 w-px bg-border" />
+            <CreditCounter variant="badge" showClaimButton={true} className="flex shrink-0" />
+            <div className="hidden sm:block h-5 w-px bg-border shrink-0" aria-hidden />
           </>
         )}
 
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1">
           {authState.verified ? (
             <>
               <NotificationBell />
               {authState.isAdmin ? (
                 <>
                   <Link href="/admin/dashboard">
-                    <Button size="sm" variant="default" className="h-8 px-3 text-sm font-medium">
+                    <Button size="sm" variant="default" className="h-8 rounded-full px-3 text-sm font-medium shadow-none">
                       Admin
                     </Button>
                   </Link>
                   <Link href="/founder/dashboard" className="hidden sm:block">
-                    <Button size="sm" variant="outline" className="h-8 px-2.5 text-sm font-medium">
-                      Founder
+                    <Button size="sm" variant="outline" className="h-8 rounded-full border-border/80 px-3 text-sm font-medium shadow-none">
+                      Hub
                     </Button>
                   </Link>
                 </>
               ) : (
                 <Link href="/founder/dashboard">
-                  <Button size="sm" variant="default" className="h-8 px-3 text-sm font-medium">
-                    Dashboard
+                  <Button size="sm" variant="outline" className="h-8 rounded-full border-border/80 px-3 text-sm font-medium shadow-none">
+                    Hub
                   </Button>
                 </Link>
               )}
             </>
           ) : (
             <Link href="/founder/onboarding">
-              <Button size="sm" variant="default" className="h-8 px-3 text-sm font-medium">
-                Continue onboarding
+              <Button size="sm" className="h-8 rounded-full px-3 text-sm font-medium shadow-none">
+                Onboarding
               </Button>
             </Link>
           )}
           <Link href="/account">
-            <Button size="sm" variant="ghost" className="h-8 px-2.5 hidden sm:flex">
+            <Button size="sm" variant="ghost" className="hidden h-8 rounded-full px-2.5 sm:flex" aria-label="Account">
               <User className="h-4 w-4" />
-              <span className="hidden md:inline ml-1.5">Account</span>
+              <span className="hidden md:inline ml-1.5 text-sm">Account</span>
             </Button>
           </Link>
           <LogoutButton />
@@ -145,14 +145,16 @@ export const NavAuth = memo(function NavAuth() {
 
   // User not logged in
   return (
-    <div className="flex items-center gap-3" suppressHydrationWarning>
+    <div className="flex items-center gap-1.5" suppressHydrationWarning>
       <Link href="/login">
-        <Button size="sm" variant="ghost">
-          Log In
+        <Button size="sm" variant="ghost" className="h-8 rounded-full px-3 text-sm">
+          Log in
         </Button>
       </Link>
       <Link href="/signup">
-        <Button size="sm">Sign Up</Button>
+        <Button size="sm" className="h-8 rounded-full px-3 text-sm shadow-none">
+          Sign up
+        </Button>
       </Link>
     </div>
   )

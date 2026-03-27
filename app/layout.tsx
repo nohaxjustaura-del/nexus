@@ -4,11 +4,9 @@ import { DM_Sans, Outfit } from "next/font/google"
 import "./globals.css"
 import { cn } from "@/lib/utils"
 import { SessionKeeper } from "@/components/session-keeper"
-import { NavAuth } from "@/components/nav-auth"
-import { ProtectedNavLink } from "@/components/protected-nav-link"
+import { SiteHeader } from "@/components/site-header"
 import Link from "next/link"
 import { Orbit } from "lucide-react"
-import { MobileNav } from "@/components/ui/mobile-nav"
 import { getSiteUrl } from "@/lib/site-url"
 import { BRAND_DEFAULT_TITLE, BRAND_NAME, BRAND_TITLE_TEMPLATE } from "@/lib/brand"
 import { AppToaster } from "@/components/ui/app-toaster"
@@ -111,39 +109,7 @@ export default function RootLayout({
           Skip to main content
         </a>
 
-        <header className="sticky top-0 z-50 no-print border-b border-border/80 bg-background/80 backdrop-blur-xl ring-1 ring-white/[0.03] supports-[backdrop-filter]:bg-background/55">
-          <div className="container mx-auto max-w-7xl flex h-14 sm:h-16 items-center justify-between px-4 sm:px-6">
-            <Link
-              href="/"
-              className="flex items-center gap-2.5 rounded-lg -ml-1 px-1 py-0.5 hover:bg-foreground/[0.03] transition-colors group"
-            >
-              <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm ring-1 ring-primary/20">
-                <Orbit className="h-5 w-5" strokeWidth={2} aria-hidden />
-              </span>
-              <span className="font-heading text-lg font-semibold tracking-tight text-foreground">{BRAND_NAME}</span>
-            </Link>
-
-            <nav className="hidden lg:flex items-center gap-0.5 text-sm" role="navigation" aria-label="Main navigation" suppressHydrationWarning>
-              <ProtectedNavLink href="/founder/discover" className="text-muted-foreground hover:text-foreground px-3 py-2 rounded-md transition-colors font-medium">Discover</ProtectedNavLink>
-              <ProtectedNavLink href="/founder/ai-analysis" className="text-muted-foreground hover:text-foreground px-3 py-2 rounded-md transition-colors font-medium">AI Analysis</ProtectedNavLink>
-              <ProtectedNavLink href="/pricing" publicRoute className="text-muted-foreground hover:text-foreground px-3 py-2 rounded-md transition-colors font-medium">Pricing</ProtectedNavLink>
-              <div className="ml-3 pl-3 border-l border-border" suppressHydrationWarning>
-                <NavAuth />
-              </div>
-            </nav>
-            
-            {/* Mobile Navigation */}
-            <div className="lg:hidden flex items-center gap-2">
-              <MobileNav links={[
-                { href: "/founder/discover", label: "Discover VCs" },
-                { href: "/founder/ai-analysis", label: "AI Analysis" },
-                { href: "/pricing", label: "Pricing" },
-                { href: "/vc/claim", label: "For VCs" }
-              ]} />
-              <NavAuth />
-            </div>
-          </div>
-        </header>
+        <SiteHeader />
         
         <main id="main-content" className="flex-1">
           {children}
@@ -151,13 +117,16 @@ export default function RootLayout({
         {/* Global Footer - Clean & Modern */}
         <footer className="mt-auto border-t border-border/80 py-14 no-print bg-background" role="contentinfo">
           <div className="container mx-auto max-w-6xl px-4">
-            <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-2 mb-10">
+            <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 mb-8">
               <Link href="/privacy" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Privacy</Link>
               <Link href="/terms" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Terms</Link>
               <Link href="/about" className="text-sm text-muted-foreground hover:text-foreground transition-colors">About</Link>
-              <Link href="/verification-notice" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Verification</Link>
-              <Link href="/security" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Security</Link>
               <Link href="/contact" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Contact</Link>
+            </div>
+            <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-1 mb-10 text-xs text-muted-foreground/90">
+              <Link href="/verification-notice" className="hover:text-foreground transition-colors">Verification notice</Link>
+              <Link href="/security" className="hover:text-foreground transition-colors">Security</Link>
+              <Link href="/disclaimer" className="hover:text-foreground transition-colors">Disclaimer</Link>
             </div>
 
             <div className="flex flex-col items-center gap-4 mb-6">

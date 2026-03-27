@@ -23,9 +23,11 @@
  *   NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY (required for Supabase sync)
  *   SUPABASE_VC_TABLE (optional, default vc_directory)
  *   DATABASE_URL (Prisma)
- *   OPENROUTER_API_KEY for per-firm research after discovery (auto-research-vcs); optional if you only list names
- *   --discover requires BOTH TAVILY_API_KEY and EXA_API_KEY: Exa scrapes, Tavily answers + extracts (no OpenRouter in discovery)
- *   Discover uses VC_DISCOVERY_CONTENT_SINCE (default 2026-01-01) for Exa + Tavily search.
+ *   OPENROUTER_API_KEY required for per-firm research (structured extraction after scrape)
+ *   OPENROUTER_VC_EXTRACTION_MODEL optional (default deepseek/deepseek-chat on OpenRouter)
+ *   VC_RESEARCH_CONTEXT_CHARS, VC_RESEARCH_EXA_NUM_RESULTS
+ *   --discover requires EXA_API_KEY only: two parallel Exa searches per round (no Tavily, no OpenRouter in discovery)
+ *   Discover uses VC_DISCOVERY_CONTENT_SINCE (default 2026-01-01) for Exa startPublishedDate.
  */
 
 import * as fs from 'fs'
@@ -210,7 +212,7 @@ async function main() {
       return
     }
     if (discover) {
-      console.log('\n🔎 Discover mode: randomized web search → new firms only\n')
+      console.log('\n🔎 Discover mode: dual Exa search → new firms only\n')
       const candidates = await discoverNewFirmNamesNotInDatabase({
         searchRounds: discoverRounds,
         resultsPerQuery: discoverPerQuery,

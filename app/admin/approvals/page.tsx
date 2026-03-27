@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { toast } from '@/components/ui/toast-simple'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { AddEmailForm } from '@/components/admin/add-email-form'
 
 type Approval = {
   id: string
@@ -69,11 +71,19 @@ export default function AdminApprovalsPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="container mx-auto max-w-4xl px-4 py-10">
-        <div className="mb-6 flex items-center justify-between">
-          <h1 className="text-2xl font-bold">Signup Approvals</h1>
-          <Link className="text-sm underline underline-offset-4 hover:text-primary" href="/admin/founders">
-            Review Founder IDs
+      <div className="container mx-auto max-w-4xl px-4 py-10 sm:px-6">
+        <div className="mb-8 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <h1 className="font-heading text-2xl font-semibold tracking-tight text-foreground">
+              Signup approvals
+            </h1>
+            <p className="mt-1 text-sm text-muted-foreground">Approve new accounts. Everything pending also appears on Overview.</p>
+          </div>
+          <Link
+            className="text-sm font-medium text-primary hover:underline hover:underline-offset-4"
+            href="/admin/founders"
+          >
+            Review founder IDs →
           </Link>
         </div>
 
@@ -113,6 +123,16 @@ export default function AdminApprovalsPage() {
             </div>
           ))}
         </div>
+
+        <Card className="mt-10 border-dashed">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">Add email manually</CardTitle>
+            <CardDescription>Put someone on the pending list without them signing up first.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <AddEmailForm />
+          </CardContent>
+        </Card>
       </div>
     </div>
   )

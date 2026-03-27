@@ -1,7 +1,6 @@
 import { db } from "@/lib/db"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
 import { 
   Heart,
   Users,
@@ -13,7 +12,6 @@ import {
   XCircle,
   ExternalLink
 } from "lucide-react"
-import Link from "next/link"
 import { parseJSON } from "@/lib/utils"
 import { VCClaimActions } from "./vc-claim-actions"
 
@@ -52,30 +50,14 @@ export default async function AdminWaitlistPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b">
-        <div className="container mx-auto flex h-16 items-center justify-between px-4">
-          <Link href="/" className="flex items-center gap-2">
-            <Heart className="h-6 w-6 text-primary" />
-            <span className="text-xl font-bold">NEXUS Admin</span>
-          </Link>
-          <div className="flex items-center gap-4">
-            <Link href="/admin/vcs">
-              <Button variant="ghost" size="sm">
-                <Building2 className="h-4 w-4 mr-2" />
-                VC Management
-              </Button>
-            </Link>
-            <Badge variant="secondary">Waitlist Dashboard</Badge>
-          </div>
-        </div>
-      </header>
-
-      <div className="container mx-auto px-4 py-12">
+      <div className="container mx-auto max-w-7xl px-4 py-10 sm:px-6">
         <div className="mb-8">
-          <h1 className="mb-2 text-3xl font-bold">Waitlist Signups</h1>
-          <p className="text-muted-foreground">
-            All emails will be notified at: <strong>adventa.counseling@gmail.com</strong>
+          <h1 className="font-heading text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
+            Waitlist
+          </h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Signups and VC claims. Notify at{' '}
+            <span className="font-medium text-foreground">adventa.counseling@gmail.com</span>
           </p>
         </div>
 

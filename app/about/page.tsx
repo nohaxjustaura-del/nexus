@@ -22,16 +22,16 @@ import Link from "next/link"
 
 export default function AboutPage() {
   return (
-    <div className="min-h-screen bg-gradient-to-b from-white via-slate-50/30 to-white">
+    <div className="min-h-screen bg-background">
       <div className="container mx-auto max-w-6xl px-4 py-12 md:py-16">
         {/* Hero Section */}
         <div className="text-center mb-12">
           <h1 className="text-4xl md:text-5xl font-bold mb-4 bg-gradient-to-r from-primary via-blue-600 to-purple-600 bg-clip-text text-transparent">
             About NEXUS
           </h1>
-          <p className="text-xl text-slate-600 max-w-3xl mx-auto leading-relaxed">
+          <p className="text-xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">
             AI-powered platform connecting founders with compatible VCs, angels, and mentors. 
-            Get matched with <span className="font-semibold text-slate-900">1,002 verified investors</span> who actually fund startups like yours.
+            Get matched with <span className="font-semibold text-foreground">1,002 verified investors</span> who actually fund startups like yours.
           </p>
         </div>
 
@@ -44,7 +44,7 @@ export default function AboutPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-slate-700 leading-relaxed text-lg">
+            <p className="text-muted-foreground leading-relaxed text-lg">
               NEXUS democratizes access to venture capital by using intelligent AI matching algorithms 
               to connect founders with the right investors for their stage, sector, vision, and working style. 
               We eliminate the guesswork and cold outreach, replacing it with evidence-based matching that 
@@ -55,7 +55,7 @@ export default function AboutPage() {
 
         {/* What We Do Section */}
         <div className="mb-12">
-          <h2 className="text-3xl font-bold mb-8 text-center text-slate-900">
+          <h2 className="text-3xl font-bold mb-8 text-center text-foreground">
             What We Do
           </h2>
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -71,7 +71,7 @@ export default function AboutPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <ul className="space-y-2 text-sm text-slate-600">
+                <ul className="space-y-2 text-sm text-muted-foreground">
                   <li className="flex items-start gap-2">
                     <CheckCircle className="h-4 w-4 text-green-500 mt-0.5 shrink-0" />
                     <span><strong>Pitch Idea Analysis:</strong> Validate your startup concept and get investor-style feedback</span>
@@ -100,7 +100,7 @@ export default function AboutPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <ul className="space-y-2 text-sm text-slate-600">
+                <ul className="space-y-2 text-sm text-muted-foreground">
                   <li className="flex items-start gap-2">
                     <CheckCircle className="h-4 w-4 text-green-500 mt-0.5 shrink-0" />
                     <span>AI analyzes your stage, sector, vision, and working style</span>
@@ -133,7 +133,7 @@ export default function AboutPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <ul className="space-y-2 text-sm text-slate-600">
+                <ul className="space-y-2 text-sm text-muted-foreground">
                   <li className="flex items-start gap-2">
                     <CheckCircle className="h-4 w-4 text-green-500 mt-0.5 shrink-0" />
                     <span>Search by stage, sector, check size, and geography</span>
@@ -158,7 +158,7 @@ export default function AboutPage() {
 
         {/* Key Features */}
         <div className="mb-12">
-          <h2 className="text-3xl font-bold mb-8 text-center text-slate-900">
+          <h2 className="text-3xl font-bold mb-8 text-center text-foreground">
             Key Features
           </h2>
           <div className="grid md:grid-cols-2 gap-6">
@@ -170,7 +170,7 @@ export default function AboutPage() {
                   </div>
                   <div>
                     <h3 className="font-semibold text-lg mb-2">Privacy First</h3>
-                    <p className="text-slate-600">
+                    <p className="text-muted-foreground">
                       Your pitch deck and personal information are secure and never shared without your permission. 
                       All materials are auto-deleted after 30-90 days.
                     </p>
@@ -187,7 +187,7 @@ export default function AboutPage() {
                   </div>
                   <div>
                     <h3 className="font-semibold text-lg mb-2">Fast & Efficient</h3>
-                    <p className="text-slate-600">
+                    <p className="text-muted-foreground">
                       Get matched with compatible investors in minutes, not weeks. Skip the cold outreach 
                       and focus on building relationships with the right VCs.
                     </p>
@@ -204,7 +204,7 @@ export default function AboutPage() {
                   </div>
                   <div>
                     <h3 className="font-semibold text-lg mb-2">Evidence-Based</h3>
-                    <p className="text-slate-600">
+                    <p className="text-muted-foreground">
                       Our matching algorithm uses data from 15,000+ successful founder-VC matches, 
                       including YC batches, Sequoia portfolio, and a16z deals.
                     </p>
@@ -219,7 +219,7 @@ export default function AboutPage() {
                   </div>
                   <div>
                     <h3 className="font-semibold text-lg mb-2">Global Coverage</h3>
-                    <p className="text-slate-600">
+                    <p className="text-muted-foreground">
                       Connect with investors worldwide, from elite Silicon Valley VCs to international 
                       funds and student-focused accelerators.
                     </p>
@@ -230,7 +230,7 @@ export default function AboutPage() {
           </div>
         </div>        {/* How It Works */}
         <div className="mb-12">
-          <h2 className="text-3xl font-bold mb-8 text-center text-slate-900">
+          <h2 className="text-3xl font-bold mb-8 text-center text-foreground">
             How It Works
           </h2>
           <div className="grid md:grid-cols-3 gap-6">
@@ -242,7 +242,7 @@ export default function AboutPage() {
                 <CardTitle>Upload & Analyze</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-slate-600">
+                <p className="text-muted-foreground">
                   Upload your pitch idea, pitch deck, or video pitch. Our AI analyzes your materials 
                   and provides detailed feedback and insights.
                 </p>
@@ -255,7 +255,7 @@ export default function AboutPage() {
                 <CardTitle>Get Matched</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-slate-600">
+                <p className="text-muted-foreground">
                   Our AI matches you with compatible investors based on your stage, sector, vision, 
                   and working style. Get personalized recommendations with detailed compatibility scores.
                 </p>
@@ -268,7 +268,7 @@ export default function AboutPage() {
                 <CardTitle>Connect & Fundraise</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-slate-600">
+                <p className="text-muted-foreground">
                   Browse matched investors, bookmark favorites, and connect with VCs who are a real fit. 
                   Use personalized talking points to start meaningful conversations.
                 </p>
@@ -280,26 +280,26 @@ export default function AboutPage() {
           <CardContent className="pt-6">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
               <div>
-                <div className="text-3xl md:text-4xl font-bold text-slate-900 mb-2">1,002</div>
-                <div className="text-sm text-slate-600">Verified Investors</div>
+                <div className="text-3xl md:text-4xl font-bold text-foreground mb-2">1,002</div>
+                <div className="text-sm text-muted-foreground">Verified Investors</div>
               </div>
               <div>
-                <div className="text-3xl md:text-4xl font-bold text-slate-900 mb-2">50+</div><div className="text-sm text-slate-600">Industry Sectors</div>
+                <div className="text-3xl md:text-4xl font-bold text-foreground mb-2">50+</div><div className="text-sm text-muted-foreground">Industry Sectors</div>
               </div>
               <div>
-                <div className="text-3xl md:text-4xl font-bold text-slate-900 mb-2">AI</div><div className="text-sm text-slate-600">Smart Matching</div>
+                <div className="text-3xl md:text-4xl font-bold text-foreground mb-2">AI</div><div className="text-sm text-muted-foreground">Smart Matching</div>
               </div>
               <div>
-                <div className="text-3xl md:text-4xl font-bold text-slate-900 mb-2">Global</div><div className="text-sm text-slate-600">Coverage</div>
+                <div className="text-3xl md:text-4xl font-bold text-foreground mb-2">Global</div><div className="text-sm text-muted-foreground">Coverage</div>
               </div>
             </div>
           </CardContent>
         </Card>        {/* CTA */}
         <div className="text-center">
-          <h2 className="text-2xl md:text-3xl font-bold mb-4 text-slate-900">
+          <h2 className="text-2xl md:text-3xl font-bold mb-4 text-foreground">
             Ready to Find Your Perfect Investor?
           </h2>
-          <p className="text-slate-600 mb-8 max-w-2xl mx-auto">
+          <p className="text-muted-foreground mb-8 max-w-2xl mx-auto">
             Join thousands of founders who are using NEXUS to connect with the right investors 
             and accelerate their fundraising journey.
           </p>

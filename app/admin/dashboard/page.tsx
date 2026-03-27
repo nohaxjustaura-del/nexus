@@ -2,6 +2,7 @@ import { db } from "@/lib/db"
 import { getCurrentUser } from "@/lib/auth"
 import { redirect } from "next/navigation"
 import { AdminDashboardClient } from "./admin-dashboard-client"
+import Link from "next/link"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Users, Building2, Shield, FileCheck, CheckCircle2, Clock } from "lucide-react"
 import { isAdminEmail } from "@/lib/constants"
@@ -86,36 +87,24 @@ export default async function AdminDashboardPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="container mx-auto flex h-16 items-center justify-between px-4">
-          <div className="flex items-center gap-4">
-            <h1 className="text-2xl font-bold">Admin Dashboard</h1>
-            {stats.total > 0 && (
-              <div className="flex items-center gap-2 rounded-full bg-red-100 px-3 py-1 text-sm font-semibold text-red-700">
-                <Clock className="h-4 w-4" />
-                {stats.total} Pending
-              </div>
-            )}
+      <div className="container mx-auto max-w-7xl px-4 py-8 sm:px-6">
+        <div className="mb-8 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <h1 className="font-heading text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
+              Admin
+            </h1>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Approve signups and claims from this page. Use the top tabs for lists and details.
+            </p>
           </div>
-          <div className="flex items-center gap-2">
-            <a href="/admin/approvals" className="text-sm text-muted-foreground hover:text-foreground">
-              User Approvals
-            </a>
-            <a href="/admin/founders" className="text-sm text-muted-foreground hover:text-foreground">
-              Founder IDs
-            </a>
-            <a href="/admin/vcs" className="text-sm text-muted-foreground hover:text-foreground">
-              VCs
-            </a>
-            <a href="/admin/training-data" className="text-sm text-muted-foreground hover:text-foreground">
-              Training Data
-            </a>
-          </div>
+          {stats.total > 0 && (
+            <div className="inline-flex w-fit items-center gap-2 rounded-full border border-destructive/35 bg-destructive/10 px-3 py-1.5 text-sm font-medium text-destructive">
+              <Clock className="h-4 w-4 shrink-0" aria-hidden />
+              {stats.total} pending
+            </div>
+          )}
         </div>
-      </header>
 
-      <div className="container mx-auto px-4 py-8">
         {/* Stats Cards */}
         <div className="mb-8 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           <Card>
@@ -187,8 +176,14 @@ export default async function AdminDashboardPage() {
           <Card>
             <CardContent className="flex flex-col items-center justify-center py-12">
               <CheckCircle2 className="mb-4 h-16 w-16 text-green-500" />
-              <h3 className="mb-2 text-xl font-semibold">All Clear!</h3>
-              <p className="text-muted-foreground">No pending approvals at this time.</p>
+              <h3 className="mb-2 text-xl font-semibold">Nothing pending</h3>
+              <p className="text-center text-muted-foreground">
+                New requests will show up here. Extra tools live under{' '}
+                <Link href="/admin/more" className="font-medium text-primary hover:underline">
+                  More
+                </Link>
+                .
+              </p>
             </CardContent>
           </Card>
         )}

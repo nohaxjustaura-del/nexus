@@ -33,6 +33,9 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# worker schedule (local)
+data/worker-vc-refresh-state.json
+
 # prisma
 prisma/dev.db
 prisma/dev.db-journal

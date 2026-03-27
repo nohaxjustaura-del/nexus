@@ -34,9 +34,16 @@ interface Step3PreferencesProps {
   setFormData: (data: FormData | ((prev: FormData) => FormData)) => void
   setStep: (step: number) => void
   toggleArrayItem: (key: keyof FormData, value: string) => void
+  hideNavigation?: boolean
 }
 
-export function Step3Preferences({ formData, setFormData, setStep, toggleArrayItem }: Step3PreferencesProps) {
+export function Step3Preferences({
+  formData,
+  setFormData,
+  setStep,
+  toggleArrayItem,
+  hideNavigation = false,
+}: Step3PreferencesProps) {
   return (
     <Card>
       <CardHeader>
@@ -176,6 +183,7 @@ export function Step3Preferences({ formData, setFormData, setStep, toggleArrayIt
           </div>
         </div>
 
+        {!hideNavigation && (
         <div className="flex gap-4">
           <Button onClick={() => setStep(2)} variant="outline" className="flex-1 gap-2">
             <ArrowLeft className="h-4 w-4" />
@@ -186,6 +194,7 @@ export function Step3Preferences({ formData, setFormData, setStep, toggleArrayIt
             <ArrowRight className="ml-2 h-4 w-4" />
           </Button>
         </div>
+        )}
       </CardContent>
     </Card>
   )

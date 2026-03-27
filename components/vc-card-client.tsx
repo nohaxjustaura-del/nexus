@@ -94,16 +94,16 @@ export function VCCardClient({
   return (
     <>
       <Card
-        className={`group relative cursor-pointer overflow-hidden border-border bg-card transition-colors duration-200 hover:border-foreground/25 ${
-          isYC ? 'ring-1 ring-foreground/10' : ''
+        className={`group relative flex h-full min-h-[280px] cursor-pointer flex-col overflow-hidden border-border/70 bg-gradient-to-b from-card via-card to-card/92 transition-all duration-300 hover:border-primary/30 hover:shadow-[0_20px_48px_-28px_hsl(var(--primary)/0.35)] ${
+          isYC ? 'ring-1 ring-primary/20' : 'ring-1 ring-white/[0.04]'
         }`}
         onClick={() => setIsModalOpen(true)}
       >
         {isYC && (
-          <div className="absolute top-0 left-0 right-0 h-px bg-foreground/25" />
+          <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-primary/60 via-primary to-primary/60 opacity-90" />
         )}
 
-        <CardHeader className="pb-3 pt-5 relative z-10">
+        <CardHeader className="pb-3 pt-5 relative z-10 flex-1">
           <div className="flex items-start justify-between gap-3 mb-3">
             <div className="flex-1 min-w-0">
               <CardTitle
@@ -193,7 +193,7 @@ export function VCCardClient({
           )}
         </CardHeader>
 
-        <CardContent className="pb-4 relative z-10">
+        <CardContent className="pb-4 relative z-10 flex-1">
           {/* Differentiator chips - max 3, unique only */}
           <div className="space-y-2.5">
             {safeValueAdd.length > 0 && (() => {
@@ -267,13 +267,13 @@ export function VCCardClient({
                 className="flex items-center gap-2 text-xs font-medium border border-border rounded-md px-3 py-2 text-foreground hover:bg-muted/50 transition-colors"
               >
                 <Crown className="h-4 w-4 text-muted-foreground" />
-                <span>YC Insider — tips & office hours</span>
+                <span>YC Insider: tips and office hours</span>
               </Link>
             </div>
           )}
         </CardContent>
 
-        <CardFooter className="flex items-center gap-2 pt-4 border-t border-border relative z-10 bg-muted/20">
+        <CardFooter className="mt-auto flex items-center gap-2 pt-4 border-t border-border/80 relative z-10 bg-muted/15">
           {profileComplete ? (
             <>
               {applicationLink ? (

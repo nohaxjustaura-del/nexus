@@ -1,6 +1,7 @@
 import { Resend } from 'resend'
 import { BRAND_NAME } from '@/lib/brand'
 import { getSiteUrl } from '@/lib/site-url'
+import { sendCursorDebugIngest } from '@/lib/cursor-debug-ingest'
 
 export {
   RESEND_DEV_CONSOLE_FALLBACK_HINT,
@@ -8,31 +9,6 @@ export {
 } from '@/lib/resend-user-messages'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
-
-function debugLog(
-  runId: string,
-  hypothesisId: string,
-  location: string,
-  message: string,
-  data: Record<string, unknown>
-) {
-  fetch('http://127.0.0.1:7464/ingest/8942f439-d0f1-43ea-9e6d-5d7995eef824', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-Debug-Session-Id': '0f3c2c',
-    },
-    body: JSON.stringify({
-      sessionId: '0f3c2c',
-      runId,
-      hypothesisId,
-      location,
-      message,
-      data,
-      timestamp: Date.now(),
-    }),
-  }).catch(() => {})
-}
 
 function emailFromHeader(): string {
   const raw = process.env.RESEND_FROM_EMAIL
@@ -224,12 +200,12 @@ The ${BRAND_NAME} team`
   try {
     console.log(`📧 Sending magic-link email to: ${email}`)
     // #region agent log
-    debugLog(
-      'pre-fix-domain-send',
-      'H4',
-      'lib/email.ts:sendMagicLinkEmail-pre-send',
-      'About to call resend.emails.send',
-      {
+    sendCursorDebugIngest({
+      runId: 'pre-fix-domain-send',
+      hypothesisId: 'H4',
+      location: 'lib/email.ts:sendMagicLinkEmail-pre-send',
+      message: 'About to call resend.emails.send',
+      data: {
         fromDomain: fromHeader.includes('@') ? fromHeader.split('@').pop()?.replace(/[>\s]/g, '') : null,
         usesResendDevFromAddress: usesResendDevFromAddress(),
         magicLinkHost: (() => {
@@ -239,8 +215,8 @@ The ${BRAND_NAME} team`
             return null
           }
         })(),
-      }
-    )
+      },
+    })
     // #endregion
     const { data, error } = await resend.emails.send({
       from: fromHeader,
@@ -252,18 +228,18 @@ The ${BRAND_NAME} team`
     if (error) {
       console.error('❌ Resend API error (magic link):', error)
       // #region agent log
-      debugLog(
-        'pre-fix-domain-send',
-        'H5',
-        'lib/email.ts:sendMagicLinkEmail-resend-error',
-        'Resend send returned error',
-        {
+      sendCursorDebugIngest({
+        runId: 'pre-fix-domain-send',
+        hypothesisId: 'H5',
+        location: 'lib/email.ts:sendMagicLinkEmail-resend-error',
+        message: 'Resend send returned error',
+        data: {
           statusCode: (error as any)?.statusCode ?? null,
           name: (error as any)?.name ?? null,
           message: formatResendErrorMessage(error).slice(0, 220),
           testingRestriction: isResendTestingRecipientError(error),
-        }
-      )
+        },
+      })
       // #endregion
       if (isResendTestingRecipientError(error)) {
         return { success: false, error, resendTestingRecipientOnly: true as const }

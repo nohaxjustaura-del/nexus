@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { otpVerificationCandidates } from '@/lib/auth-otp'
 import { createSupabaseAuthRouteClient } from '@/lib/supabase/route-handler'
 import { syncPrismaUserFromAuth } from '@/lib/auth'
+import { resolveUserApprovalAccess } from '@/lib/user-approval-access'
 
 export const dynamic = 'force-dynamic'
 
@@ -45,6 +46,25 @@ export async function POST(request: NextRequest) {
     }
 
     const user = await syncPrismaUserFromAuth(data.user)
+
+    const verifiedEmail = user?.email ?? normalizedEmail
+    const { approved, status } = await resolveUserApprovalAccess(verifiedEmail)
+    if (!approved) {
+      await supabase.auth.signOut()
+      const res = NextResponse.json(
+        {
+          error:
+            status === 'rejected'
+              ? 'Your application was not approved. If you have questions, you can reply to our earlier email.'
+              : 'Our team is still verifying your account. We’ll email you as soon as you’re approved.',
+          code: status === 'rejected' ? 'ACCOUNT_REJECTED' : 'ACCOUNT_PENDING_APPROVAL',
+          approvalStatus: status,
+        },
+        { status: 403 }
+      )
+      applyAuthCookies(res)
+      return res
+    }
 
     const res = NextResponse.json({
       success: true,

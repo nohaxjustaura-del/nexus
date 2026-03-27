@@ -77,19 +77,19 @@ export default function DiscoverClient({ investors, profileComplete }: DiscoverC
       <div className="mb-6 space-y-4">
         <VCSearchSimple />
 
-        <div className="flex flex-col gap-4 rounded-lg border border-border bg-muted/25 p-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="surface-panel flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0">
             <p className="text-sm font-medium text-foreground">
-              Want AI to find your best matches?
+              Want AI-ranked matches?
             </p>
             <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-              Analyze your pitch first, then use Smart Match to rank investors by fit.
+              Run an analysis first. We’ll rank investors by fit to your pitch.
             </p>
           </div>
-          <Link href="/founder/pitch-deck-analysis" className="shrink-0">
+          <Link href="/founder/ai-analysis" className="shrink-0">
             <Button
               variant="outline"
-              className="w-full sm:w-auto border-foreground/20 bg-background hover:bg-muted text-foreground"
+              className="w-full sm:w-auto border-border/80 bg-card/50 hover:bg-card text-foreground"
             >
               <Sparkles className="mr-2 h-4 w-4 opacity-70" />
               Get started

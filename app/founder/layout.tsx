@@ -105,8 +105,16 @@ export default function FounderLayout({ children }: { children: React.ReactNode 
 
   if (!mounted || checking) {
     return (
-      <div suppressHydrationWarning className="min-h-screen flex items-center justify-center text-sm text-muted-foreground">
-        <div suppressHydrationWarning>Loading...</div>
+      <div
+        suppressHydrationWarning
+        className="flex min-h-[50vh] items-center justify-center bg-background px-4"
+      >
+        <div
+          suppressHydrationWarning
+          className="h-9 w-9 animate-pulse rounded-full bg-muted"
+          aria-hidden
+        />
+        <span className="sr-only">Loading</span>
       </div>
     )
   }

@@ -1,30 +1,13 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { NextRequest, NextResponse } from 'next/server'
 import { syncPrismaUserFromAuth } from '@/lib/auth'
+import { resolveUserApprovalAccess } from '@/lib/user-approval-access'
+import { sendCursorDebugIngest } from '@/lib/cursor-debug-ingest'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
 type PendingCookie = { name: string; value: string; options: CookieOptions }
-
-function debugLog(hypothesisId: string, location: string, message: string, data: Record<string, unknown>) {
-  fetch('http://127.0.0.1:7464/ingest/8942f439-d0f1-43ea-9e6d-5d7995eef824', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-Debug-Session-Id': '0f3c2c',
-    },
-    body: JSON.stringify({
-      sessionId: '0f3c2c',
-      runId: 'callback-domain-debug',
-      hypothesisId,
-      location,
-      message,
-      data,
-      timestamp: Date.now(),
-    }),
-  }).catch(() => {})
-}
 
 /**
  * Supabase PKCE redirect target. Prefer this path in Redirect URLs (same family as /api/auth/*).
@@ -50,16 +33,22 @@ export async function GET(request: NextRequest) {
     const nextPath = requestUrl.searchParams.get('next') || '/founder/onboarding'
     const safeNext = nextPath.startsWith('/') ? nextPath : '/'
   // #region agent log
-  debugLog('C1,C2', 'app/api/auth/callback/route.ts:entry', 'Callback query received', {
-    hasCode: Boolean(code),
-    hasTokenHash: Boolean(tokenHash),
-    tokenType,
-    safeNext,
-    host: requestUrl.host,
-    userAgentHead: ua.slice(0, 120),
-    hasReferer: Boolean(referer),
-    secFetchUser,
-    secFetchSite,
+  sendCursorDebugIngest({
+    runId: 'callback-domain-debug',
+    hypothesisId: 'C1,C2',
+    location: 'app/api/auth/callback/route.ts:entry',
+    message: 'Callback query received',
+    data: {
+      hasCode: Boolean(code),
+      hasTokenHash: Boolean(tokenHash),
+      tokenType,
+      safeNext,
+      host: requestUrl.host,
+      userAgentHead: ua.slice(0, 120),
+      hasReferer: Boolean(referer),
+      secFetchUser,
+      secFetchSite,
+    },
   })
   // #endregion
 
@@ -114,15 +103,21 @@ export async function GET(request: NextRequest) {
       }
     }
   // #region agent log
-  debugLog('C3', 'app/api/auth/callback/route.ts:auth-result', 'Callback auth result', {
-    usedCodeFlow: Boolean(code),
-    usedTokenHashFlow: Boolean(tokenHash),
-    callbackError: callbackError?.message ?? null,
-    suspiciousScanner:
-      !secFetchUser ||
-      /bot|spider|crawler|prefetch|urlscan|proofpoint|barracuda|mimecast|outlook|safelinks/i.test(
-        ua
-      ),
+  sendCursorDebugIngest({
+    runId: 'callback-domain-debug',
+    hypothesisId: 'C3',
+    location: 'app/api/auth/callback/route.ts:auth-result',
+    message: 'Callback auth result',
+    data: {
+      usedCodeFlow: Boolean(code),
+      usedTokenHashFlow: Boolean(tokenHash),
+      callbackError: callbackError?.message ?? null,
+      suspiciousScanner:
+        !secFetchUser ||
+        /bot|spider|crawler|prefetch|urlscan|proofpoint|barracuda|mimecast|outlook|safelinks/i.test(
+          ua
+        ),
+    },
   })
   // #endregion
 
@@ -139,6 +134,19 @@ export async function GET(request: NextRequest) {
     } = await supabase.auth.getUser()
     if (user) {
       await syncPrismaUserFromAuth(user)
+      const userEmail = user.email
+      if (userEmail) {
+        const { approved, status } = await resolveUserApprovalAccess(userEmail)
+        if (!approved) {
+          await supabase.auth.signOut()
+          const login = new URL('/login', request.url)
+          login.searchParams.set('pendingApproval', '1')
+          if (status === 'rejected') login.searchParams.set('rejected', '1')
+          const res = NextResponse.redirect(login)
+          jar.forEach(({ name, value, options }) => res.cookies.set(name, value, options))
+          return res
+        }
+      }
     }
 
     const res = NextResponse.redirect(new URL(safeNext, request.url))

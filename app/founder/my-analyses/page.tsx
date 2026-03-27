@@ -108,7 +108,7 @@ export default function MyAnalysesPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50/30">
+      <div className="min-h-screen bg-background">
         <div className="container mx-auto px-4 py-4 md:py-6">
           <div className="mb-6">
             <Skeleton className="h-10 w-64 mb-2" />
@@ -116,7 +116,7 @@ export default function MyAnalysesPage() {
           </div>
           <div className="space-y-4">
             {[1, 2, 3].map((i) => (
-              <Card key={i} className="border-2">
+              <Card key={i} className="border border-border/80">
                 <CardHeader>
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
@@ -161,26 +161,26 @@ export default function MyAnalysesPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50/30">
+    <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-4 md:py-6">
         {/* Tab Navigation */}
-        <div className="mb-4 border-b">
+        <div className="mb-4 border-b border-border">
           <nav className="flex items-center gap-1 -mb-px">
             <Link
               href="/founder/discover"
-              className="px-4 py-2 text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors"
+              className="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
             >
               Discover
             </Link>
             <Link
               href="/founder/matches"
-              className="px-4 py-2 text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors"
+              className="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
             >
               Matches
             </Link>
             <Link
               href="/founder/bookmarks"
-              className="px-4 py-2 text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors"
+              className="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
             >
               Bookmarks
             </Link>
@@ -197,7 +197,7 @@ export default function MyAnalysesPage() {
           <h1 className="mb-2 text-3xl md:text-4xl font-bold bg-gradient-to-r from-primary via-blue-600 to-purple-600 bg-clip-text text-transparent">
             My Analyses
           </h1>
-          <p className="text-slate-600 text-lg">
+          <p className="text-muted-foreground text-lg">
             View your previous AI analysis reports and VC matches
           </p>
         </div>
@@ -211,12 +211,12 @@ export default function MyAnalysesPage() {
 
         {/* Search and Filter Bar */}
         {analyses.length > 0 && (
-          <Card className="mb-6 border-2">
+          <Card className="mb-6 border border-border/80">
             <CardContent className="pt-6">
               <div className="flex flex-col md:flex-row gap-4">
                 {/* Search */}
                 <div className="flex-1 relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground/65" />
                   <Input
                     placeholder="Search analyses by filename or type..."
                     value={searchQuery}
@@ -226,7 +226,7 @@ export default function MyAnalysesPage() {
                   {searchQuery && (
                     <button
                       onClick={() => setSearchQuery('')}
-                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground/65 hover:text-foreground"
                     >
                       <X className="h-4 w-4" />
                     </button>
@@ -235,11 +235,11 @@ export default function MyAnalysesPage() {
 
                 {/* Type Filter */}
                 <div className="flex items-center gap-2">
-                  <Filter className="h-4 w-4 text-slate-400" />
+                  <Filter className="h-4 w-4 text-muted-foreground/65" />
                   <select
                     value={typeFilter}
                     onChange={(e) => setTypeFilter(e.target.value as any)}
-                    className="px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                    className="px-3 py-2 border border-border bg-card rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary text-foreground"
                   >
                     <option value="all">All Types</option>
                     <option value="video-pitch">Video Pitch</option>
@@ -253,7 +253,7 @@ export default function MyAnalysesPage() {
                   <select
                     value={sortBy}
                     onChange={(e) => setSortBy(e.target.value as 'date' | 'score')}
-                    className="px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                    className="px-3 py-2 border border-border bg-card rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary text-foreground"
                   >
                     <option value="date">Sort by Date</option>
                     <option value="score">Sort by Score</option>
@@ -263,7 +263,7 @@ export default function MyAnalysesPage() {
 
               {/* Results count */}
               {filteredAndSortedAnalyses.length !== analyses.length && (
-                <div className="mt-4 text-sm text-slate-600">
+                <div className="mt-4 text-sm text-muted-foreground">
                   Showing {filteredAndSortedAnalyses.length} of {analyses.length} analyses
                 </div>
               )}
@@ -272,7 +272,7 @@ export default function MyAnalysesPage() {
         )}
 
         {analyses.length === 0 ? (
-          <Card className="border-2">
+          <Card className="border border-border/80">
             <CardContent className="pt-12 pb-12 text-center">
               <div className="flex items-center justify-center gap-3 mb-6">
                 <div className="p-4 rounded-lg bg-primary/10">
@@ -291,7 +291,7 @@ export default function MyAnalysesPage() {
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 max-w-4xl mx-auto">
                 <Link href="/founder/pitch-deck">
-                  <Card className="hover:shadow-md transition-all border-2 hover:border-primary/40 h-full">
+                  <Card className="hover:shadow-md transition-all border border-border/80 hover:border-primary/40 h-full">
                     <CardContent className="pt-6 text-center">
                       <div className="p-3 rounded-lg bg-primary/10 w-fit mx-auto mb-3">
                         <Presentation className="h-6 w-6 text-primary" />
@@ -307,7 +307,7 @@ export default function MyAnalysesPage() {
                   </Card>
                 </Link>
                 <Link href="/founder/video-pitch">
-                  <Card className="hover:shadow-md transition-all border-2 hover:border-primary/40 h-full">
+                  <Card className="hover:shadow-md transition-all border border-border/80 hover:border-primary/40 h-full">
                     <CardContent className="pt-6 text-center">
                       <div className="p-3 rounded-lg bg-primary/10 w-fit mx-auto mb-3">
                         <Video className="h-6 w-6 text-primary" />
@@ -323,7 +323,7 @@ export default function MyAnalysesPage() {
                   </Card>
                 </Link>
                 <Link href="/founder/ai-analysis">
-                  <Card className="hover:shadow-md transition-all border-2 hover:border-primary/40 h-full">
+                  <Card className="hover:shadow-md transition-all border border-border/80 hover:border-primary/40 h-full">
                     <CardContent className="pt-6 text-center">
                       <div className="p-3 rounded-lg bg-primary/10 w-fit mx-auto mb-3">
                         <Lightbulb className="h-6 w-6 text-primary" />
@@ -342,10 +342,10 @@ export default function MyAnalysesPage() {
             </CardContent>
           </Card>
         ) : filteredAndSortedAnalyses.length === 0 ? (
-          <Card className="border-2">
+          <Card className="border border-border/80">
             <CardContent className="pt-12 pb-12 text-center">
-              <div className="p-4 rounded-lg bg-slate-100 w-fit mx-auto mb-4">
-                <Search className="h-8 w-8 text-slate-400" />
+              <div className="p-4 rounded-lg bg-muted w-fit mx-auto mb-4">
+                <Search className="h-8 w-8 text-muted-foreground/65" />
               </div>
               <h3 className="text-xl font-bold mb-2">No analyses found</h3>
               <p className="text-muted-foreground mb-4">
@@ -369,11 +369,11 @@ export default function MyAnalysesPage() {
         ) : (
           <div className="space-y-4">
             {filteredAndSortedAnalyses.map((analysis) => (
-              <Card key={analysis.id} className="hover:shadow-medium transition-all duration-300 border-2 border-slate-200 hover:border-primary/40 overflow-hidden relative group">
+              <Card key={analysis.id} className="hover:shadow-medium transition-all duration-300 border border-border hover:border-primary/40 overflow-hidden relative group">
                 {/* Gradient accent bar */}
                 <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-primary via-blue-500 to-purple-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                 
-                <CardHeader className="bg-gradient-to-br from-slate-50 to-white pb-4">
+                <CardHeader className="bg-gradient-to-br from-muted/40 to-card pb-4 border-b border-border/60">
                   <div className="flex items-start justify-between">
                     <div>
                       <CardTitle className="flex items-center gap-2 text-lg font-bold">
@@ -397,7 +397,7 @@ export default function MyAnalysesPage() {
                         })}
                         {analysis.fileName && (
                           <>
-                            <span className="text-slate-400">•</span>
+                            <span className="text-muted-foreground/50">•</span>
                             <span className="text-xs">{analysis.fileName}</span>
                           </>
                         )}
@@ -409,7 +409,7 @@ export default function MyAnalysesPage() {
                           <div className="text-4xl font-bold bg-gradient-to-r from-primary via-blue-600 to-purple-600 bg-clip-text text-transparent">
                             {Math.round(analysis.compatibilityScore)}
                           </div>
-                          <div className="text-xs font-medium text-slate-600">Compatibility</div>
+                          <div className="text-xs font-medium text-muted-foreground">Compatibility</div>
                           {analysis.confidence && analysis.confidence > 0 && (
                             <div className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
                               <TrendingUp className="h-3 w-3" />
@@ -455,7 +455,7 @@ export default function MyAnalysesPage() {
                             {(analysis.result.matches || analysis.result.matchedVCs || []).slice(0, 5).map((match: any, i: number) => (
                             <div
                               key={i}
-                              className="flex flex-col gap-2 p-3 rounded-lg border-2 border-slate-200 bg-gradient-to-r from-white to-slate-50/50 hover:border-primary/40 hover:shadow-sm transition-all"
+                              className="flex flex-col gap-2 p-3 rounded-lg border border-border bg-card hover:border-primary/40 hover:shadow-sm transition-all"
                             >
                               <div className="flex items-center justify-between">
                                 <div className="flex-1">
@@ -463,34 +463,34 @@ export default function MyAnalysesPage() {
                                     <span className="text-xs font-bold text-primary bg-primary/10 px-2 py-0.5 rounded">
                                       #{i + 1}
                                     </span>
-                                    <span className="text-sm font-semibold text-slate-900">{match.firmName || match.investor?.firmName || 'Unknown Firm'}</span>
+                                    <span className="text-sm font-semibold text-foreground">{match.firmName || match.investor?.firmName || 'Unknown Firm'}</span>
                                     {match.livePulse && match.livePulse.signalStrength > 1 && (
-                                      <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-full px-1.5 py-0.5">
+                                      <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-300 bg-emerald-500/15 border border-emerald-500/30 rounded-full px-1.5 py-0.5">
                                         <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
                                         Live
                                       </span>
                                     )}
                                     {match.livePulse && match.livePulse.signalStrength <= 1 && (
-                                      <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded-full px-1.5 py-0.5">
+                                      <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-300 bg-amber-500/12 border border-amber-500/30 rounded-full px-1.5 py-0.5">
                                         Potentially Inactive
                                       </span>
                                     )}
                                   </div>
                                   {match.reasons && match.reasons.length > 0 && (
-                                    <p className="text-xs text-slate-600 mt-1.5">
+                                    <p className="text-xs text-muted-foreground mt-1.5">
                                       {match.reasons[0]}
                                     </p>
                                   )}
                                   {match.livePulse?.summary && (match.livePulse.summary.recentPortfolio || match.livePulse.summary.currentHeat || match.livePulse.summary.founderAlignment) && (
-                                    <div className="mt-2 p-2 rounded bg-indigo-50/70 border border-indigo-100 space-y-0.5">
+                                    <div className="mt-2 p-2 rounded bg-indigo-500/10 border border-indigo-500/25 space-y-0.5">
                                       {match.livePulse.summary.recentPortfolio && (
-                                        <p className="text-xs text-slate-600">{match.livePulse.summary.recentPortfolio}</p>
+                                        <p className="text-xs text-muted-foreground">{match.livePulse.summary.recentPortfolio}</p>
                                       )}
                                       {match.livePulse.summary.currentHeat && (
-                                        <p className="text-xs text-slate-600">{match.livePulse.summary.currentHeat}</p>
+                                        <p className="text-xs text-muted-foreground">{match.livePulse.summary.currentHeat}</p>
                                       )}
                                       {match.livePulse.summary.founderAlignment && (
-                                        <p className="text-xs text-slate-600">{match.livePulse.summary.founderAlignment}</p>
+                                        <p className="text-xs text-muted-foreground">{match.livePulse.summary.founderAlignment}</p>
                                       )}
                                     </div>
                                   )}
@@ -501,7 +501,7 @@ export default function MyAnalysesPage() {
                                   className={`text-xs font-semibold ${
                                     match.score >= 80 
                                       ? "bg-gradient-to-r from-primary to-blue-600 text-white" 
-                                      : "bg-slate-100 text-slate-700"
+                                      : "bg-muted text-muted-foreground"
                                   }`}
                                 >
                                   {match.score}% match
@@ -545,12 +545,12 @@ export default function MyAnalysesPage() {
                       )}
 
                       {/* Actions */}
-                      <div className="flex gap-3 pt-4 border-t border-slate-200">
+                      <div className="flex gap-3 pt-4 border-t border-border">
                         <Link 
                           href={analysis.type === 'video-pitch' ? '/founder/video-pitch' : '/founder/pitch-deck'} 
                           className="flex-1"
                         >
-                          <Button variant="outline" className="w-full border-2 hover:border-primary hover:bg-primary/5 transition-all">
+                          <Button variant="outline" className="w-full border-border hover:border-primary hover:bg-primary/5 transition-all">
                             <Sparkles className="mr-2 h-4 w-4" />
                             {analysis.type === 'video-pitch' ? 'New Video Pitch' : 'New Pitch Deck'}
                           </Button>

@@ -158,11 +158,11 @@ export function InvestorProfileModal({
       onClick={onClose}
     >
       <div 
-        className="relative w-full max-w-3xl max-h-[90vh] overflow-y-auto bg-card rounded-xl shadow-2xl"
+        className="relative w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-xl border border-border/80 bg-card shadow-2xl ring-1 ring-white/[0.06]"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="sticky top-0 z-10 bg-card border-b px-6 py-4">
+        <div className="sticky top-0 z-10 border-b border-border/80 bg-card/95 px-6 py-4 backdrop-blur-md">
           <div className="flex items-start justify-between gap-4">
             <div className="flex-1 min-w-0">
               <h2 className="text-2xl font-bold text-foreground mb-2">
@@ -170,7 +170,7 @@ export function InvestorProfileModal({
               </h2>
               <div className="flex flex-wrap items-center gap-2">
                 {investor.verified && (
-                  <Badge className="bg-green-100 text-green-800 border-green-300">
+                  <Badge className="border border-emerald-500/35 bg-emerald-500/15 text-emerald-300">
                     <CheckCircle className="h-3 w-3 mr-1" />
                     Verified
                   </Badge>
@@ -214,30 +214,30 @@ export function InvestorProfileModal({
         </div>
 
         {/* Key Facts Row */}
-        <div className="px-6 py-4 bg-muted/50 border-b">
+        <div className="px-6 py-4 border-b border-border/80 bg-muted/25">
           <div className="flex flex-wrap gap-2">
             {cleanStages.length > 0 && (
-              <div className="flex items-center gap-1.5 bg-blue-100 text-primary px-3 py-1.5 rounded-md text-sm font-medium">
-                <Target className="h-4 w-4" />
+              <div className="flex items-center gap-1.5 rounded-md border border-blue-500/30 bg-blue-500/12 px-3 py-1.5 text-sm font-medium text-blue-200">
+                <Target className="h-4 w-4 shrink-0 text-primary" />
                 <span>{cleanStages.slice(0, 3).join(', ')}</span>
               </div>
             )}
             
             {investor.checkSizeMin && investor.checkSizeMax && (
-              <div className="flex items-center gap-1.5 bg-green-100 text-green-700 px-3 py-1.5 rounded-md text-sm font-medium">
+              <div className="flex items-center gap-1.5 rounded-md border border-emerald-500/30 bg-emerald-500/12 px-3 py-1.5 text-sm font-medium text-emerald-200">
                 <span>{formatCheckSize(investor.checkSizeMin, investor.checkSizeMax)}</span>
               </div>
             )}
             
             {cleanGeo.length > 0 && (
-              <div className="flex items-center gap-1.5 bg-purple-100 text-purple-700 px-3 py-1.5 rounded-md text-sm font-medium">
-                <MapPin className="h-4 w-4" />
+              <div className="flex items-center gap-1.5 rounded-md border border-violet-500/30 bg-violet-500/12 px-3 py-1.5 text-sm font-medium text-violet-200">
+                <MapPin className="h-4 w-4 shrink-0" />
                 <span>{cleanGeo.slice(0, 2).join(', ')}</span>
               </div>
             )}
             
             {investor.leadFollow && (
-              <div className="flex items-center gap-1.5 bg-amber-100 text-amber-700 px-3 py-1.5 rounded-md text-sm font-medium">
+              <div className="flex items-center gap-1.5 rounded-md border border-amber-500/30 bg-amber-500/12 px-3 py-1.5 text-sm font-medium text-amber-200">
                 <span className="capitalize">
                   {investor.leadFollow === 'lead' ? 'Leads' : 
                    investor.leadFollow === 'follow' ? 'Follows' : 
@@ -247,14 +247,14 @@ export function InvestorProfileModal({
             )}
             
             {introPreference !== 'Unknown' && (
-              <div className="flex items-center gap-1.5 bg-muted text-foreground/85 px-3 py-1.5 rounded-md text-sm font-medium">
+              <div className="flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 text-sm font-medium text-foreground/90">
                 <span>{introPreference}</span>
               </div>
             )}
             
             {decisionSpeed !== 'Unknown' && (
-              <div className="flex items-center gap-1.5 bg-indigo-100 text-indigo-700 px-3 py-1.5 rounded-md text-sm font-medium">
-                <Clock className="h-4 w-4" />
+              <div className="flex items-center gap-1.5 rounded-md border border-indigo-500/30 bg-indigo-500/12 px-3 py-1.5 text-sm font-medium text-indigo-200">
+                <Clock className="h-4 w-4 shrink-0" />
                 <span>{decisionSpeed}</span>
               </div>
             )}
@@ -284,7 +284,7 @@ export function InvestorProfileModal({
                   <ul className="space-y-2">
                     {fitBullets.map((bullet, i) => (
                       <li key={i} className="flex items-start gap-2 text-sm text-muted-foreground">
-                        <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
+                        <CheckCircle className="h-4 w-4 text-emerald-400 mt-0.5 flex-shrink-0" />
                         <span>{bullet}</span>
                       </li>
                     ))}

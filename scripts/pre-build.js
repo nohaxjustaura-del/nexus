@@ -13,13 +13,19 @@ try { require('dotenv').config({ path: path.join(__dirname, '..', '.env') }) } c
 
 console.log('🚀 Running pre-build optimizations...\n')
 
-// 1. Clean up old build artifacts
-console.log('📦 Cleaning old build artifacts...')
-const cleanDirs = ['.next', 'out']
-cleanDirs.forEach(dir => {
+// 1. Clean static export dir only (do not delete .next here: next build manages it;
+//    wiping .next on Windows often causes ENOTEMPTY, or rare ENOENT during manifest reads).
+console.log('📦 Cleaning old export artifacts...')
+const cleanDirs = ['out']
+cleanDirs.forEach((dir) => {
   const dirPath = path.join(process.cwd(), dir)
   if (fs.existsSync(dirPath)) {
-    fs.rmSync(dirPath, { recursive: true, force: true })
+    fs.rmSync(dirPath, {
+      recursive: true,
+      force: true,
+      maxRetries: 10,
+      retryDelay: 100,
+    })
     console.log(`   ✓ Removed ${dir}`)
   }
 })

@@ -6,8 +6,8 @@
  */
 
 import { db } from '../lib/db'
-import { searchVCInfo } from '../lib/web-search'
-import { openrouterGenerateJson } from '../lib/openrouter'
+import { openrouterGenerateJson, hasOpenRouterKey, getVcExtractionModel } from '../lib/openrouter'
+import { gatherVCFirmRetrievalContext, getVcResearchPipelineEnvStatus } from '../lib/vc-research-retrieval'
 
 export interface VCResearchResult {
   firmName: string
@@ -30,9 +30,90 @@ export interface VCResearchResult {
   sources?: string[]
 }
 
+export type ResearchBatchMode = 'full' | 'thesis' | 'profile'
+
+const contextSliceLen = () =>
+  Math.min(28000, Math.max(8000, parseInt(process.env.VC_RESEARCH_CONTEXT_CHARS || '20000', 10) || 20000))
+
+async function extractThesisOnly(
+  firmName: string,
+  rawContent: string,
+): Promise<Pick<VCResearchResult, 'thesis'>> {
+  try {
+    const result = await openrouterGenerateJson<{ thesis: string | null }>({
+      system: `You extract ONLY the investment thesis for this VC/investor from the text. Return JSON: { "thesis": string | null }. Be specific (themes, stage, sectors). If not stated, null.`,
+      user: `Firm: "${firmName}"\n\n${rawContent.substring(0, contextSliceLen())}`,
+      temperature: 0.15,
+      model: getVcExtractionModel(),
+      retryOnParseError: true,
+    })
+    return { thesis: result.thesis || undefined }
+  } catch (e: any) {
+    console.error(`   ⚠️ Thesis extraction failed for ${firmName}:`, e.message)
+    return {}
+  }
+}
+
+async function extractProfileFieldsOnly(
+  firmName: string,
+  rawContent: string,
+): Promise<
+  Omit<
+    Partial<VCResearchResult>,
+    'firmName' | 'verified' | 'researchDate' | 'sources' | 'thesis'
+  >
+> {
+  try {
+    const result = await openrouterGenerateJson<{
+      bio: string
+      checkSizeMin: number | null
+      checkSizeMax: number | null
+      stages: string[]
+      sectors: string[]
+      geography: string[]
+      fundType: string
+      leadFollow: string
+      portfolio: string[]
+      valueAddTags: string[]
+      websiteUrl: string | null
+      linkedinUrl: string | null
+      applicationUrl: string | null
+    }>({
+      system: `Extract structured VC profile data from Exa retrieval — do NOT include thesis. Return accurate JSON only.
+
+Fund types: "Micro VC", "Venture Capital", "Accelerator", "CVC", "Angel Group", "Family Office", "Growth Equity"
+Lead/follow: "lead", "follow", "either"
+Stages: "pre-seed", "seed", "Series A", "Series B", "Series C", "Growth"`,
+      user: `Firm: "${firmName}". Extract all available data except investment thesis:
+
+${rawContent.substring(0, contextSliceLen())}`,
+      temperature: 0.15,
+      model: getVcExtractionModel(),
+      retryOnParseError: true,
+    })
+    return {
+      bio: result.bio || undefined,
+      checkSizeMin: result.checkSizeMin ?? undefined,
+      checkSizeMax: result.checkSizeMax ?? undefined,
+      stages: result.stages?.length ? result.stages : undefined,
+      sectors: result.sectors?.length ? result.sectors : undefined,
+      geography: result.geography?.length ? result.geography : undefined,
+      fundType: result.fundType || undefined,
+      leadFollow: result.leadFollow || undefined,
+      portfolio: result.portfolio?.length ? result.portfolio : undefined,
+      valueAddTags: result.valueAddTags?.length ? result.valueAddTags : undefined,
+      websiteUrl: result.websiteUrl || undefined,
+      linkedinUrl: result.linkedinUrl || undefined,
+      applicationUrl: result.applicationUrl || undefined,
+    }
+  } catch (e: any) {
+    console.error(`   ⚠️ Profile extraction failed for ${firmName}:`, e.message)
+    return {}
+  }
+}
+
 /**
- * Use AI to extract structured VC data from raw search content.
- * Falls back to regex if AI is unavailable.
+ * OpenRouter-only structured extraction from merged dual-Exa retrieval.
  */
 async function extractWithAI(firmName: string, rawContent: string): Promise<Partial<VCResearchResult>> {
   try {
@@ -52,18 +133,22 @@ async function extractWithAI(firmName: string, rawContent: string): Promise<Part
       linkedinUrl: string | null
       applicationUrl: string | null
     }>({
-      system: `You extract structured VC/investor data from web search results. Return accurate JSON only; never fabricate data. If information is not found, use null for strings/numbers and empty arrays for lists.
+      system: `You extract structured VC/investor data from Exa web retrieval (two query passes: fund profile and deals/fundraising). Rules:
+- Return accurate JSON only. Do not invent fund sizes, portfolios, or URLs not supported by the text.
+- Prefer facts repeated across sources; when sources conflict, prefer the fund's primary site / press / official bio.
+- If unknown, use null for strings/numbers and [] for arrays.
 
 Fund types: "Micro VC", "Venture Capital", "Accelerator", "CVC", "Angel Group", "Family Office", "Growth Equity"
 Lead/follow: "lead", "follow", "either"
-Stages: use exactly these values: "pre-seed", "seed", "Series A", "Series B", "Series C", "Growth"`,
-      user: `Extract all available data for "${firmName}" from these search results:
+Stages: "pre-seed", "seed", "Series A", "Series B", "Series C", "Growth" only.`,
+      user: `Extract all available data for "${firmName}" from this material:
 
-${rawContent.substring(0, 6000)}
+${rawContent.substring(0, contextSliceLen())}
 
-Return JSON with: thesis (1-2 sentence investment thesis), bio (1-2 sentence firm description), checkSizeMin (in thousands, e.g. 500 = $500K), checkSizeMax (in thousands), stages (array), sectors (array of focus areas), geography (array of regions), fundType, leadFollow, portfolio (array of notable company names), valueAddTags (array like "board seats", "recruiting", "go-to-market"), websiteUrl, linkedinUrl, applicationUrl`,
-      temperature: 0.2,
-      model: 'deepseek/deepseek-chat',
+Return JSON with: thesis (2-3 sentences, specific themes and stage if present), bio (2-3 sentences: who they are, founding vintage or notable background if stated), checkSizeMin (thousands USD, e.g. 500 = $500K), checkSizeMax (thousands), stages, sectors, geography (country/region level), fundType, leadFollow, portfolio (company names only, max 25), valueAddTags, websiteUrl (official fund site if explicit), linkedinUrl (company/fund page if explicit), applicationUrl (pitch form or email contact page if explicit)`,
+      temperature: 0.15,
+      model: getVcExtractionModel(),
+      retryOnParseError: true,
     })
 
     return {
@@ -89,34 +174,60 @@ Return JSON with: thesis (1-2 sentence investment thesis), bio (1-2 sentence fir
 }
 
 /**
- * Research a single VC firm using web search + AI extraction
+ * Research a single VC firm (dual-Exa + OpenRouter). Mode limits extraction/application.
  */
-async function researchVC(firmName: string): Promise<VCResearchResult | null> {
-  console.log(`\n🔍 Researching: ${firmName}`)
+async function researchVC(
+  firmName: string,
+  mode: ResearchBatchMode = 'full',
+): Promise<VCResearchResult | null> {
+  const label = mode === 'full' ? 'Researching' : mode === 'thesis' ? 'Thesis refresh' : 'Profile refresh'
+  console.log(`\n🔍 ${label}: ${firmName}`)
 
   try {
-    const year = new Date().getFullYear()
-    const searchResponse = await searchVCInfo(firmName, `investment thesis check size stages ${year}`)
-
-    if (!searchResponse || !searchResponse.results || searchResponse.results.length === 0) {
-      console.log(`   ⚠️ No results found`)
+    if (!hasOpenRouterKey()) {
+      console.error(`   ⚠️ OPENROUTER_API_KEY is required for VC extraction (Exa supplies text).`)
       return null
     }
 
-    const allContent = searchResponse.results.map(r => r.content).join('\n\n')
+    const pipe = getVcResearchPipelineEnvStatus()
+    if (!pipe.exa) {
+      console.warn(`   ⚠️ EXA_API_KEY missing — VC research retrieval will fail.`)
+    }
 
-    const aiExtracted = await extractWithAI(firmName, allContent)
+    const snapshot = await gatherVCFirmRetrievalContext(firmName)
+    if (!snapshot) {
+      console.log(`   ⚠️ No retrieval context (check EXA_API_KEY and quotas)`)
+      return null
+    }
 
-    const result: VCResearchResult = {
+    console.log(
+      `   📚 Context: Exa ${snapshot.exaTotalResults} result(s), ${snapshot.exaPassesWithHits}/2 passes, ${snapshot.mergedContext.length} chars`,
+    )
+
+    const base = {
       firmName,
       verified: true,
       researchDate: new Date(),
-      sources: searchResponse.results.map(r => r.url).filter(Boolean),
-      ...aiExtracted,
+      sources: snapshot.sources,
     }
 
-    console.log(`   ✅ Found: ${result.checkSizeMin ? `$${result.checkSizeMin}K-$${result.checkSizeMax}K` : 'check size unknown'}, ${result.stages?.length || 0} stages, ${result.portfolio?.length || 0} portfolio cos`)
+    if (mode === 'thesis') {
+      const { thesis } = await extractThesisOnly(firmName, snapshot.mergedContext)
+      console.log(`   ✅ Thesis: ${thesis ? `${thesis.slice(0, 80)}…` : 'none'}`)
+      return { ...base, thesis }
+    }
 
+    if (mode === 'profile') {
+      const fields = await extractProfileFieldsOnly(firmName, snapshot.mergedContext)
+      console.log(
+        `   ✅ Profile: checks ${fields.checkSizeMin != null ? 'yes' : 'no'}, ${fields.stages?.length || 0} stages, ${fields.portfolio?.length || 0} portfolio`,
+      )
+      return { ...base, ...fields }
+    }
+
+    const aiExtracted = await extractWithAI(firmName, snapshot.mergedContext)
+    const result: VCResearchResult = { ...base, ...aiExtracted }
+    console.log(`   ✅ Found: ${result.checkSizeMin ? `$${result.checkSizeMin}K-$${result.checkSizeMax}K` : 'check size unknown'}, ${result.stages?.length || 0} stages, ${result.portfolio?.length || 0} portfolio cos`)
     return result
   } catch (error: any) {
     console.error(`   ❌ Error researching ${firmName}:`, error.message)
@@ -128,6 +239,105 @@ async function researchVC(firmName: string): Promise<VCResearchResult | null> {
  * Update VC in database  -  only fills in missing fields, never overwrites
  * existing good data with potentially worse AI-extracted data.
  */
+/** Apply only thesis (+ verified). */
+export async function updateVCInDatabaseThesisOnly(research: VCResearchResult): Promise<boolean> {
+  try {
+    const existing = await db.investor.findFirst({
+      where: { firmName: research.firmName },
+    })
+    if (!existing) {
+      console.log(`   ⚠️ VC not found in database: ${research.firmName}`)
+      return false
+    }
+    const updateData: Record<string, unknown> = { verified: true }
+    if (research.thesis && (!existing.thesis || existing.thesis.length < 20)) {
+      updateData.thesis = research.thesis
+    }
+    const fieldsUpdated = Object.keys(updateData).length > 1 ? 1 : 0
+    if (fieldsUpdated > 0) {
+      await db.investor.update({ where: { id: existing.id }, data: updateData })
+      console.log(`   ✅ Updated thesis for ${research.firmName}`)
+    } else {
+      await db.investor.update({ where: { id: existing.id }, data: { verified: true } })
+      console.log(`   ℹ️ No thesis slot to fill for ${research.firmName}`)
+    }
+    return true
+  } catch (error: any) {
+    console.error(`   ❌ Error updating database:`, error.message)
+    return false
+  }
+}
+
+/** Apply profile fields only — never touches thesis. */
+export async function updateVCInDatabaseProfileOnly(research: VCResearchResult): Promise<boolean> {
+  try {
+    const existing = await db.investor.findFirst({
+      where: { firmName: research.firmName },
+    })
+    if (!existing) {
+      console.log(`   ⚠️ VC not found in database: ${research.firmName}`)
+      return false
+    }
+    const updateData: any = {}
+
+    if (research.checkSizeMin && existing.checkSizeMin === 0) {
+      updateData.checkSizeMin = research.checkSizeMin
+    }
+    if (research.checkSizeMax && existing.checkSizeMax === 0) {
+      updateData.checkSizeMax = research.checkSizeMax
+    }
+    if (research.stages?.length && existing.stages === '[]') {
+      updateData.stages = JSON.stringify(research.stages)
+    }
+    if (research.bio && (!existing.bio || existing.bio.length < 20)) {
+      updateData.bio = research.bio
+    }
+    if (research.sectors?.length && existing.sectors === '[]') {
+      updateData.sectors = JSON.stringify(research.sectors)
+    }
+    if (research.geography?.length) {
+      const existingGeo = existing.geography || '[]'
+      if (existingGeo === '[]') {
+        updateData.geography = JSON.stringify(research.geography)
+      }
+    }
+    if (research.fundType && existing.fundType === 'Venture Capital') {
+      updateData.fundType = research.fundType
+    }
+    if (research.leadFollow && existing.leadFollow === 'either') {
+      updateData.leadFollow = research.leadFollow
+    }
+    if (research.portfolio?.length && (!existing.portfolio || existing.portfolio === '[]')) {
+      updateData.portfolio = JSON.stringify(research.portfolio)
+    }
+    if (research.valueAddTags?.length && existing.valueAddTags === '[]') {
+      updateData.valueAddTags = JSON.stringify(research.valueAddTags)
+    }
+    if (research.websiteUrl && !existing.websiteUrl) {
+      updateData.websiteUrl = research.websiteUrl
+    }
+    if (research.linkedinUrl && !existing.linkedinUrl) {
+      updateData.linkedinUrl = research.linkedinUrl
+    }
+    if (research.applicationUrl && !existing.applicationUrl) {
+      updateData.applicationUrl = research.applicationUrl
+    }
+    updateData.verified = true
+    const fieldsUpdated = Object.keys(updateData).length - 1
+    if (fieldsUpdated > 0) {
+      await db.investor.update({ where: { id: existing.id }, data: updateData })
+      console.log(`   ✅ Updated ${fieldsUpdated} profile fields for ${research.firmName}`)
+    } else {
+      await db.investor.update({ where: { id: existing.id }, data: { verified: true } })
+      console.log(`   ℹ️ No empty profile fields for ${research.firmName}`)
+    }
+    return true
+  } catch (error: any) {
+    console.error(`   ❌ Error updating database:`, error.message)
+    return false
+  }
+}
+
 async function updateVCInDatabase(research: VCResearchResult): Promise<boolean> {
   try {
     const existing = await db.investor.findFirst({
@@ -222,24 +432,31 @@ async function researchVCsBatch(
   options: {
     delayBetweenSearches?: number
     maxConcurrent?: number
+    mode?: ResearchBatchMode
   } = {}
 ): Promise<void> {
-  const { delayBetweenSearches = 2000, maxConcurrent = 3 } = options
+  const { delayBetweenSearches = 2000, maxConcurrent = 3, mode = 'full' } = options
 
-  console.log(`\n🚀 Starting batch research: ${firmNames.length} VCs`)
+  console.log(`\n🚀 Starting batch research: ${firmNames.length} VCs (mode=${mode})`)
   console.log(`   Delay: ${delayBetweenSearches}ms, Max concurrent: ${maxConcurrent}\n`)
 
   let updated = 0
   let failed = 0
+
+  const apply = async (research: VCResearchResult) => {
+    if (mode === 'thesis') return updateVCInDatabaseThesisOnly(research)
+    if (mode === 'profile') return updateVCInDatabaseProfileOnly(research)
+    return updateVCInDatabase(research)
+  }
 
   for (let i = 0; i < firmNames.length; i += maxConcurrent) {
     const batch = firmNames.slice(i, i + maxConcurrent)
 
     const results = await Promise.all(
       batch.map(async (firmName) => {
-        const research = await researchVC(firmName)
+        const research = await researchVC(firmName, mode)
         if (research) {
-          const ok = await updateVCInDatabase(research)
+          const ok = await apply(research)
           return { firmName, success: ok }
         }
         return { firmName, success: false }
@@ -260,7 +477,9 @@ async function researchVCsBatch(
   console.log(`\n📊 Batch Research Complete:`)
   console.log(`   ✅ Updated: ${updated}`)
   console.log(`   ❌ Failed: ${failed}`)
-  console.log(`   📈 Success rate: ${((updated / firmNames.length) * 100).toFixed(1)}%`)
+  if (firmNames.length > 0) {
+    console.log(`   📈 Success rate: ${((updated / firmNames.length) * 100).toFixed(1)}%`)
+  }
 }
 
 /**

@@ -1,7 +1,16 @@
-import type { NextRequest } from 'next/server'
+import { NextResponse, type NextRequest } from 'next/server'
 import { updateSupabaseSession } from '@/lib/supabase/middleware'
 
+function isProductionDebugRoute(pathname: string): boolean {
+  if (pathname.startsWith('/api/debug')) return true
+  if (pathname === '/api/auth/debug' || pathname === '/api/auth/middleware-debug') return true
+  return false
+}
+
 export async function middleware(request: NextRequest) {
+  if (process.env.NODE_ENV === 'production' && isProductionDebugRoute(request.nextUrl.pathname)) {
+    return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  }
   return updateSupabaseSession(request)
 }
 

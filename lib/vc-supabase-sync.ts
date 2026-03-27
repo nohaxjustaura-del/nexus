@@ -1,4 +1,5 @@
 import type { Investor } from '@prisma/client'
+import { db } from './db'
 
 function parseJsonArray(raw: string | null | undefined, fallback: unknown[] = []): unknown[] {
   if (raw == null || raw === '') return fallback
@@ -84,5 +85,66 @@ export async function upsertInvestorToVcDirectory(
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : String(e)
     return { ok: false, error: message }
+  }
+}
+
+export type SyncRecentVcDirectoryResult = {
+  skipped: boolean
+  reason?: string
+  upserted: number
+  failed: number
+  examined: number
+}
+
+/**
+ * Upserts recently updated public/discoverable investors into Supabase `vc_directory`.
+ * Uses a lookback window so discover/ingest failures can be healed on the next tick without full-table scans.
+ */
+export async function syncRecentPublicDiscoverableToVcDirectory(options?: {
+  lookbackMs?: number
+  maxRows?: number
+  delayBetweenUpsertsMs?: number
+}): Promise<SyncRecentVcDirectoryResult> {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim()
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim()
+  if (!url || !key) {
+    return {
+      skipped: true,
+      reason: 'Missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY.',
+      upserted: 0,
+      failed: 0,
+      examined: 0,
+    }
+  }
+
+  const lookbackMs = options?.lookbackMs ?? 50 * 60 * 60 * 1000
+  const maxRows = Math.min(400, Math.max(15, options?.maxRows ?? 120))
+  const delayMs = Math.max(0, options?.delayBetweenUpsertsMs ?? 75)
+
+  const since = new Date(Date.now() - lookbackMs)
+  const rows = await db.investor.findMany({
+    where: {
+      isPublic: true,
+      discoverable: true,
+      updatedAt: { gte: since },
+    },
+    orderBy: { updatedAt: 'desc' },
+    take: maxRows,
+  })
+
+  let upserted = 0
+  let failed = 0
+  for (const inv of rows) {
+    const r = await upsertInvestorToVcDirectory(inv)
+    if (r.ok) upserted++
+    else failed++
+    if (delayMs) await new Promise((res) => setTimeout(res, delayMs))
+  }
+
+  return {
+    skipped: false,
+    upserted,
+    failed,
+    examined: rows.length,
   }
 }

@@ -46,6 +46,21 @@ export async function PATCH(
       },
     })
 
+    // Keep UserApproval in sync so auth/check, admin queues, and access rules stay consistent.
+    const approvalStatus = action === 'approve' ? 'approved' : 'rejected'
+    await db.userApproval.upsert({
+      where: { email },
+      create: {
+        email,
+        status: approvalStatus,
+        reviewedAt: now,
+      },
+      update: {
+        status: approvalStatus,
+        reviewedAt: now,
+      },
+    })
+
     return NextResponse.json({ success: true })
   } catch (error: any) {
     console.error('Update founder verification error:', error)

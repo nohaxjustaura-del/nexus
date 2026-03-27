@@ -14,7 +14,6 @@ import {
   RefreshCw,
   Calendar,
   Filter,
-  ArrowLeft,
   User,
   Clock,
   HardDrive,
@@ -23,7 +22,6 @@ import {
   ExternalLink,
   Mic,
 } from 'lucide-react'
-import Link from 'next/link'
 
 interface TrainingDataExport {
   exportedAt: string
@@ -151,46 +149,33 @@ export default function TrainingDataPage() {
   }
 
   return (
-    <div className="min-h-screen bg-muted/50">
-      {/* Header */}
-      <header className="sticky top-0 z-50 border-b bg-card/95 backdrop-blur">
-        <div className="container mx-auto flex h-16 items-center justify-between px-4">
-          <div className="flex items-center gap-4">
-            <Link href="/admin/dashboard">
-              <Button variant="ghost" size="sm">
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                Admin
-              </Button>
-            </Link>
-            <div className="flex items-center gap-2">
-              <Database className="h-5 w-5 text-blue-600" />
-              <h1 className="text-xl font-bold text-foreground">Training Data</h1>
+    <div className="min-h-screen bg-background">
+      <div className="container mx-auto max-w-7xl px-4 py-8 sm:px-6">
+        <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-start gap-3">
+            <div className="mt-0.5 flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+              <Database className="h-5 w-5" aria-hidden />
+            </div>
+            <div>
+              <h1 className="font-heading text-2xl font-semibold tracking-tight text-foreground">
+                Training data
+              </h1>
+              <p className="text-sm text-muted-foreground">
+                Export pitches, decks, and recordings for model work
+              </p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={fetchData}
-              disabled={loading}
-            >
+          <div className="flex flex-wrap items-center gap-2">
+            <Button variant="outline" size="sm" onClick={fetchData} disabled={loading}>
               <RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
               Refresh
             </Button>
-            <Button
-              size="sm"
-              onClick={handleDownloadJSON}
-              disabled={!data || data.counts.total === 0}
-              className="bg-blue-600 hover:bg-blue-700"
-            >
+            <Button size="sm" onClick={handleDownloadJSON} disabled={!data || data.counts.total === 0}>
               <Download className="mr-2 h-4 w-4" />
               Download JSON
             </Button>
           </div>
         </div>
-      </header>
-
-      <div className="container mx-auto px-4 py-8 max-w-7xl">
         {/* Error */}
         {error && (
           <Card className="mb-6 border-red-300 bg-red-50">

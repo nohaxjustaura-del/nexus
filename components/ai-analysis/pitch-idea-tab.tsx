@@ -374,8 +374,8 @@ export function PitchIdeaAnalysisTab() {
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="font-semibold text-lg mb-2">Get Feedback from YC-Funded Founders</h3>
-                  <p className="text-sm text-slate-600 mb-1">Get personalized feedback from Inigo & William (YC-backed founders)</p>
-                  <p className="text-xs text-slate-500">Improve your score and get actionable advice from real investors</p>
+                  <p className="text-sm text-muted-foreground mb-1">Get personalized feedback from Inigo & William (YC-backed founders)</p>
+                  <p className="text-xs text-muted-foreground/85">Improve your score and get actionable advice from real investors</p>
                 </div>
                 <Button 
                   onClick={handleGetFounderFeedback}
@@ -401,7 +401,7 @@ export function PitchIdeaAnalysisTab() {
             </CardHeader>
             <CardContent>
               <div className="prose prose-sm max-w-none">
-                <div className="whitespace-pre-wrap text-slate-700">{result.founderFeedback}</div>
+                <div className="whitespace-pre-wrap text-muted-foreground">{result.founderFeedback}</div>
               </div>
             </CardContent>
           </Card>
@@ -510,10 +510,10 @@ export function PitchIdeaAnalysisTab() {
                 }
                 
                 const getScoreBadge = (score: number) => {
-                  if (score >= 85) return { text: 'Excellent Match', color: 'bg-green-100 text-green-700 border-green-300' }
-                  if (score >= 75) return { text: 'Strong Match', color: 'bg-blue-100 text-blue-700 border-blue-300' }
-                  if (score >= 65) return { text: 'Good Match', color: 'bg-purple-100 text-purple-700 border-purple-300' }
-                  return { text: 'Potential Match', color: 'bg-slate-100 text-slate-700 border-slate-300' }
+                  if (score >= 85) return { text: 'Excellent Match', color: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/35' }
+                  if (score >= 75) return { text: 'Strong Match', color: 'bg-blue-500/15 text-blue-300 border-blue-500/35' }
+                  if (score >= 65) return { text: 'Good Match', color: 'bg-violet-500/15 text-violet-300 border-violet-500/35' }
+                  return { text: 'Potential Match', color: 'bg-muted text-muted-foreground border-border' }
                 }
                 
                 const scoreBadge = getScoreBadge(matchScore)
@@ -521,28 +521,28 @@ export function PitchIdeaAnalysisTab() {
                 return (
                   <Card 
                     key={idx} 
-                    className={`border-2 hover:border-primary/50 transition-all duration-300 hover:shadow-lg ${
-                      matchScore >= 85 ? 'border-green-200 bg-gradient-to-br from-green-50/50 to-white' :
-                      matchScore >= 75 ? 'border-blue-200 bg-gradient-to-br from-blue-50/50 to-white' :
-                      'border-slate-200 bg-white'
+                    className={`border hover:border-primary/50 transition-all duration-300 hover:shadow-lg ${
+                      matchScore >= 85 ? 'border-emerald-500/30 bg-gradient-to-br from-emerald-500/10 to-card' :
+                      matchScore >= 75 ? 'border-primary/30 bg-gradient-to-br from-primary/10 to-card' :
+                      'border-border bg-card'
                     }`}
                   >
                     <CardContent className="pt-6">
                       <div className="flex items-start justify-between mb-4">
                         <div className="flex-1">
                           <div className="flex items-center gap-3 mb-2">
-                            <h3 className="text-lg font-bold text-slate-900">{investor.firmName || 'Unknown VC'}</h3>
+                            <h3 className="text-lg font-bold text-foreground">{investor.firmName || 'Unknown VC'}</h3>
                             <Badge variant="outline" className={`text-xs font-semibold ${scoreBadge.color}`}>
                               {scoreBadge.text}
                             </Badge>
                             {match.livePulse && match.livePulse.signalStrength > 1 && (
-                              <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-full px-2 py-0.5">
+                              <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-300 bg-emerald-500/15 border border-emerald-500/30 rounded-full px-2 py-0.5">
                                 <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
                                 Live
                               </span>
                             )}
                             {match.livePulse && match.livePulse.signalStrength <= 1 && (
-                              <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded-full px-2 py-0.5">
+                              <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-300 bg-amber-500/12 border border-amber-500/30 rounded-full px-2 py-0.5">
                                 Potentially Inactive
                               </span>
                             )}
@@ -551,16 +551,16 @@ export function PitchIdeaAnalysisTab() {
                             {investor.fundType || 'VC'} • ${investor.checkMin || 0}K - ${investor.checkMax || 0}K
                           </p>
                           {investor.bio && (
-                            <p className="text-xs text-slate-600 mt-2 line-clamp-2">{investor.bio.substring(0, 120)}...</p>
+                            <p className="text-xs text-muted-foreground mt-2 line-clamp-2">{investor.bio.substring(0, 120)}...</p>
                           )}
                         </div>
                         <div className="text-right ml-4">
                           <div className={`text-4xl font-bold bg-gradient-to-r ${getScoreColor(matchScore)} bg-clip-text text-transparent`}>
                             {matchScore}
                           </div>
-                          <div className="text-xs font-medium text-slate-600 mt-1">Match Score</div>
+                          <div className="text-xs font-medium text-muted-foreground mt-1">Match Score</div>
                           <div className="mt-2">
-                            <div className="w-20 h-2 bg-slate-200 rounded-full overflow-hidden">
+                            <div className="w-20 h-2 bg-border rounded-full overflow-hidden">
                               <div 
                                 className={`h-full bg-gradient-to-r ${getScoreColor(matchScore)} transition-all`}
                                 style={{ width: `${matchScore}%` }}
@@ -570,9 +570,9 @@ export function PitchIdeaAnalysisTab() {
                         </div>
                       </div>
                       
-                      <div className="space-y-3 mt-4 pt-4 border-t border-slate-200">
+                      <div className="space-y-3 mt-4 pt-4 border-t border-border">
                         <div>
-                          <h4 className="text-sm font-semibold mb-3 flex items-center gap-2 text-slate-700">
+                          <h4 className="text-sm font-semibold mb-3 flex items-center gap-2 text-foreground">
                             <Sparkles className="h-4 w-4 text-primary" />
                             Why This Match?
                           </h4>
@@ -580,17 +580,17 @@ export function PitchIdeaAnalysisTab() {
                             <ul className="space-y-2.5">
                               {match.detailedReasons.slice(0, 4).map((detail: any, i: number) => (
                                 <li key={i} className="text-sm">
-                                  <div className="flex items-start gap-3 p-2 rounded-lg hover:bg-slate-50 transition-colors">
+                                  <div className="flex items-start gap-3 p-2 rounded-lg hover:bg-muted/50 transition-colors">
                                     {detail.score > 0 ? (
                                       <CheckCircle className="h-4 w-4 shrink-0 mt-0.5 text-green-500" />
                                     ) : (
                                       <AlertCircle className="h-4 w-4 shrink-0 mt-0.5 text-orange-500" />
                                     )}
                                     <div className="flex-1">
-                                      <div className="font-semibold text-slate-800">{detail.category}</div>
-                                      <div className="text-xs text-slate-600 mt-0.5">{detail.explanation}</div>
+                                      <div className="font-semibold text-foreground">{detail.category}</div>
+                                      <div className="text-xs text-muted-foreground mt-0.5">{detail.explanation}</div>
                                       {detail.evidence && detail.evidence.length > 0 && (
-                                        <div className="text-xs text-slate-500 mt-1.5 italic flex items-center gap-1">
+                                        <div className="text-xs text-muted-foreground/80 mt-1.5 italic flex items-center gap-1">
                                           <TrendingUp className="h-3 w-3" />
                                           {detail.evidence.slice(0, 2).join(' • ')}
                                         </div>
@@ -599,8 +599,8 @@ export function PitchIdeaAnalysisTab() {
                                     {detail.score !== undefined && (
                                       <div className={`text-xs font-bold px-2 py-0.5 rounded ${
                                         detail.score > 0 
-                                          ? 'bg-green-100 text-green-700' 
-                                          : 'bg-orange-100 text-orange-700'
+                                          ? 'bg-emerald-500/15 text-emerald-300' 
+                                          : 'bg-orange-500/15 text-orange-300'
                                       }`}>
                                         {detail.score > 0 ? '+' : ''}{detail.score}
                                       </div>
@@ -612,7 +612,7 @@ export function PitchIdeaAnalysisTab() {
                           ) : (
                             <ul className="space-y-2">
                               {(match.reasons || []).slice(0, 4).map((reason: string, i: number) => (
-                                <li key={i} className="text-sm text-slate-700 flex items-start gap-2 p-2 rounded-lg hover:bg-slate-50 transition-colors">
+                                <li key={i} className="text-sm text-muted-foreground flex items-start gap-2 p-2 rounded-lg hover:bg-muted/50 transition-colors">
                                   <CheckCircle className="h-4 w-4 shrink-0 mt-0.5 text-green-500" />
                                   <span>{reason}</span>
                                 </li>
@@ -622,19 +622,19 @@ export function PitchIdeaAnalysisTab() {
                         </div>
                         
                         {match.livePulse?.summary && (
-                          <div className="p-3 rounded-lg bg-gradient-to-br from-indigo-50 to-blue-50 border border-indigo-200/60 space-y-1.5">
-                            <h5 className="text-xs font-semibold text-indigo-700 flex items-center gap-1.5">
+                          <div className="p-3 rounded-lg bg-gradient-to-br from-indigo-500/12 to-primary/10 border border-indigo-500/25 space-y-1.5">
+                            <h5 className="text-xs font-semibold text-indigo-300 flex items-center gap-1.5">
                               <TrendingUp className="h-3 w-3" />
                               Live VC Intelligence
                             </h5>
                             {match.livePulse.summary.recentPortfolio && (
-                              <p className="text-xs text-slate-700">{match.livePulse.summary.recentPortfolio}</p>
+                              <p className="text-xs text-muted-foreground">{match.livePulse.summary.recentPortfolio}</p>
                             )}
                             {match.livePulse.summary.currentHeat && (
-                              <p className="text-xs text-slate-700">{match.livePulse.summary.currentHeat}</p>
+                              <p className="text-xs text-muted-foreground">{match.livePulse.summary.currentHeat}</p>
                             )}
                             {match.livePulse.summary.founderAlignment && (
-                              <p className="text-xs text-slate-700">{match.livePulse.summary.founderAlignment}</p>
+                              <p className="text-xs text-muted-foreground">{match.livePulse.summary.founderAlignment}</p>
                             )}
                           </div>
                         )}
@@ -669,7 +669,7 @@ export function PitchIdeaAnalysisTab() {
 
   return (
     <div className="space-y-6">
-      <Card className="mx-auto max-w-4xl w-full border-2 border-primary/20 bg-gradient-to-br from-primary/5 via-background to-blue-50/30">
+      <Card className="mx-auto max-w-4xl w-full border border-primary/25 bg-gradient-to-br from-primary/8 via-background to-violet-500/8">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Lightbulb className="h-5 w-5 text-primary" />
@@ -681,7 +681,7 @@ export function PitchIdeaAnalysisTab() {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid md:grid-cols-3 gap-4">
-            <div className="p-4 rounded-lg bg-white/60 border border-primary/10">
+            <div className="p-4 rounded-lg bg-card/80 border border-primary/15">
               <div className="flex items-center gap-2 mb-2">
                 <Target className="h-5 w-5 text-primary" />
                 <h4 className="font-semibold text-sm">Real Investor Insights</h4>
@@ -690,7 +690,7 @@ export function PitchIdeaAnalysisTab() {
                 AI trained on feedback from real VCs and investors. Get the same insights they look for.
               </p>
             </div>
-            <div className="p-4 rounded-lg bg-white/60 border border-primary/10">
+            <div className="p-4 rounded-lg bg-card/80 border border-primary/15">
               <div className="flex items-center gap-2 mb-2">
                 <TrendingUp className="h-5 w-5 text-primary" />
                 <h4 className="font-semibold text-sm">Actionable Improvements</h4>
@@ -699,7 +699,7 @@ export function PitchIdeaAnalysisTab() {
                 Specific suggestions to strengthen your pitch and make it more compelling to investors.
               </p>
             </div>
-            <div className="p-4 rounded-lg bg-white/60 border border-primary/10">
+            <div className="p-4 rounded-lg bg-card/80 border border-primary/15">
               <div className="flex items-center gap-2 mb-2">
                 <Lightbulb className="h-5 w-5 text-primary" />
                 <h4 className="font-semibold text-sm">VC Recommendations</h4>
@@ -721,7 +721,7 @@ export function PitchIdeaAnalysisTab() {
         </CardHeader>
         <CardContent className="space-y-6">
           {/* Input Mode Toggle */}
-          <div className="flex gap-2 p-1 bg-slate-100 rounded-lg">
+          <div className="flex gap-2 p-1 bg-muted rounded-lg">
             <button
               type="button"
               onClick={() => {
@@ -731,8 +731,8 @@ export function PitchIdeaAnalysisTab() {
               }}
               className={`flex-1 px-4 py-2 rounded-md text-sm font-medium transition-all ${
                 inputMode === 'text'
-                  ? 'bg-white text-slate-900 shadow-sm'
-                  : 'text-slate-600 hover:text-slate-900'
+                  ? 'bg-card text-foreground shadow-sm ring-1 ring-border'
+                  : 'text-muted-foreground hover:text-foreground'
               }`}
               disabled={analyzing}
             >
@@ -748,8 +748,8 @@ export function PitchIdeaAnalysisTab() {
               }}
               className={`flex-1 px-4 py-2 rounded-md text-sm font-medium transition-all ${
                 inputMode === 'file'
-                  ? 'bg-white text-slate-900 shadow-sm'
-                  : 'text-slate-600 hover:text-slate-900'
+                  ? 'bg-card text-foreground shadow-sm ring-1 ring-border'
+                  : 'text-muted-foreground hover:text-foreground'
               }`}
               disabled={analyzing}
             >
@@ -783,7 +783,7 @@ export function PitchIdeaAnalysisTab() {
                     className={`p-2 rounded-full transition-all duration-300 ${
                       isRecording
                         ? 'bg-primary text-white shadow-lg shadow-primary/40 scale-110'
-                        : 'bg-slate-100 hover:bg-primary/10 text-slate-500 hover:text-primary'
+                        : 'bg-muted hover:bg-primary/10 text-muted-foreground hover:text-primary'
                     } disabled:opacity-50 disabled:cursor-not-allowed`}
                     title={isRecording ? 'Click to stop' : 'Click to speak your idea'}
                   >
@@ -802,7 +802,7 @@ export function PitchIdeaAnalysisTab() {
                 className={`flex min-h-[200px] w-full rounded-xl border-2 ${
                   isRecording
                     ? 'border-primary/50 bg-primary/[0.02]'
-                    : 'border-slate-300 focus:border-primary bg-background'
+                    : 'border-border focus:border-primary bg-background'
                 } px-4 py-3 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 transition-all`}
                 required
                 disabled={analyzing}
@@ -822,13 +822,13 @@ export function PitchIdeaAnalysisTab() {
                   className={`flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-xl transition-all ${
                     ideaFile
                       ? 'border-primary bg-primary/5'
-                      : 'border-slate-300 hover:border-primary/50 bg-slate-50/50'
+                      : 'border-border hover:border-primary/50 bg-muted/40'
                   }`}
                 >
                   {ideaFile ? (
                     <div className="flex flex-col items-center gap-2">
                       <FileText className="w-8 h-8 text-primary" />
-                      <p className="text-sm font-medium text-slate-900">{ideaFile.name}</p>
+                      <p className="text-sm font-medium text-foreground">{ideaFile.name}</p>
                       <p className="text-xs text-muted-foreground">
                         {(ideaFile.size / 1024).toFixed(1)} KB
                       </p>
@@ -847,8 +847,8 @@ export function PitchIdeaAnalysisTab() {
                     </div>
                   ) : (
                     <label htmlFor="idea-file" className="flex flex-col items-center cursor-pointer w-full h-full justify-center">
-                      <Upload className="w-8 h-8 text-slate-400 mb-2" />
-                      <p className="text-sm font-medium text-slate-600">
+                      <Upload className="w-8 h-8 text-muted-foreground/65 mb-2" />
+                      <p className="text-sm font-medium text-muted-foreground">
                         Click to upload or drag and drop
                       </p>
                       <p className="text-xs text-muted-foreground mt-1">
@@ -930,7 +930,7 @@ export function PitchIdeaAnalysisTab() {
                   Cost: {PITCH_IDEA_CREDIT_COST} credits
                   {credits && (
                     <span className="ml-2">
-                      • You have: <span className="font-semibold text-slate-900">{credits.credits ?? 0}</span> credits
+                      • You have: <span className="font-semibold text-foreground">{credits.credits ?? 0}</span> credits
                       {credits.isPremium && <Badge variant="secondary" className="ml-2 text-xs">Premium</Badge>}
                     </span>
                   )}

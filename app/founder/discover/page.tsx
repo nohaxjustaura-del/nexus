@@ -155,6 +155,10 @@ export default async function DiscoverPage({
   let investors: any[]
   try {
     investors = await db.investor.findMany({
+      where: {
+        isPublic: true,
+        discoverable: true,
+      },
       select: {
         id: true,
         name: true,
@@ -447,14 +451,16 @@ export default async function DiscoverPage({
   }
 
   return (
-    <div className="min-h-screen bg-background text-foreground" data-page="discover">
+    <div className="relative min-h-screen bg-background text-foreground" data-page="discover">
+      <div className="bg-page-mesh pointer-events-none fixed inset-0 -z-10" aria-hidden />
+      <div className="pointer-events-none fixed inset-0 -z-10 bg-[radial-gradient(ellipse_70%_50%_at_50%_-10%,hsl(var(--primary)/0.07),transparent)]" aria-hidden />
       <div className="container mx-auto max-w-7xl px-4 py-6 md:py-8">
         <div className="mb-8">
-          <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-foreground mb-2">
-            1,002 Verified Investors
+          <h1 className="font-heading text-3xl md:text-4xl font-bold tracking-tight text-foreground mb-2">
+            1,002 verified investors
           </h1>
-          <p className="text-muted-foreground text-base md:text-lg">
-            Find the right investors for your startup
+          <p className="text-muted-foreground text-base md:text-lg max-w-2xl leading-relaxed">
+            Search and filter the database. Open any card for thesis, check size, and how to apply.
           </p>
         </div>
 
@@ -487,12 +493,12 @@ export default async function DiscoverPage({
           </nav>
         </div>
 
-        <div className="mb-6 inline-flex rounded-md border border-border p-0.5 bg-muted/40">
+        <div className="mb-6 inline-flex rounded-lg border border-border/80 p-1 bg-card/40 backdrop-blur-sm ring-1 ring-white/[0.04]">
           <Link
             href="/founder/discover"
-            className={`px-4 py-2 rounded-sm text-sm font-medium transition-colors ${
+            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
               !viewAll
-                ? 'bg-foreground text-background'
+                ? 'bg-primary/20 text-foreground shadow-sm ring-1 ring-primary/25'
                 : 'text-muted-foreground hover:text-foreground'
             }`}
           >
@@ -500,9 +506,9 @@ export default async function DiscoverPage({
           </Link>
           <Link
             href="/founder/discover?all=1"
-            className={`px-4 py-2 rounded-sm text-sm font-medium transition-colors ${
+            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
               viewAll
-                ? 'bg-foreground text-background'
+                ? 'bg-primary/20 text-foreground shadow-sm ring-1 ring-primary/25'
                 : 'text-muted-foreground hover:text-foreground'
             }`}
           >

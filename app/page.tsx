@@ -108,7 +108,7 @@ export default function Home() {
               >
                 {mounted && isAuthenticated ? (
                   <>
-                    {isAdmin ? 'Admin dashboard' : 'Go to dashboard'}
+                    {isAdmin ? 'Admin hub' : 'Open hub'}
                     <LayoutDashboard className="ml-2 h-4 w-4" />
                   </>
                 ) : (
@@ -264,26 +264,6 @@ export default function Home() {
               <span className="hidden sm:inline text-border">·</span>
               <span className="font-medium text-foreground">1,002 verified investors</span>
             </div>
-          </div>
-        </section>
-
-        {/* Stats */}
-        <section className="px-4 py-8 md:py-12">
-          <div className="mx-auto grid max-w-5xl grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
-            {[
-              { n: '500+', l: 'Active VCs' },
-              { n: '1,002', l: 'Verified investors' },
-              { n: '50+', l: 'Sectors' },
-              { n: 'AI', l: 'Match engine' },
-            ].map((s) => (
-              <div
-                key={s.l}
-                className="rounded-xl border border-border/80 bg-card/50 px-4 py-5 text-center ring-1 ring-white/[0.04] backdrop-blur-md"
-              >
-                <div className="font-heading text-2xl font-bold text-foreground md:text-3xl">{s.n}</div>
-                <div className="mt-1 text-xs font-medium text-muted-foreground md:text-sm">{s.l}</div>
-              </div>
-            ))}
           </div>
         </section>
 

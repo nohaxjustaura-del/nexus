@@ -18,19 +18,30 @@ const nextConfig = {
       exclude: ['error', 'warn'],
     } : false,
   },
-  
+
   experimental: {
-    // Tree-shake icon and Radix entry points (smaller client bundles)
+    // lucide-react here breaks RSC flight ↔ client webpack (undefined `options.factory`).
     optimizePackageImports: [
-      'lucide-react',
       '@radix-ui/react-select',
       '@radix-ui/react-checkbox',
+      'framer-motion',
+      'react-markdown',
     ],
   },
-  
-  // Webpack config removed to fix module loading errors
-  // If needed, add back with minimal configuration
-  
+
+  /**
+   * Windows: webpack’s default filesystem cache under `.next/cache/webpack` often races with
+   * hot restarts, `next.config` reloads, antivirus, or a second dev server on another port —
+   * leading to ENOENT on `*.pack.gz` and client runtime `options.factory` / `.call` errors.
+   * Disabling persistent cache in dev trades a bit of compile speed for stability.
+   */
+  webpack: (config, { dev }) => {
+    if (dev && process.platform === 'win32') {
+      config.cache = false
+    }
+    return config
+  },
+
   // Headers for caching and security
   async headers() {
     return [
@@ -60,31 +71,16 @@ const nextConfig = {
         ],
       },
       {
+        // Never override Content-Type here: this pattern matches CSS, fonts, and JS.
+        // Forcing application/javascript breaks styles + RSC/webpack under X-Content-Type-Options: nosniff.
         source: '/_next/static/:path*',
         headers: [
           {
             key: 'Cache-Control',
-            value: 'public, max-age=31536000, immutable'
+            value: 'public, max-age=31536000, immutable',
           },
-          {
-            key: 'Content-Type',
-            value: 'application/javascript; charset=utf-8'
-          }
         ],
       },
-      {
-        source: '/_next/static/css/:path*',
-        headers: [
-          {
-            key: 'Content-Type',
-            value: 'text/css; charset=utf-8'
-          },
-          {
-            key: 'Cache-Control',
-            value: 'public, max-age=31536000, immutable'
-          }
-        ],
-      }
     ]
   },
 }

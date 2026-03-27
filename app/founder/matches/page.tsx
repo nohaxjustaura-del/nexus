@@ -174,7 +174,7 @@ export default async function MatchesPage({
   // If no analysis, show prompt to use AI analyzer
   if (!hasAnalysis) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50/30">
+      <div className="min-h-screen bg-background">
         <div className="container mx-auto max-w-6xl px-4 py-4 md:py-6">
           {/* Tab Navigation */}
           <div className="mb-4 border-b">
@@ -220,7 +220,7 @@ export default async function MatchesPage({
               </CardDescription>
               
               <div className="mx-auto mb-8 max-w-2xl space-y-4 text-left">
-                <div className="flex items-start gap-4 rounded-lg border bg-white/50 p-4">
+                <div className="flex items-start gap-4 rounded-lg border border-border bg-card/80 p-4">
                   <Sparkles className="mt-1 h-6 w-6 shrink-0 text-primary" />
                   <div>
                     <h3 className="mb-1 font-semibold">AI-Powered Analysis</h3>
@@ -229,7 +229,7 @@ export default async function MatchesPage({
                     </p>
                   </div>
                 </div>
-                <div className="flex items-start gap-4 rounded-lg border bg-white/50 p-4">
+                <div className="flex items-start gap-4 rounded-lg border border-border bg-card/80 p-4">
                   <Target className="mt-1 h-6 w-6 shrink-0 text-primary" />
                   <div>
                     <h3 className="mb-1 font-semibold">Detailed Match Breakdown</h3>
@@ -238,7 +238,7 @@ export default async function MatchesPage({
                     </p>
                   </div>
                 </div>
-                <div className="flex items-start gap-4 rounded-lg border bg-white/50 p-4">
+                <div className="flex items-start gap-4 rounded-lg border border-border bg-card/80 p-4">
                   <TrendingUp className="mt-1 h-6 w-6 shrink-0 text-primary" />
                   <div>
                     <h3 className="mb-1 font-semibold">Actionable Insights</h3>

@@ -39,6 +39,8 @@ export interface WebSearchResponse {
   results: WebSearchResult[]
   query: string
   responseTime: number
+  /** Tavily synthesized answer when includeAnswer: true (improves downstream extraction) */
+  answer?: string
   /** Tavily-reported API credits for this request when includeUsage was sent */
   tavilyCredits?: number
 }
@@ -98,7 +100,9 @@ export async function searchWeb(
     }))
 
     const responseTime = Date.now() - startTime
-    const usage = (response as { usage?: { credits?: number } }).usage
+    const raw = response as { answer?: string; usage?: { credits?: number } }
+    const answer = typeof raw.answer === 'string' && raw.answer.trim() ? raw.answer.trim() : undefined
+    const usage = raw.usage
     const tavilyCredits = typeof usage?.credits === 'number' ? usage.credits : undefined
 
     if (results.length === 0) {
@@ -113,6 +117,7 @@ export async function searchWeb(
       results,
       query,
       responseTime,
+      answer,
       tavilyCredits,
     }
   } catch (error: any) {
@@ -138,7 +143,8 @@ export async function searchVCInfo(firmName: string, additionalContext?: string)
     ? `${firmName} ${additionalContext} investment thesis recent deals portfolio`
     : `${firmName} VC investment thesis recent deals portfolio ${year - 1} ${year}`
 
-  return searchWeb(query, 5, 'advanced')
+  const max = Math.min(8, Math.max(5, parseInt(process.env.TAVILY_VC_SEARCH_MAX_RESULTS || '6', 10) || 6))
+  return searchWeb(query, max, 'advanced', { includeUsage: true })
 }
 
 /**
@@ -196,4 +202,68 @@ Content: ${result.content.substring(0, 500)}${result.content.length > 500 ? '...
  */
 export function isWebSearchAvailable(): boolean {
   return !!process.env.TAVILY_API_KEY && !!getTavilyClient()
+}
+
+/**
+ * Deep-read top URLs via Tavily extract (optional elsewhere; VC research pipeline uses Exa-only).
+ */
+export async function tavilyExtractUrlsForResearch(
+  urls: string[],
+  firmName: string,
+): Promise<{ text: string; credits?: number }> {
+  const client = getTavilyClient()
+  if (!client || urls.length === 0) {
+    return { text: '' }
+  }
+
+  const max = Math.min(
+    10,
+    Math.max(4, parseInt(process.env.VC_RESEARCH_TAVILY_EXTRACT_MAX_URLS || '8', 10) || 8),
+  )
+  const clean = [...new Set(urls.map((u) => normalizeHttpUrl(u)).filter((u): u is string => !!u))].slice(
+    0,
+    max,
+  )
+  if (!clean.length) return { text: '' }
+
+  const startTime = Date.now()
+  try {
+    const res = await client.extract(clean, {
+      extractDepth: 'advanced',
+      format: 'text',
+      includeUsage: true,
+      query: `Investment firm "${firmName}": thesis, fund size / check size, stages, sectors, geography, portfolio companies, value-add, website, application process.`,
+      timeout: 55,
+    })
+    const cred = res.usage?.credits
+    const parts = (res.results || []).map((r) => {
+      const title = r.title ?? r.url ?? 'untitled'
+      const body = (r.rawContent || '').slice(0, 5200)
+      return `[extract: ${title}]\n${body}`
+    })
+    const failed = (res as { failedResults?: unknown[] }).failedResults?.length ?? 0
+    console.log(
+      `[WEB-SEARCH] Tavily extract: ${parts.length} page(s), ${failed} failed, ${Date.now() - startTime}ms`,
+    )
+    return {
+      text: parts.join('\n\n'),
+      credits: typeof cred === 'number' ? cred : undefined,
+    }
+  } catch (error: any) {
+    const msg = error?.message || String(error)
+    console.error('[WEB-SEARCH] Tavily extract failed:', msg)
+    return { text: '' }
+  }
+}
+
+function normalizeHttpUrl(u: string): string | null {
+  const s = u.trim()
+  if (!/^https?:\/\//i.test(s)) return null
+  try {
+    const x = new URL(s)
+    x.hash = ''
+    return x.toString()
+  } catch {
+    return null
+  }
 }

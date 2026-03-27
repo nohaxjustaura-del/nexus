@@ -213,8 +213,8 @@ export function PitchDeckAnalysisTab() {
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="font-semibold text-lg mb-2">Get Feedback from YC-Funded Founders</h3>
-                  <p className="text-sm text-slate-600 mb-1">Get personalized feedback from Inigo & William (YC-backed founders)</p>
-                  <p className="text-xs text-slate-500">Improve your score and get actionable advice from real investors</p>
+                  <p className="text-sm text-muted-foreground mb-1">Get personalized feedback from Inigo & William (YC-backed founders)</p>
+                  <p className="text-xs text-muted-foreground/85">Improve your score and get actionable advice from real investors</p>
                 </div>
                 <Button 
                   onClick={async () => {
@@ -271,7 +271,7 @@ export function PitchDeckAnalysisTab() {
             </CardHeader>
             <CardContent>
               <div className="prose prose-sm max-w-none">
-                <div className="whitespace-pre-wrap text-slate-700">{result.founderFeedback}</div>
+                <div className="whitespace-pre-wrap text-muted-foreground">{result.founderFeedback}</div>
               </div>
             </CardContent>
           </Card>
@@ -393,7 +393,7 @@ export function PitchDeckAnalysisTab() {
                     href={fellowship.url} 
                     target="_blank" 
                     rel="noopener noreferrer"
-                    className="p-4 rounded-lg border-2 border-purple-200 bg-white hover:border-purple-400 transition-colors group"
+                    className="p-4 rounded-lg border border-purple-500/35 bg-card hover:border-purple-400/55 transition-colors group"
                   >
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex-1">
@@ -472,10 +472,10 @@ export function PitchDeckAnalysisTab() {
                                       <AlertCircle className="h-4 w-4 shrink-0 mt-0.5 text-orange-500" />
                                     )}
                                     <div className="flex-1">
-                                      <div className="font-medium text-slate-700">{detail.category}</div>
-                                      <div className="text-xs text-slate-500 mt-0.5">{detail.explanation}</div>
+                                      <div className="font-medium text-muted-foreground">{detail.category}</div>
+                                      <div className="text-xs text-muted-foreground/85 mt-0.5">{detail.explanation}</div>
                                       {detail.evidence && detail.evidence.length > 0 && (
-                                        <div className="text-xs text-slate-400 mt-1 italic">
+                                        <div className="text-xs text-muted-foreground/65 mt-1 italic">
                                           {detail.evidence.slice(0, 2).join(' • ')}
                                         </div>
                                       )}
@@ -508,13 +508,13 @@ export function PitchDeckAnalysisTab() {
                               Live VC Intelligence
                             </h5>
                             {match.livePulse.summary.recentPortfolio && (
-                              <p className="text-xs text-slate-700">{match.livePulse.summary.recentPortfolio}</p>
+                              <p className="text-xs text-muted-foreground">{match.livePulse.summary.recentPortfolio}</p>
                             )}
                             {match.livePulse.summary.currentHeat && (
-                              <p className="text-xs text-slate-700">{match.livePulse.summary.currentHeat}</p>
+                              <p className="text-xs text-muted-foreground">{match.livePulse.summary.currentHeat}</p>
                             )}
                             {match.livePulse.summary.founderAlignment && (
-                              <p className="text-xs text-slate-700">{match.livePulse.summary.founderAlignment}</p>
+                              <p className="text-xs text-muted-foreground">{match.livePulse.summary.founderAlignment}</p>
                             )}
                           </div>
                         )}
@@ -570,7 +570,7 @@ export function PitchDeckAnalysisTab() {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid md:grid-cols-3 gap-4">
-            <div className="p-4 rounded-lg bg-white/60 border border-primary/10">
+            <div className="p-4 rounded-lg bg-card/75 border border-primary/10">
               <div className="flex items-center gap-2 mb-2">
                 <Target className="h-5 w-5 text-primary" />
                 <h4 className="font-semibold text-sm">Perfect VC Matches</h4>
@@ -579,7 +579,7 @@ export function PitchDeckAnalysisTab() {
                 Our AI analyzes your pitch deck and finds VCs that are the perfect fit for your business model, stage, sector, and traction.
               </p>
             </div>
-            <div className="p-4 rounded-lg bg-white/60 border border-primary/10">
+            <div className="p-4 rounded-lg bg-card/75 border border-primary/10">
               <div className="flex items-center gap-2 mb-2">
                 <TrendingUp className="h-5 w-5 text-primary" />
                 <h4 className="font-semibold text-sm">Tailored Recommendations</h4>
@@ -588,7 +588,7 @@ export function PitchDeckAnalysisTab() {
                 Get personalized suggestions on what to improve in your pitch deck and how to better position your startup for each VC.
               </p>
             </div>
-            <div className="p-4 rounded-lg bg-white/60 border border-primary/10">
+            <div className="p-4 rounded-lg bg-card/75 border border-primary/10">
               <div className="flex items-center gap-2 mb-2">
                 <Lightbulb className="h-5 w-5 text-primary" />
                 <h4 className="font-semibold text-sm">Actionable Insights</h4>
@@ -653,7 +653,7 @@ export function PitchDeckAnalysisTab() {
                 Cost: {PITCH_DECK_CREDIT_COST} credits
                 {credits && (
                   <span className="ml-2">
-                    • You have: <span className="font-semibold text-slate-900">{credits.credits ?? 0}</span> credits
+                    • You have: <span className="font-semibold text-foreground">{credits.credits ?? 0}</span> credits
                     {credits.isPremium && <Badge variant="secondary" className="ml-2 text-xs">Premium</Badge>}
                   </span>
                 )}

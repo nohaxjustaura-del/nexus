@@ -63,6 +63,15 @@ export function hasOpenRouterKey(): boolean {
   return !!(process.env.OPENROUTER_API_KEY)
 }
 
+/** Model for VC JSON extraction (OpenRouter id, e.g. deepseek/deepseek-chat). */
+export function getVcExtractionModel(): string {
+  const m = process.env.OPENROUTER_VC_EXTRACTION_MODEL?.trim()
+  if (m) return m
+  return 'deepseek/deepseek-chat'
+}
+
+const VC_EXTRACTION_FALLBACK_MODEL = 'openai/gpt-4o-mini'
+
 /**
  * Generate text using OpenRouter
  */
@@ -94,60 +103,82 @@ export async function openrouterGenerateText(
 /**
  * Generate JSON using OpenRouter
  */
+function parseJsonFromModelContent(content: string, model: string): unknown {
+  let jsonText = content.trim()
+  const codeBlockMatch = jsonText.match(/```(?:json)?\s*(\{[\s\S]*?\})\s*```/)
+  if (codeBlockMatch) {
+    jsonText = codeBlockMatch[1]
+  }
+  const firstBrace = jsonText.indexOf('{')
+  const lastBrace = jsonText.lastIndexOf('}')
+  if (firstBrace >= 0 && lastBrace > firstBrace) {
+    jsonText = jsonText.slice(firstBrace, lastBrace + 1)
+  }
+  return JSON.parse(jsonText)
+}
+
 export async function openrouterGenerateJson<T = any>(options: {
   system: string
   user: string
   temperature?: number
   model?: string
+  /** If true (default), retry once with a small OpenRouter model when JSON parse fails */
+  retryOnParseError?: boolean
 }): Promise<T> {
   const client = getOpenRouterClient()
   if (!client) {
     throw new Error('OpenRouter not configured. Set OPENROUTER_API_KEY.')
   }
 
-  const model = options.model || 'deepseek/deepseek-chat' // FREE model!
-  
-  console.log(`[OPENROUTER] 🤖 Using model: ${model} (FREE)`)
-  
-  const response = await client.chat.completions.create({
-    model,
-    messages: [
-      { role: 'system', content: options.system + '\n\nReturn ONLY valid JSON. No markdown, no code blocks, no explanations.' },
-      { role: 'user', content: options.user + '\n\nIMPORTANT: Respond with ONLY the JSON object. No markdown code fences.' },
-    ],
-    temperature: options.temperature ?? 0.7,
-    max_tokens: 4000,
-  })
+  const primaryModel = options.model || 'deepseek/deepseek-chat'
+  const retryOnParseError = options.retryOnParseError !== false
 
-  const content = response.choices[0]?.message?.content || '{}'
-  
-  console.log(`[OPENROUTER] 📄 Response length: ${content.length}, starts: ${content.substring(0, 100)}`)
-  
-  // Extract JSON from response (handles markdown code blocks and extra text)
-  let jsonText = content.trim()
-  
-  // Remove markdown code blocks if present
-  const codeBlockMatch = jsonText.match(/```(?:json)?\s*(\{[\s\S]*?\})\s*```/)
-  if (codeBlockMatch) {
-    jsonText = codeBlockMatch[1]
-    console.log(`[OPENROUTER] 🔧 Extracted from markdown code block`)
+  const run = async (model: string): Promise<T> => {
+    console.log(`[OPENROUTER] 🤖 Using model: ${model}`)
+
+    const response = await client.chat.completions.create({
+      model,
+      messages: [
+        {
+          role: 'system',
+          content:
+            options.system + '\n\nReturn ONLY valid JSON. No markdown, no code blocks, no explanations.',
+        },
+        {
+          role: 'user',
+          content:
+            options.user +
+            '\n\nIMPORTANT: Respond with ONLY the JSON object. No markdown code fences.',
+        },
+      ],
+      temperature: options.temperature ?? 0.7,
+      max_tokens: 4000,
+    })
+
+    const content = response.choices[0]?.message?.content || '{}'
+    console.log(`[OPENROUTER] 📄 Response length: ${content.length}, starts: ${content.substring(0, 100)}`)
+
+    try {
+      return parseJsonFromModelContent(content, model) as T
+    } catch (parseError: any) {
+      console.error(`[OPENROUTER] ❌ JSON parse error:`, parseError.message)
+      console.error(`[OPENROUTER] Raw content:`, content.substring(0, 500))
+      throw new Error(`Failed to parse JSON from ${model}: ${parseError.message}`)
+    }
   }
-  
-  // Find JSON object boundaries
-  const firstBrace = jsonText.indexOf('{')
-  const lastBrace = jsonText.lastIndexOf('}')
-  if (firstBrace >= 0 && lastBrace > firstBrace) {
-    jsonText = jsonText.slice(firstBrace, lastBrace + 1)
-  }
-  
-  console.log(`[OPENROUTER] ✅ Parsing JSON...`)
-  
+
   try {
-    return JSON.parse(jsonText)
-  } catch (parseError: any) {
-    console.error(`[OPENROUTER] ❌ JSON parse error:`, parseError.message)
-    console.error(`[OPENROUTER] Raw content:`, content.substring(0, 500))
-    throw new Error(`Failed to parse JSON from ${model}: ${parseError.message}`)
+    return await run(primaryModel)
+  } catch (e: any) {
+    if (
+      retryOnParseError &&
+      primaryModel !== VC_EXTRACTION_FALLBACK_MODEL &&
+      /parse JSON|JSON/i.test(String(e?.message || e))
+    ) {
+      console.warn(`[OPENROUTER] Retrying with fallback model: ${VC_EXTRACTION_FALLBACK_MODEL}`)
+      return await run(VC_EXTRACTION_FALLBACK_MODEL)
+    }
+    throw e
   }
 }
 

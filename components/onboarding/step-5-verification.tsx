@@ -81,7 +81,7 @@ export function Step5Verification({
                 if (!res.ok) throw new Error(data.error || 'Upload failed')
                 setIdUploaded(true)
                 toast.success(
-                  "We’ve received your ID. Our team will verify your account—please check back in a little while.",
+                  "We’ve received your ID. Our team will verify your account. Please check back in a little while.",
                   8000
                 )
               } catch (e: any) {

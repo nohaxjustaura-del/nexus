@@ -55,14 +55,11 @@ export default function VCDashboard() {
   const [vcProfile, setVcProfile] = useState<any>(null)
   const [currentPage, setCurrentPage] = useState(1)
   const itemsPerPage = 10
-  const [isAdmin, setIsAdmin] = useState(false)
-
   useEffect(() => {
     async function loadData() {
       try {
         const authRes = await fetch('/api/auth/check', { credentials: 'include' })
-        const authData = await authRes.json().catch(() => ({}))
-        setIsAdmin(Boolean(authData?.isAdmin))
+        await authRes.json().catch(() => ({}))
 
         const profileRes = await fetch('/api/vc/profile', { credentials: 'include' })
         if (!profileRes.ok) {
@@ -115,29 +112,7 @@ export default function VCDashboard() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Modern Navigation */}
-      <div className="border-b border-border/80 bg-background/90 backdrop-blur-xl sticky top-0 z-50">
-        <div className="container mx-auto max-w-7xl px-4">
-          <nav className="flex items-center gap-8 h-14">
-            <Link href="/vc/dashboard" className="text-sm font-semibold text-primary border-b-2 border-primary pb-4 -mb-px transition-all">
-              Dashboard
-            </Link>
-            <Link href="/vc/claim" className="text-sm font-medium text-muted-foreground hover:text-primary transition-all pb-4 -mb-px hover:border-b-2 hover:border-primary">
-              Edit Profile
-            </Link>
-            <Link href="/account" className="text-sm font-medium text-muted-foreground hover:text-primary transition-all pb-4 -mb-px hover:border-b-2 hover:border-primary">
-              Account
-            </Link>
-            {isAdmin && (
-              <Link href="/admin/dashboard" className="text-sm font-semibold text-amber-700 hover:text-amber-800 transition-all pb-4 -mb-px hover:border-b-2 hover:border-amber-600">
-                Admin
-              </Link>
-            )}
-          </nav>
-        </div>
-      </div>
-
-      <div className="container mx-auto max-w-7xl px-4 py-8">
+      <div className="container mx-auto max-w-7xl px-4 py-8 sm:px-6">
         {/* Hero Welcome */}
         <div className="mb-8 animate-slide-up">
           <h1 className="mb-2 text-4xl font-bold bg-gradient-to-r from-foreground via-primary to-foreground bg-clip-text text-transparent">

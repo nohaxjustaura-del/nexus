@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import { usePathname } from 'next/navigation'
+import { cn } from '@/lib/utils'
 
 interface ProtectedNavLinkProps {
   href: string
@@ -11,6 +13,7 @@ interface ProtectedNavLinkProps {
 }
 
 export function ProtectedNavLink({ href, children, className, publicRoute = false }: ProtectedNavLinkProps) {
+  const pathname = usePathname()
   const [mounted, setMounted] = useState(false)
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null)
   // Start with the original href to match server render
@@ -49,10 +52,21 @@ export function ProtectedNavLink({ href, children, className, publicRoute = fals
   // Only update after mount
   const finalHref = mounted ? linkHref : href
 
+  const pathMatches =
+    pathname === href || (href.length > 1 && pathname != null && pathname.startsWith(`${href}/`))
+  const showActive =
+    pathMatches && (publicRoute || isAuthenticated === true) && mounted
+
   return (
-    <Link 
-      href={finalHref} 
-      className={className}
+    <Link
+      href={finalHref}
+      className={cn(
+        'rounded-full px-3 py-1.5 text-sm font-medium transition-colors',
+        showActive
+          ? 'bg-primary/15 text-foreground ring-1 ring-primary/25'
+          : 'text-muted-foreground hover:bg-foreground/[0.06] hover:text-foreground',
+        className
+      )}
       prefetch={publicRoute || isAuthenticated === true}
     >
       {children}

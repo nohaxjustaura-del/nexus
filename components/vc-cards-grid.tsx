@@ -227,7 +227,7 @@ function VCCardsGrid({ investors, profileComplete, bookmarkedIds, onBookmarkChan
   }
 
   return (
-    <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+    <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 xl:gap-6">
       {validInvestors.map((investor) => {
         try {
           const truncatedDescription = generateTruncatedDescription(investor)

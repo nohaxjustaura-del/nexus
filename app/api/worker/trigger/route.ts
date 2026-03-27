@@ -11,6 +11,7 @@ import { researchVCsBatch } from '@/scripts/auto-research-vcs'
 import { getLiveInvestorPulse } from '@/lib/exa-service'
 import { logger } from '@/lib/logger'
 import { isAdminEmail } from '@/lib/constants'
+import { syncRecentPublicDiscoverableToVcDirectory } from '@/lib/vc-supabase-sync'
 
 export const dynamic = 'force-dynamic'
 
@@ -36,8 +37,57 @@ export async function POST(request: NextRequest) {
         await researchVCsBatch(vcsToResearch, {
           delayBetweenSearches: 2000,
           maxConcurrent: 2,
+          mode: 'full',
         })
         result = { updated: vcsToResearch.length }
+        break
+      }
+
+      case 'vc-thesis-research': {
+        const limit = Math.min(50, Math.max(1, params?.limit ?? 15))
+        const rows = await db.investor.findMany({
+          where: { OR: [{ thesis: null }, { thesis: '' }] },
+          select: { firmName: true, thesis: true },
+          take: limit * 2,
+          orderBy: { updatedAt: 'asc' },
+        })
+        const names = rows
+          .filter((r) => !r.thesis || r.thesis.trim().length < 20)
+          .slice(0, limit)
+          .map((r) => r.firmName)
+        await researchVCsBatch(names, {
+          delayBetweenSearches: 2500,
+          maxConcurrent: 2,
+          mode: 'thesis',
+        })
+        result = { mode: 'thesis', firms: names.length }
+        break
+      }
+
+      case 'vc-profile-research': {
+        const limit = Math.min(50, Math.max(1, params?.limit ?? 15))
+        const rows = await db.investor.findMany({
+          where: {
+            OR: [
+              { checkSizeMin: 0 },
+              { portfolio: null },
+              { portfolio: '' },
+              { stages: '[]' },
+              { sectors: '[]' },
+              { bio: '' },
+            ],
+          },
+          select: { firmName: true },
+          take: limit,
+          orderBy: { updatedAt: 'asc' },
+        })
+        const names = rows.map((r) => r.firmName)
+        await researchVCsBatch(names, {
+          delayBetweenSearches: 2500,
+          maxConcurrent: 2,
+          mode: 'profile',
+        })
+        result = { mode: 'profile', firms: names.length }
         break
       }
 
@@ -62,6 +112,17 @@ export async function POST(request: NextRequest) {
         }
 
         result = { total: vcs.length, enriched }
+        break
+      }
+
+      case 'vc-directory-sync': {
+        const maxRows = Math.min(400, Math.max(10, params?.maxRows ?? 150))
+        const lookbackHours = Math.min(168, Math.max(6, params?.lookbackHours ?? 72))
+        const dir = await syncRecentPublicDiscoverableToVcDirectory({
+          maxRows,
+          lookbackMs: lookbackHours * 60 * 60 * 1000,
+        })
+        result = dir
         break
       }
 
@@ -92,7 +153,9 @@ export async function POST(request: NextRequest) {
 
       default:
         return NextResponse.json(
-          { error: `Unknown job type: ${jobType}. Valid types: vc-research, exa-enrichment, data-validation` },
+          {
+            error: `Unknown job type: ${jobType}. Valid: vc-research, vc-thesis-research, vc-profile-research, exa-enrichment, vc-directory-sync, data-validation`,
+          },
           { status: 400 }
         )
     }

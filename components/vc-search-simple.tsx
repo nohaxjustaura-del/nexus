@@ -72,8 +72,8 @@ function VCSearchSimple() {
 
   return (
     <div className="w-full max-w-2xl">
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+      <div className="relative rounded-xl ring-1 ring-white/[0.05]">
+        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground pointer-events-none z-10" />
         <Input
           id="vc-search-input"
           name="vc-search"
@@ -81,7 +81,7 @@ function VCSearchSimple() {
           placeholder="Search by firm name, sector, stage, or location..."
           value={searchQuery}
           onChange={(e) => handleSearch(e.target.value)}
-          className="pl-10 pr-10 h-12 text-base border border-border bg-background focus-visible:ring-1 focus-visible:ring-foreground/20"
+          className="pl-10 pr-10 h-12 text-base rounded-xl border-border/70 bg-card/70 backdrop-blur-md shadow-[inset_0_1px_0_0_hsl(var(--foreground)/0.04)] placeholder:text-muted-foreground/75 focus-visible:border-primary/40 focus-visible:ring-2 focus-visible:ring-primary/25"
           autoComplete="off"
         />
         {searchQuery && (
@@ -89,7 +89,7 @@ function VCSearchSimple() {
             variant="ghost"
             size="sm"
             onClick={clearSearch}
-            className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8 p-0 hover:bg-muted/70"
+            className="absolute right-1 top-1/2 z-10 -translate-y-1/2 h-8 w-8 p-0 hover:bg-muted/70"
             aria-label="Clear search"
           >
             <X className="h-4 w-4" />
@@ -102,21 +102,21 @@ function VCSearchSimple() {
           <button
             type="button"
             onClick={() => handleSearch('AI')}
-            className="px-2.5 py-1 rounded-md border border-border bg-muted/50 hover:bg-muted transition-colors text-foreground/80"
+            className="px-2.5 py-1 rounded-md border border-border/80 bg-card/60 hover:bg-muted/80 hover:border-border transition-colors text-muted-foreground hover:text-foreground"
           >
             AI
           </button>
           <button
             type="button"
             onClick={() => handleSearch('Seed')}
-            className="px-2.5 py-1 rounded-md border border-border bg-muted/50 hover:bg-muted transition-colors text-foreground/80"
+            className="px-2.5 py-1 rounded-md border border-border/80 bg-card/60 hover:bg-muted/80 hover:border-border transition-colors text-muted-foreground hover:text-foreground"
           >
             Seed
           </button>
           <button
             type="button"
             onClick={() => handleSearch('San Francisco')}
-            className="px-2.5 py-1 rounded-md border border-border bg-muted/50 hover:bg-muted transition-colors text-foreground/80"
+            className="px-2.5 py-1 rounded-md border border-border/80 bg-card/60 hover:bg-muted/80 hover:border-border transition-colors text-muted-foreground hover:text-foreground"
           >
             San Francisco
           </button>

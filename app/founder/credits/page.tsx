@@ -19,6 +19,7 @@ import {
   Calendar,
 } from 'lucide-react'
 import Link from 'next/link'
+import DailyClaim from '@/components/daily-claim'
 
 interface CreditUsage {
   feature: string
@@ -146,6 +147,12 @@ export default function CreditsPage() {
               </div>
             </CardContent>
           </Card>
+
+          {!credits?.isPremium && (
+            <div className="mt-6">
+              <DailyClaim />
+            </div>
+          )}
         </div>
 
         {/* Stats */}
