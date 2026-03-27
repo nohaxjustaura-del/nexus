@@ -70,18 +70,12 @@ export async function POST(request: NextRequest) {
     // magic link. This avoids the PKCE code-verifier cookie issue where the
     // code verifier set during login isn't present when the link is clicked from
     // an email client.
-    // #region agent log
-    fetch('http://127.0.0.1:7471/ingest/0f685c44-f6c8-4b99-b23e-84e0cc9d4f08',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'2f72c9'},body:JSON.stringify({sessionId:'2f72c9',location:'app/api/auth/login/route.ts:23',message:'signInWithOtp called WITHOUT emailRedirectTo',data:{email:normalizedEmail,hasEmailRedirectTo:false},timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
     const { error } = await supabase.auth.signInWithOtp({
       email: normalizedEmail,
       options: {
         shouldCreateUser: false,
       },
     })
-    // #region agent log
-    fetch('http://127.0.0.1:7471/ingest/0f685c44-f6c8-4b99-b23e-84e0cc9d4f08',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'2f72c9'},body:JSON.stringify({sessionId:'2f72c9',location:'app/api/auth/login/route.ts:31',message:'signInWithOtp result',data:{hasError:!!error,errorMsg:error?.message||null},timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
 
     if (error) {
       console.error('Supabase login OTP error:', error)

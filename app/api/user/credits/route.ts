@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { getCurrentUser } from '@/lib/auth'
+import { getCurrentUserOrAdmin } from '@/lib/auth'
 import { ADMIN_EMAIL, CREDIT_COSTS } from '@/lib/constants'
 import { logger } from '@/lib/logger'
 
@@ -9,7 +9,7 @@ export const dynamic = 'force-dynamic'
 // GET: Get user credits
 export async function GET(request: NextRequest) {
   try {
-    const user = await getCurrentUser()
+    const user = await getCurrentUserOrAdmin()
     
     if (!user) {
       return NextResponse.json(
@@ -78,7 +78,7 @@ export async function GET(request: NextRequest) {
 // POST: Use credits or unlock premium matches
 export async function POST(request: NextRequest) {
   try {
-    const user = await getCurrentUser()
+    const user = await getCurrentUserOrAdmin()
     
     if (!user) {
       return NextResponse.json(

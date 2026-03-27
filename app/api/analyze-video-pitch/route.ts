@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { getUserFromRequest } from '@/lib/auth'
+import { getUserFromRequestOrAdmin } from '@/lib/auth'
 import { analyzeVideoPitch, VideoPitchFeatures } from '@/lib/ai'
-import { intelligentMatchVCs } from '@/lib/intelligent-matching'
-import { aiNativeMatchVCs } from '@/lib/ai-native-matching'
+import { runMatchingPipeline } from '@/lib/matching/matching-orchestrator'
 import { validateVideoPitch } from '@/lib/content-validator'
 import { ADMIN_EMAIL, CREDIT_COSTS } from '@/lib/constants'
 import { generatePitchEmbedding, rankVCsForPitch } from '@/lib/embeddings'
@@ -12,7 +11,8 @@ import { logger } from '@/lib/logger'
 import { rateLimitMiddleware, RATE_LIMITS } from '@/lib/rate-limit'
 import { saveFileToDisk, buildFounderSnapshot } from '@/lib/file-storage'
 import { getDeepMarketContext } from '@/lib/market-intelligence'
-import { runUniversalAnalysis, type FounderDossier } from '@/lib/universal-analysis-engine'
+import { runScoringPipeline } from '@/lib/scoring/scoring-pipeline'
+import { getComprehensiveFounderContext } from '@/lib/founder-context'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const user = await getUserFromRequest(request)
+    const user = await getUserFromRequestOrAdmin(request)
     
     if (!user) {
       return NextResponse.json(
@@ -456,7 +456,6 @@ export async function POST(request: NextRequest) {
     
     try {
       // Get comprehensive founder context for analysis
-      const { getComprehensiveFounderContext } = await import('@/lib/founder-context')
       founderContext = await getComprehensiveFounderContext(founder.email)
       
       // Enhance founder object with all context data
@@ -467,6 +466,9 @@ export async function POST(request: NextRequest) {
       }
       
       pitchAnalysis = await analyzeVideoPitch(transcriptText, enhancedFounder)
+      // #region agent log
+      fetch('http://127.0.0.1:7471/ingest/0f685c44-f6c8-4b99-b23e-84e0cc9d4f08',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'e61823'},body:JSON.stringify({sessionId:'e61823',location:'analyze-video-pitch/route.ts:468',message:'H1+H3: pitchAnalysis after analyzeVideoPitch',data:{hasPitchAnalysis:!!pitchAnalysis,startupNameField:(pitchAnalysis as any)?.startupName||'MISSING',sectorFitKeys:Object.keys(pitchAnalysis?.sectorFit||{}),tractionRevenue:pitchAnalysis?.tractionMetrics?.revenue,tractionUsers:pitchAnalysis?.tractionMetrics?.users,strengthsCount:pitchAnalysis?.strengths?.length,productDiffs:pitchAnalysis?.productFit?.differentiators},timestamp:Date.now(),hypothesisId:'H1+H3'})}).catch(()=>{});
+      // #endregion
     } catch (aiError: any) {
       logger.error('[ANALYZE-VIDEO-PITCH] AI analysis error:', aiError)
       
@@ -558,171 +560,113 @@ export async function POST(request: NextRequest) {
       where: { verified: true },
     })
 
-    // Use AI-Native Matching (combines intelligent matching + FAISS vector similarity)
+    // Use Matching Pipeline v3
     let matchedVCs: any[] = []
+    let matchPipelineResult: any = null
     try {
-      logger.log('[ANALYZE-VIDEO-PITCH] Starting AI-native matching with FAISS...')
+      logger.log('[ANALYZE-VIDEO-PITCH] Starting matching pipeline v3...')
       logger.log(`[ANALYZE-VIDEO-PITCH] Transcript length: ${transcriptText.length} characters`)
-      
-      // Use aiNativeMatchVCs which combines:
-      // 1. Rule-based intelligent matching (stage, sector, traction)
-      // 2. FAISS vector similarity (semantic understanding)
-      // 3. Comprehensive founder context (profile, pitch, video, resume)
-      // 🆕 ENHANCE: Pass transcript to matching for context-aware recommendations
-      // Use enhanced founder with all profile data for matching
-      matchedVCs = await aiNativeMatchVCs(
-        enhancedFounder, // Use enhanced founder with ALL profile data
-        investors,
-        {
-          pitchAnalysis: pitchAnalysis,
-          transcript: transcriptText, // Use REAL transcript from video
-          resumeFeatures: undefined, // Will be extracted from founder profile if available
-          useFAISS: true, // Enable FAISS for vector similarity
-        }
+
+      matchPipelineResult = await runMatchingPipeline(
+        founderContext || enhancedFounder as unknown as import('@/lib/founder-context').ComprehensiveFounderContext,
+        pitchAnalysis,
+        transcriptText,
       )
 
-      logger.log(`[ANALYZE-VIDEO-PITCH] AI-native matching completed: ${matchedVCs.length} matches found`)
+      // Adapter: expose m.investor so all downstream response code works unchanged
+      matchedVCs = matchPipelineResult.rankedInvestors.map((r: any) => ({
+        ...r,
+        investor: r.vc,
+        score: r.combinedScore,
+        intelligentScore: r.combinedScore,
+        vectorSimilarity: 0,
+        confidence: r.investmentLikelihood.confidence === 'HIGH' ? 0.95
+          : r.investmentLikelihood.confidence === 'MEDIUM' ? 0.80
+          : 0.60,
+        reasons: [],
+        suggestions: [],
+        detailedReasons: [],
+        detectedPatterns: null,
+        livePulse: null,
+        scoreSymbol: undefined,
+        scoreMeaning: undefined,
+      }))
 
-      // Enhance matches with application recommendations based on combined scores
-      matchedVCs = matchedVCs.map(match => {
-        const vc = match.investor
-        const sectors = parseJSON<string[]>(vc.sectors || '[]', [])
-        const founderSectors = parseJSON<string[]>(founder.sectors || '[]', [])
-        const sectorMatch = sectors.some((s: string) => 
-          founderSectors.some((fs: string) => 
-            fs.toLowerCase().includes(s.toLowerCase()) || 
-            s.toLowerCase().includes(fs.toLowerCase())
-          )
-        )
+      logger.log(`[ANALYZE-VIDEO-PITCH] Matching pipeline v3 completed: ${matchedVCs.length} matches found`)
 
-        // Generate application recommendations based on COMBINED score
-        const score = match.combinedScore || match.score || 0
-        const vectorSim = (match.vectorSimilarity ?? 0) || 0 // Fix NaN issue
-
-        let whyApply = `Strong ${sectorMatch ? 'sector' : 'stage'} fit with ${vc.firmName}'s investment thesis.`
-        let bestApproach = 'Warm introduction preferred'
-        let timing = 'Apply within 2-4 weeks'
-
-        if (score >= 90) {
-          whyApply = `🏆 Elite match! ${vc.firmName} actively invests in ${sectors.slice(0, 2).join(' and ')} at ${founder.stage} stage. Your pitch shows ${(vectorSim * 100).toFixed(0)}% semantic alignment with their thesis.`
-          bestApproach = 'Warm introduction through portfolio founder or mutual connection'
-          timing = 'Apply immediately - high priority match'
-        } else if (score >= 80) {
-          whyApply = `⭐️⭐️⭐️ Excellent match! ${vc.firmName} invests in ${sectors[0]} and your stage aligns. ${(vectorSim * 100).toFixed(0)}% semantic similarity indicates strong fit.`
-          bestApproach = 'Warm introduction or personalized cold email with specific thesis alignment'
-          timing = 'Apply within 1 week - strong match'
-        } else if (score >= 70) {
-          whyApply = `⭐️⭐️ Strong match with ${vc.firmName}. They invest in ${sectors[0]} and your stage aligns. ${(vectorSim * 100).toFixed(0)}% semantic similarity.`
-          bestApproach = 'Warm introduction or personalized cold email with specific thesis alignment'
-          timing = 'Apply within 1-2 weeks'
-        } else if (score >= 60) {
-          whyApply = `⭐️ Good match. ${vc.firmName} may be interested given your sector and traction. ${(vectorSim * 100).toFixed(0)}% semantic similarity.`
-          bestApproach = 'Personalized cold email highlighting specific alignment points'
-          timing = 'Apply within 2-4 weeks'
-        } else {
-          whyApply = `💡 Moderate fit. ${vc.firmName} may consider your pitch. Build more traction for stronger match.`
-          bestApproach = 'Personalized cold email highlighting specific alignment points'
-          timing = 'Apply when you have stronger traction metrics'
-        }
-
-        return {
-          ...match,
-          whyApply,
-          bestApproach,
-          timing,
-        }
-      })
     } catch (matchError: any) {
-      logger.error('[ANALYZE-VIDEO-PITCH] AI-native matching error:', matchError)
+      logger.error('[ANALYZE-VIDEO-PITCH] Matching pipeline error:', matchError)
       logger.error('[ANALYZE-VIDEO-PITCH] Error stack:', matchError?.stack)
-      
-      // Fallback to basic matching if AI-native fails
-      try {
-        logger.log('[ANALYZE-VIDEO-PITCH] Falling back to intelligent matching...')
-        const resumeLikeFeatures = {
-          basics: {},
-          education: [],
-          experience: [],
-          projects: [],
-          skills: {
-            programming: [],
-            ml: [],
-            gtm: [],
-            domain: [],
-          },
-          yearsExp: 0,
-          leadership: true,
-          traction: pitchAnalysis.tractionMetrics,
-        }
-
-        matchedVCs = await intelligentMatchVCs(
-          resumeLikeFeatures,
-          {
-            stage: founder.stage,
-            sectors: parseJSON<string[]>(founder.sectors || '[]', []),
-            fundingNeed: founder.fundingNeed,
-            location: founder.location,
-          },
-          investors
-        )
-        
-        // Add default vectorSimilarity to prevent NaN
-        matchedVCs = matchedVCs.map(m => ({
-          ...m,
-          vectorSimilarity: 0,
-          combinedScore: m.score,
-        }))
-        
-        logger.log('[ANALYZE-VIDEO-PITCH] Fallback to intelligent matching successful')
-      } catch (fallbackError: any) {
-        logger.error('[ANALYZE-VIDEO-PITCH] Fallback matching also failed:', fallbackError)
-        matchedVCs = []
-      }
+      matchedVCs = []
     }
 
     // -----------------------------------------------------------------------
-    // UNIVERSAL ANALYSIS ENGINE — rubric scoring with Exa market intelligence
+    // MULTI-PASS SCORING PIPELINE — replaces Universal Analysis Engine
     // -----------------------------------------------------------------------
-    let rubricAnalysis: any = null
+    let scoringResult: Awaited<ReturnType<typeof runScoringPipeline>> | null = null
     try {
-      const sectors = parseJSON<string[]>(founder.sectors || '[]', [])
-      const domain = sectors[0] || pitchAnalysis?.sectorFit?.primarySector || 'technology'
-      const problem = pitchAnalysis?.problemStatement || pitchAnalysis?.oneLineSummary || founder.bio?.substring(0, 300) || ''
+      // Build a video-enhanced context: override DB profile fields with data
+      // extracted from the video transcript so the scoring pipeline analyzes
+      // the PITCHED startup, not the founder's onboarding profile.
+      const baseCtx = founderContext || enhancedFounder
 
-      logger.log('[ANALYZE-VIDEO-PITCH] Running Market Intelligence + Universal Analysis Engine...')
+      // Extract startup name from transcript (patterns: "CEO of X", "building X", "X is")
+      let videoStartupName: string | null = null
+      const namePatterns = [
+        /(?:CEO|CTO|founder|co-?founder)\s+(?:of|at)\s+([A-Z][A-Za-z0-9]+)/i,
+        /(?:we(?:'re| are)\s+(?:building|creating|launching))\s+([A-Z][A-Za-z0-9]+)/i,
+        /([A-Z][A-Za-z0-9]+)\s+is\s+(?:the|a|an)\s+(?:platform|app|tool|product|company|startup|service|solution)/i,
+      ]
+      for (const pat of namePatterns) {
+        const m = transcriptText.match(pat)
+        if (m && m[1] && m[1].length > 1 && m[1].toLowerCase() !== 'the') {
+          videoStartupName = m[1]
+          break
+        }
+      }
+
+      // Extract sector from pitchAnalysis.sectorFit if available
+      const videoSectors: string[] = pitchAnalysis?.sectorFit
+        ? Object.keys(pitchAnalysis.sectorFit).filter((k: string) => (pitchAnalysis.sectorFit as any)[k] > 40)
+        : []
+
+      // Build a bio from transcript's first ~300 chars as context
+      const videoBio = transcriptText.substring(0, 400)
+
+      // Derive the stage from the video content: if the transcript mentions
+      // revenue/paying customers → "revenue"; signed clients → "pre-seed"; otherwise use DB
+      const transcriptLower = transcriptText.toLowerCase()
+      let videoStage = baseCtx.stage
+      if (transcriptLower.includes('revenue') || transcriptLower.includes('paying customer') || transcriptLower.includes('mrr'))
+        videoStage = 'revenue'
+      else if (transcriptLower.includes('signed') || transcriptLower.includes('pilot') || transcriptLower.includes('beta'))
+        videoStage = 'pre-seed'
+      else if (transcriptLower.includes('prototype') || transcriptLower.includes('mvp'))
+        videoStage = 'pre-seed'
+
+      const videoEnhancedCtx = {
+        ...baseCtx,
+        startupName: videoStartupName || baseCtx.startupName,
+        bio: videoBio,
+        sectors: videoSectors.length > 0 ? videoSectors : baseCtx.sectors,
+        stage: videoStage,
+      }
+
+      const sectors = videoEnhancedCtx.sectors || parseJSON<string[]>(founder.sectors || '[]', [])
+      const domain = sectors[0] || pitchAnalysis?.sectorFit?.primarySector || 'technology'
+      const problem = pitchAnalysis?.problemStatement || pitchAnalysis?.oneLineSummary || videoBio.substring(0, 300)
+
+      logger.log(`[ANALYZE-VIDEO-PITCH] Running Market Intelligence + Scoring Pipeline for "${videoEnhancedCtx.startupName}" (stage: ${videoEnhancedCtx.stage})...`)
 
       const marketContext = await getDeepMarketContext(domain, problem)
 
-      const dossier: FounderDossier = {
-        startup: founder.startupName || 'Unknown',
-        stage: founder.stage || 'seed',
-        sectors,
-        location: founder.location || founderContext?.location,
-        businessModel: founder.businessModel || pitchAnalysis?.businessModel,
-        summary: pitchAnalysis?.oneLineSummary || founder.bio?.substring(0, 1000) || '',
-        transcript: transcriptText?.substring(0, 1500),
-        education: founder.education || founderContext?.education,
-        university: founderContext?.universityAffiliation,
-        isStudent: founderContext?.isStudent,
-        techBackground: founderContext?.techBackground,
-        isImmigrant: founderContext?.isImmigrant,
-        isVeteran: founderContext?.isVeteran,
-        isUnderrepresented: founderContext?.isUnderrepresented,
-        cofounders: founderContext?.cofounders,
-        prevFunding: founderContext?.prevFunding,
-        revenue: founder.revenue || pitchAnalysis?.tractionMetrics?.revenue,
-        users: founder.users || pitchAnalysis?.tractionMetrics?.users,
-        growth: founder.growthRate || pitchAnalysis?.tractionMetrics?.growth,
-        mrr: pitchAnalysis?.tractionMetrics?.mrr,
-        teamSize: founder.teamSize || founderContext?.teamSize,
-        fundingNeed: founder.fundingNeed || founderContext?.fundingNeed,
-        valueAddNeeds: parseJSON<string[]>(founder.valueAddNeeds || '[]', []),
-      }
-
-      rubricAnalysis = await runUniversalAnalysis(dossier, 'VIDEO', marketContext)
-      logger.log('[ANALYZE-VIDEO-PITCH] Universal Analysis Engine completed successfully')
-    } catch (rubricError: any) {
-      logger.error('[ANALYZE-VIDEO-PITCH] Universal Analysis Engine failed (non-critical):', rubricError?.message)
+      // #region agent log
+      fetch('http://127.0.0.1:7471/ingest/0f685c44-f6c8-4b99-b23e-84e0cc9d4f08',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'e61823'},body:JSON.stringify({sessionId:'e61823',location:'analyze-video-pitch/route.ts:scoring',message:'POST-FIX: data entering runScoringPipeline',data:{startupName:videoEnhancedCtx.startupName,stage:videoEnhancedCtx.stage,sectors:videoEnhancedCtx.sectors,bioPreview:videoEnhancedCtx.bio?.substring(0,120),videoStartupNameExtracted:videoStartupName,pitchType:'VIDEO'},timestamp:Date.now(),runId:'post-fix',hypothesisId:'H2+H4+H5'})}).catch(()=>{});
+      // #endregion
+      scoringResult = await runScoringPipeline(transcriptText, videoEnhancedCtx, marketContext, "VIDEO")
+      logger.log(`[ANALYZE-VIDEO-PITCH] Scoring Pipeline completed — finalScore: ${scoringResult.finalScore}`)
+    } catch (scoringError: any) {
+      logger.error('[ANALYZE-VIDEO-PITCH] Scoring Pipeline failed (non-critical):', scoringError?.message)
     }
 
     // Save video pitch analysis
@@ -749,9 +693,10 @@ export async function POST(request: NextRequest) {
           marketAnalysis: pitchAnalysis.marketAnalysis || {},
           teamAnalysis: pitchAnalysis.teamAnalysis || {},
           productFit: pitchAnalysis.productFit || {},
-          presentationScore: pitchAnalysis.presentationScore || null,
-          contentScore: pitchAnalysis.contentScore || null,
-          overallScore: pitchAnalysis.overallScore || null,
+          overallScore: scoringResult?.finalScore ?? null,
+          scoreBreakdown: scoringResult?.scoreBreakdown ?? null,
+          categoryScores: scoringResult?.categoryScores ?? null,
+          pipelineVersion: scoringResult?.pipelineVersion ?? null,
           // Save as both "matches" (for matches page) and "matchedVCs" (legacy)
           matches: matchedVCs.slice(0, 20).map(m => ({
             investorId: m.investor.id,
@@ -819,18 +764,18 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Smart Match is now integrated into aiNativeMatchVCs above
-    // The combined scores already include vector similarity from FAISS
-    // No need for separate smartMatches - it's all in matchedVCs now
+    // Smart Match is now handled by Matching Pipeline v3 (runMatchingPipeline)
+    // The combined scores include gate-based investment likelihood + deployment scoring
 
     // Return complete results immediately
     return NextResponse.json({
       success: true,
       videoPitchId: videoPitch.id,
       analysis: {
-        overallScore: pitchAnalysis.overallScore || 0,
-        presentationScore: pitchAnalysis.presentationScore || 0,
-        contentScore: pitchAnalysis.contentScore || 0,
+        overallScore: scoringResult?.finalScore ?? 0,
+        finalScore: scoringResult?.finalScore ?? 0,
+        scoreBreakdown: scoringResult?.scoreBreakdown ?? null,
+        categoryScores: scoringResult?.categoryScores ?? null,
         strengths: pitchAnalysis.strengths || [],
         weaknesses: pitchAnalysis.weaknesses || [],
         improvements: pitchAnalysis.improvements || [],
@@ -892,8 +837,12 @@ export async function POST(request: NextRequest) {
         transcript: transcriptText.substring(0, 5000), // Include transcript for display
         // 🆕 Include detected patterns from matching
         detectedPatterns: matchedVCs[0]?.detectedPatterns || null,
-        rubricAnalysis: rubricAnalysis || null,
+        rubricAnalysis: scoringResult?.rubricCompatible ?? null,
       },
+      universityPrograms: matchPipelineResult?.universityPrograms ?? [],
+      pipelineVersion: matchPipelineResult?.pipelineVersion ?? '3.0',
+      matchingDurationMs: matchPipelineResult?.durationMs ?? 0,
+      matchingError: matchPipelineResult === null,
     }, {
       headers: { 'Content-Type': 'application/json' },
     })

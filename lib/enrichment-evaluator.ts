@@ -18,6 +18,11 @@ export interface ConflictResult {
 /**
  * Uses GPT-4o-mini to distill raw Exa search results into a strict
  * 3-sentence VC summary contextualised against the founder's pitch.
+ *
+ * @deprecated Replaced by the gate-reasoner + narrative-generator pipeline
+ * in lib/matching/. generateVCSummary() produced generic summaries that
+ * were not grounded in specific gate evidence. Retained for non-matching
+ * callsites only.
  */
 export async function generateVCSummary(
   vcName: string,

@@ -3,6 +3,18 @@
  * UNIVERSAL ANALYSIS ENGINE
  * ===============================================================================
  *
+ * @deprecated This module is superseded by the multi-pass scoring pipeline at
+ * lib/scoring/scoring-pipeline.ts.  All three route handlers (analyze-video-pitch,
+ * analyze-pitch-deck, analyze-pitch-idea) now call runScoringPipeline() instead of
+ * runUniversalAnalysis().  This file is retained for reference and any third-party
+ * integrations that have not yet migrated.
+ *
+ * TODO: Remove this file after confirming no remaining callers (post dashboard sprint).
+ *
+ * -------------------------------------------------------------------------------
+ * ORIGINAL DESCRIPTION
+ * -------------------------------------------------------------------------------
+ *
  * The "brain" behind every pitch analysis — video, text idea, or slide deck.
  *
  * Takes three inputs:

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { getCurrentUser } from '@/lib/auth'
-import { aiNativeMatchVCs } from '@/lib/ai-native-matching'
+import { getCurrentUserOrAdmin } from '@/lib/auth'
+import { runMatchingPipeline } from '@/lib/matching/matching-orchestrator'
 import { logger } from '@/lib/logger'
 import { validatePitchIdea } from '@/lib/content-validator'
 import { ADMIN_EMAIL, CREDIT_COSTS } from '@/lib/constants'
@@ -14,7 +14,7 @@ import { hasOpenRouterKey, openrouterGenerateJson } from '@/lib/openrouter'
 import { getPersonalizedVCRecommendations } from '@/lib/predictive-matching'
 import { buildFounderSnapshot } from '@/lib/file-storage'
 import { getDeepMarketContext } from '@/lib/market-intelligence'
-import { runUniversalAnalysis, type FounderDossier } from '@/lib/universal-analysis-engine'
+import { runScoringPipeline } from '@/lib/scoring/scoring-pipeline'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
     
     let user
     try {
-      user = await getCurrentUser()
+      user = await getCurrentUserOrAdmin()
     } catch (authError: any) {
       logger.error('[ANALYZE-PITCH-IDEA] Auth error:', authError)
       return NextResponse.json(
@@ -296,7 +296,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // 🚀 OPTIMIZED: Concise prompt for faster responses
+    // 🚀 OPTIMIZED: Concise prompt for faster responses — scores come from runScoringPipeline()
     const analysisPrompt = `Expert VC analyst. Analyze this pitch:
 
 ${contextPrompt ? `FOUNDER: ${contextPrompt.substring(0, 500)}\n\n` : ''}${ycTrendsAnalysis?.insights[0] ? `TREND: ${ycTrendsAnalysis.insights[0].title}\n\n` : ''}PITCH: "${idea.substring(0, 2000)}"
@@ -308,9 +308,7 @@ JSON format:
   "suggestions": ["3-5 actionable steps"],
   "marketFit": "brief assessment",
   "uniqueness": "competitive advantage",
-  "riskFactors": ["2-3 risks"],
-  "founderFit": 75,
-  "ycFitScore": 70
+  "riskFactors": ["2-3 risks"]
 }
 
 Be specific and actionable.`
@@ -320,7 +318,7 @@ Be specific and actionable.`
         system:
           'You are an expert VC analyst. Provide detailed, actionable feedback on startup pitch ideas. Always respond with valid JSON.',
         user: analysisPrompt,
-        temperature: 0.7,
+        temperature: 0.3,
         model: 'meta-llama/llama-3.3-70b-instruct', // Fast, high-quality model
       })
 
@@ -350,88 +348,51 @@ Be specific and actionable.`
         }
       }
 
-      // 🆕 AI-NATIVE MATCHING: Combined intelligent + vector matching (same as Video Pitch)
-      // Uses 60% intelligent matching + 40% FAISS vector similarity + pattern boosts
+      // Matching Pipeline v3
       const { getCachedInvestors } = await import('@/lib/investor-cache')
       const investors = await getCachedInvestors()
-      
+
       // Build enhanced founder data with all profile context
       const enhancedFounder = {
         ...founder,
         ...founderContext,
         sectors: parseJSON<string[]>(founder.sectors || '[]', []),
       }
-      
-      logger.log('[ANALYZE-PITCH-IDEA] Starting AI-native matching with FAISS...')
+
+      logger.log('[ANALYZE-PITCH-IDEA] Starting matching pipeline v3...')
       logger.log(`[ANALYZE-PITCH-IDEA] Pitch idea length: ${idea.length} characters`)
-      
-      // Use aiNativeMatchVCs which combines:
-      // 1. Rule-based intelligent matching (stage, sector, traction)
-      // 2. FAISS vector similarity (semantic understanding)
-      // 3. Pattern detection (university, accelerator, VC affiliations)
-      // 4. Comprehensive founder context
-      let matchedVCs = await aiNativeMatchVCs(
-        enhancedFounder,
-        investors,
-        {
-          pitchAnalysis: analysis,
-          transcript: idea, // Use the pitch idea text as "transcript" for pattern detection
-          resumeFeatures: undefined,
-          useFAISS: true,
-        }
-      )
-      
-      logger.log(`[ANALYZE-PITCH-IDEA] AI-native matching completed: ${matchedVCs.length} matches found`)
-      
-      // Enhance matches with application recommendations based on combined scores
-      matchedVCs = matchedVCs.map(match => {
-        const vc = match.investor
-        const sectors = parseJSON<string[]>(vc.sectors || '[]', [])
-        const founderSectors = parseJSON<string[]>(founder.sectors || '[]', [])
-        const sectorMatch = sectors.some((s: string) => 
-          founderSectors.some((fs: string) => 
-            fs.toLowerCase().includes(s.toLowerCase()) || 
-            s.toLowerCase().includes(fs.toLowerCase())
-          )
+
+      let matchedVCs: any[] = []
+      let matchPipelineResult: any = null
+      try {
+        matchPipelineResult = await runMatchingPipeline(
+          founderContext ?? (enhancedFounder as unknown as import('@/lib/founder-context').ComprehensiveFounderContext),
+          analysis,
+          null, // idea route has no transcript
         )
 
-        // Generate application recommendations based on COMBINED score
-        const score = match.combinedScore || match.score || 0
-        const vectorSim = (match.vectorSimilarity ?? 0) || 0
+        // Adapter: expose m.investor so all downstream response code works unchanged
+        matchedVCs = matchPipelineResult.rankedInvestors.map((r: any) => ({
+          ...r,
+          investor: r.vc,
+          score: r.combinedScore,
+          intelligentScore: r.combinedScore,
+          vectorSimilarity: 0,
+          confidence: r.investmentLikelihood.confidence === 'HIGH' ? 0.95
+            : r.investmentLikelihood.confidence === 'MEDIUM' ? 0.80
+            : 0.60,
+          reasons: [],
+          suggestions: [],
+          detailedReasons: [],
+          livePulse: null,
+          ycTrends: undefined,
+        }))
 
-        let whyApply = `Strong ${sectorMatch ? 'sector' : 'stage'} fit with ${vc.firmName}'s investment thesis.`
-        let bestApproach = 'Warm introduction preferred'
-        let timing = 'Apply within 2-4 weeks'
-
-        if (score >= 90) {
-          whyApply = `🏆 Elite match! ${vc.firmName} actively invests in ${sectors.slice(0, 2).join(' and ')} at ${founder.stage} stage. Your pitch shows ${(vectorSim * 100).toFixed(0)}% semantic alignment with their thesis.`
-          bestApproach = 'Warm introduction through portfolio founder or mutual connection'
-          timing = 'Apply immediately - high priority match'
-        } else if (score >= 80) {
-          whyApply = `⭐️⭐️⭐️ Excellent match! ${vc.firmName} invests in ${sectors[0]} and your stage aligns. ${(vectorSim * 100).toFixed(0)}% semantic similarity indicates strong fit.`
-          bestApproach = 'Warm introduction or personalized cold email with specific thesis alignment'
-          timing = 'Apply within 1 week - strong match'
-        } else if (score >= 70) {
-          whyApply = `⭐️⭐️ Strong match with ${vc.firmName}. They invest in ${sectors[0]} and your stage aligns. ${(vectorSim * 100).toFixed(0)}% semantic similarity.`
-          bestApproach = 'Warm introduction or personalized cold email with specific thesis alignment'
-          timing = 'Apply within 1-2 weeks'
-        } else if (score >= 60) {
-          whyApply = `⭐️ Good match. ${vc.firmName} may be interested given your sector and traction. ${(vectorSim * 100).toFixed(0)}% semantic similarity.`
-          bestApproach = 'Personalized cold email highlighting specific alignment points'
-          timing = 'Apply within 2-4 weeks'
-        } else {
-          whyApply = `💡 Moderate fit. ${vc.firmName} may consider your pitch. Build more traction for stronger match.`
-          bestApproach = 'Personalized cold email highlighting specific alignment points'
-          timing = 'Apply when you have stronger traction metrics'
-        }
-
-        return {
-          ...match,
-          whyApply,
-          bestApproach,
-          timing,
-        }
-      })
+        logger.log(`[ANALYZE-PITCH-IDEA] Matching pipeline v3 completed: ${matchedVCs.length} matches found`)
+      } catch (matchError: any) {
+        logger.error('[ANALYZE-PITCH-IDEA] Matching pipeline error:', matchError)
+        matchedVCs = []
+      }
 
       // 🆕 AI-NATIVE: Get current YC trends
       const currentTrends = getCurrentYCTrends()
@@ -547,13 +508,13 @@ Be specific and actionable.`
         detailedRationale: {
           summary: aiReason || combinedReasons[0] || 'Good potential match',
           matchFactors: {
-            stage: combinedReasons.some((r) => r.toLowerCase().includes('stage')) ? 'Match' : 'Partial',
-            sector: combinedReasons.some((r) => r.toLowerCase().includes('sector')) ? 'Match' : 'Partial',
-            geography: combinedReasons.some((r) => r.toLowerCase().includes('geograp')) ? 'Match' : 'Acceptable',
-            checkSize: combinedReasons.some((r) => r.toLowerCase().includes('check')) ? 'Match' : 'Acceptable',
-            founderFit: combinedReasons.some((r) => r.includes('FIT') || r.includes('PERFECT')) ? 'Excellent' : 'Good',
+            stage: combinedReasons.some((r: string) => r.toLowerCase().includes('stage')) ? 'Match' : 'Partial',
+            sector: combinedReasons.some((r: string) => r.toLowerCase().includes('sector')) ? 'Match' : 'Partial',
+            geography: combinedReasons.some((r: string) => r.toLowerCase().includes('geograp')) ? 'Match' : 'Acceptable',
+            checkSize: combinedReasons.some((r: string) => r.toLowerCase().includes('check')) ? 'Match' : 'Acceptable',
+            founderFit: combinedReasons.some((r: string) => r.includes('FIT') || r.includes('PERFECT')) ? 'Excellent' : 'Good',
           },
-          whyThisVC: combinedReasons.filter((r) => r.includes('✓') || r.includes('🎓') || r.includes('⭐')).join(' | '),
+          whyThisVC: combinedReasons.filter((r: string) => r.includes('✓') || r.includes('🎓') || r.includes('⭐')).join(' | '),
           nextSteps: (m.suggestions || []).length > 0 ? m.suggestions[0] : 'Research this VC and prepare targeted outreach',
         },
         ycTrends: m.ycTrends,
@@ -622,48 +583,35 @@ Be specific and actionable.`
       }
 
       // -----------------------------------------------------------------------
-      // UNIVERSAL ANALYSIS ENGINE — rubric scoring with Exa market intelligence
+      // MULTI-PASS SCORING PIPELINE — replaces Universal Analysis Engine
       // -----------------------------------------------------------------------
       let rubricAnalysis: any = null
+      let scoringResult: Awaited<ReturnType<typeof runScoringPipeline>> | null = null
       try {
         const sectors = parseJSON<string[]>(founder.sectors || '[]', [])
-        const domain = sectors[0] || analysis?.sectorFit?.primarySector || 'technology'
+        const domain = sectors[0] || 'technology'
         const problem = analysis?.marketFit || idea.substring(0, 300)
 
-        logger.log('[ANALYZE-PITCH-IDEA] Running Market Intelligence + Universal Analysis Engine...')
+        logger.log('[ANALYZE-PITCH-IDEA] Running Market Intelligence + Scoring Pipeline...')
 
         const marketContext = await getDeepMarketContext(domain, problem)
+        scoringResult = await runScoringPipeline(idea, founderContext ?? (founder as unknown as import('@/lib/founder-context').ComprehensiveFounderContext), marketContext)
+        rubricAnalysis = scoringResult.rubricCompatible
 
-        const dossier: FounderDossier = {
-          startup: founder.startupName || 'Unknown',
-          stage: founder.stage || 'seed',
-          sectors,
-          location: founder.location || founderContext?.location,
-          businessModel: founder.businessModel || analysis?.businessModel,
-          summary: idea.substring(0, 1500),
-          transcript: undefined,
-          education: founder.education || founderContext?.education,
-          university: founderContext?.universityAffiliation,
-          isStudent: founderContext?.isStudent,
-          techBackground: founderContext?.techBackground,
-          isImmigrant: founderContext?.isImmigrant,
-          isVeteran: founderContext?.isVeteran,
-          isUnderrepresented: founderContext?.isUnderrepresented,
-          cofounders: founderContext?.cofounders,
-          prevFunding: founderContext?.prevFunding,
-          revenue: founder.revenue || analysis?.tractionMetrics?.revenue,
-          users: founder.users || analysis?.tractionMetrics?.users,
-          growth: founder.growthRate || analysis?.tractionMetrics?.growth,
-          mrr: analysis?.tractionMetrics?.mrr,
-          teamSize: founder.teamSize || founderContext?.teamSize,
-          fundingNeed: founder.fundingNeed || founderContext?.fundingNeed,
-          valueAddNeeds: parseJSON<string[]>(founder.valueAddNeeds || '[]', []),
+        // Map pipeline tier to a ycFitScore for backward compatibility with UI
+        const YC_FIT_MAP: Record<string, number> = {
+          EXCEPTIONAL: 95,
+          STRONG: 80,
+          DEVELOPING: 60,
+          EARLY: 35,
+          PASS: 10,
         }
+        analysis.founderFit = scoringResult.categoryScores.team
+        analysis.ycFitScore = YC_FIT_MAP[scoringResult.tier] ?? 60
 
-        rubricAnalysis = await runUniversalAnalysis(dossier, 'IDEA', marketContext)
-        logger.log('[ANALYZE-PITCH-IDEA] Universal Analysis Engine completed successfully')
-      } catch (rubricError: any) {
-        logger.error('[ANALYZE-PITCH-IDEA] Universal Analysis Engine failed (non-critical):', rubricError?.message)
+        logger.log(`[ANALYZE-PITCH-IDEA] Scoring Pipeline completed — finalScore: ${scoringResult.finalScore}`)
+      } catch (scoringError: any) {
+        logger.error('[ANALYZE-PITCH-IDEA] Scoring Pipeline failed (non-critical):', scoringError?.message)
       }
 
       // Save pitch idea analysis to database for training data
@@ -702,6 +650,9 @@ Be specific and actionable.`
           analysis: {
             ...analysis,
             rubricAnalysis: rubricAnalysis || null,
+            finalScore: scoringResult?.finalScore ?? null,
+            scoreBreakdown: scoringResult?.scoreBreakdown ?? null,
+            categoryScores: scoringResult?.categoryScores ?? null,
             founderContext: founderContext
               ? {
                   stage: founderContext.stage,
@@ -725,9 +676,13 @@ Be specific and actionable.`
             matchesGenerated: matchedVCs.length,
             top20Selected: true,
             includedYCTrends: !!ycTrendsAnalysis,
-            usedAINativeMatching: true, // 🆕 Combined intelligent + FAISS matching
+            usedAINativeMatching: true,
             usedFullFounderContext: !!founderContext,
           },
+          universityPrograms: matchPipelineResult?.universityPrograms ?? [],
+          pipelineVersion: matchPipelineResult?.pipelineVersion ?? '3.0',
+          matchingDurationMs: matchPipelineResult?.durationMs ?? 0,
+          matchingError: matchPipelineResult === null,
         },
         {
           headers: { 'Content-Type': 'application/json' },

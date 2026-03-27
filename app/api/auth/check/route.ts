@@ -93,7 +93,7 @@ export async function GET(_request: NextRequest) {
     })
     res.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate')
     return res
-  } catch (error) {
+  } catch (error: any) {
     logger.error('AUTH_CHECK', 'Error checking auth', error)
     const res = NextResponse.json({ authenticated: false, verified: false }, { status: 401 })
     res.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate')

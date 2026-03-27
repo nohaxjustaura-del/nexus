@@ -21,6 +21,10 @@ import { db } from "@/lib/db"
 import { getCurrentUser } from "@/lib/auth"
 import { parseJSON } from "@/lib/utils"
 import { logger } from "@/lib/logger"
+import { matchUniversityPrograms } from "@/lib/matching/university-matcher"
+import type { FounderMatchSignal } from "@/lib/matching/types"
+import type { UniversityProgramMatch } from "@/lib/matching/types"
+import { UniversityProgramsSection } from "@/components/university-programs-section"
 
 export const dynamic = "force-dynamic"
 export const runtime = "nodejs"
@@ -43,10 +47,12 @@ export default async function MatchesPage({
   let latestAnalysis: any = null
   let topMatches: any[] = []
   let analysisType: 'resume' | 'video' | 'other' = 'resume'
+  let universityPrograms: UniversityProgramMatch[] = []
 
   if (user?.email) {
     try {
       let founder
+      let founderPrefs: any = null
       try {
         founder = await db.founder.findUnique({
         where: { email: user.email },
@@ -72,8 +78,34 @@ export default async function MatchesPage({
           },
         },
         })
+        founderPrefs = await db.founderPrefs.findUnique({ where: { email: user.email } })
       } catch (dbError) {
         founder = null
+      }
+
+      // Compute university program matches using founder's profile data
+      if (founder) {
+        try {
+          const sectors = parseJSON<string[]>(founder.sectors, [])
+          const signal: FounderMatchSignal = {
+            stage: founder.stage ?? 'pre-seed',
+            sectors,
+            primarySector: sectors[0] ?? '',
+            founderArchetype: 'unknown',
+            checkNeeded: 0,
+            location: founder.location ?? '',
+            university: founder.education ?? null,
+            isStudent: founderPrefs?.isStudent ?? false,
+            isRepeatFounder: false,
+            tractionTier: 'none',
+            keyStrengths: [],
+            redFlags: [],
+            pitchKeywords: [],
+          }
+          universityPrograms = matchUniversityPrograms(signal)
+        } catch {
+          // Non-critical — university section simply won't render
+        }
       }
 
       // Check for any analysis type (all are equal importance)
@@ -398,6 +430,13 @@ export default async function MatchesPage({
             Evidence-based compatibility scores with detailed explanations
           </p>
         </div>
+
+        {/* University programs — rendered directly above the VC match list */}
+        {universityPrograms.length > 0 && (
+          <div className="mb-6">
+            <UniversityProgramsSection programs={universityPrograms} />
+          </div>
+        )}
 
         {/* Matches */}
         <div className="space-y-4">

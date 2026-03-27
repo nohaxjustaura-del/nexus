@@ -71,7 +71,7 @@ export default function LoginPage() {
         if (!targetUrl) {
           if (data.user?.userType === 'investor') targetUrl = '/vc/dashboard'
           else if (data.user?.userType === 'mentor') targetUrl = '/'
-          else targetUrl = '/founder/onboarding'
+          else targetUrl = '/founder/ai-analysis'
         }
 
         window.location.assign(targetUrl)

@@ -3,7 +3,9 @@
  * AI-NATIVE MATCHING SYSTEM v2 — Surgical Funnel + Live Enrichment
  * ===============================================================================
  *
- * FinalScore = (IntelligentScore × 0.4) + (VectorScore × 0.3) + (EnrichmentScore × 0.3)
+ * SUPERSEDED by lib/matching/matching-orchestrator.ts (v3.0).
+ * The formula below is no longer executed. See ranker.ts for
+ * the current scoring logic.
  *
  * Phase 1 — Hard Filter:  Exclude VCs whose stages don't include the founder's stage
  * Phase 2 — Vector Search: FAISS top-15 by semantic similarity
@@ -611,12 +613,16 @@ export async function aiNativeMatchVCs(
   // -----------------------------------------------------------------------
   // PHASE 4 — Re-Scoring with weighted formula
   //
+  // SUPERSEDED — route migration complete. This block is dead code.
+  // Replacement: lib/matching/gate-reasoner.ts + investment-likelihood.ts
+  //
+  // OLD (v2) formula — no longer executed:
   // FinalScore = (IntelligentScore × 0.4) + (VectorScore × 0.3) + (EnrichmentScore × 0.3)
   //
-  // EnrichmentScore starts at 50 (neutral) and adjusts:
+  // EnrichmentScore started at 50 (neutral) and adjusted:
   //   +25 if recent deals found
   //   +15 if thought leadership found
-  //   +10 if summary indicates alignment with founder
+  //   +10 if summary indicated alignment with founder
   //   −50 if direct conflict detected
   // -----------------------------------------------------------------------
 

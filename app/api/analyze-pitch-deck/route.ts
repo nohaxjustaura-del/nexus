@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { getCurrentUser } from '@/lib/auth'
+import { getCurrentUserOrAdmin } from '@/lib/auth'
 import { extractPitchDeckFeatures } from '@/lib/ai'
-import { aiNativeMatchVCs } from '@/lib/ai-native-matching'
+import { runMatchingPipeline } from '@/lib/matching/matching-orchestrator'
 import { logger } from '@/lib/logger'
 import { validatePitchDeck } from '@/lib/content-validator'
 import { ADMIN_EMAIL, CREDIT_COSTS } from '@/lib/constants'
@@ -10,6 +10,8 @@ import { rateLimitMiddleware, RATE_LIMITS } from '@/lib/rate-limit'
 import { parseJSON } from '@/lib/utils'
 import { getComprehensiveFounderContext } from '@/lib/founder-context'
 import { saveFileToDisk, buildFounderSnapshot } from '@/lib/file-storage'
+import { getDeepMarketContext } from '@/lib/market-intelligence'
+import { runScoringPipeline } from '@/lib/scoring/scoring-pipeline'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -68,7 +70,7 @@ export async function POST(request: NextRequest) {
     if (process.env.NODE_ENV === 'development') {
       logger.log('[ANALYZE-PITCH-DECK] Starting pitch deck analysis...')
     }
-    const user = await getCurrentUser()
+    const user = await getCurrentUserOrAdmin()
     
     if (!user) {
       if (process.env.NODE_ENV === 'development') {
@@ -301,7 +303,7 @@ export async function POST(request: NextRequest) {
       // If validation fails due to error, still proceed but log it
     }
 
-    // Analyze pitch deck
+    // Analyze pitch deck (qualitative analysis only — scores come from pipeline)
     const features = await extractPitchDeckFeatures(deckText, founder)
 
     // 🆕 Get cached investors (faster) and comprehensive founder context
@@ -316,80 +318,64 @@ export async function POST(request: NextRequest) {
       sectors: parseJSON<string[]>(founder.sectors || '[]', []),
     }
 
-    logger.log('[ANALYZE-PITCH-DECK] Starting AI-native matching with FAISS...')
+    logger.log('[ANALYZE-PITCH-DECK] Starting matching pipeline v3...')
     logger.log(`[ANALYZE-PITCH-DECK] Deck text length: ${deckText.length} characters`)
-    
-    // 🆕 AI-NATIVE MATCHING: Combined intelligent + vector matching (same as Video Pitch)
-    // Uses 60% intelligent matching + 40% FAISS vector similarity + pattern boosts
-    let matchedVCs = await aiNativeMatchVCs(
-      enhancedFounder,
-      investors,
-      {
-        pitchAnalysis: features,
-        transcript: deckText, // Use the deck text for pattern detection
-        resumeFeatures: undefined,
-        useFAISS: true,
-      }
-    )
-    
-    logger.log(`[ANALYZE-PITCH-DECK] AI-native matching completed: ${matchedVCs.length} matches found`)
-    
-    // Enhance matches with application recommendations based on combined scores
-    matchedVCs = matchedVCs.map(match => {
-      const vc = match.investor
-      const sectors = parseJSON<string[]>(vc.sectors || '[]', [])
-      const founderSectors = parseJSON<string[]>(founder.sectors || '[]', [])
-      const sectorMatch = sectors.some((s: string) => 
-        founderSectors.some((fs: string) => 
-          fs.toLowerCase().includes(s.toLowerCase()) || 
-          s.toLowerCase().includes(fs.toLowerCase())
-        )
+
+    let matchedVCs: any[] = []
+    let matchPipelineResult: any = null
+    try {
+      matchPipelineResult = await runMatchingPipeline(
+        founderContext ?? (enhancedFounder as unknown as import('@/lib/founder-context').ComprehensiveFounderContext),
+        features,
+        null, // deck route has no transcript
       )
 
-      // Generate application recommendations based on COMBINED score
-      const score = match.combinedScore || match.score || 0
-      const vectorSim = (match.vectorSimilarity ?? 0) || 0
+      // Adapter: expose m.investor so all downstream response code works unchanged
+      matchedVCs = matchPipelineResult.rankedInvestors.map((r: any) => ({
+        ...r,
+        investor: r.vc,
+        score: r.combinedScore,
+        intelligentScore: r.combinedScore,
+        vectorSimilarity: 0,
+        confidence: r.investmentLikelihood.confidence === 'HIGH' ? 0.95
+          : r.investmentLikelihood.confidence === 'MEDIUM' ? 0.80
+          : 0.60,
+        reasons: [],
+        suggestions: [],
+        detailedReasons: [],
+        livePulse: null,
+      }))
 
-      let whyApply = `Strong ${sectorMatch ? 'sector' : 'stage'} fit with ${vc.firmName}'s investment thesis.`
-      let bestApproach = 'Warm introduction preferred'
-      let timing = 'Apply within 2-4 weeks'
-
-      if (score >= 90) {
-        whyApply = `🏆 Elite match! ${vc.firmName} actively invests in ${sectors.slice(0, 2).join(' and ')} at ${founder.stage} stage. Your deck shows ${(vectorSim * 100).toFixed(0)}% semantic alignment with their thesis.`
-        bestApproach = 'Warm introduction through portfolio founder or mutual connection'
-        timing = 'Apply immediately - high priority match'
-      } else if (score >= 80) {
-        whyApply = `⭐️⭐️⭐️ Excellent match! ${vc.firmName} invests in ${sectors[0]} and your stage aligns. ${(vectorSim * 100).toFixed(0)}% semantic similarity indicates strong fit.`
-        bestApproach = 'Warm introduction or personalized cold email with specific thesis alignment'
-        timing = 'Apply within 1 week - strong match'
-      } else if (score >= 70) {
-        whyApply = `⭐️⭐️ Strong match with ${vc.firmName}. They invest in ${sectors[0]} and your stage aligns. ${(vectorSim * 100).toFixed(0)}% semantic similarity.`
-        bestApproach = 'Warm introduction or personalized cold email with specific thesis alignment'
-        timing = 'Apply within 1-2 weeks'
-      } else if (score >= 60) {
-        whyApply = `⭐️ Good match. ${vc.firmName} may be interested given your sector and traction. ${(vectorSim * 100).toFixed(0)}% semantic similarity.`
-        bestApproach = 'Personalized cold email highlighting specific alignment points'
-        timing = 'Apply within 2-4 weeks'
-      } else {
-        whyApply = `💡 Moderate fit. ${vc.firmName} may consider your pitch. Build more traction for stronger match.`
-        bestApproach = 'Personalized cold email highlighting specific alignment points'
-        timing = 'Apply when you have stronger traction metrics'
-      }
-
-      return {
-        ...match,
-        whyApply,
-        bestApproach,
-        timing,
-      }
-    })
+      logger.log(`[ANALYZE-PITCH-DECK] Matching pipeline v3 completed: ${matchedVCs.length} matches found`)
+    } catch (matchError: any) {
+      logger.error('[ANALYZE-PITCH-DECK] Matching pipeline error:', matchError)
+      matchedVCs = []
+    }
     
     // Top 20 matches with enhanced data
     const top20Matches = matchedVCs.slice(0, 20)
 
+    // -----------------------------------------------------------------------
+    // MULTI-PASS SCORING PIPELINE
+    // -----------------------------------------------------------------------
+    let scoringResult: Awaited<ReturnType<typeof runScoringPipeline>> | null = null
+    try {
+      const sectors = parseJSON<string[]>(founder.sectors || '[]', [])
+      const domain = sectors[0] || 'technology'
+      const problem = features.strengths?.[0] || founder.bio?.substring(0, 300) || ''
+
+      logger.log('[ANALYZE-PITCH-DECK] Running Market Intelligence + Scoring Pipeline...')
+
+      const marketContext = await getDeepMarketContext(domain, problem)
+      scoringResult = await runScoringPipeline(deckText, founderContext ?? (enhancedFounder as unknown as import('@/lib/founder-context').ComprehensiveFounderContext), marketContext)
+      logger.log(`[ANALYZE-PITCH-DECK] Scoring Pipeline completed — finalScore: ${scoringResult.finalScore}`)
+    } catch (scoringError: any) {
+      logger.error('[ANALYZE-PITCH-DECK] Scoring Pipeline failed (non-critical):', scoringError?.message)
+    }
+
     // 🆕 Save pitch deck analysis to database (like video pitch)
     const analysisData = {
-      overallScore: features.overallScore,
+      overallScore: scoringResult?.finalScore ?? 0,
       strengths: features.strengths,
       weaknesses: features.weaknesses,
       improvements: features.improvements,
@@ -439,7 +425,7 @@ export async function POST(request: NextRequest) {
           fileType: file.type.split('/')[1] || 'pdf',
           fileSize: file.size,
           extractedText: deckText.substring(0, 50000), // Store extracted text for training
-          overallScore: features.overallScore || 0,
+          overallScore: scoringResult?.finalScore ?? 0,
           analysisResult: JSON.stringify(analysisData),
           smartMatchResults: JSON.stringify(top20Matches.slice(0, 10)),
           founderSnapshot: JSON.stringify(buildFounderSnapshot(founder)),
@@ -458,7 +444,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       pitchDeckId: pitchDeckAnalysis?.id || `pitch-deck-${Date.now()}`,
       analysis: {
-        overallScore: features.overallScore,
+        overallScore: scoringResult?.finalScore ?? 0,
+        finalScore: scoringResult?.finalScore ?? 0,
+        scoreBreakdown: scoringResult?.scoreBreakdown ?? null,
+        categoryScores: scoringResult?.categoryScores ?? null,
+        rubricAnalysis: scoringResult?.rubricCompatible ?? null,
         strengths: features.strengths,
         weaknesses: features.weaknesses,
         improvements: features.improvements,
@@ -507,9 +497,13 @@ export async function POST(request: NextRequest) {
         totalInvestors: investors.length,
         matchesGenerated: matchedVCs.length,
         top20Selected: true,
-        usedAINativeMatching: true, // Combined intelligent + FAISS matching
+        usedAINativeMatching: true,
         usedFullFounderContext: !!founderContext,
       },
+      universityPrograms: matchPipelineResult?.universityPrograms ?? [],
+      pipelineVersion: matchPipelineResult?.pipelineVersion ?? '3.0',
+      matchingDurationMs: matchPipelineResult?.durationMs ?? 0,
+      matchingError: matchPipelineResult === null,
     }, {
       headers: { 'Content-Type': 'application/json' },
     })

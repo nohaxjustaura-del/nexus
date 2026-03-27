@@ -558,8 +558,9 @@ export function VideoPitchAnalysisTab() {
       <div id="analysis-results" className="mx-auto max-w-6xl w-full space-y-6">
             {/* Rubric Analysis Dashboard */}
             {result.rubricAnalysis ? (
-              <AnalysisDashboard result={result.rubricAnalysis} />
+              <AnalysisDashboard result={result.rubricAnalysis} finalScore={result.finalScore ?? result.overallScore} />
             ) : (
+              // Fallback card — shown only if the scoring pipeline did not return rubricAnalysis
               <Card className="border-2 border-primary/20">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
@@ -568,21 +569,11 @@ export function VideoPitchAnalysisTab() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                  <div className="grid md:grid-cols-3 gap-4">
-                    <div className="p-4 rounded-lg bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/20">
+                  <div className="flex justify-center">
+                    <div className="p-6 rounded-lg bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/20 text-center">
                       <div className="text-sm text-muted-foreground mb-1">Overall Score</div>
-                      <div className="text-3xl font-bold text-primary">{result.overallScore || 0}/100</div>
-                      <div className="text-xs text-muted-foreground mt-1">Combined presentation & content</div>
-                    </div>
-                    <div className="p-4 rounded-lg bg-gradient-to-br from-blue-50 to-blue-100/50 border border-blue-200">
-                      <div className="text-sm text-muted-foreground mb-1">Presentation Score</div>
-                      <div className="text-3xl font-bold text-blue-600">{result.presentationScore || 0}/100</div>
-                      <div className="text-xs text-muted-foreground mt-1">Delivery, clarity, engagement</div>
-                    </div>
-                    <div className="p-4 rounded-lg bg-gradient-to-br from-green-50 to-green-100/50 border border-green-200">
-                      <div className="text-sm text-muted-foreground mb-1">Content Score</div>
-                      <div className="text-3xl font-bold text-green-600">{result.contentScore || 0}/100</div>
-                      <div className="text-xs text-muted-foreground mt-1">Substance, metrics, market fit</div>
+                      <div className="text-4xl font-bold text-primary">{result.finalScore ?? result.overallScore ?? 0}/100</div>
+                      <div className="text-xs text-muted-foreground mt-1">Multi-pass scoring pipeline</div>
                     </div>
                   </div>
                 </CardContent>

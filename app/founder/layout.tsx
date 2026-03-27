@@ -48,10 +48,10 @@ export default function FounderLayout({ children }: { children: React.ReactNode 
   useEffect(() => {
     let cancelled = false
     
-    // CRITICAL: If we're on onboarding page, IMMEDIATELY allow access - don't check anything
-    // This prevents any redirects from happening before the page loads
     const isOnboardingPage = pathname === '/founder/onboarding'
-    if (isOnboardingPage) {
+    const isAIAnalysisPage = pathname === '/founder/ai-analysis'
+    
+    if (isOnboardingPage || isAIAnalysisPage) {
       setChecking(false)
       return () => { cancelled = true }
     }
@@ -88,7 +88,7 @@ export default function FounderLayout({ children }: { children: React.ReactNode 
         }
         
         setChecking(false)
-      } catch (error) {
+      } catch (error: any) {
         if (cancelled) return
         const isDiscoverPage = pathname === '/founder/discover' || pathname?.startsWith('/founder/discover/')
         const isOnboardingPage = pathname === '/founder/onboarding'

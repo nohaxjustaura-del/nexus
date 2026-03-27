@@ -5,6 +5,7 @@ import { cookies } from 'next/headers'
 import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { getSupabaseAuthUserFromRequest } from '@/lib/supabase/request-reader'
+import { ADMIN_EMAIL } from '@/lib/constants'
 
 export async function syncPrismaUserFromAuth(authUser: SupabaseAuthUser): Promise<PrismaUser | null> {
   const email = authUser.email?.toLowerCase().trim()
@@ -74,6 +75,39 @@ export async function getUserFromRequest(request: NextRequest): Promise<PrismaUs
   } catch {
     return null
   }
+}
+
+/**
+ * Returns the admin user from the DB. Used as a fallback for unauthenticated
+ * requests on public-facing pages (e.g. AI analysis) so they can run with
+ * admin-level access without requiring login.
+ */
+export async function getAdminUser(): Promise<PrismaUser | null> {
+  try {
+    return await db.user.findUnique({ where: { email: ADMIN_EMAIL.toLowerCase() } })
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Tries to authenticate the current user via Supabase cookies.
+ * If no session exists, falls back to the admin user so unauthenticated
+ * visitors can still use the AI analysis features.
+ */
+export async function getCurrentUserOrAdmin(): Promise<PrismaUser | null> {
+  const user = await getCurrentUser()
+  if (user) return user
+  return getAdminUser()
+}
+
+/**
+ * Same as getUserFromRequest but falls back to the admin user.
+ */
+export async function getUserFromRequestOrAdmin(request: NextRequest): Promise<PrismaUser | null> {
+  const user = await getUserFromRequest(request)
+  if (user) return user
+  return getAdminUser()
 }
 
 /** @deprecated Legacy JWT session — use Supabase Auth. */

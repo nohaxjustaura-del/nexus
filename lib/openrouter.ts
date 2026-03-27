@@ -14,12 +14,15 @@ export function getOpenRouterClient(): OpenAI | null {
       return null
     }
 
+    // #region agent log
+    fetch('http://127.0.0.1:7471/ingest/0f685c44-f6c8-4b99-b23e-84e0cc9d4f08',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'e61823'},body:JSON.stringify({sessionId:'e61823',location:'openrouter.ts:getOpenRouterClient',message:'Client instantiated',data:{title:'NEXUS - AI analysis',referer:process.env.OPENROUTER_REFERER_URL||'(getSiteUrl)'},timestamp:Date.now(),hypothesisId:'H1'})}).catch(()=>{});
+    // #endregion
     return new OpenAI({
       apiKey: apiKey,
       baseURL: 'https://openrouter.ai/api/v1',
       defaultHeaders: {
         'HTTP-Referer': process.env.OPENROUTER_REFERER_URL || getSiteUrl(),
-        'X-Title': 'NEXUS — AI analysis',
+        'X-Title': 'NEXUS - AI analysis',
       },
     })
   } catch (error) {
@@ -72,6 +75,7 @@ export async function openrouterGenerateText(
     temperature?: number
     maxTokens?: number
     model?: string
+    timeoutMs?: number
   } = {}
 ): Promise<string> {
   const client = getOpenRouterClient()
@@ -80,13 +84,21 @@ export async function openrouterGenerateText(
   }
 
   const model = options.model || 'deepseek/deepseek-chat' // FREE model!
+  const timeoutMs = options.timeoutMs ?? 45_000
   
-  const response = await client.chat.completions.create({
+  const llmPromise = client.chat.completions.create({
     model,
     messages: [{ role: 'user', content: prompt }],
     temperature: options.temperature ?? 0.7,
     max_tokens: options.maxTokens ?? 4000,
   })
+
+  const response = await Promise.race([
+    llmPromise,
+    new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error(`OpenRouter timeout after ${timeoutMs / 1000}s for ${model}`)), timeoutMs)
+    ),
+  ])
 
   return response.choices[0]?.message?.content || ''
 }
@@ -99,6 +111,7 @@ export async function openrouterGenerateJson<T = any>(options: {
   user: string
   temperature?: number
   model?: string
+  timeoutMs?: number
 }): Promise<T> {
   const client = getOpenRouterClient()
   if (!client) {
@@ -106,10 +119,13 @@ export async function openrouterGenerateJson<T = any>(options: {
   }
 
   const model = options.model || 'deepseek/deepseek-chat' // FREE model!
+  const timeoutMs = options.timeoutMs ?? 45_000
   
   console.log(`[OPENROUTER] 🤖 Using model: ${model} (FREE)`)
-  
-  const response = await client.chat.completions.create({
+  // #region agent log
+  fetch('http://127.0.0.1:7471/ingest/0f685c44-f6c8-4b99-b23e-84e0cc9d4f08',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'e61823'},body:JSON.stringify({sessionId:'e61823',location:'openrouter.ts:openrouterGenerateJson',message:'Making LLM call',data:{model,systemLen:options.system.length,userLen:options.user.length},timestamp:Date.now(),hypothesisId:'H1'})}).catch(()=>{});
+  // #endregion
+  const llmPromise = client.chat.completions.create({
     model,
     messages: [
       { role: 'system', content: options.system + '\n\nReturn ONLY valid JSON. No markdown, no code blocks, no explanations.' },
@@ -118,6 +134,13 @@ export async function openrouterGenerateJson<T = any>(options: {
     temperature: options.temperature ?? 0.7,
     max_tokens: 4000,
   })
+
+  const response = await Promise.race([
+    llmPromise,
+    new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error(`OpenRouter timeout after ${timeoutMs / 1000}s for ${model}`)), timeoutMs)
+    ),
+  ])
 
   const content = response.choices[0]?.message?.content || '{}'
   
@@ -141,7 +164,9 @@ export async function openrouterGenerateJson<T = any>(options: {
   }
   
   console.log(`[OPENROUTER] ✅ Parsing JSON...`)
-  
+  // #region agent log
+  fetch('http://127.0.0.1:7471/ingest/0f685c44-f6c8-4b99-b23e-84e0cc9d4f08',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'e61823'},body:JSON.stringify({sessionId:'e61823',location:'openrouter.ts:parseJSON',message:'About to parse JSON response',data:{jsonLen:jsonText.length,preview:jsonText.substring(0,80)},timestamp:Date.now(),hypothesisId:'H1'})}).catch(()=>{});
+  // #endregion
   try {
     return JSON.parse(jsonText)
   } catch (parseError: any) {
