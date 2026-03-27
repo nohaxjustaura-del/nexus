@@ -58,7 +58,33 @@ const JSON_SCHEMA = `{
   "redFlags": <array of vague buzzword phrases found WITH NO backing data — scan for: 'large market', 'massive market', 'proprietary tech', 'proprietary algorithm', 'experienced team', 'strong team', 'no real competitors', 'first mover', 'growing fast', 'rapid growth', 'AI-powered', 'disruptive', 'revolutionary', 'transforming' — only include a phrase if it appears WITHOUT specific evidence supporting it>
 }`
 
-function buildUserPrompt(pitch: string, ctx: FounderContext): string {
+const UNIFIED_FACT_NOTE =
+  "This pitch was submitted from multiple sources (STRUCTURED Q&A, PITCH DECK, VIDEO TRANSCRIPT). " +
+  "Gaps in one source may be covered by another — evaluate holistically. " +
+  "Extract verified facts from EVERY present section with equal weight; do not stop after the first section. " +
+  "Scan the full pitch text below from start to end."
+
+/** Single-modality hints so fact extraction matches how each analyze-* route assembles pitch text. */
+function modalityPreamble(pitchType: string): string {
+  if (pitchType === "UNIFIED") return ""
+  switch (pitchType) {
+    case "DECK":
+      return (
+        "Pitch source: text extracted from a slide deck. Lines may be fragmented or out of slide order; " +
+        "only count claims explicitly stated in the text below.\n\n"
+      )
+    case "VIDEO":
+      return (
+        "Pitch source: video transcript. Spoken delivery may include fillers; extract only facts the speaker clearly states.\n\n"
+      )
+    case "IDEA":
+      return "Pitch source: written founder pitch (idea or memo).\n\n"
+    default:
+      return ""
+  }
+}
+
+function buildUserPrompt(pitch: string, ctx: FounderContext, pitchType: string = "PITCH"): string {
   const profileLines: string[] = []
 
   if (ctx.startupName)           profileLines.push(`Startup name: ${ctx.startupName}`)
@@ -79,10 +105,24 @@ function buildUserPrompt(pitch: string, ctx: FounderContext): string {
   if (ctx.fundingNeed)           profileLines.push(`Raising: $${ctx.fundingNeed}K`)
   if (ctx.bio)                   profileLines.push(`Bio: ${ctx.bio.substring(0, 400)}`)
 
-  return `FOUNDER PROFILE (structured data — use as supporting context only):
+  const unifiedHeader =
+    pitchType === "UNIFIED"
+      ? `${UNIFIED_FACT_NOTE}
+
+The pitch contains labeled sections: STRUCTURED Q&A:, PITCH DECK:, and/or VIDEO TRANSCRIPT:. Treat all sections as equally valid evidence for fact extraction.
+
+`
+      : ""
+
+  const pitchLabel =
+    pitchType === "UNIFIED"
+      ? "MULTI-SOURCE PITCH TEXT (extract facts from ALL sections — full scan required):"
+      : "PITCH TEXT (primary source — extract facts from here):"
+
+  return `${unifiedHeader}${modalityPreamble(pitchType)}FOUNDER PROFILE (structured data — use as supporting context only):
 ${profileLines.length > 0 ? profileLines.join("\n") : "(no additional profile data)"}
 
-PITCH TEXT (primary source — extract facts from here):
+${pitchLabel}
 ${pitch.substring(0, 15000)}
 
 Do NOT score anything. Do NOT evaluate quality. Only extract verifiable facts.
@@ -146,14 +186,16 @@ function normalizeRaw(raw: any): VerifiedFacts {
 export async function extractVerifiedFacts(
   pitch: string,
   founderContext: FounderContext,
+  pitchType: string = "PITCH",
 ): Promise<VerifiedFacts> {
   logger.log("[FACT-EXTRACTOR] Starting fact extraction")
 
   try {
     const raw = await openrouterGenerateJson<any>({
       system: SYSTEM_PROMPT,
-      user: buildUserPrompt(pitch, founderContext),
+      user: buildUserPrompt(pitch, founderContext, pitchType),
       temperature: 0.1,
+      forceOpenRouter: true,
     })
 
     const facts = normalizeRaw(raw)

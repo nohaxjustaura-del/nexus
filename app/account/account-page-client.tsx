@@ -1,26 +1,59 @@
 'use client'
 
 import Link from 'next/link'
-import { ArrowRight, UserCircle } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { useEffect, useState } from 'react'
+import { ArrowRight, CreditCard, UserCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { useChromeMode } from '@/components/chrome-mode-provider'
+import { cn } from '@/lib/utils'
 
 export type AccountPageClientProps = {
   email: string
   emailVerified: boolean
   userType: string | null
-  isAdmin: boolean
 }
 
 export function AccountPageClient({
   email,
   emailVerified,
   userType,
-  isAdmin,
 }: AccountPageClientProps) {
+  const router = useRouter()
+  const { chrome, setPreferredChrome } = useChromeMode()
   const typeLabel = userType || 'founder'
   const isFounder = typeLabel === 'founder'
   const isVc = typeLabel === 'vc' || typeLabel === 'investor'
+
+  const [caps, setCaps] = useState<{
+    hasFounderProfile?: boolean
+    hasInvestorProfile?: boolean
+  } | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    fetch('/api/account/capabilities', { credentials: 'include' })
+      .then((r) => r.json())
+      .then((d) => {
+        if (!cancelled && d?.authenticated) {
+          setCaps({
+            hasFounderProfile: Boolean(d.hasFounderProfile),
+            hasInvestorProfile: Boolean(d.hasInvestorProfile),
+          })
+        }
+      })
+      .catch(() => {})
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  const canEditFounderProfile = isFounder || Boolean(caps?.hasFounderProfile)
+
+  const canUseFounderWorkspace = Boolean(caps?.hasFounderProfile) || userType === 'mentor'
+
+  const canUseInvestorWorkspace = Boolean(caps?.hasInvestorProfile)
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-muted/30 to-background">
@@ -31,6 +64,84 @@ export function AccountPageClient({
         </header>
 
         <div className="space-y-6">
+          <Card className="border-border/80 shadow-sm">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg">Workspace</CardTitle>
+              <CardDescription>
+                You can switch workspaces after your founder profile and investor listing are each set up (claim your
+                listing for investor tools).
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3 pt-2">
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  variant={chrome === 'founder' ? 'default' : 'outline'}
+                  className={cn(chrome === 'founder' && 'shadow-none')}
+                  disabled={!canUseFounderWorkspace}
+                  onClick={() => {
+                    if (!canUseFounderWorkspace) return
+                    setPreferredChrome('founder')
+                    router.push('/founder/dashboard')
+                  }}
+                >
+                  Founder
+                </Button>
+                <Button
+                  type="button"
+                  variant={chrome === 'investor' ? 'default' : 'outline'}
+                  className={cn(chrome === 'investor' && 'bg-emerald-600 hover:bg-emerald-600/90 shadow-none')}
+                  disabled={!canUseInvestorWorkspace}
+                  onClick={() => {
+                    if (!canUseInvestorWorkspace) return
+                    setPreferredChrome('investor')
+                    router.push('/vc/profile')
+                  }}
+                >
+                  Investor
+                </Button>
+              </div>
+              {caps && (!canUseFounderWorkspace || !canUseInvestorWorkspace) && (
+                <ul className="list-inside list-disc space-y-1 text-sm text-muted-foreground">
+                  {!canUseFounderWorkspace && (
+                    <li>
+                      <Link href="/onboarding/founder" className="text-primary underline-offset-4 hover:underline">
+                        Set up your founder profile
+                      </Link>{' '}
+                      to use the founder workspace.
+                    </li>
+                  )}
+                  {!canUseInvestorWorkspace && (
+                    <li>
+                      <Link href="/vc/claim" className="text-primary underline-offset-4 hover:underline">
+                        Claim your investor listing
+                      </Link>{' '}
+                      to use the investor workspace.
+                    </li>
+                  )}
+                </ul>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card className="border-border/80 shadow-sm">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <CreditCard className="h-5 w-5 text-muted-foreground" />
+                Plans & credits
+              </CardTitle>
+              <CardDescription>Credit packs, premium, and checkout</CardDescription>
+            </CardHeader>
+            <CardContent className="pt-2">
+              <Link href="/pricing">
+                <Button variant="default" className="w-full justify-between">
+                  View pricing
+                  <ArrowRight className="h-4 w-4" />
+                </Button>
+              </Link>
+            </CardContent>
+          </Card>
+
           <Card className="border-border/80 shadow-sm">
             <CardHeader className="pb-2">
               <CardTitle className="text-lg">Your account</CardTitle>
@@ -58,7 +169,7 @@ export function AccountPageClient({
             </CardContent>
           </Card>
 
-          {isFounder && (
+          {canEditFounderProfile && (
             <Card className="border-border/80 shadow-sm">
               <CardHeader className="pb-2">
                 <CardTitle className="text-lg flex items-center gap-2">
@@ -84,7 +195,36 @@ export function AccountPageClient({
               <CardDescription>Jump back into the product</CardDescription>
             </CardHeader>
             <CardContent className="space-y-2 pt-2">
-              {isFounder ? (
+              {chrome === 'investor' ? (
+                <>
+                  <Link href="/vc/extract" className="block">
+                    <Button variant="outline" className="w-full justify-between border-border shadow-none">
+                      Extract listing from text
+                      <ArrowRight className="h-4 w-4" />
+                    </Button>
+                  </Link>
+                  <Link href="/vc/profile" className="block">
+                    <Button variant="outline" className="w-full justify-between border-border shadow-none">
+                      Your listing & thesis
+                      <ArrowRight className="h-4 w-4" />
+                    </Button>
+                  </Link>
+                  <Link href="/vc/dashboard" className="block">
+                    <Button variant="outline" className="w-full justify-between border-border shadow-none">
+                      Matched founders
+                      <ArrowRight className="h-4 w-4" />
+                    </Button>
+                  </Link>
+                  {!isVc && (
+                    <Link href="/vc/claim" className="block">
+                      <Button variant="outline" className="w-full justify-between border-border shadow-none">
+                        Claim investor profile
+                        <ArrowRight className="h-4 w-4" />
+                      </Button>
+                    </Link>
+                  )}
+                </>
+              ) : isFounder ? (
                 <>
                   <Link href="/founder/dashboard" className="block">
                     <Button variant="outline" className="w-full justify-between border-border shadow-none">
@@ -100,7 +240,7 @@ export function AccountPageClient({
                   </Link>
                   <Link href="/founder/ai-analysis" className="block">
                     <Button variant="outline" className="w-full justify-between border-border shadow-none">
-                      AI analysis
+                      Pitch analysis
                       <ArrowRight className="h-4 w-4" />
                     </Button>
                   </Link>
@@ -110,30 +250,35 @@ export function AccountPageClient({
                       <ArrowRight className="h-4 w-4" />
                     </Button>
                   </Link>
-                  {isAdmin && (
-                    <Link href="/founder/vc-database" className="block">
+                </>
+              ) : isVc ? (
+                caps?.hasFounderProfile ? (
+                  <>
+                    <Link href="/founder/dashboard" className="block">
                       <Button variant="outline" className="w-full justify-between border-border shadow-none">
-                        VC database (admin)
+                        Founder hub
                         <ArrowRight className="h-4 w-4" />
                       </Button>
                     </Link>
-                  )}
-                </>
-              ) : isVc ? (
-                <>
-                  <Link href="/vc/dashboard" className="block">
-                    <Button variant="outline" className="w-full justify-between border-border shadow-none">
-                      Dashboard
-                      <ArrowRight className="h-4 w-4" />
-                    </Button>
-                  </Link>
-                  <Link href="/vc/claim" className="block">
-                    <Button variant="outline" className="w-full justify-between border-border shadow-none">
-                      Firm profile
-                      <ArrowRight className="h-4 w-4" />
-                    </Button>
-                  </Link>
-                </>
+                    <Link href="/founder/discover" className="block">
+                      <Button variant="outline" className="w-full justify-between border-border shadow-none">
+                        Discover investors
+                        <ArrowRight className="h-4 w-4" />
+                      </Button>
+                    </Link>
+                    <Link href="/founder/ai-analysis" className="block">
+                      <Button variant="outline" className="w-full justify-between border-border shadow-none">
+                        Pitch analysis
+                        <ArrowRight className="h-4 w-4" />
+                      </Button>
+                    </Link>
+                  </>
+                ) : (
+                  <p className="text-sm text-muted-foreground py-2">
+                    Use <strong>Founder</strong> above to start the founder flow, or switch to <strong>Investor</strong>{' '}
+                    for your listing.
+                  </p>
+                )
               ) : (
                 <p className="text-sm text-muted-foreground py-2">No shortcuts for this account type yet.</p>
               )}

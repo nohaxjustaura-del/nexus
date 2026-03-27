@@ -8,7 +8,16 @@ export {
   RESEND_TESTING_MODE_PUBLIC_MESSAGE,
 } from '@/lib/resend-user-messages'
 
-const resend = new Resend(process.env.RESEND_API_KEY)
+function resendApiKey(): string | undefined {
+  const k = process.env.RESEND_API_KEY?.trim()
+  return k || undefined
+}
+
+function getResendClient(): Resend | null {
+  const key = resendApiKey()
+  if (!key) return null
+  return new Resend(key)
+}
 
 function emailFromHeader(): string {
   const raw = process.env.RESEND_FROM_EMAIL
@@ -57,7 +66,7 @@ function usesResendDevFromAddress(): boolean {
 }
 
 export async function sendVerificationCode(email: string, code: string) {
-  if (!process.env.RESEND_API_KEY) {
+  if (!resendApiKey()) {
     console.log(`
 📧 Verification Code Email (Development Mode)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -70,6 +79,11 @@ This code will expire in 10 minutes.
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     `)
     return { success: true }
+  }
+
+  const resend = getResendClient()
+  if (!resend) {
+    return { success: false, error: new Error('RESEND_API_KEY is not set') }
   }
 
   try {
@@ -120,7 +134,7 @@ export async function sendMagicLinkEmail(
     ? `Click the button below to verify your email and activate your ${BRAND_NAME} account.`
     : `Click the button below to sign in to your ${BRAND_NAME} account instantly (no password needed).`
 
-  if (!process.env.RESEND_API_KEY) {
+  if (!resendApiKey()) {
     console.log(`
 📧 Magic Link Email (Development Mode, no RESEND_API_KEY)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -197,6 +211,11 @@ This link expire in 1 hour. If you didn't request this, you can safely ignore th
 
 The ${BRAND_NAME} team`
 
+  const resend = getResendClient()
+  if (!resend) {
+    return { success: false, error: new Error('RESEND_API_KEY is not set') }
+  }
+
   try {
     console.log(`📧 Sending magic-link email to: ${email}`)
     // #region agent log
@@ -268,7 +287,7 @@ export async function sendVCClaimReceipt(toEmail: string, name: string, firmName
 Thanks for submitting your VC profile for ${firmName}.
 Our team will review your information and verify the profile shortly. You'll receive an update within 24 hours.`
 
-  if (!process.env.RESEND_API_KEY) {
+  if (!resendApiKey()) {
     console.log(`
 📧 VC Claim Receipt (Development Mode)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -280,6 +299,9 @@ ${plain}
     `)
     return { success: true }
   }
+
+  const resend = getResendClient()
+  if (!resend) return { success: true }
 
   try {
     const { data, error } = await resend.emails.send({
@@ -306,7 +328,7 @@ Our team will review your account within 24 hours and notify you once approved.
 
 If you didn’t request this, you can ignore this email.`
 
-  if (!process.env.RESEND_API_KEY) {
+  if (!resendApiKey()) {
     console.log(`
 📧 Founder Application Receipt (Development Mode)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -318,6 +340,9 @@ ${plain}
     `)
     return { success: true }
   }
+
+  const resend = getResendClient()
+  if (!resend) return { success: true }
 
   try {
     const { data, error } = await resend.emails.send({
@@ -352,7 +377,7 @@ You can sign in and continue here: ${base}/founder/discover`
 
 Your ${BRAND_NAME} application was not approved at this time. You may reply to this email with any additional information.`
 
-  if (!process.env.RESEND_API_KEY) {
+  if (!resendApiKey()) {
     console.log(`
 📧 User Approval (${status}) (Development Mode)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -364,6 +389,9 @@ ${plain}
     `)
     return { success: true }
   }
+
+  const resend = getResendClient()
+  if (!resend) return { success: true }
 
   try {
     const { data, error } = await resend.emails.send({

@@ -54,6 +54,7 @@ export async function GET(request: NextRequest) {
         websiteUrl: investor.websiteUrl,
         fundType: investor.fundType,
         thesis: investor.thesis,
+        bio: investor.bio || '',
         ownershipTarget: investor.ownershipTarget,
         notableInvestments: parseJSON<string[]>(investor.notableInvestments, []),
         proofPoints: parseJSON<string[]>(investor.proofPoints, []),
@@ -123,7 +124,21 @@ export async function POST(request: NextRequest) {
         websiteUrl: data.websiteUrl !== undefined ? data.websiteUrl : existingInvestor.websiteUrl,
         fundType: data.fundType !== undefined ? data.fundType : existingInvestor.fundType,
         thesis: data.thesis !== undefined ? data.thesis : existingInvestor.thesis,
+        bio: data.bio !== undefined ? String(data.bio) : existingInvestor.bio,
         ownershipTarget: data.ownershipTarget !== undefined ? data.ownershipTarget : existingInvestor.ownershipTarget,
+        notableInvestments:
+          data.notableInvestments !== undefined
+            ? JSON.stringify(
+                Array.isArray(data.notableInvestments)
+                  ? data.notableInvestments.map(String)
+                  : typeof data.notableInvestments === 'string'
+                    ? data.notableInvestments
+                        .split('\n')
+                        .map((s: string) => s.trim())
+                        .filter(Boolean)
+                    : []
+              )
+            : existingInvestor.notableInvestments,
       },
     })
 

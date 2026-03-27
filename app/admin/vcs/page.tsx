@@ -12,16 +12,17 @@ import {
   Clock,
   Search,
   ExternalLink,
-  Mail,
   Globe,
   Linkedin,
-  Filter,
   Download,
   Eye,
-  EyeOff
+  EyeOff,
+  AlertTriangle
 } from "lucide-react"
 import { parseJSON } from "@/lib/utils"
 import { toast } from '@/components/ui/toast-simple'
+
+type VcLinkIssue = { field: 'websiteUrl' | 'linkedinUrl' | 'applicationUrl'; message: string }
 
 interface Investor {
   id: string
@@ -39,6 +40,13 @@ interface Investor {
   websiteUrl: string | null
   createdAt: Date
   updatedAt: Date
+  linkQuality?: {
+    safeWebsite: string | null
+    safeLinkedin: string | null
+    safeApplication: string | null
+    issues: VcLinkIssue[]
+    linkClean: boolean
+  }
 }
 
 interface VCClaim {
@@ -59,7 +67,9 @@ export default function AdminVCsPage() {
   const [claims, setClaims] = useState<VCClaim[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
-  const [filterStatus, setFilterStatus] = useState<'all' | 'verified' | 'unverified'>('all')
+  const [filterStatus, setFilterStatus] = useState<
+    'all' | 'verified' | 'unverified' | 'needs_attention'
+  >('all')
   const [showPendingClaims, setShowPendingClaims] = useState(true)
 
   useEffect(() => {
@@ -172,20 +182,30 @@ export default function AdminVCsPage() {
       inv.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       inv.email.toLowerCase().includes(searchTerm.toLowerCase())
     
-    const matchesFilter = 
+    const linkClean = inv.linkQuality?.linkClean ?? true
+    const needsAttention = !inv.verified || !linkClean
+
+    const matchesFilter =
       filterStatus === 'all' ||
       (filterStatus === 'verified' && inv.verified) ||
-      (filterStatus === 'unverified' && !inv.verified)
-    
+      (filterStatus === 'unverified' && !inv.verified) ||
+      (filterStatus === 'needs_attention' && needsAttention)
+
     return matchesSearch && matchesFilter
   })
 
   const pendingClaims = claims.filter(c => c.status === 'pending')
+  const needsAttentionCount = investors.filter((i) => {
+    const clean = i.linkQuality?.linkClean ?? true
+    return !i.verified || !clean
+  }).length
+
   const stats = {
     total: investors.length,
     verified: investors.filter(i => i.verified).length,
     unverified: investors.filter(i => !i.verified).length,
     pendingClaims: pendingClaims.length,
+    needsAttention: needsAttentionCount,
   }
 
   if (loading) {
@@ -212,7 +232,7 @@ export default function AdminVCsPage() {
         </div>
 
         {/* Stats */}
-        <div className="mb-8 grid gap-4 md:grid-cols-4">
+        <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium">Total VCs</CardTitle>
@@ -250,6 +270,17 @@ export default function AdminVCsPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-blue-600">{stats.pendingClaims}</div>
+            </CardContent>
+          </Card>
+
+          <Card className={stats.needsAttention > 0 ? 'border-amber-500/50' : ''}>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium">Needs attention</CardTitle>
+              <AlertTriangle className="h-4 w-4 text-amber-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-amber-600">{stats.needsAttention}</div>
+              <p className="text-xs text-muted-foreground mt-1">Unverified or link issues</p>
             </CardContent>
           </Card>
         </div>
@@ -390,6 +421,14 @@ export default function AdminVCsPage() {
                   <XCircle className="h-4 w-4 mr-1" />
                   Unverified
                 </Button>
+                <Button
+                  variant={filterStatus === 'needs_attention' ? 'default' : 'outline'}
+                  onClick={() => setFilterStatus('needs_attention')}
+                  className="gap-1"
+                >
+                  <AlertTriangle className="h-4 w-4" />
+                  Needs attention
+                </Button>
               </div>
             </div>
           </CardContent>
@@ -422,6 +461,12 @@ export default function AdminVCsPage() {
                             Unverified
                           </Badge>
                         )}
+                        {(investor.linkQuality?.issues.length ?? 0) > 0 && (
+                          <Badge variant="outline" className="text-amber-700 border-amber-600">
+                            <AlertTriangle className="h-3 w-3 mr-1" />
+                            Link issues ({investor.linkQuality!.issues.length})
+                          </Badge>
+                        )}
                       </div>
                       <p className="text-sm text-muted-foreground mb-3">
                         <strong>{investor.name}</strong> • {investor.email}
@@ -439,10 +484,10 @@ export default function AdminVCsPage() {
                         ))}
                       </div>
 
-                      <div className="flex gap-4 mt-3">
-                        {investor.websiteUrl && (
+                      <div className="flex flex-wrap gap-x-4 gap-y-2 mt-3">
+                        {investor.linkQuality?.safeWebsite ? (
                           <a
-                            href={investor.websiteUrl}
+                            href={investor.linkQuality.safeWebsite}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="flex items-center gap-1 text-sm text-muted-foreground hover:text-primary"
@@ -450,10 +495,15 @@ export default function AdminVCsPage() {
                             <Globe className="h-4 w-4" />
                             Website
                           </a>
-                        )}
-                        {investor.linkedinUrl && (
+                        ) : investor.websiteUrl?.trim() ? (
+                          <span className="flex items-center gap-1 text-sm text-destructive" title={investor.websiteUrl}>
+                            <Globe className="h-4 w-4" />
+                            Website (broken URL)
+                          </span>
+                        ) : null}
+                        {investor.linkQuality?.safeLinkedin ? (
                           <a
-                            href={investor.linkedinUrl}
+                            href={investor.linkQuality.safeLinkedin}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="flex items-center gap-1 text-sm text-muted-foreground hover:text-primary"
@@ -461,10 +511,15 @@ export default function AdminVCsPage() {
                             <Linkedin className="h-4 w-4" />
                             LinkedIn
                           </a>
-                        )}
-                        {investor.applicationUrl && (
+                        ) : investor.linkedinUrl?.trim() ? (
+                          <span className="flex items-center gap-1 text-sm text-destructive" title={investor.linkedinUrl}>
+                            <Linkedin className="h-4 w-4" />
+                            LinkedIn (broken URL)
+                          </span>
+                        ) : null}
+                        {investor.linkQuality?.safeApplication ? (
                           <a
-                            href={investor.applicationUrl}
+                            href={investor.linkQuality.safeApplication}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="flex items-center gap-1 text-sm text-muted-foreground hover:text-primary"
@@ -472,8 +527,22 @@ export default function AdminVCsPage() {
                             <ExternalLink className="h-4 w-4" />
                             Apply
                           </a>
-                        )}
+                        ) : investor.applicationUrl?.trim() ? (
+                          <span className="flex items-center gap-1 text-sm text-destructive" title={investor.applicationUrl}>
+                            <ExternalLink className="h-4 w-4" />
+                            Apply (broken URL)
+                          </span>
+                        ) : null}
                       </div>
+                      {(investor.linkQuality?.issues.length ?? 0) > 0 && (
+                        <ul className="mt-2 text-xs text-amber-800 dark:text-amber-200/90 list-disc pl-4 space-y-0.5">
+                          {investor.linkQuality!.issues.map((issue, idx) => (
+                            <li key={idx}>
+                              <span className="font-medium">{issue.field}:</span> {issue.message}
+                            </li>
+                          ))}
+                        </ul>
+                      )}
 
                       <p className="text-xs text-muted-foreground mt-3">
                         Created {new Date(investor.createdAt).toLocaleDateString()} • 

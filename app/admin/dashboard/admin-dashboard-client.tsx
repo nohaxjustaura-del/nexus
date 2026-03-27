@@ -216,7 +216,7 @@ export function AdminDashboardClient({
     try {
       const data = await patchUserAction(email, 'revoke_verification')
       if (data?.skipped) {
-        toast.success('No founder verification on file — nothing to revoke')
+        toast.success('No founder verification on file; nothing to revoke.')
       } else {
         toast.success('Founder verification revoked')
       }

@@ -15,6 +15,7 @@
 import { Founder } from '@prisma/client'
 import { parseJSON } from './utils'
 import { db } from './db' // Use singleton instance instead of creating new PrismaClient
+import { computeFounderProfileCompletenessPercentAnalytical } from './founder-profile-completeness'
 
 export interface ComprehensiveFounderContext {
   // Core identity
@@ -232,8 +233,20 @@ export async function getComprehensiveFounderContext(
       lastAiAnalysis,
       lastAnalysisDate: user?.lastAnalysisDate || undefined,
       
-      // Computed
-      profileCompleteness: founder.profileCompleteness,
+      // Computed (DB column is often stale; derive from actual fields + contact LinkedIn)
+      profileCompleteness: computeFounderProfileCompletenessPercentAnalytical({
+        name: founder.name,
+        startupName: founder.startupName,
+        bio: founder.bio,
+        stage: founder.stage,
+        sectors,
+        location: founder.location,
+        fundingNeed: founder.fundingNeed,
+        pitchDeck: founder.pitchDeck,
+        videoPitchUrl: founder.videoPitchUrl,
+        linkedinUrl: founder.linkedinUrl,
+        linkedin: contact?.linkedin,
+      }),
       experienceLevel,
       techBackground,
       hasStrongTraction,

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { revalidateVerifiedInvestorCountCache } from '@/lib/investor-public-stats'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -25,7 +26,10 @@ export async function DELETE(
       where: { id: investorId },
     })
 
-    console.log(`🗑️ Deleted investor ${existing.firmName} (${existing.email})`)
+    if (existing.verified) {
+      revalidateVerifiedInvestorCountCache()
+    }
+
     return NextResponse.json({ success: true })
   } catch (error) {
     console.error('Error deleting investor:', error)

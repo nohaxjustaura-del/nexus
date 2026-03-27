@@ -447,10 +447,28 @@ model User {
 
   credits UserCredits?
 
+  ycInsiderFounderRequests YCInsiderFounderRequest[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([email])
+}
+
+/// Premium-only requests from /founder/yc-insider (Ask / Book with founders).
+model YCInsiderFounderRequest {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userEmail   String
+  founderKey  String // william | inigo
+  requestType String // ask | book
+  message     String   @db.Text
+
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([userId])
 }
 
 model VerificationCode {

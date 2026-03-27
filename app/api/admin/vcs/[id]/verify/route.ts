@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { revalidateVerifiedInvestorCountCache } from '@/lib/investor-public-stats'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -17,7 +18,7 @@ export async function POST(
       data: { verified: verified === true },
     })
 
-    console.log(`✅ VC ${investor.firmName} verification ${verified ? 'enabled' : 'disabled'}`)
+    revalidateVerifiedInvestorCountCache()
 
     return NextResponse.json({ 
       success: true,

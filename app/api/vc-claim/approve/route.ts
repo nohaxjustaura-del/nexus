@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { revalidateVerifiedInvestorCountCache } from '@/lib/investor-public-stats'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -48,12 +49,11 @@ export async function POST(request: NextRequest) {
         where: { email: claim.email },
         data: { verified: true },
       })
-      console.log(`✅ Auto-verified VC profile: ${claim.email}`)
-    } catch (error) {
-      console.warn('Could not update VC verification status:', error)
+    } catch {
+      /* optional: investor row may not exist yet */
     }
 
-    console.log(`✅ Approved VC claim: ${claim.firmName} (${claim.email})`)
+    revalidateVerifiedInvestorCountCache()
 
     return NextResponse.json({
       success: true,

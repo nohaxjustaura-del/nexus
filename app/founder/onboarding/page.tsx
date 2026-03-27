@@ -117,7 +117,7 @@ export default function OnboardingPage() {
         
         if (response.ok) {
           const data = await response.json()
-          // Fully verified founders should use Hub — avoid looping them through onboarding after sign-in.
+          // Fully verified founders should use Hub; avoid looping them through onboarding after sign-in.
           if (
             data.exists &&
             data.profile &&

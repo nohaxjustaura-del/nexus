@@ -52,6 +52,24 @@ export function getStoragePublicUrl(objectPath: string): string {
   return data.publicUrl
 }
 
+/** Time-limited HTTPS URL for private buckets (admin export / bulk download). */
+export async function createSignedStorageUrl(
+  objectPath: string | null | undefined,
+  expiresInSeconds: number = 60 * 60 * 24 * 7
+): Promise<string | null> {
+  const p = objectPath?.trim()
+  if (!p) return null
+  try {
+    const supabase = createSupabaseAdminClient()
+    const bucket = getStorageBucketName()
+    const { data, error } = await supabase.storage.from(bucket).createSignedUrl(p, expiresInSeconds)
+    if (error || !data?.signedUrl) return null
+    return data.signedUrl
+  } catch {
+    return null
+  }
+}
+
 /**
  * Build a founder snapshot object that captures the founder's profile
  * at the time of submission. Useful as training data context.

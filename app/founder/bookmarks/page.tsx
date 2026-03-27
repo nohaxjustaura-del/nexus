@@ -97,7 +97,7 @@ export default function BookmarksPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="container mx-auto max-w-6xl px-4 py-4 md:py-6">
+      <div className="container mx-auto max-w-7xl px-4 py-4 md:py-6">
         {/* Tab Navigation */}
         <div className="mb-4 border-b">
           <nav className="flex items-center gap-1 -mb-px">

@@ -4,12 +4,15 @@ import { DM_Sans, Outfit } from "next/font/google"
 import "./globals.css"
 import { cn } from "@/lib/utils"
 import { SessionKeeper } from "@/components/session-keeper"
+import { AuthSessionProvider } from "@/components/auth-session-provider"
+import { ChromeModeProvider } from "@/components/chrome-mode-provider"
 import { SiteHeader } from "@/components/site-header"
 import Link from "next/link"
-import { Orbit } from "lucide-react"
+import { NexusWordmark } from "@/components/nexus-wordmark"
 import { getSiteUrl } from "@/lib/site-url"
 import { BRAND_DEFAULT_TITLE, BRAND_NAME, BRAND_TITLE_TEMPLATE } from "@/lib/brand"
 import { AppToaster } from "@/components/ui/app-toaster"
+import { formatVerifiedInvestorCount, getVerifiedInvestorCount } from "@/lib/investor-public-stats"
 
 const siteUrl = getSiteUrl()
 
@@ -28,61 +31,68 @@ const outfit = Outfit({
   variable: "--font-heading",
 })
 
-export const metadata: Metadata = {
-  metadataBase: new URL(siteUrl),
-  title: {
-    default: BRAND_DEFAULT_TITLE,
-    template: BRAND_TITLE_TEMPLATE,
-  },
-  description: "AI-powered platform connecting founders with 1,002 verified investors. Get matched with VCs who actually fund startups like yours through intelligent analysis of your pitch idea, deck, and video pitch.",
-  keywords: ["venture capital", "VC matching", "founder", "investor", "startup funding", "AI matching", "pitch deck", "fundraising"],
-  authors: [{ name: BRAND_NAME, url: siteUrl }],
-  creator: BRAND_NAME,
-  publisher: BRAND_NAME,
-  formatDetection: {
-    email: false,
-    address: false,
-    telephone: false,
-  },
-  openGraph: {
-    type: "website",
-    locale: "en_US",
-    url: siteUrl,
-    siteName: BRAND_NAME,
-    title: BRAND_DEFAULT_TITLE,
-    description: "AI-powered platform connecting founders with 1,002 verified investors. Smart matching through pitch analysis and evidence-based recommendations.",
-    images: [
-      {
-        url: "/og-image.png",
-        width: 1200,
-        height: 630,
-        alt: BRAND_DEFAULT_TITLE,
-      },
+export async function generateMetadata(): Promise<Metadata> {
+  const verifiedCount = await getVerifiedInvestorCount()
+  const label = formatVerifiedInvestorCount(verifiedCount)
+  const description = `NEXUS produces ranked investor shortlists from your pitch summary, deck, or recording. ${label}+ verified profiles scored on stage, sector, thesis, and fit, with clear rationale.`
+  const ogDescription = `${label}+ verified investors and programs, ranked by stage, sector, thesis, and alignment with how you build.`
+
+  return {
+    metadataBase: new URL(siteUrl),
+    title: {
+      default: BRAND_DEFAULT_TITLE,
+      template: BRAND_TITLE_TEMPLATE,
+    },
+    description,
+    keywords: [
+      "venture capital",
+      "investor matching",
+      "founder fundraising",
+      "startup funding",
+      "pitch deck analysis",
+      "VC shortlist",
+      "angel investors",
     ],
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: BRAND_DEFAULT_TITLE,
-    description: "AI-powered platform connecting founders with compatible VCs",
-    images: ["/og-image.png"],
-  },
-  robots: {
-    index: true,
-    follow: true,
-    googleBot: {
+    authors: [{ name: BRAND_NAME, url: siteUrl }],
+    creator: BRAND_NAME,
+    publisher: BRAND_NAME,
+    formatDetection: {
+      email: false,
+      address: false,
+      telephone: false,
+    },
+    openGraph: {
+      type: "website",
+      locale: "en_US",
+      url: siteUrl,
+      siteName: BRAND_NAME,
+      title: BRAND_DEFAULT_TITLE,
+      description: ogDescription,
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: BRAND_DEFAULT_TITLE,
+      description:
+        "Ranked introductions to verified investors from your pitch materials, aligned on mandate, stage, and sector.",
+    },
+    robots: {
       index: true,
       follow: true,
-      'max-video-preview': -1,
-      'max-image-preview': 'large',
-      'max-snippet': -1,
+      googleBot: {
+        index: true,
+        follow: true,
+        'max-video-preview': -1,
+        'max-image-preview': 'large',
+        'max-snippet': -1,
+      },
     },
-  },
-  manifest: '/manifest.json',
-  verification: {
-    // Add verification tokens here when available
-    // google: 'your-google-verification-token',
-    // yandex: 'your-yandex-verification-token',
-  },
+    manifest: '/manifest.json',
+    verification: {
+      // Add verification tokens here when available
+      // google: 'your-google-verification-token',
+      // yandex: 'your-yandex-verification-token',
+    },
+  }
 }
 
 export const viewport = {
@@ -91,62 +101,92 @@ export const viewport = {
   maximumScale: 5,
 }
 
-export default function RootLayout({
-  children,
-}: Readonly<{
+type RootLayoutProps = Readonly<{
   children: React.ReactNode
-}>) {
+}>
+
+export default function RootLayout({ children }: RootLayoutProps) {
   return (
     <html lang="en" className={cn("dark scroll-smooth", dmSans.variable, outfit.variable)}>
-      <body className={cn("min-h-screen bg-background font-sans antialiased")} suppressHydrationWarning>
+      <body className={cn("flex min-h-screen flex-col bg-background font-sans antialiased")} suppressHydrationWarning>
         <SessionKeeper />
-        
-        {/* Skip to main content - Accessibility */}
-        <a 
-          href="#main-content" 
-          className="skip-to-main focus:top-4 rounded"
-        >
-          Skip to main content
-        </a>
+        <AuthSessionProvider>
+          <ChromeModeProvider>
+          {/* Skip to main content - Accessibility */}
+          <a
+            href="#main-content"
+            className="skip-to-main focus:top-4 rounded"
+          >
+            Skip to main content
+          </a>
 
-        <SiteHeader />
-        
-        <main id="main-content" className="flex-1">
-          {children}
-        </main>
-        {/* Global Footer - Clean & Modern */}
-        <footer className="mt-auto border-t border-border/80 py-14 no-print bg-background" role="contentinfo">
-          <div className="container mx-auto max-w-6xl px-4">
-            <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 mb-8">
-              <Link href="/privacy" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Privacy</Link>
-              <Link href="/terms" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Terms</Link>
-              <Link href="/about" className="text-sm text-muted-foreground hover:text-foreground transition-colors">About</Link>
-              <Link href="/contact" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Contact</Link>
-            </div>
-            <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-1 mb-10 text-xs text-muted-foreground/90">
-              <Link href="/verification-notice" className="hover:text-foreground transition-colors">Verification notice</Link>
-              <Link href="/security" className="hover:text-foreground transition-colors">Security</Link>
-              <Link href="/disclaimer" className="hover:text-foreground transition-colors">Disclaimer</Link>
-            </div>
+          <SiteHeader />
 
-            <div className="flex flex-col items-center gap-4 mb-6">
-              <div className="flex items-center gap-2.5">
-                <span className="flex h-8 w-8 items-center justify-center rounded-md bg-primary/10 text-primary">
-                  <Orbit className="h-4 w-4" strokeWidth={2} />
-                </span>
-                <span className="font-heading font-semibold text-foreground">{BRAND_NAME}</span>
+          <main id="main-content" className="flex-1">
+            {children}
+          </main>
+          <footer className="mt-auto border-t border-border/30 bg-muted/[0.06] py-12 sm:py-14 no-print" role="contentinfo">
+            <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+              <div className="flex flex-col gap-10 lg:flex-row lg:items-start lg:justify-between lg:gap-16">
+                <div className="max-w-sm shrink-0">
+                  <NexusWordmark heightClass="h-14 sm:h-16" className="max-w-[20rem] sm:max-w-[26rem]" />
+                  <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
+                    Founder–investor matching and pitch tools. Built for clarity, not clutter.
+                  </p>
+                </div>
+
+                <div className="flex flex-wrap gap-x-16 gap-y-10 sm:gap-x-20">
+                  <div>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Product</p>
+                    <nav className="mt-3 flex flex-col gap-2 text-sm" aria-label="Footer product">
+                      <Link href="/pricing" className="text-muted-foreground transition-colors hover:text-foreground">
+                        Pricing
+                      </Link>
+                      <Link href="/about" className="text-muted-foreground transition-colors hover:text-foreground">
+                        About
+                      </Link>
+                      <Link href="/contact" className="text-muted-foreground transition-colors hover:text-foreground">
+                        Contact
+                      </Link>
+                      <Link href="/blog" className="text-muted-foreground transition-colors hover:text-foreground">
+                        Blog
+                      </Link>
+                    </nav>
+                  </div>
+
+                  <div>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Legal & trust</p>
+                    <nav className="mt-3 flex flex-col gap-2 text-sm" aria-label="Footer legal">
+                      <Link href="/privacy" className="text-muted-foreground transition-colors hover:text-foreground">
+                        Privacy
+                      </Link>
+                      <Link href="/terms" className="text-muted-foreground transition-colors hover:text-foreground">
+                        Terms
+                      </Link>
+                      <Link href="/verification-notice" className="text-muted-foreground transition-colors hover:text-foreground">
+                        Verification notice
+                      </Link>
+                      <Link href="/security" className="text-muted-foreground transition-colors hover:text-foreground">
+                        Security
+                      </Link>
+                      <Link href="/disclaimer" className="text-muted-foreground transition-colors hover:text-foreground">
+                        Disclaimer
+                      </Link>
+                    </nav>
+                  </div>
+                </div>
               </div>
-              <p className="text-sm text-muted-foreground">
-                © {new Date().getFullYear()} {BRAND_NAME}. Built for founders.
+
+              <p className="mt-10 border-t border-border/25 pt-8 text-center text-xs leading-relaxed text-muted-foreground/85 sm:mt-12">
+                ©{' '}
+                <span suppressHydrationWarning>{new Date().getFullYear()}</span> {BRAND_NAME}. Information and tools
+                only. We do not broker or advise on securities.
               </p>
             </div>
-
-            <p className="text-center text-xs text-muted-foreground/90 max-w-xl mx-auto leading-relaxed">
-              {BRAND_NAME} provides information and tools only. We do not broker, solicit, or advise on securities.
-            </p>
-          </div>
-        </footer>
-        <AppToaster />
+          </footer>
+          <AppToaster />
+          </ChromeModeProvider>
+        </AuthSessionProvider>
       </body>
     </html>
   )

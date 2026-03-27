@@ -1,11 +1,11 @@
 {
-  "name": "NEXUS · Find your perfect investor",
+  "name": "NEXUS · Investor matching for founders",
   "short_name": "NEXUS",
-  "description": "AI-powered platform connecting founders with compatible VCs, angels, and mentors",
+  "description": "Ranked matches to verified investors and programs from your pitch, by stage, sector, thesis, and fit.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
-  "theme_color": "#155DFD",
+  "theme_color": "#1D3567",
   "orientation": "portrait-primary",
   "icons": []
 }

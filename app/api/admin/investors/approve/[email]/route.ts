@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { revalidateVerifiedInvestorCountCache } from '@/lib/investor-public-stats'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -16,6 +17,7 @@ async function approve(emailParam: string) {
   if (!investor.count) {
     return NextResponse.json({ error: 'Investor not found' }, { status: 404 })
   }
+  revalidateVerifiedInvestorCountCache()
   return NextResponse.json({ success: true })
 }
 

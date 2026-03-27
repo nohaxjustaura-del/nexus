@@ -21,6 +21,10 @@
  *  - WORKER_EXA_UNCACHED_TAKE, WORKER_EXA_STALE_TAKE, WORKER_EXA_ENRICH_DELAY_MS
  *  - WORKER_THESIS_REFRESH_INTERVAL_MS, WORKER_PROFILE_REFRESH_INTERVAL_MS (default ~30d each)
  *  - WORKER_VC_DIRECTORY_SYNC_INTERVAL_MS (default 6h)
+ *  - WORKER_VALIDATION_EXA_SAMPLE (default 0) — if > 0, sample that many public VCs and score DB vs fresh Exa + LLM (e.g. Ollama qwen2.5:7b)
+ *  - WORKER_VALIDATION_EXA_DELAY_MS (default 2500) — pause between Exa validation samples
+ *  - VC_VALIDATION_EXA_CONTEXT_CHARS (default 12000) — max chars of Exa text passed to the LLM
+ *  - WORKER_VALIDATION_FULL_LOCAL_AUDIT=1 — scan ALL investors with lib/investor-quality-audit (logs summary + top error rows)
  */
 
 import { db } from './db'
@@ -38,6 +42,9 @@ import {
   markProfileBatchRan,
 } from './worker-vc-refresh-state'
 import { syncRecentPublicDiscoverableToVcDirectory } from './vc-supabase-sync'
+import { verifyInvestorAgainstExa } from './vc-db-exa-quality-check'
+import { hasVcLlmConfigured } from './openrouter'
+import { auditInvestorLocal, auditSeverityScore, type InvestorLocalAuditInput } from './investor-quality-audit'
 
 // ============================================================================
 // TYPES & CONFIGURATION
@@ -138,6 +145,44 @@ const DEFAULT_CONFIG: WorkerConfig = {
       maxErrors: 5,
     },
   ],
+}
+
+/** Accurate summaries for admin UI, API status, and `npm run worker:status` */
+export const WORKER_JOB_UI_META: Record<string, { summary: string; cadence: string }> = {
+  'vc-thesis-monthly': {
+    summary:
+      'Backfills missing or very short thesis text for real firm names using Exa plus your configured LLM. Honors the monthly thesis window in data/worker-vc-refresh-state.json.',
+    cadence:
+      'Scheduler tick every 24h; batches run only while the monthly thesis cycle is open (interval: WORKER_THESIS_REFRESH_INTERVAL_MS in lib/worker-vc-refresh-state.ts).',
+  },
+  'vc-profile-monthly': {
+    summary:
+      'Refreshes non-thesis fields (stages, sectors, check size, portfolio, bio, etc.) for investors in the open monthly profile window.',
+    cadence:
+      'Scheduler tick every 24h; work only when the profile cycle is open (WORKER_PROFILE_REFRESH_INTERVAL_MS in lib/worker-vc-refresh-state.ts).',
+  },
+  'exa-enrichment-daily': {
+    summary:
+      'Pre-warms VC enrichment cache via Exa live pulse for public discoverable investors so matching and profiles see fresher context.',
+    cadence: 'Every 24 hours.',
+  },
+  'embeddings-rebuild': {
+    summary:
+      'Regenerates Voyage embeddings and rebuilds the FAISS index backing semantic investor search.',
+    cadence:
+      'Every 24 hours. Not run immediately on worker startup (timer only); use Admin “Run now” or npm run embeddings:rebuild for an on-demand rebuild.',
+  },
+  'data-validation': {
+    summary:
+      'Aggregates data-gap counts, optional full-table local audit when WORKER_VALIDATION_FULL_LOCAL_AUDIT=1, and optional Exa+LLM samples when WORKER_VALIDATION_EXA_SAMPLE > 0.',
+    cadence: 'Every 12 hours.',
+  },
+  'vc-directory-sync': {
+    summary:
+      'Syncs recently updated public Prisma investors into Supabase vc_directory to heal missed upserts and keep search directory rows aligned.',
+    cadence:
+      'Default every 6h (minimum 1h); set WORKER_VC_DIRECTORY_SYNC_INTERVAL_MS. Not run on worker startup; timer only.',
+  },
 }
 
 // ============================================================================
@@ -494,6 +539,128 @@ async function executeDataValidation(): Promise<void> {
       logger.info('WORKER', '✅ Data validation passed  -  no issues found')
     }
 
+    if (process.env.WORKER_VALIDATION_FULL_LOCAL_AUDIT === '1') {
+      const invRows = await db.investor.findMany({
+        select: {
+          id: true,
+          firmName: true,
+          email: true,
+          thesis: true,
+          bio: true,
+          checkSizeMin: true,
+          checkSizeMax: true,
+          stages: true,
+          sectors: true,
+          geography: true,
+          fundType: true,
+          portfolio: true,
+          websiteUrl: true,
+          embedding: true,
+          isPublic: true,
+          discoverable: true,
+        },
+        orderBy: { firmName: 'asc' },
+      })
+      const audits = invRows.map((r) => auditInvestorLocal(r as InvestorLocalAuditInput))
+      const errN = audits.filter((a) => a.errorCount > 0).length
+      const warnN = audits.filter((a) => a.warnCount > 0).length
+      const codes = new Map<string, number>()
+      for (const a of audits) {
+        for (const iss of a.issues) codes.set(iss.code, (codes.get(iss.code) || 0) + 1)
+      }
+      const topCodes = [...codes.entries()]
+        .sort((x, y) => y[1] - x[1])
+        .slice(0, 12)
+        .map(([c, n]) => `${c}=${n}`)
+        .join(', ')
+      logger.info(
+        'WORKER',
+        `📋 Full local investor audit: ${audits.length} rows, ${errN} with errors, ${warnN} with warns. Top codes: ${topCodes}`,
+      )
+      const worst = [...audits].sort((x, y) => auditSeverityScore(y) - auditSeverityScore(x)).slice(0, 8)
+      for (const a of worst) {
+        if (a.errorCount === 0 && a.warnCount === 0) continue
+        const codesHere = a.issues
+          .filter((i) => i.level === 'error' || i.level === 'warn')
+          .map((i) => i.code)
+          .join(', ')
+        logger.warn('WORKER', `   ⚠️ ${a.firmName}: ${codesHere || 'info-only'}`)
+      }
+    }
+
+    // Optional: Exa + LLM spot-check (same stack as VC research — verifies stored rows vs live web excerpts)
+    const exaSample = Math.min(
+      15,
+      Math.max(0, parseInt(process.env.WORKER_VALIDATION_EXA_SAMPLE || '0', 10) || 0),
+    )
+    if (exaSample > 0) {
+      if (!process.env.EXA_API_KEY?.trim()) {
+        logger.warn('WORKER', '⏭️ WORKER_VALIDATION_EXA_SAMPLE > 0 but EXA_API_KEY missing — skipping Exa+LLM checks')
+      } else if (!hasVcLlmConfigured()) {
+        logger.warn(
+          'WORKER',
+          '⏭️ WORKER_VALIDATION_EXA_SAMPLE > 0 but no LLM — set OLLAMA_BASE_URL+OLLAMA_MODEL (e.g. qwen2.5:7b) or OPENROUTER_API_KEY',
+        )
+      } else {
+        const delayMs = Math.max(
+          500,
+          parseInt(process.env.WORKER_VALIDATION_EXA_DELAY_MS || '2500', 10) || 2500,
+        )
+        const rows = await db.investor.findMany({
+          where: { isPublic: true, discoverable: true },
+          select: {
+            firmName: true,
+            thesis: true,
+            bio: true,
+            checkSizeMin: true,
+            checkSizeMax: true,
+            stages: true,
+            sectors: true,
+            geography: true,
+            fundType: true,
+            portfolio: true,
+            websiteUrl: true,
+            updatedAt: true,
+          },
+          take: exaSample,
+          orderBy: { updatedAt: 'desc' },
+        })
+
+        logger.info(
+          'WORKER',
+          `🔎 Exa+LLM validation sample: ${rows.length} investor row(s) (recently updated first)…`,
+        )
+
+        let checked = 0
+        for (const row of rows) {
+          try {
+            const r = await verifyInvestorAgainstExa(row)
+            if (!r) continue
+            checked++
+            if (r.skippedReason === 'no_exa' || r.skippedReason === 'no_llm') {
+              logger.warn('WORKER', `⚠️ ${r.firmName}: ${r.issues[0] || r.skippedReason}`)
+              continue
+            }
+            const flag = r.aligned ? '✅' : '⚠️'
+            const tail = r.summary ? ` — ${r.summary}` : ''
+            logger.info(
+              'WORKER',
+              `${flag} ${r.firmName}: score ${r.score}/100, Exa ${r.exaTotalResults} hit(s)${tail}`,
+            )
+            if (r.issues.length) {
+              logger.warn('WORKER', `   issues: ${r.issues.join('; ')}`)
+            }
+          } catch (e: any) {
+            logger.warn('WORKER', `⚠️ Exa+LLM check failed for ${row.firmName}:`, e?.message || e)
+          }
+          await new Promise((resolve) => setTimeout(resolve, delayMs))
+        }
+        if (checked === 0) {
+          logger.info('WORKER', '⏭️ Exa+LLM validation: no rows passed the firm-name quality gate')
+        }
+      }
+    }
+
     logger.info('WORKER', '✅ Data validation complete')
   } catch (error: any) {
     logger.error('WORKER', 'Data validation failed:', error.message)
@@ -648,18 +815,24 @@ export function getWorkerStatus(): {
     lastRun?: string
     nextRun?: string
     errorCount: number
+    summary?: string
+    cadence?: string
   }>
 } {
   return {
     running: isRunning,
-    jobs: workerConfig.jobs.map(job => ({
-      id: job.id,
-      name: job.name,
-      status: job.status,
-      lastRun: job.lastRun?.toISOString(),
-      nextRun: job.nextRun?.toISOString(),
-      errorCount: job.errorCount,
-    })),
+    jobs: workerConfig.jobs.map(job => {
+      const meta = WORKER_JOB_UI_META[job.id]
+      return {
+        id: job.id,
+        name: job.name,
+        status: job.status,
+        lastRun: job.lastRun?.toISOString(),
+        nextRun: job.nextRun?.toISOString(),
+        errorCount: job.errorCount,
+        ...(meta ? { summary: meta.summary, cadence: meta.cadence } : {}),
+      }
+    }),
   }
 }
 

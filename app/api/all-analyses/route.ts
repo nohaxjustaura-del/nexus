@@ -1,27 +1,21 @@
 import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { getCurrentUser } from '@/lib/auth'
-import { logger } from '@/lib/logger'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
 export async function GET() {
   try {
-    console.log('[API] /api/all-analyses GET called')
     const user = await getCurrentUser()
-    console.log('[API] /api/all-analyses user:', user ? `found (${user.email})` : 'not found')
-    
+
     if (!user || !user.email) {
-      console.log('[API] /api/all-analyses unauthorized')
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
       )
     }
 
-    // Find founder profile
-    console.log('[API] /api/all-analyses fetching founder profile...')
     const founder = await db.founder.findUnique({
       where: { email: user.email },
       select: {
@@ -36,13 +30,11 @@ export async function GET() {
     })
 
     if (!founder) {
-      console.log('[API] /api/all-analyses founder not found')
       return NextResponse.json({
         analyses: [],
       })
     }
 
-    console.log('[API] /api/all-analyses founder found, fetching analyses...')
     // Get all analysis types
     const [resumeAnalyses, videoPitches, pitchDeckAnalyses, pitchIdeaAnalyses] = await Promise.all([
       // Resume analyses
@@ -84,8 +76,8 @@ export async function GET() {
         if (analysis.fullResult) {
           try {
             analysisResult = JSON.parse(analysis.fullResult)
-          } catch (e) {
-            console.warn('Could not parse resume analysis result')
+          } catch {
+            /* invalid JSON */
           }
         }
 
@@ -105,14 +97,15 @@ export async function GET() {
         if (pitch.analysisResult) {
           try {
             analysisResult = JSON.parse(pitch.analysisResult)
-          } catch (e) {
-            console.warn('Could not parse video pitch analysis result')
+          } catch {
+            /* invalid JSON */
           }
         }
 
+        const isUnified = analysisResult?.pitchType === 'UNIFIED'
         return {
           id: pitch.id,
-          type: 'video-pitch',
+          type: isUnified ? 'unified-pitch' : 'video-pitch',
           createdAt: pitch.createdAt,
           compatibilityScore: analysisResult?.overallScore || 0,
           confidence: analysisResult?.confidence || 85,
@@ -126,8 +119,8 @@ export async function GET() {
         if (analysis.analysisResult) {
           try {
             analysisResult = JSON.parse(analysis.analysisResult)
-          } catch (e) {
-            console.warn('Could not parse pitch deck analysis result')
+          } catch {
+            /* invalid JSON */
           }
         }
 
@@ -147,16 +140,16 @@ export async function GET() {
         if (analysis.analysisResult) {
           try {
             analysisResult = JSON.parse(analysis.analysisResult)
-          } catch (e) {
-            console.warn('Could not parse pitch idea analysis result')
+          } catch {
+            /* invalid JSON */
           }
         }
         let smartMatchResults = null
         if (analysis.smartMatchResults) {
           try {
             smartMatchResults = JSON.parse(analysis.smartMatchResults)
-          } catch (e) {
-            console.warn('Could not parse pitch idea match results')
+          } catch {
+            /* invalid JSON */
           }
         }
 
@@ -176,13 +169,11 @@ export async function GET() {
       }),
     ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
 
-    console.log(`[API] /api/all-analyses success: ${allAnalyses.length} analyses found`)
     return NextResponse.json({
       analyses: allAnalyses,
     })
-  } catch (error: any) {
-    console.error('[API] /api/all-analyses error:', error?.message || error)
-    console.error('[API] /api/all-analyses error stack:', error?.stack || 'No stack trace')
+  } catch (error: unknown) {
+    console.error('[API] /api/all-analyses', error)
     return NextResponse.json(
       { error: 'Failed to fetch analyses' },
       { status: 500 }

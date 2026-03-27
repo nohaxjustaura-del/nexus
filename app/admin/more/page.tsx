@@ -3,18 +3,12 @@ import { getCurrentUser } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { isAdminEmail } from '@/lib/constants'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Database, Heart, Cog } from 'lucide-react'
+import { Database, MessageSquare } from 'lucide-react'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
 const tools = [
-  {
-    href: '/admin/waitlist',
-    title: 'Waitlist',
-    description: 'Early access and interest list',
-    icon: Heart,
-  },
   {
     href: '/admin/training-data',
     title: 'Training data',
@@ -22,10 +16,10 @@ const tools = [
     icon: Database,
   },
   {
-    href: '/admin/worker',
-    title: 'Worker',
-    description: 'Background jobs and automation',
-    icon: Cog,
+    href: '/admin/yc-insider-requests',
+    title: 'YC Insider requests',
+    description: 'Ask / Book submissions from premium users',
+    icon: MessageSquare,
   },
 ] as const
 

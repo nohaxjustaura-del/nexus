@@ -71,17 +71,17 @@ function VCSearchSimple() {
   }
 
   return (
-    <div className="w-full max-w-2xl">
-      <div className="relative rounded-xl ring-1 ring-white/[0.05]">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground pointer-events-none z-10" />
+    <div className="w-full max-w-xl">
+      <div className="relative">
+        <Search className="pointer-events-none absolute left-3 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
           id="vc-search-input"
           name="vc-search"
           type="text"
-          placeholder="Search by firm name, sector, stage, or location..."
+          placeholder="Search firms or partners…"
           value={searchQuery}
           onChange={(e) => handleSearch(e.target.value)}
-          className="pl-10 pr-10 h-12 text-base rounded-xl border-border/70 bg-card/70 backdrop-blur-md shadow-[inset_0_1px_0_0_hsl(var(--foreground)/0.04)] placeholder:text-muted-foreground/75 focus-visible:border-primary/40 focus-visible:ring-2 focus-visible:ring-primary/25"
+          className="h-10 rounded-lg border-border bg-background pl-9 pr-9 text-sm placeholder:text-muted-foreground/70 focus-visible:ring-1"
           autoComplete="off"
         />
         {searchQuery && (
@@ -97,29 +97,18 @@ function VCSearchSimple() {
         )}
       </div>
       {!searchQuery && (
-        <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-          <span>Try:</span>
-          <button
-            type="button"
-            onClick={() => handleSearch('AI')}
-            className="px-2.5 py-1 rounded-md border border-border/80 bg-card/60 hover:bg-muted/80 hover:border-border transition-colors text-muted-foreground hover:text-foreground"
-          >
-            AI
-          </button>
-          <button
-            type="button"
-            onClick={() => handleSearch('Seed')}
-            className="px-2.5 py-1 rounded-md border border-border/80 bg-card/60 hover:bg-muted/80 hover:border-border transition-colors text-muted-foreground hover:text-foreground"
-          >
-            Seed
-          </button>
-          <button
-            type="button"
-            onClick={() => handleSearch('San Francisco')}
-            className="px-2.5 py-1 rounded-md border border-border/80 bg-card/60 hover:bg-muted/80 hover:border-border transition-colors text-muted-foreground hover:text-foreground"
-          >
-            San Francisco
-          </button>
+        <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
+          <span className="mr-0.5">Try</span>
+          {(['AI', 'Seed', 'San Francisco'] as const).map((q) => (
+            <button
+              key={q}
+              type="button"
+              onClick={() => handleSearch(q)}
+              className="rounded-md px-2 py-0.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            >
+              {q}
+            </button>
+          ))}
         </div>
       )}
     </div>

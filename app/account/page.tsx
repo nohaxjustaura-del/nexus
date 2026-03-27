@@ -1,6 +1,5 @@
 import { redirect } from 'next/navigation'
 import { getCurrentUser } from '@/lib/auth'
-import { isAdminEmail } from '@/lib/constants'
 import { AccountPageClient } from './account-page-client'
 
 export const dynamic = 'force-dynamic'
@@ -22,7 +21,6 @@ export default async function AccountPage() {
         email={user.email}
         emailVerified={user.emailVerified}
         userType={user.userType}
-        isAdmin={isAdminEmail(user.email)}
       />
     )
   } catch (error) {

@@ -3,8 +3,6 @@
 import { useEffect, useState } from 'react'
 import VCSearchSimple from "@/components/vc-search-simple"
 import VCCardsGrid from "@/components/vc-cards-grid"
-import { Button } from "@/components/ui/button"
-import { Sparkles } from "lucide-react"
 import Link from "next/link"
 
 interface DiscoverClientProps {
@@ -25,6 +23,8 @@ interface DiscoverClientProps {
     decisionSpeed: string | null
     leadFollow: string | null
     ownershipTarget: string | null
+    checkMin: number | null
+    checkMax: number | null
     applicationUrl: string | null
     websiteUrl: string | null
     twitterUrl: string | null
@@ -34,19 +34,13 @@ interface DiscoverClientProps {
 }
 
 export default function DiscoverClient({ investors, profileComplete }: DiscoverClientProps) {
-  const [mounted, setMounted] = useState(false)
   const [bookmarkedIds, setBookmarkedIds] = useState<Set<string>>(new Set())
-  
-  // Ensure investors is always an array
   const safeInvestors = Array.isArray(investors) ? investors : []
 
   useEffect(() => {
-    setMounted(true)
-    
-    // Fetch all bookmarks once
     fetch('/api/bookmarks', { credentials: 'include' })
-      .then(res => res.json())
-      .then(data => {
+      .then((res) => res.json())
+      .then((data) => {
         if (data.bookmarks) {
           const ids = new Set<string>(
             (data.bookmarks as { investor: { id: string } }[]).map((b) => b.investor.id)
@@ -57,47 +51,20 @@ export default function DiscoverClient({ investors, profileComplete }: DiscoverC
       .catch(() => {})
   }, [])
 
-  if (!mounted) {
-    return (
-      <>
-        <div className="mb-6">
-          <div className="h-12 bg-slate-100 rounded-md animate-pulse" />
-        </div>
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {[...Array(8)].map((_, i) => (
-            <div key={i} className="h-64 bg-slate-100 rounded-lg animate-pulse" />
-          ))}
-        </div>
-      </>
-    )
-  }
-
   return (
     <>
-      {/* Search Bar + Smart Match */}
-      <div className="mb-6 space-y-4">
-        <VCSearchSimple />
-        
-        {/* Smart Match CTA */}
-        <div className="flex items-center justify-center gap-4 p-4 bg-gradient-to-r from-purple-50 to-pink-50 border-2 border-purple-200 rounded-lg">
-          <div className="flex-1">
-            <p className="text-sm font-semibold text-slate-900">
-              Want AI to find your best matches?
-            </p>
-            <p className="text-xs text-slate-600">
-              Analyze your pitch first, then use Smart Match to rank all 1,002 investors by fit
-            </p>
-          </div>
-          <Link href="/founder/pitch-deck-analysis">
-            <Button className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700">
-              <Sparkles className="mr-2 h-4 w-4" />
-              Get Started
-            </Button>
-          </Link>
+      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between sm:gap-4">
+        <div className="min-w-0 flex-1">
+          <VCSearchSimple />
         </div>
+        <Link
+          href="/founder/ai-analysis"
+          className="shrink-0 text-sm font-medium text-primary underline-offset-4 hover:underline"
+        >
+          Analyze pitch for ranked matches →
+        </Link>
       </div>
 
-      {/* Investor Cards Grid */}
       {safeInvestors.length > 0 ? (
         <VCCardsGrid 
           investors={safeInvestors} 
@@ -116,8 +83,8 @@ export default function DiscoverClient({ investors, profileComplete }: DiscoverC
           }}
         />
       ) : (
-        <div className="text-center py-12 text-slate-600">
-          <p>No investors found. Try adjusting your filters.</p>
+        <div className="py-12 text-center text-sm text-muted-foreground">
+          No investors match. Try search or switch to &quot;All&quot; for the full directory.
         </div>
       )}
     </>

@@ -13,7 +13,7 @@ export default function VCGuidePage() {
         <div className="mb-12 text-center">
           <Badge className="mb-4" variant="secondary">
             <Target className="mr-1 h-3 w-3" />
-            Evidence-Based Matching
+            How matching works
           </Badge>
           <h1 className="mb-4 text-4xl font-bold md:text-5xl">
             VC Landscape: What Each Type Actually Looks For
@@ -419,12 +419,12 @@ export default function VCGuidePage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-sm">
-              <strong>Every score on NEXUS is backed by evidence.</strong> We match these sector-specific 
-              proof points against your resume to tell you exactly where you're strong and where to improve.
+              <strong>Scores tie back to what you actually wrote.</strong> We line up sector- and stage-specific
+              proof points from your materials so you can see where you are strong and what is still thin.
             </p>
             <p className="text-sm">
-              Our AI doesn't just give you a score - it shows you the exact resume lines and VC thesis 
-              statements that contributed to each match, plus tailored suggestions for improvement.
+              Each match includes the lines and thesis cues that moved the score, not a black-box number, and
+              notes on what to tighten before you reach out.
             </p>
             <div className="flex gap-4 mt-6">
               <Link href="/founder/resume-analysis">

@@ -308,7 +308,7 @@ export default function CrashCoursePage() {
           <CardContent className="p-8 text-center">
             <h3 className="mb-2 text-xl font-bold">Ready to Start Pitching?</h3>
             <p className="mb-6 text-sm text-muted-foreground">
-              Use this framework to craft your perfect pitch and find the right VCs for your startup.
+              Use this framework to tighten your pitch and aim at VCs who match your stage.
             </p>
             <div className="flex justify-center gap-4">
               <Link href="/founder/matches">

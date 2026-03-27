@@ -17,17 +17,26 @@ export async function GET(_request: NextRequest) {
     }
 
     let approved = false
+    /** Used for dev auto-approve; undefined if approval read failed. */
+    let signupApprovalStatus: string | undefined
     try {
-      // Avoid race-condition duplicates under concurrent auth checks.
-      const row = await db.userApproval.upsert({
+      // Read-first: avoid a write on every poll (layout + nav used to upsert each time).
+      let row = await db.userApproval.findUnique({
         where: { email: user.email },
-        create: {
-          email: user.email,
-          status: 'pending',
-        },
-        update: {},
       })
-      approved = row.status === 'approved'
+      if (!row) {
+        try {
+          row = await db.userApproval.create({
+            data: { email: user.email, status: 'pending' },
+          })
+        } catch {
+          row = await db.userApproval.findUnique({
+            where: { email: user.email },
+          })
+        }
+      }
+      signupApprovalStatus = row?.status
+      approved = row?.status === 'approved'
       // Founder ID verification (admin panel) updates FounderVerification, not always UserApproval.
       if (!approved) {
         const fv = await db.founderVerification.findUnique({
@@ -61,6 +70,29 @@ export async function GET(_request: NextRequest) {
       } catch (autoApproveErr) {
         approved = true
         logger.warn('AUTH_CHECK', 'Auto-approve DB update failed, granting access anyway')
+      }
+    }
+
+    // Local dev: new accounts get UserApproval `pending`, while login still allows them through
+    // resolveUserApprovalAccess — but founder routes require verified=true here, which left the hub
+    // permanently blocked. Auto-approve pending signups in development only (opt out below).
+    const devAutoApprove =
+      process.env.NODE_ENV === 'development' &&
+      process.env.DISABLE_DEV_APPROVAL_BYPASS !== '1' &&
+      !approved &&
+      signupApprovalStatus === 'pending'
+
+    if (devAutoApprove) {
+      try {
+        await db.userApproval.update({
+          where: { email: user.email },
+          data: { status: 'approved', reviewedAt: new Date() },
+        })
+        approved = true
+        logger.log('AUTH_CHECK', `Dev auto-approved pending signup: ${user.email}`)
+      } catch {
+        approved = true
+        logger.warn('AUTH_CHECK', 'Dev auto-approve DB update failed; granting verified session anyway')
       }
     }
 

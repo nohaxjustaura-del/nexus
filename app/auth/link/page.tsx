@@ -19,7 +19,7 @@ export default function AuthLinkPage() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-primary/5 to-background p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center space-y-2">
-          <div className="mx-auto w-12 h-12 bg-gradient-to-br from-purple-600 to-blue-600 rounded-full flex items-center justify-center mb-2">
+          <div className="mx-auto w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-950 rounded-full flex items-center justify-center mb-2">
             <Mail className="w-6 h-6 text-white" />
           </div>
           <CardTitle>Continue to {BRAND_NAME}</CardTitle>

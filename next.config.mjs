@@ -3,7 +3,12 @@ const nextConfig = {
   // Performance optimizations
   compress: true,
   poweredByHeader: false,
-  
+
+  // Dev fetch tree (GET … │ GET https://… (cache skip) │ │ Cache skipped reason: …):
+  // In Next 14, defining `logging.fetches` *enables* that nested fetch logging; `fullUrl` only
+  // shortens URLs. Omit `logging` entirely for a clean terminal. To debug upstream fetches,
+  // temporarily add: `logging: { fetches: { fullUrl: true } }`.
+
   // Image optimization
   images: {
     formats: ['image/avif', 'image/webp'],
@@ -44,31 +49,38 @@ const nextConfig = {
 
   // Headers for caching and security
   async headers() {
+    const globalSecurity = [
+      {
+        key: 'X-DNS-Prefetch-Control',
+        value: 'on',
+      },
+      {
+        key: 'X-Frame-Options',
+        value: 'SAMEORIGIN',
+      },
+      {
+        key: 'X-Content-Type-Options',
+        value: 'nosniff',
+      },
+      {
+        key: 'Referrer-Policy',
+        value: 'strict-origin-when-cross-origin',
+      },
+      {
+        key: 'Permissions-Policy',
+        value: 'camera=(), microphone=(self), geolocation=()',
+      },
+    ]
+    if (process.env.NODE_ENV === 'production') {
+      globalSecurity.push({
+        key: 'Strict-Transport-Security',
+        value: 'max-age=31536000; includeSubDomains; preload',
+      })
+    }
     return [
       {
         source: '/:path*',
-        headers: [
-          {
-            key: 'X-DNS-Prefetch-Control',
-            value: 'on'
-          },
-          {
-            key: 'X-Frame-Options',
-            value: 'SAMEORIGIN'
-          },
-          {
-            key: 'X-Content-Type-Options',
-            value: 'nosniff'
-          },
-          {
-            key: 'Referrer-Policy',
-            value: 'origin-when-cross-origin'
-          },
-          {
-            key: 'Permissions-Policy',
-            value: 'camera=(), microphone=(self), geolocation=()'
-          }
-        ],
+        headers: globalSecurity,
       },
       {
         // Never override Content-Type here: this pattern matches CSS, fonts, and JS.

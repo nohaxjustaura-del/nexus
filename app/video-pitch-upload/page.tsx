@@ -155,7 +155,7 @@ export default function VideoPitchUploadPage() {
         </div>
       </header>
 
-      <div className="container mx-auto max-w-4xl px-4 py-12">
+      <div className="container mx-auto max-w-7xl px-4 py-12">
         {/* Hero Section */}
         <div className="mb-12 text-center">
           <Badge className="mb-4" variant="secondary">
@@ -166,7 +166,7 @@ export default function VideoPitchUploadPage() {
             Upload Your Video Pitch
           </h1>
           <p className="mx-auto max-w-2xl text-lg text-muted-foreground">
-            Get AI-powered feedback on your pitch delivery, content quality, and personalized VC recommendations with application strategies.
+            Notes on delivery and content, plus investor shortlists and outreach angles from your video.
           </p>
         </div>
 

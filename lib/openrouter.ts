@@ -99,7 +99,7 @@ export function getOllamaKeepAliveParams(): { keep_alive?: string | number } {
 
 /**
  * Get the model name for OpenRouter
- * Prioritizes FREE models (DeepSeek, Gemini free tier)
+ * Prioritizes cost-effective models (gpt-4o-mini, Gemini free tier when keys are set)
  */
 export function getModelName(model: string = 'gpt-4o'): string {
   if (isUsingOllama()) {
@@ -143,14 +143,57 @@ export function hasOpenRouterKey(): boolean {
   return hasVcLlmConfigured()
 }
 
-/** Model for VC JSON extraction (OpenRouter id e.g. deepseek/deepseek-chat, or Ollama tag e.g. llama3.2). */
+/** Model for VC JSON extraction (OpenRouter id e.g. meta-llama/llama-3.3-70b-instruct, or Ollama tag e.g. llama3.2). */
 export function getVcExtractionModel(): string {
   if (isUsingOllama()) {
     return process.env.OLLAMA_MODEL?.trim() || 'llama3.2'
   }
   const m = process.env.OPENROUTER_VC_EXTRACTION_MODEL?.trim()
   if (m) return m
-  return 'deepseek/deepseek-chat'
+  return 'meta-llama/llama-3.3-70b-instruct'
+}
+
+/**
+ * When `OPENROUTER_API_KEY` is set, scoring passes use this model (ignores `LLM_PREFER_OLLAMA`).
+ * Falls back to `OPENROUTER_VC_EXTRACTION_MODEL` then Llama 3.3 70B.
+ */
+export function getScoringOpenRouterModel(): string {
+  const scoring = process.env.OPENROUTER_SCORING_MODEL?.trim()
+  if (scoring) return scoring
+  const vc = process.env.OPENROUTER_VC_EXTRACTION_MODEL?.trim()
+  if (vc) return vc
+  return 'meta-llama/llama-3.3-70b-instruct'
+}
+
+/**
+ * LLM client for multi-pass pitch scoring: OpenRouter whenever the key is set (even if `LLM_PREFER_OLLAMA=1`),
+ * otherwise the same preference as `getLlmClient()`.
+ */
+export function getScoringLlmClient(): OpenAI | null {
+  const or = getOpenRouterClient()
+  if (or) return or
+  return getLlmClient()
+}
+
+/**
+ * Model id for tier / scoring helpers when routing may differ from `getModelName()` (Ollama-first override).
+ */
+export function getModelNameForScoring(model: string = 'gpt-4o'): string {
+  if (getOpenRouterClient()) {
+    if (model === 'gpt-4o') {
+      return 'openai/gpt-4o-mini'
+    }
+    if (process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY) {
+      if (model === 'gemini' || model.includes('gemini')) {
+        return 'google/gemini-2.0-flash-thinking-exp:free'
+      }
+    }
+    if (!model.includes('/')) {
+      return 'openai/gpt-4o-mini'
+    }
+    return model
+  }
+  return getModelName(model)
 }
 
 /**
@@ -183,9 +226,7 @@ export async function openrouterGenerateText(
     throw new Error('No LLM configured. Set OLLAMA_BASE_URL (local Ollama) or OPENROUTER_API_KEY.')
   }
 
-  const model =
-    options.model ||
-    (isUsingOllama() ? getVcExtractionModel() : 'deepseek/deepseek-chat')
+  const model = options.model ?? getVcExtractionModel()
 
   const tag = isUsingOllama() ? 'OLLAMA' : 'OPENROUTER'
   console.log(`[${tag}] 🤖 Using model: ${model}`)
@@ -232,6 +273,14 @@ function parseJsonFromModelContent(content: string, _model: string): unknown {
   return JSON.parse(s)
 }
 
+function resolveMaxTokensForRoute(effectiveOllama: boolean, override?: number): number {
+  if (override != null) return override
+  const raw = process.env.VC_EXTRACTION_MAX_TOKENS?.trim()
+  const n = raw ? parseInt(raw, 10) : NaN
+  if (Number.isFinite(n) && n >= 256 && n <= 16000) return n
+  return effectiveOllama ? 8192 : 2048
+}
+
 export async function openrouterGenerateJson<T = any>(options: {
   system: string
   user: string
@@ -241,28 +290,37 @@ export async function openrouterGenerateJson<T = any>(options: {
   maxTokens?: number
   /** If true (default), retry once with a small OpenRouter model when JSON parse fails */
   retryOnParseError?: boolean
+  /**
+   * Scoring pipeline only: use OpenRouter when `OPENROUTER_API_KEY` is set, even if `LLM_PREFER_OLLAMA=1`
+   * (avoids routing scoring to local Ollama / e.g. Qwen).
+   */
+  forceOpenRouter?: boolean
 }): Promise<T> {
-  const client = getLlmClient()
+  const openRouterClient = getOpenRouterClient()
+  const forceOr = options.forceOpenRouter === true && !!openRouterClient
+  const client = forceOr ? openRouterClient! : getLlmClient()
   if (!client) {
     throw new Error('No LLM configured. Set OLLAMA_BASE_URL (local Ollama) or OPENROUTER_API_KEY.')
   }
 
+  const effectiveUsingOllama = forceOr ? false : isUsingOllama()
+
   const primaryModel =
-    options.model ||
-    (isUsingOllama() ? getVcExtractionModel() : 'deepseek/deepseek-chat')
+    options.model ??
+    (forceOr ? getScoringOpenRouterModel() : getVcExtractionModel())
   const retryOnParseError = options.retryOnParseError !== false
-  const logTag = isUsingOllama() ? 'OLLAMA' : 'OPENROUTER'
+  const logTag = effectiveUsingOllama ? 'OLLAMA' : 'OPENROUTER'
 
   const run = async (model: string): Promise<T> => {
     console.log(`[${logTag}] 🤖 Using model: ${model}`)
 
     const ollamaStrict =
-      isUsingOllama() && process.env.OLLAMA_JSON_STRICT !== 'false'
+      effectiveUsingOllama && process.env.OLLAMA_JSON_STRICT !== 'false'
     const temp =
       options.temperature ??
       (ollamaStrict ? 0.15 : 0.7)
 
-    let maxTok = options.maxTokens ?? getVcExtractionMaxTokens()
+    let maxTok = resolveMaxTokensForRoute(effectiveUsingOllama, options.maxTokens)
 
     for (let attempt = 0; attempt < 3; attempt++) {
       const baseParams: Record<string, unknown> = {
@@ -291,7 +349,7 @@ export async function openrouterGenerateJson<T = any>(options: {
       if (ollamaStrict) {
         baseParams.response_format = { type: 'json_object' }
       }
-      if (isUsingOllama()) {
+      if (effectiveUsingOllama) {
         Object.assign(baseParams, getOllamaKeepAliveParams())
       }
 
@@ -302,7 +360,7 @@ export async function openrouterGenerateJson<T = any>(options: {
 
       console.log(`[${logTag}] 📄 Response length: ${content.length}, starts: ${content.substring(0, 100)}`)
 
-      if (finishReason === 'length' && isUsingOllama() && attempt < 2) {
+      if (finishReason === 'length' && effectiveUsingOllama && attempt < 2) {
         const next = Math.min(16000, Math.max(maxTok * 2, maxTok + 4096))
         if (next > maxTok) {
           console.warn(
@@ -333,7 +391,7 @@ export async function openrouterGenerateJson<T = any>(options: {
       e?.error?.type === "not_found_error" ||
       /model ['"][^'"]+['"] not found|not_found_error/i.test(msg)
     const canFallback404 =
-      !isUsingOllama() &&
+      !effectiveUsingOllama &&
       getOpenRouterClient() &&
       retryOnParseError &&
       primaryModel !== VC_EXTRACTION_FALLBACK_MODEL &&
@@ -346,7 +404,10 @@ export async function openrouterGenerateJson<T = any>(options: {
       return await run(VC_EXTRACTION_FALLBACK_MODEL)
     }
     const canFallbackOpenRouter =
-      !isUsingOllama() && getOpenRouterClient() && retryOnParseError && primaryModel !== VC_EXTRACTION_FALLBACK_MODEL
+      !effectiveUsingOllama &&
+      getOpenRouterClient() &&
+      retryOnParseError &&
+      primaryModel !== VC_EXTRACTION_FALLBACK_MODEL
     if (canFallbackOpenRouter && /parse JSON|JSON/i.test(msg)) {
       console.warn(`[OPENROUTER] Retrying with fallback model: ${VC_EXTRACTION_FALLBACK_MODEL}`)
       return await run(VC_EXTRACTION_FALLBACK_MODEL)

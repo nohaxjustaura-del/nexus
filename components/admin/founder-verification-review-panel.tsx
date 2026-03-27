@@ -235,7 +235,7 @@ export function FounderVerificationReviewPanel({
                 <div className="flex items-center gap-2">
                   <Badge variant={row.status === 'approved' ? 'default' : 'destructive'}>{row.status}</Badge>
                   <span className="text-xs text-muted-foreground">
-                    {row.verifiedAt ? new Date(row.verifiedAt).toLocaleString() : '—'}
+                    {row.verifiedAt ? new Date(row.verifiedAt).toLocaleString() : '-'}
                   </span>
                 </div>
               </div>

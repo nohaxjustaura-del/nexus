@@ -10,23 +10,35 @@ import {
 } from '@/lib/email'
 import { db } from '@/lib/db'
 import { resolveUserApprovalAccess } from '@/lib/user-approval-access'
+import { safeAuthNextPath } from '@/lib/auth-flow-paths'
+import { sendMagicLinkViaSupabaseOtp, sendSignupInviteViaSupabase } from '@/lib/supabase/auth-email-delivery'
 
 export const dynamic = 'force-dynamic'
 
+function hasResendConfigured(): boolean {
+  return Boolean(process.env.RESEND_API_KEY?.trim())
+}
+
 export async function POST(request: NextRequest) {
   try {
-    const { email } = await request.json()
+    const { email, next: nextFromBody } = await request.json()
 
     if (!email || !email.includes('@')) {
       return NextResponse.json({ error: 'Please provide a valid email address' }, { status: 400 })
     }
 
     const normalizedEmail = email.toLowerCase().trim()
+    const afterAuthPath = safeAuthNextPath(
+      typeof nextFromBody === 'string' ? nextFromBody : undefined,
+      '/founder/onboarding'
+    )
 
     const siteUrl = getSiteUrl(request)
-    const callbackUrl = `${siteUrl}/api/auth/callback?next=${encodeURIComponent('/founder/onboarding')}`
+    const callbackUrl = `${siteUrl}/api/auth/callback?next=${encodeURIComponent(afterAuthPath)}`
 
     const adminClient = createSupabaseAdminClient()
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
     // Determine whether the user already exists in Supabase so we pick the
     // correct link type. Use the Prisma User table as a fast proxy.
@@ -47,6 +59,71 @@ export async function POST(request: NextRequest) {
           { status: 403 }
         )
       }
+    }
+
+    const { applyAuthCookies } = createSupabaseAuthRouteClient(request)
+
+    async function respondSupabaseSuccess(message: string) {
+      const res = NextResponse.json({
+        success: true,
+        message,
+        deliveredBy: 'supabase' as const,
+      })
+      applyAuthCookies(res)
+      return res
+    }
+
+    if (!hasResendConfigured()) {
+      if (!supabaseUrl || !anonKey) {
+        return NextResponse.json(
+          {
+            error:
+              'Email is not configured. Set RESEND_API_KEY or ensure NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY are set.',
+            code: 'EMAIL_NOT_CONFIGURED',
+          },
+          { status: 503 }
+        )
+      }
+      if (existingUser) {
+        const otp = await sendMagicLinkViaSupabaseOtp({
+          supabaseUrl,
+          anonKey,
+          email: normalizedEmail,
+          emailRedirectTo: callbackUrl,
+        })
+        if (!otp.ok) {
+          return NextResponse.json(
+            {
+              error: 'Failed to send sign-in email. Check Supabase Auth email settings in the dashboard.',
+              code: 'EMAIL_SEND_FAILED',
+              details: otp.message,
+            },
+            { status: 500 }
+          )
+        }
+        return respondSupabaseSuccess(
+          'New sign-in link sent via Supabase. Check your inbox (and spam) and tap the link to continue.'
+        )
+      }
+      const invite = await sendSignupInviteViaSupabase({
+        admin: adminClient,
+        email: normalizedEmail,
+        redirectTo: callbackUrl,
+        userMetadata: { user_type: 'founder' },
+      })
+      if (!invite.ok) {
+        return NextResponse.json(
+          {
+            error: 'Failed to send verification email. Check Supabase Auth email settings in the dashboard.',
+            code: 'EMAIL_SEND_FAILED',
+            details: invite.message,
+          },
+          { status: 500 }
+        )
+      }
+      return respondSupabaseSuccess(
+        'New verification link sent via Supabase. Check your inbox (and spam) and tap the link to continue.'
+      )
     }
 
     const generateResult = existingUser
@@ -81,7 +158,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const oneTapLink = `${siteUrl}/auth/link?token_hash=${encodeURIComponent(tokenHash)}&type=${linkType}&next=${encodeURIComponent('/founder/onboarding')}&email=${encodeURIComponent(normalizedEmail)}`
+    const oneTapLink = `${siteUrl}/auth/link?token_hash=${encodeURIComponent(tokenHash)}&type=${linkType}&next=${encodeURIComponent(afterAuthPath)}&email=${encodeURIComponent(normalizedEmail)}`
 
     const emailResult = await sendMagicLinkEmail(normalizedEmail, {
       magicLink: oneTapLink,
@@ -100,6 +177,33 @@ export async function POST(request: NextRequest) {
       }
       const resendHint = formatResendErrorMessage(emailResult.error)
       console.error('Resend-code email send failed:', resendHint || emailResult.error)
+      if (supabaseUrl && anonKey) {
+        if (existingUser) {
+          const otp = await sendMagicLinkViaSupabaseOtp({
+            supabaseUrl,
+            anonKey,
+            email: normalizedEmail,
+            emailRedirectTo: callbackUrl,
+          })
+          if (otp.ok) {
+            return respondSupabaseSuccess(
+              'We could not send through Resend, so we sent a new sign-in link via Supabase. Check your inbox (and spam).'
+            )
+          }
+        } else {
+          const invite = await sendSignupInviteViaSupabase({
+            admin: adminClient,
+            email: normalizedEmail,
+            redirectTo: callbackUrl,
+            userMetadata: { user_type: 'founder' },
+          })
+          if (invite.ok) {
+            return respondSupabaseSuccess(
+              'We could not send through Resend, so we sent a new verification link via Supabase. Check your inbox (and spam).'
+            )
+          }
+        }
+      }
       return NextResponse.json(
         {
           error: 'Failed to send email. Please try again.',
@@ -109,8 +213,6 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       )
     }
-
-    const { applyAuthCookies } = createSupabaseAuthRouteClient(request)
 
     const res = NextResponse.json({
       success: true,

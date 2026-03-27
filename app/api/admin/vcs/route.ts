@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { analyzeInvestorLinks } from '@/lib/vc-link-quality'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -27,7 +28,25 @@ export async function GET() {
       },
     })
 
-    return NextResponse.json({ investors })
+    const enriched = investors.map((inv) => {
+      const linkQuality = analyzeInvestorLinks({
+        websiteUrl: inv.websiteUrl,
+        linkedinUrl: inv.linkedinUrl,
+        applicationUrl: inv.applicationUrl,
+      })
+      return {
+        ...inv,
+        linkQuality: {
+          safeWebsite: linkQuality.safeWebsite,
+          safeLinkedin: linkQuality.safeLinkedin,
+          safeApplication: linkQuality.safeApplication,
+          issues: linkQuality.issues,
+          linkClean: linkQuality.linkClean,
+        },
+      }
+    })
+
+    return NextResponse.json({ investors: enriched })
   } catch (error) {
     console.error('Error fetching investors:', error)
     return NextResponse.json(

@@ -10,8 +10,13 @@ import {
 } from '@/lib/email'
 import { resolveUserApprovalAccess } from '@/lib/user-approval-access'
 import { sendCursorDebugIngest } from '@/lib/cursor-debug-ingest'
+import { sendMagicLinkViaSupabaseOtp } from '@/lib/supabase/auth-email-delivery'
 
 export const dynamic = 'force-dynamic'
+
+function hasResendConfigured(): boolean {
+  return Boolean(process.env.RESEND_API_KEY?.trim())
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -51,11 +56,52 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Regular users: generate a magic link + OTP via Supabase Admin API
-    // and send the email ourselves through Resend.
+    // Regular users: magic link via Supabase Admin + Resend when configured; otherwise Supabase Auth email (signInWithOtp).
     const siteUrl = getSiteUrl(request)
-    // Returning users should land on Hub (dashboard), not onboarding — signup still uses /founder/onboarding.
+    // Returning users should land on Hub (dashboard), not onboarding; signup still uses /founder/onboarding.
     const callbackUrl = `${siteUrl}/api/auth/callback?next=${encodeURIComponent('/founder/dashboard')}`
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+    if (!hasResendConfigured()) {
+      if (!supabaseUrl || !anonKey) {
+        return NextResponse.json(
+          {
+            error:
+              'Email sign-in is not configured. Set RESEND_API_KEY or ensure NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY are set.',
+            code: 'EMAIL_NOT_CONFIGURED',
+          },
+          { status: 503 }
+        )
+      }
+      const otp = await sendMagicLinkViaSupabaseOtp({
+        supabaseUrl,
+        anonKey,
+        email: normalizedEmail,
+        emailRedirectTo: callbackUrl,
+      })
+      if (!otp.ok) {
+        console.error('Login signInWithOtp error:', otp.message)
+        return NextResponse.json(
+          {
+            error: 'Failed to send sign-in email. Check Supabase Auth email (SMTP) in the project dashboard.',
+            code: 'EMAIL_SEND_FAILED',
+            details: otp.message,
+          },
+          { status: 500 }
+        )
+      }
+      const res = NextResponse.json({
+        success: true,
+        message:
+          'Sign-in link sent via Supabase. Check your inbox (and spam) and tap the link to continue.',
+        email: normalizedEmail,
+        deliveredBy: 'supabase' as const,
+      })
+      applyAuthCookies(res)
+      return res
+    }
+
     // #region agent log
     sendCursorDebugIngest({
       runId: 'pre-fix-domain-send',
@@ -65,7 +111,7 @@ export async function POST(request: NextRequest) {
       data: {
         siteUrl,
         callbackUrl,
-        hasResendKey: Boolean(process.env.RESEND_API_KEY),
+        hasResendKey: Boolean(process.env.RESEND_API_KEY?.trim()),
         hasFromEnv: Boolean(process.env.RESEND_FROM_EMAIL),
         nodeEnv: process.env.NODE_ENV ?? null,
       },
@@ -157,6 +203,26 @@ export async function POST(request: NextRequest) {
       }
       const resendHint = formatResendErrorMessage(emailResult.error)
       console.error('Login email send failed:', resendHint || emailResult.error)
+      if (supabaseUrl && anonKey) {
+        const otp = await sendMagicLinkViaSupabaseOtp({
+          supabaseUrl,
+          anonKey,
+          email: normalizedEmail,
+          emailRedirectTo: callbackUrl,
+        })
+        if (otp.ok) {
+          const res = NextResponse.json({
+            success: true,
+            message:
+              'We could not send email through Resend, so we sent your sign-in link via Supabase instead. Check your inbox (and spam).',
+            email: normalizedEmail,
+            deliveredBy: 'supabase' as const,
+            resendError: resendHint || undefined,
+          })
+          applyAuthCookies(res)
+          return res
+        }
+      }
       return NextResponse.json(
         {
           error: 'Failed to send sign-in email. Please try again.',

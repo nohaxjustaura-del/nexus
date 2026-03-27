@@ -42,8 +42,6 @@ export async function POST(request: NextRequest) {
       },
     })
 
-    console.log(`❌ Rejected VC claim: ${claim.firmName} (${claim.email})`)
-
     return NextResponse.json({
       success: true,
       message: 'Claim rejected',

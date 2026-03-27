@@ -40,13 +40,13 @@ export function SmartMatchResults({ matches, showAll = false }: SmartMatchResult
           </div>
           <div className="flex-1">
             <CardTitle className="text-lg flex items-center gap-2">
-              AI Smart Match Results
+              Semantic match results
               <Badge className="bg-purple-100 text-purple-800">
                 {matches.length} matches
               </Badge>
             </CardTitle>
             <CardDescription>
-              Ranked by semantic similarity using AI embeddings
+              Ranked by overlap between your pitch text and investor profiles
             </CardDescription>
           </div>
         </div>

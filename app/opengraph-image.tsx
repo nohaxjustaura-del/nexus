@@ -1,10 +1,8 @@
 import { ImageResponse } from 'next/og'
 import { BRAND_DEFAULT_TITLE, BRAND_NAME } from '@/lib/brand'
 
-// Route segment config
 export const runtime = 'edge'
 
-// Image metadata
 export const alt = BRAND_DEFAULT_TITLE
 export const size = {
   width: 1200,
@@ -12,7 +10,8 @@ export const size = {
 }
 export const contentType = 'image/png'
 
-// Image generation
+const BRAND_NAVY = '#1D3567'
+
 export default async function OGImage() {
   return new ImageResponse(
     (
@@ -24,63 +23,42 @@ export default async function OGImage() {
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
-          background: 'linear-gradient(135deg, #155DFD 0%, #7AA8FF 100%)',
+          background: `linear-gradient(160deg, ${BRAND_NAVY} 0%, #0f2447 100%)`,
           fontFamily: 'system-ui, sans-serif',
         }}
       >
         <div
           style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '20px',
-            marginBottom: '40px',
+            fontSize: 88,
+            fontWeight: 700,
+            color: 'white',
+            letterSpacing: '0.06em',
           }}
         >
-          <div
-            style={{
-              width: '80px',
-              height: '80px',
-              background: 'white',
-              borderRadius: '50%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: '48px',
-            }}
-          >
-            ❤️
-          </div>
-          <div
-            style={{
-              fontSize: '72px',
-              fontWeight: 'bold',
-              color: 'white',
-            }}
-          >
-            {BRAND_NAME}
-          </div>
+          {BRAND_NAME}
         </div>
         <div
           style={{
-            fontSize: '36px',
-            color: 'white',
-            opacity: 0.95,
+            marginTop: 28,
+            fontSize: 32,
+            color: 'rgba(255,255,255,0.92)',
             textAlign: 'center',
-            maxWidth: '900px',
+            maxWidth: 880,
+            lineHeight: 1.35,
           }}
         >
-          Find VCs Who Actually Fit You
+          Investor matching for founders
         </div>
         <div
           style={{
-            fontSize: '24px',
-            color: 'white',
-            opacity: 0.85,
-            marginTop: '20px',
+            marginTop: 16,
+            fontSize: 24,
+            color: 'rgba(255,255,255,0.78)',
             textAlign: 'center',
+            maxWidth: 820,
           }}
         >
-          Evidence-based matching by stage, sector, vision, and working style
+          Stage, sector, thesis, and how you operate
         </div>
       </div>
     ),
@@ -89,7 +67,3 @@ export default async function OGImage() {
     }
   )
 }
-
-
-
-

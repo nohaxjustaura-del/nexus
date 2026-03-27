@@ -98,8 +98,8 @@ export async function gatherVCFirmRetrievalContext(
     Math.max(4, parseInt(process.env.VC_RESEARCH_EXA_NUM_RESULTS || '8', 10) || 8),
   )
 
-  const q1 = `"${firmName}" venture capital fund investment thesis portfolio fund size stages ${year}`
-  const q2 = `"${firmName}" VC fund lead investments portfolio companies fundraising LP limited partners ${year}`
+  const q1 = `"${firmName}" venture capital investment focus thesis sectors stages geography mandate strategy ${year}`
+  const q2 = `"${firmName}" VC fund portfolio companies recent investments fundraising ${year}`
 
   const [pass1, pass2] = await Promise.all([exaSearchPass(q1, n), exaSearchPass(q2, n)])
 

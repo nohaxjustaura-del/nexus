@@ -8,16 +8,14 @@ import {
   formatResendErrorMessage,
   sendMagicLinkEmail,
 } from '@/lib/email'
+import { signupCallbackPath } from '@/lib/auth-flow-paths'
+import { isExistingUserAuthError } from '@/lib/auth-user-exists-error'
+import { sendSignupInviteViaSupabase } from '@/lib/supabase/auth-email-delivery'
 
 export const dynamic = 'force-dynamic'
 
-function isExistingUserLinkError(err: { message?: string; code?: string } | null) {
-  if (!err) return false
-  if (err.code === 'email_exists') return true
-  const msg = (err.message || '').toLowerCase()
-  if (msg.includes('already been registered') || msg.includes('already registered')) return true
-  if (msg.includes('user with this email') && msg.includes('registered')) return true
-  return false
+function hasResendConfigured(): boolean {
+  return Boolean(process.env.RESEND_API_KEY?.trim())
 }
 
 export async function POST(request: NextRequest) {
@@ -30,10 +28,55 @@ export async function POST(request: NextRequest) {
 
     const normalizedEmail = email.toLowerCase().trim()
 
+    const rawType = typeof userType === 'string' ? userType : 'founder'
+    const supabaseUserType =
+      rawType === 'investor' ? 'vc' : rawType === 'mentor' ? 'mentor' : 'founder'
+    const afterAuthPath = signupCallbackPath(rawType)
+
     const siteUrl = getSiteUrl(request)
-    const callbackUrl = `${siteUrl}/api/auth/callback?next=${encodeURIComponent('/founder/onboarding')}`
+    const callbackUrl = `${siteUrl}/api/auth/callback?next=${encodeURIComponent(afterAuthPath)}`
 
     const adminClient = createSupabaseAdminClient()
+
+    if (!hasResendConfigured()) {
+      const invite = await sendSignupInviteViaSupabase({
+        admin: adminClient,
+        email: normalizedEmail,
+        redirectTo: callbackUrl,
+        userMetadata: { user_type: supabaseUserType },
+      })
+      if (!invite.ok) {
+        if (isExistingUserAuthError({ message: invite.message, code: invite.code })) {
+          return NextResponse.json(
+            {
+              error: 'An account with this email already exists.',
+              existingAccount: true,
+              message: 'Try logging in instead.',
+            },
+            { status: 400 }
+          )
+        }
+        console.error('Signup inviteUserByEmail error:', invite.message, invite.code)
+        return NextResponse.json(
+          {
+            error: 'Failed to send verification email. Check Supabase Auth email settings (SMTP) in the dashboard.',
+            code: 'EMAIL_SEND_FAILED',
+            details: invite.message,
+          },
+          { status: 500 }
+        )
+      }
+      const { applyAuthCookies } = createSupabaseAuthRouteClient(request)
+      const res = NextResponse.json({
+        success: true,
+        message:
+          'Verification email sent via Supabase. Check your inbox (and spam) and tap the link to continue.',
+        email: normalizedEmail,
+        deliveredBy: 'supabase' as const,
+      })
+      applyAuthCookies(res)
+      return res
+    }
 
     const { data: linkData, error: linkError } = await adminClient.auth.admin.generateLink({
       type: 'invite',
@@ -41,13 +84,13 @@ export async function POST(request: NextRequest) {
       options: {
         redirectTo: callbackUrl,
         data: {
-          user_type: userType || 'founder',
+          user_type: supabaseUserType,
         },
       },
     })
 
     if (linkError) {
-      if (isExistingUserLinkError(linkError)) {
+      if (isExistingUserAuthError(linkError)) {
         return NextResponse.json(
           {
             error: 'An account with this email already exists.',
@@ -74,7 +117,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const oneTapLink = `${siteUrl}/auth/link?token_hash=${encodeURIComponent(tokenHash)}&type=invite&next=${encodeURIComponent('/founder/onboarding')}&email=${encodeURIComponent(normalizedEmail)}`
+    const oneTapLink = `${siteUrl}/auth/link?token_hash=${encodeURIComponent(tokenHash)}&type=invite&next=${encodeURIComponent(afterAuthPath)}&email=${encodeURIComponent(normalizedEmail)}`
 
     const emailResult = await sendMagicLinkEmail(normalizedEmail, {
       magicLink: oneTapLink,

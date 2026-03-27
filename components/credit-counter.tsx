@@ -4,6 +4,10 @@ import { useState, useEffect, useRef } from 'react'
 import { Coins, Gift } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
+import {
+  getUserCreditsClient,
+  invalidateUserCreditsClientCache,
+} from '@/lib/client/user-credits-client'
 
 interface CreditCounterProps {
   className?: string
@@ -31,12 +35,11 @@ export function CreditCounter({
 
   const fetchCredits = async () => {
     try {
-      const res = await fetch('/api/user/credits', {
-        credentials: 'include'
-      })
-      if (res.ok) {
-        const data = await res.json()
-        setCredits(data.credits ?? 0)
+      const { ok, data } = await getUserCreditsClient()
+      if (ok) {
+        setCredits(typeof data.credits === 'number' ? data.credits : 0)
+      } else {
+        setCredits(0)
       }
     } catch (error) {
       console.error('Failed to fetch credits:', error)
@@ -72,6 +75,7 @@ export function CreditCounter({
       const data = await res.json()
       
       if (data.success) {
+        invalidateUserCreditsClientCache()
         setCredits(data.credits)
         setCanClaim(false)
         // Refresh both credits and claim status

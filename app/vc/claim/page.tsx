@@ -7,8 +7,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
-import { Heart, Sparkles, CheckCircle, Building2, ArrowRight, Loader2, TrendingUp, Users, Shield, Zap, Target, BarChart3 } from "lucide-react"
-import Link from "next/link"
+import { CheckCircle, Building2, ArrowRight, Loader2 } from "lucide-react"
+import { useAuthSession } from '@/components/auth-session-provider'
 
 const SECTORS = [
   'AI/ML', 'SaaS', 'Fintech', 'Healthcare', 'Climate Tech', 'Consumer',
@@ -25,8 +25,8 @@ const VALUE_ADDS = [
 
 export default function VCClaimPage() {
   const router = useRouter()
+  const { loading: authLoading, authenticated, email: sessionEmail } = useAuthSession()
   const [step, setStep] = useState(1)
-  const [loading, setLoading] = useState(true)
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -46,8 +46,24 @@ export default function VCClaimPage() {
     websiteUrl: '',
   })
 
+  useEffect(() => {
+    if (authLoading) return
+    if (!authenticated) {
+      const next = encodeURIComponent('/vc/claim')
+      router.replace(`/signup?redirect=${next}`)
+    }
+  }, [authLoading, authenticated, router])
+
+  useEffect(() => {
+    const e = sessionEmail?.trim()
+    if (!e) return
+    setFormData((prev) => (prev.email === e ? prev : { ...prev, email: e }))
+  }, [sessionEmail])
+
   // Load existing VC profile on mount
   useEffect(() => {
+    if (authLoading || !authenticated) return
+
     async function loadProfile() {
       try {
         const response = await fetch('/api/vc/profile', {
@@ -79,20 +95,18 @@ export default function VCClaimPage() {
             
             // If profile is verified and complete, redirect to dashboard
             if (data.verified && data.profile.firmName && data.profile.checkMin && data.profile.checkMax) {
-              router.push('/vc/dashboard')
+              router.push('/vc/profile')
               return
             }
           }
         }
       } catch (error) {
         console.error('Error loading VC profile:', error)
-      } finally {
-        setLoading(false)
       }
     }
     
     loadProfile()
-  }, [router])
+  }, [router, authLoading, authenticated])
 
   const toggleArrayItem = (key: keyof typeof formData, value: string) => {
     setFormData(prev => {
@@ -119,6 +133,7 @@ export default function VCClaimPage() {
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include',
         body: JSON.stringify(formData),
       })
 
@@ -137,59 +152,35 @@ export default function VCClaimPage() {
     }
   }
 
+  if (authLoading || !authenticated) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" aria-label="Loading" />
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b">
-        <div className="container mx-auto flex h-16 items-center justify-between px-4">
-          <Link href="/" className="flex items-center gap-2">
-            <Heart className="h-6 w-6 text-primary" />
-            <span className="text-xl font-bold">NEXUS</span>
-          </Link>
-        </div>
-      </header>
-
-      <div className="container mx-auto max-w-6xl px-4 py-12">
-        {/* Hero */}
-        <div className="mb-16 text-center">
-          <Badge className="mb-6 px-4 py-1.5 text-sm" variant="secondary">
-            <Building2 className="mr-2 h-4 w-4" />
-            For Investors
+      <div className="container mx-auto max-w-2xl px-4 py-8 md:py-12">
+        <header className="mb-8 text-center">
+          <Badge className="mb-3 px-2.5 py-0.5 text-xs font-medium" variant="secondary">
+            <Building2 className="mr-1.5 h-3.5 w-3.5" />
+            For investors
           </Badge>
-          <h1 className="mb-6 text-5xl md:text-6xl font-bold bg-gradient-to-r from-primary via-blue-600 to-purple-600 bg-clip-text text-transparent">
-            Access Premium Deal Flow
+          <h1 className="font-heading text-2xl font-semibold tracking-tight text-foreground md:text-3xl">
+            Claim your firm profile
           </h1>
-          <p className="mx-auto max-w-3xl text-xl md:text-2xl text-slate-600 leading-relaxed mb-8">
-            Get matched with highly qualified founders who fit your investment thesis. 
-            Save time, improve deal quality, and grow your portfolio.
+          <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
+            Matched founders see your thesis and apply through your link. Three quick steps after you&apos;re signed in.
           </p>
-          
-          {/* Simplified Key Benefits */}
-          <div className="grid md:grid-cols-3 gap-4 max-w-4xl mx-auto mb-12">
-            <div className="text-center p-6 rounded-xl border border-border bg-card">
-              <Sparkles className="h-8 w-8 text-primary mx-auto mb-3" />
-              <h3 className="font-semibold mb-2">AI-Pre-Screened</h3>
-              <p className="text-sm text-slate-600">Quality founders, pre-analyzed for fit</p>
-            </div>
-            <div className="text-center p-6 rounded-xl border border-border bg-card">
-              <CheckCircle className="h-8 w-8 text-primary mx-auto mb-3" />
-              <h3 className="font-semibold mb-2">Verified</h3>
-              <p className="text-sm text-slate-600">Identity-verified, serious founders only</p>
-            </div>
-            <div className="text-center p-6 rounded-xl border border-border bg-card">
-              <ArrowRight className="h-8 w-8 text-primary mx-auto mb-3" />
-              <h3 className="font-semibold mb-2">Save Time</h3>
-              <p className="text-sm text-slate-600">Deal flow that matches your criteria</p>
-            </div>
-          </div>
-        </div>
+        </header>
 
-        {/* Progress */}
-        <div className="mb-8 flex gap-2">
+        <div className="mb-8 flex gap-1.5" aria-hidden>
           {[1, 2, 3].map((s) => (
             <div
               key={s}
-              className={`h-2 flex-1 rounded-full transition-colors ${
+              className={`h-1 flex-1 rounded-full transition-colors ${
                 s <= step ? 'bg-primary' : 'bg-muted'
               }`}
             />
@@ -204,27 +195,19 @@ export default function VCClaimPage() {
               <CardDescription>Tell us about yourself and your fund</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="grid gap-6 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Your Name *</Label>
-                  <Input
-                    id="name"
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    placeholder="John Doe"
-                  />
-                </div>
+              <div className="space-y-2">
+                <Label htmlFor="name">Your Name *</Label>
+                <Input
+                  id="name"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  placeholder="John Doe"
+                />
+              </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email *</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    placeholder="john@fund.com"
-                  />
-                </div>
+              <div className="rounded-lg border border-border/80 bg-muted/30 px-3 py-2.5 text-sm">
+                <span className="text-muted-foreground">Account email</span>
+                <p className="mt-0.5 font-medium text-foreground">{formData.email || sessionEmail || '-'}</p>
               </div>
 
               <div className="space-y-2">
@@ -446,42 +429,9 @@ export default function VCClaimPage() {
                 </div>
               </div>
 
-              {/* Simplified Benefits Section */}
-              <div className="rounded-2xl border-2 border-primary/20 bg-gradient-to-br from-primary/5 via-white to-purple-50/30 p-6 mb-6">
-                <h3 className="mb-4 text-lg font-bold flex items-center gap-2">
-                  <Sparkles className="h-5 w-5 text-primary" />
-                  What You Get
-                </h3>
-                <div className="space-y-3">
-                  <div className="flex items-start gap-3">
-                    <CheckCircle className="h-5 w-5 text-primary shrink-0 mt-0.5" />
-                    <div>
-                      <div className="font-semibold text-sm">Quality Deal Flow</div>
-                      <div className="text-xs text-muted-foreground">AI-pre-screened founders who match your thesis</div>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <CheckCircle className="h-5 w-5 text-primary shrink-0 mt-0.5" />
-                    <div>
-                      <div className="font-semibold text-sm">Zero Spam</div>
-                      <div className="text-xs text-muted-foreground">Only verified founders who fit your criteria</div>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <CheckCircle className="h-5 w-5 text-primary shrink-0 mt-0.5" />
-                    <div>
-                      <div className="font-semibold text-sm">Save Time</div>
-                      <div className="text-xs text-muted-foreground">Get pitch decks and founder insights upfront</div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="rounded-lg border border-border bg-muted/40 p-4">
-                <p className="text-sm text-slate-600">
-                  <strong>Next steps:</strong> We'll verify your profile within 24 hours, then you'll start receiving matched founders. Free forever.
-                </p>
-              </div>
+              <p className="text-sm text-muted-foreground">
+                We review claims within about 24 hours. Listing stays free.
+              </p>
 
               {error && (
                 <div className="rounded-lg border border-red-500 bg-red-50 p-4 text-sm text-red-700">

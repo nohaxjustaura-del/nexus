@@ -1,6 +1,13 @@
 // Enhanced Debugging & Logging System
 const isDev = process.env.NODE_ENV === 'development'
-const DEBUG = process.env.DEBUG === 'true' || isDev
+// DEBUG must be explicit — do not tie to isDev or dev servers become extremely noisy.
+const DEBUG = process.env.DEBUG === 'true'
+// Chatty logs (API/AI/DB/perf, etc.): off by default in dev; set VERBOSE_DEV_LOGS=1 or LOG_LEVEL=debug
+const verboseDevLogs =
+  isDev &&
+  (process.env.VERBOSE_DEV_LOGS === '1' ||
+    process.env.LOG_LEVEL === 'debug' ||
+    process.env.LOG_LEVEL === 'verbose')
 
 // Color codes for terminal output (Node.js only)
 const isNode = typeof process !== 'undefined' && process.versions && process.versions.node
@@ -43,9 +50,9 @@ const formatLog = (level: string, color: string, ...args: any[]) => {
 }
 
 export const logger = {
-  // Regular log - development only
+  // Regular log - development only when VERBOSE_DEV_LOGS / LOG_LEVEL
   log: (...args: any[]) => {
-    if (isDev) console.log(...formatLog('🔵 LOG', colors.blue, ...args))
+    if (verboseDevLogs) console.log(...formatLog('🔵 LOG', colors.blue, ...args))
   },
   
   // Errors - always logged with full stack trace
@@ -62,14 +69,14 @@ export const logger = {
     if (isDev) console.warn(...formatLog('⚠️  WARN', colors.yellow, ...args))
   },
   
-  // Info - development only
+  // Info - verbose development only
   info: (...args: any[]) => {
-    if (isDev) console.info(...formatLog('ℹ️  INFO', colors.cyan, ...args))
+    if (verboseDevLogs) console.info(...formatLog('ℹ️  INFO', colors.cyan, ...args))
   },
   
   // Success messages
   success: (...args: any[]) => {
-    if (isDev) console.log(...formatLog('✅ SUCCESS', colors.green, ...args))
+    if (verboseDevLogs) console.log(...formatLog('✅ SUCCESS', colors.green, ...args))
   },
   
   // Debug - only when DEBUG=true
@@ -79,7 +86,7 @@ export const logger = {
   
   // AI performance tracking
   ai: (feature: string, model: string, tokens?: number, duration?: number) => {
-    if (isDev) {
+    if (verboseDevLogs) {
       const tokenInfo = tokens ? `${tokens} tokens` : 'N/A'
       const durationInfo = duration ? `${duration}ms` : 'N/A'
       console.log(...formatLog('🤖 AI', colors.cyan, `[${feature}]`, `Model: ${model}`, `| ${tokenInfo}`, `| ${durationInfo}`))
@@ -88,7 +95,7 @@ export const logger = {
   
   // API request tracking
   api: (method: string, endpoint: string, status?: number, duration?: number) => {
-    if (isDev) {
+    if (verboseDevLogs) {
       const statusColor = status && status >= 200 && status < 300 ? colors.green : status && status >= 400 ? colors.red : colors.yellow
       const statusInfo = status ? `${statusColor}${status}${colors.reset}` : 'pending'
       const durationInfo = duration ? `${duration}ms` : 'N/A'
@@ -98,7 +105,7 @@ export const logger = {
   
   // Database query tracking
   db: (operation: string, table: string, duration?: number) => {
-    if (isDev) {
+    if (verboseDevLogs) {
       const durationInfo = duration ? `${duration}ms` : 'N/A'
       console.log(...formatLog('💾 DB', colors.magenta, `${operation} on ${table}`, `| ${durationInfo}`))
     }
@@ -106,7 +113,7 @@ export const logger = {
   
   // Performance measurement
   perf: (label: string, startTime: number) => {
-    if (isDev) {
+    if (verboseDevLogs) {
       const duration = Date.now() - startTime
       const color = duration < 100 ? colors.green : duration < 500 ? colors.yellow : colors.red
       console.log(...formatLog('⚡ PERF', color, `${label}: ${duration}ms`))
@@ -115,18 +122,18 @@ export const logger = {
   
   // Group logs together
   group: (label: string) => {
-    if (isDev) {
+    if (verboseDevLogs) {
       console.group(`${colors.bright}${colors.blue}▶ ${label}${colors.reset}`)
     }
   },
   
   groupEnd: () => {
-    if (isDev) console.groupEnd()
+    if (verboseDevLogs) console.groupEnd()
   },
   
   // Table display for objects
   table: (data: any) => {
-    if (isDev) console.table(data)
+    if (verboseDevLogs) console.table(data)
   },
   
   // Trace execution path

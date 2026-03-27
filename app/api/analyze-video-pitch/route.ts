@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { getUserFromRequestOrAdmin } from '@/lib/auth'
+import { getUserFromRequest } from '@/lib/auth'
 import { analyzeVideoPitch, VideoPitchFeatures } from '@/lib/ai'
 import { runMatchingPipeline } from '@/lib/matching/matching-orchestrator'
 import { validateVideoPitch } from '@/lib/content-validator'
-import { ADMIN_EMAIL, CREDIT_COSTS } from '@/lib/constants'
+import { CREDIT_COSTS, isAdminEmail } from '@/lib/constants'
 import { generatePitchEmbedding, rankVCsForPitch } from '@/lib/embeddings'
 import { parseJSON } from '@/lib/utils'
 import { logger } from '@/lib/logger'
@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const user = await getUserFromRequestOrAdmin(request)
+    const user = await getUserFromRequest(request)
     
     if (!user) {
       return NextResponse.json(
@@ -111,7 +111,7 @@ export async function POST(request: NextRequest) {
     
     // Skip credit check for admin
     let userCredits = null
-    if (user.email !== ADMIN_EMAIL) {
+    if (!isAdminEmail(user.email)) {
       userCredits = await db.userCredits.findUnique({
         where: { userId: user.id },
       })
@@ -153,7 +153,7 @@ export async function POST(request: NextRequest) {
     // Require payment verification only if user is not Premium and doesn't have enough credits
     // Premium users or users with sufficient credits don't need payment verification
     const hasEnoughCredits = userCredits?.isPremium || (userCredits && (userCredits.credits ?? 0) >= CREDIT_COST)
-    if (!paymentVerified && !hasEnoughCredits && user.email !== ADMIN_EMAIL) {
+    if (!paymentVerified && !hasEnoughCredits && !isAdminEmail(user.email)) {
       return NextResponse.json({
         error: 'Payment required',
         requiresPayment: true,
@@ -370,16 +370,17 @@ export async function POST(request: NextRequest) {
         })
       }
       
-      // Save video pitch first
+      // Save video pitch first (file already uploaded above with AI path; same buffer / savedFilePath)
       const videoPitch = await (db as any).videoPitch.create({
         data: {
           founderId: founder.id,
           fileName: file.name,
-          fileUrl: '', // In production, upload to storage
+          fileUrl: savedFilePath || '',
           fileType: file.type.split('/')[1] || 'mp4',
           fileSize: file.size,
           transcript: transcriptText.substring(0, 1000),
           transcriptText: transcriptText.substring(0, 50000),
+          founderSnapshot: JSON.stringify(buildFounderSnapshot(founder)),
         },
       })
       
@@ -601,7 +602,7 @@ export async function POST(request: NextRequest) {
     }
 
     // -----------------------------------------------------------------------
-    // MULTI-PASS SCORING PIPELINE — replaces Universal Analysis Engine
+    // MULTI-PASS SCORING PIPELINE (replaces Universal Analysis Engine)
     // -----------------------------------------------------------------------
     let scoringResult: Awaited<ReturnType<typeof runScoringPipeline>> | null = null
     try {
@@ -664,7 +665,7 @@ export async function POST(request: NextRequest) {
       fetch('http://127.0.0.1:7471/ingest/0f685c44-f6c8-4b99-b23e-84e0cc9d4f08',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'e61823'},body:JSON.stringify({sessionId:'e61823',location:'analyze-video-pitch/route.ts:scoring',message:'POST-FIX: data entering runScoringPipeline',data:{startupName:videoEnhancedCtx.startupName,stage:videoEnhancedCtx.stage,sectors:videoEnhancedCtx.sectors,bioPreview:videoEnhancedCtx.bio?.substring(0,120),videoStartupNameExtracted:videoStartupName,pitchType:'VIDEO'},timestamp:Date.now(),runId:'post-fix',hypothesisId:'H2+H4+H5'})}).catch(()=>{});
       // #endregion
       scoringResult = await runScoringPipeline(transcriptText, videoEnhancedCtx, marketContext, "VIDEO")
-      logger.log(`[ANALYZE-VIDEO-PITCH] Scoring Pipeline completed — finalScore: ${scoringResult.finalScore}`)
+      logger.log(`[ANALYZE-VIDEO-PITCH] Scoring Pipeline completed; finalScore: ${scoringResult.finalScore}`)
     } catch (scoringError: any) {
       logger.error('[ANALYZE-VIDEO-PITCH] Scoring Pipeline failed (non-critical):', scoringError?.message)
     }
@@ -749,7 +750,7 @@ export async function POST(request: NextRequest) {
     })
 
     // Deduct credits AFTER successful analysis (admin bypass)
-    if (user.email !== ADMIN_EMAIL) {
+    if (!isAdminEmail(user.email)) {
       try {
         await db.userCredits.update({
           where: { userId: user.id },

@@ -6,7 +6,11 @@ import { Input } from '@/components/ui/input'
 import { Plus, Loader2 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 
-export function AddEmailForm() {
+type AddEmailFormProps = {
+  onSuccess?: () => void
+}
+
+export function AddEmailForm({ onSuccess }: AddEmailFormProps = {}) {
   const router = useRouter()
   const [email, setEmail] = useState('')
   const [loading, setLoading] = useState(false)
@@ -34,6 +38,7 @@ export function AddEmailForm() {
       if (res.ok) {
         setMessage({ type: 'success', text: `Added ${email} to pending approvals` })
         setEmail('')
+        onSuccess?.()
         setTimeout(() => {
           router.refresh()
         }, 500)

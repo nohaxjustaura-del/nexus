@@ -272,8 +272,16 @@ async function generateCategoryDescriptions(
 ): Promise<CategoryDescriptions> {
   const fallback = buildFallbackDescriptions(categoryScores, adversarialResult, globalVerdict)
 
+  const unifiedNote =
+    pitchType === "UNIFIED"
+      ? `
+
+MULTI-SOURCE NOTE: This pitch may include structured Q&A, deck text, and/or a video transcript. Gaps in one source may be covered by another — evaluate holistically.
+`
+      : ""
+
   const userPrompt =
-`ANALYSIS TYPE: ${pitchType}
+`ANALYSIS TYPE: ${pitchType}${unifiedNote}
 
 --- FOUNDER DOSSIER ---
 ${pitchSummary}
@@ -311,6 +319,7 @@ Return valid JSON:
       system: DESCRIPTION_SYSTEM_PROMPT,
       user: userPrompt,
       temperature: 0.4,
+      forceOpenRouter: true,
     })
 
     const descriptions: CategoryDescriptions = {
@@ -357,7 +366,7 @@ function convictionFromScore(score: number): AdversarialConviction {
  * @param rawPitch           The raw pitch text as submitted by the founder
  * @param founderContext     Complete founder profile from the database
  * @param marketIntelligence Pre-fetched Exa/Tavily market research
- * @param pitchType          "VIDEO" | "DECK" | "IDEA" — used in description prompt (default "PITCH")
+ * @param pitchType          "VIDEO" | "DECK" | "IDEA" | "UNIFIED" | … — fact-extractor + description prompts (default "PITCH")
  */
 export async function runScoringPipeline(
   rawPitch: string,
@@ -377,7 +386,7 @@ export async function runScoringPipeline(
   const stage = founderContext.stage?.trim() || "pre-seed"
 
   const [factsResult, vaguenessAudit] = await Promise.all([
-    extractVerifiedFacts(rawPitch, founderContext).then(f => {
+    extractVerifiedFacts(rawPitch, founderContext, pitchType).then(f => {
       passesCompleted.push("fact-extraction")
       return f
     }),

@@ -24,7 +24,7 @@
  *   SUPABASE_VC_TABLE (optional, default vc_directory)
  *   DATABASE_URL (Prisma)
  *   LLM: OPENROUTER_API_KEY or local OLLAMA_BASE_URL (+ OLLAMA_MODEL) for structured extraction after Exa
- *   OPENROUTER_VC_EXTRACTION_MODEL optional when using OpenRouter (default deepseek/deepseek-chat)
+ *   OPENROUTER_VC_EXTRACTION_MODEL optional when using OpenRouter (default meta-llama/llama-3.3-70b-instruct)
  *   VC_RESEARCH_CONTEXT_CHARS, VC_RESEARCH_EXA_NUM_RESULTS
  *   --discover requires EXA_API_KEY only: two parallel Exa searches per round (no Tavily, no OpenRouter in discovery)
  *   Discover uses VC_DISCOVERY_CONTENT_SINCE (default 2026-01-01) for Exa startPublishedDate.

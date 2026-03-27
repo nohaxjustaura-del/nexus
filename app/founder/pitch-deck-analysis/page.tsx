@@ -232,8 +232,6 @@ export default function PitchDeckAnalysisPage() {
         console.error('Error loading credits:', err)
       }
 
-      // SUCCESS - Show results on this page (scroll to results)
-      console.log('[PITCH-DECK] Analysis complete, showing results...')
       setTimeout(() => {
         const resultsElement = document.getElementById('analysis-results')
         if (resultsElement) {
@@ -282,7 +280,7 @@ export default function PitchDeckAnalysisPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="container mx-auto max-w-5xl px-4 py-6 md:py-8">
+      <div className="container mx-auto max-w-7xl px-4 py-6 md:py-8">
         {/* Hero */}
         <div className="mb-8 md:mb-12 text-center">
           <Badge className="mb-4" variant="secondary">
@@ -290,7 +288,7 @@ export default function PitchDeckAnalysisPage() {
             Pitch Deck Analysis
           </Badge>
           <h1 className="mb-4 text-4xl font-bold md:text-5xl">
-            Get AI-Powered Pitch Deck Feedback
+            Pitch deck feedback
           </h1>
           <p className="mx-auto max-w-2xl text-lg text-muted-foreground">
             Upload your pitch deck and get detailed feedback on what to improve, plus discover which VCs are the best fit for your startup.

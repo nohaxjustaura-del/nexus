@@ -36,32 +36,32 @@
     --success-50: 246 254 249;
   }
 
-  /* Default product UI: black-dominant surfaces, subtle lift on cards */
+  /* Default product UI: deep neutral base, calm contrast, minimal chrome */
   .dark {
     color-scheme: dark;
-    --background: 0 0% 2.5%;
-    --foreground: 240 5% 97%;
-    --card: 240 5% 7%;
-    --card-foreground: 240 5% 97%;
-    --popover: 240 5% 9%;
-    --popover-foreground: 240 5% 97%;
-    --primary: 217 88% 62%;
-    --primary-hover: 217 88% 56%;
-    --primary-foreground: 240 6% 6%;
-    --primary-gradient: linear-gradient(135deg, hsl(217 88% 58%) 0%, hsl(220 85% 52%) 100%);
-    --secondary: 240 4% 11%;
-    --secondary-foreground: 240 5% 93%;
-    --muted: 240 4% 10%;
-    --muted-foreground: 240 4% 52%;
-    --accent: 240 4% 11%;
-    --accent-foreground: 240 5% 97%;
-    --success: 152 65% 42%;
-    --warning: 38 92% 50%;
-    --destructive: 0 72% 50%;
+    --background: 240 6% 4%;
+    --foreground: 240 5% 96%;
+    --card: 240 5% 6.5%;
+    --card-foreground: 240 5% 96%;
+    --popover: 240 5% 8%;
+    --popover-foreground: 240 5% 96%;
+    --primary: 217 85% 60%;
+    --primary-hover: 217 85% 54%;
+    --primary-foreground: 240 8% 5%;
+    --primary-gradient: linear-gradient(135deg, hsl(217 85% 56%) 0%, hsl(220 82% 50%) 100%);
+    --secondary: 240 4% 10%;
+    --secondary-foreground: 240 5% 92%;
+    --muted: 240 4% 9%;
+    --muted-foreground: 240 4% 55%;
+    --accent: 240 4% 10%;
+    --accent-foreground: 240 5% 96%;
+    --success: 152 62% 44%;
+    --warning: 38 90% 52%;
+    --destructive: 0 70% 52%;
     --destructive-foreground: 0 0% 98%;
-    --border: 240 4% 16%;
-    --input: 240 4% 14%;
-    --ring: 217 88% 62%;
+    --border: 240 4% 14%;
+    --input: 240 4% 12%;
+    --ring: 217 85% 58%;
     --primary-50: 217 45% 12%;
     --success-50: 152 40% 10%;
   }
@@ -110,7 +110,7 @@
 /* Consistent app width + rhythm (reduces “chopped” layouts) */
 @layer components {
   .page-shell {
-    @apply mx-auto w-full max-w-6xl px-5 pb-20 pt-8 sm:px-8 md:pt-12 lg:px-10;
+    @apply mx-auto w-full max-w-7xl px-4 pb-16 pt-10 sm:px-6 md:pb-20 md:pt-12 lg:px-8;
   }
 
   .section-divider {
@@ -270,15 +270,13 @@
   }
 }
 
-/* Subtle page depth: mesh + grain (no hard bands) */
+/* Subtle page depth: soft vignette + light grain (avoids busy multi-band fills) */
 .bg-page-mesh {
   background-color: hsl(var(--background));
   background-image:
-    url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E"),
-    radial-gradient(ellipse 120% 85% at 50% -35%, hsl(var(--primary) / 0.11), transparent 55%),
-    radial-gradient(ellipse 65% 45% at 100% 0%, hsl(220 50% 45% / 0.05), transparent 50%),
-    radial-gradient(ellipse 55% 40% at 0% 90%, hsl(265 35% 38% / 0.04), transparent 48%),
-    radial-gradient(ellipse 100% 55% at 50% 105%, hsl(var(--muted) / 0.4), transparent 52%);
+    url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.028'/%3E%3C/svg%3E"),
+    radial-gradient(ellipse 100% 70% at 50% -20%, hsl(var(--primary) / 0.07), transparent 58%),
+    radial-gradient(ellipse 80% 50% at 100% 100%, hsl(220 40% 40% / 0.035), transparent 45%);
 }
 
 /* Ultra-light noise: breaks flat fills without looking busy */
@@ -286,9 +284,34 @@
   background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
 }
 
+@layer utilities {
+  /* PNG wordmark reads dark/muddy on black; lift luminance + tie glow to --primary */
+  .nexus-wordmark-img {
+    transition: filter 180ms ease;
+  }
+  .nexus-wordmark-img {
+    filter: brightness(1.06) contrast(1.06) saturate(1.14)
+      drop-shadow(0 1px 2px hsl(var(--primary) / 0.12));
+  }
+  .dark .nexus-wordmark-img {
+    filter: brightness(1.42) contrast(1.07) saturate(1.3)
+      drop-shadow(0 0 14px hsl(var(--primary) / 0.48))
+      drop-shadow(0 0 34px hsl(var(--primary) / 0.2));
+  }
+  a:hover .nexus-wordmark-img {
+    filter: brightness(1.12) contrast(1.07) saturate(1.18)
+      drop-shadow(0 2px 6px hsl(var(--primary) / 0.18));
+  }
+  .dark a:hover .nexus-wordmark-img {
+    filter: brightness(1.55) contrast(1.08) saturate(1.36)
+      drop-shadow(0 0 18px hsl(var(--primary) / 0.58))
+      drop-shadow(0 0 42px hsl(var(--primary) / 0.24));
+  }
+}
+
 @layer components {
   .surface-panel {
-    @apply rounded-2xl border border-border/70 bg-card backdrop-blur-md ring-1 ring-white/[0.04];
+    @apply rounded-xl border border-border/50 bg-card shadow-sm;
   }
 
   .section-title {
@@ -297,5 +320,10 @@
 
   .section-copy {
     @apply text-sm leading-relaxed text-muted-foreground md:text-base;
+  }
+
+  /* App pages (hub, tools) — width aligned with site header (max-w-7xl) */
+  .page-shell-narrow {
+    @apply mx-auto w-full max-w-7xl px-4 pb-16 pt-10 sm:px-6 md:pb-20 md:pt-12 lg:px-8;
   }
 }

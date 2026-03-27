@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -49,32 +49,13 @@ export default function FounderOnboarding() {
     futureVision: ''
   })
 
-  // Debug: Log component mount and form data changes
-  useEffect(() => {
-    console.log('[FounderOnboarding] Component mounted')
-    console.log('[FounderOnboarding] Initial form state:', formData)
-    console.log('[FounderOnboarding] Router available:', !!router)
-  }, [router])
-  
-  useEffect(() => {
-    console.log('[FounderOnboarding] Form data changed:', formData)
-  }, [formData])
-
   const updateField = (field: string, value: string) => {
-    console.log(`[FounderOnboarding] Field update: ${field} = "${value}"`)
-    setFormData(prev => {
-      const updated = { ...prev, [field]: value }
-      console.log(`[FounderOnboarding] Updated form state:`, updated)
-      return updated
-    })
+    setFormData(prev => ({ ...prev, [field]: value }))
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    console.log('[FounderOnboarding] Form submission started')
-    console.log('[FounderOnboarding] Current form data:', formData)
-    
-    // Validate required fields with detailed logging
+
     const requiredFields = {
       founderName: formData.founderName,
       founderBackground: formData.founderBackground,
@@ -98,41 +79,23 @@ export default function FounderOnboarding() {
       .map(([key]) => key)
     
     if (missingFields.length > 0) {
-      console.warn('[FounderOnboarding] Validation failed - missing fields:', missingFields)
-      console.warn('[FounderOnboarding] Required fields status:', requiredFields)
       toast.warning(`Please fill in all required fields. Missing: ${missingFields.join(', ')}`)
       return
     }
-    
-    console.log('[FounderOnboarding] Validation passed, submitting form...')
+
     setLoading(true)
-    
+
     try {
       const requestBody = JSON.stringify(formData)
-      console.log('[FounderOnboarding] API Request:', {
-        url: '/api/onboarding/founder',
-        method: 'POST',
-        bodyLength: requestBody.length,
-        bodyPreview: requestBody.substring(0, 200) + '...'
-      })
-      
+
       const response = await fetch('/api/onboarding/founder', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: requestBody
       })
 
-      console.log('[FounderOnboarding] API Response:', {
-        status: response.status,
-        statusText: response.statusText,
-        ok: response.ok,
-        headers: Object.fromEntries(response.headers.entries())
-      })
-
       if (response.ok) {
-        const responseData = await response.json().catch(() => null)
-        console.log('[FounderOnboarding] Success response data:', responseData)
-        console.log('[FounderOnboarding] Navigating to /analysis')
+        await response.json().catch(() => null)
         router.push('/analysis')
       } else {
         let errorMessage = 'Unknown error'
@@ -144,13 +107,6 @@ export default function FounderOnboarding() {
           errorMessage = errorText || errorMessage
         }
         
-        console.error('[FounderOnboarding] API Error Response:', {
-          status: response.status,
-          statusText: response.statusText,
-          errorMessage
-        })
-        
-        // Provide user-friendly error messages
         if (response.status === 401) {
           toast.info('Please sign in to continue. Redirecting to sign in page...')
           router.push('/signup')
@@ -166,15 +122,8 @@ export default function FounderOnboarding() {
         }
       }
     } catch (error) {
-      console.error('[FounderOnboarding] Exception during form submission:', error)
-      console.error('[FounderOnboarding] Error details:', {
-        name: error instanceof Error ? error.name : 'Unknown',
-        message: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : undefined
-      })
       toast.error(`An error occurred: ${error instanceof Error ? error.message : 'Unknown error'}`)
     } finally {
-      console.log('[FounderOnboarding] Form submission completed, setting loading to false')
       setLoading(false)
     }
   }
@@ -186,13 +135,13 @@ export default function FounderOnboarding() {
         <div className="text-center mb-12">
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-indigo-100 text-indigo-700 mb-4">
             <Sparkles className="w-4 h-4" />
-            <span className="text-sm font-semibold">AI Fund Coach Onboarding</span>
+            <span className="text-sm font-semibold">Founder onboarding</span>
           </div>
           <h1 className="text-4xl font-bold text-gray-900 mb-3">
             Tell Us About Your Startup
           </h1>
           <p className="text-lg text-gray-600">
-            We'll analyze your startup and match you with the best investors
+            Your answers tune how we rank investors for your stage and sector
           </p>
         </div>
 

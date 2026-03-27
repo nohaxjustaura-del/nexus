@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { getCurrentUser } from '@/lib/auth'
+import { isAdminEmail } from '@/lib/constants'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -9,6 +11,11 @@ export async function GET(
   { params }: { params: { email: string } }
 ) {
   try {
+    const admin = await getCurrentUser(false)
+    if (!admin || !isAdminEmail(admin.email)) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
+
     const email = decodeURIComponent(params.email)
     const founder = await db.founder.findUnique({ where: { email } })
     const user = await db.user.findUnique({ where: { email } }).catch(() => null)

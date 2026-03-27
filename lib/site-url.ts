@@ -18,7 +18,7 @@ function isLocalDevHost(hostHeader: string): boolean {
 }
 
 /**
- * When you run `next dev`, magic-link / OAuth callback URLs must use this origin —
+ * When you run `next dev`, magic-link / OAuth callback URLs must use this origin,
  * even if NEXT_PUBLIC_URL still points at production (common when copying .env).
  */
 function localOriginFromRequest(request: NextRequest): string | null {

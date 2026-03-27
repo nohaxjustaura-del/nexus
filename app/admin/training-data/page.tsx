@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { useAuthSession } from '@/components/auth-session-provider'
 import {
   Download,
   Database,
@@ -25,6 +26,8 @@ import {
 
 interface TrainingDataExport {
   exportedAt: string
+  /** ISO time after which signedDownloadUrl links stop working (re-export to refresh). */
+  signedUrlsExpireAt?: string
   filters: { since: string | null; type: string }
   counts: {
     videoPitches: number
@@ -41,6 +44,7 @@ interface TrainingDataExport {
 
 export default function TrainingDataPage() {
   const router = useRouter()
+  const { loading: authLoading, isAdmin, email, user } = useAuthSession()
   const [loading, setLoading] = useState(true)
   const [data, setData] = useState<TrainingDataExport | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -58,15 +62,12 @@ export default function TrainingDataPage() {
     setLoading(true)
     setError(null)
     try {
-      // Client-side admin gate
-      const auth = await fetch('/api/auth/check', {
-        credentials: 'include',
-        headers: { 'Cache-Control': 'no-store' },
-      }).then(r => r.json()).catch(() => ({}))
-
-      // The auth endpoint returns email as userEmail or user.email, not top-level email
-      const userEmail = auth?.userEmail || auth?.user?.email || auth?.email
-      if (!userEmail || !auth?.isAdmin) {
+      if (authLoading) {
+        setLoading(false)
+        return
+      }
+      const userEmail = user?.email || email
+      if (!userEmail || !isAdmin) {
         setError(`Access denied. You must be logged in as the admin. Current: ${userEmail || 'not logged in'}`)
         setLoading(false)
         return
@@ -93,9 +94,10 @@ export default function TrainingDataPage() {
   }
 
   useEffect(() => {
-    fetchData()
+    if (authLoading) return
+    void fetchData()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [authLoading])
 
   const handleApplyFilters = () => {
     fetchData()
@@ -161,8 +163,14 @@ export default function TrainingDataPage() {
                 Training data
               </h1>
               <p className="text-sm text-muted-foreground">
-                Export pitches, decks, and recordings for model work
+                Export pitches, decks, and recordings for model work. JSON includes{' '}
+                <code className="text-xs">signedDownloadUrl</code> for media files when storage is configured.
               </p>
+              {data?.signedUrlsExpireAt && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  Signed download links expire {formatDate(data.signedUrlsExpireAt)}. Download JSON again to refresh.
+                </p>
+              )}
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -367,6 +375,17 @@ export default function TrainingDataPage() {
                                     {vp.filePath}
                                   </span>
                                 )}
+                                {vp.signedDownloadUrl && (
+                                  <a
+                                    href={vp.signedDownloadUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center gap-1 text-primary hover:underline"
+                                  >
+                                    <ExternalLink className="h-3 w-3" aria-hidden />
+                                    Download media
+                                  </a>
+                                )}
                               </div>
                               {vp.transcriptText && (
                                 <p className="mt-2 text-xs text-muted-foreground bg-muted rounded p-2">
@@ -471,6 +490,17 @@ export default function TrainingDataPage() {
                                     <HardDrive className="h-3 w-3" />
                                     {pd.filePath}
                                   </span>
+                                )}
+                                {pd.signedDownloadUrl && (
+                                  <a
+                                    href={pd.signedDownloadUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center gap-1 text-primary hover:underline"
+                                  >
+                                    <ExternalLink className="h-3 w-3" aria-hidden />
+                                    Download file
+                                  </a>
                                 )}
                               </div>
                               {pd.extractedText && (
@@ -676,6 +706,17 @@ export default function TrainingDataPage() {
                                     <HardDrive className="h-3 w-3" />
                                     {vr.filePath}
                                   </span>
+                                )}
+                                {vr.signedDownloadUrl && (
+                                  <a
+                                    href={vr.signedDownloadUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center gap-1 text-primary hover:underline"
+                                  >
+                                    <ExternalLink className="h-3 w-3" aria-hidden />
+                                    Download audio
+                                  </a>
                                 )}
                                 {vr.pitchIdeaAnalysisId && (
                                   <Badge variant="outline" className="text-xs bg-amber-500/10">

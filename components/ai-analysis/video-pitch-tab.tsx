@@ -8,13 +8,10 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Upload, Sparkles, TrendingUp, AlertCircle, CheckCircle, Lightbulb, Target, ExternalLink, Video, Play, Crown, User, Star, FileVideo } from "lucide-react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
-import SmartMatchResults from '@/components/smart-match-results'
 import AnalysisDashboard from '@/components/analysis/AnalysisDashboard'
 import { toast } from '@/components/ui/toast-simple'
 
 export function VideoPitchAnalysisTab() {
-  const router = useRouter()
   const [file, setFile] = useState<File | null>(null)
   const [analyzing, setAnalyzing] = useState(false)
   const [result, setResult] = useState<any>(null)
@@ -110,12 +107,7 @@ export function VideoPitchAnalysisTab() {
     
     // Check if user has enough credits (skip check if premium)
     if (!credits.isPremium && (credits.credits ?? 0) < currentCreditCost) {
-      setError(`Insufficient credits. ${reviewType === 'ai' ? 'AI' : 'Reviewer'} video pitch analysis costs ${currentCreditCost} credits. You have ${credits.credits ?? 0} credits. Please purchase credits or upgrade to premium.`)
-      return
-    }
-    
-    if (reviewType === 'reviewer' && !selectedReviewer) {
-      setError('Please select a reviewer')
+      setError(`Insufficient credits. ${reviewType === 'ai' ? 'Standard' : 'Reviewer'} video pitch analysis costs ${currentCreditCost} credits. You have ${credits.credits ?? 0} credits. Please purchase credits or upgrade to premium.`)
       return
     }
     
@@ -237,66 +229,22 @@ export function VideoPitchAnalysisTab() {
 
   return (
     <div className="space-y-6">
-      {/* Explanation Section */}
-      <Card className="mx-auto max-w-4xl w-full border border-primary/25 bg-gradient-to-br from-primary/8 via-background to-violet-500/8">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Sparkles className="h-5 w-5 text-primary" />
-            How Video Pitch Analysis Works
-          </CardTitle>
-          <CardDescription className="text-base">
-            Get AI-powered insights tailored to your video pitch
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid md:grid-cols-3 gap-4">
-            <div className="p-4 rounded-lg bg-card/75 border border-primary/10">
-              <div className="flex items-center gap-2 mb-2">
-                <Target className="h-5 w-5 text-primary" />
-                <h4 className="font-semibold text-sm">Perfect VC Matches</h4>
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Our AI analyzes your video pitch and finds VCs that are the perfect fit for your presentation style, content, and startup profile.
-              </p>
-            </div>
-            <div className="p-4 rounded-lg bg-card/75 border border-primary/10">
-              <div className="flex items-center gap-2 mb-2">
-                <TrendingUp className="h-5 w-5 text-primary" />
-                <h4 className="font-semibold text-sm">Tailored Recommendations</h4>
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Get personalized suggestions on what to improve in your video pitch and how to better present your startup to each VC.
-              </p>
-            </div>
-            <div className="p-4 rounded-lg bg-card/75 border border-primary/10">
-              <div className="flex items-center gap-2 mb-2">
-                <Lightbulb className="h-5 w-5 text-primary" />
-                <h4 className="font-semibold text-sm">Actionable Insights</h4>
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Understand your presentation strengths, identify areas for improvement, and learn exactly what each VC looks for in video pitches.
-              </p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card className="mx-auto max-w-4xl w-full">
-        <CardHeader>
-          <CardTitle>Upload Your Video Pitch</CardTitle>
+      <Card className="border-border shadow-none">
+        <CardHeader className="space-y-1 pb-2">
+          <CardTitle className="text-lg">Video pitch</CardTitle>
           <CardDescription>
-            MP4, MOV, or WebM • Max 500MB • 2-10 minutes recommended
+            MP4, MOV, or WebM · up to 500MB · about 2–10 minutes works best
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-6">
+        <CardContent className="space-y-5 pt-2">
         {!file ? (
-          <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed p-12 text-center">
-            <Video className="mb-4 h-12 w-12 text-muted-foreground" />
+          <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-border bg-muted/20 px-6 py-10 text-center">
+            <Video className="mb-3 h-10 w-10 text-muted-foreground/70" />
             <Label htmlFor="video-upload" className="cursor-pointer">
               <span className="text-sm font-medium text-primary hover:underline">
-                Click to upload video
+                Choose video
               </span>
-              <span className="text-sm text-muted-foreground"> or drag and drop</span>
+              <span className="text-sm text-muted-foreground"> or drop it here</span>
             </Label>
             <Input
               id="video-upload"
@@ -305,14 +253,11 @@ export function VideoPitchAnalysisTab() {
               onChange={handleFileChange}
               className="hidden"
             />
-            <p className="mt-4 text-sm text-muted-foreground">
-              MP4, MOV, or WebM format • Up to 500MB
-            </p>
           </div>
         ) : (
           <div className="space-y-4">
             {videoPreview && (
-              <div className="relative rounded-lg border-2 border-border overflow-hidden bg-black">
+              <div className="relative overflow-hidden rounded-lg border border-border bg-black">
                 <video 
                   src={videoPreview} 
                   controls 
@@ -321,236 +266,170 @@ export function VideoPitchAnalysisTab() {
                 />
               </div>
             )}
-            <div className="rounded-lg border bg-muted/50 p-4">
-              <div className="flex items-center gap-3">
-                <FileVideo className="h-5 w-5 text-primary" />
-                <div>
-                  <p className="font-medium">{file.name}</p>
-                  <p className="text-sm text-muted-foreground">
+            <div className="flex items-center gap-3 rounded-lg border border-border bg-muted/30 px-4 py-3">
+                <FileVideo className="h-5 w-5 shrink-0 text-muted-foreground" />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium">{file.name}</p>
+                  <p className="text-xs text-muted-foreground">
                     {(file.size / 1024 / 1024).toFixed(2)} MB
                   </p>
                 </div>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleRemoveFile}
+                  disabled={analyzing}
+                >
+                  Remove
+                </Button>
               </div>
-            </div>
           </div>
         )}
 
         {error && (
-          <div className="rounded-lg border border-red-500 bg-red-50 p-4 text-sm text-red-700 dark:bg-red-900/20 dark:text-red-400">
-            <AlertCircle className="mr-2 inline h-4 w-4" />
+          <div className="rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2.5 text-sm text-destructive">
+            <AlertCircle className="mr-2 inline h-4 w-4 align-text-bottom" />
             {error}
           </div>
         )}
 
-        {/* Review Type Selection */}
-        <div className="rounded-lg border border-border bg-card p-6">
-          <Label className="text-base font-semibold mb-4 block">Choose Review Type</Label>
-          <div className="grid gap-4 md:grid-cols-2">
-            <div
+        <div className="space-y-3">
+          <Label className="text-sm text-muted-foreground">Review type</Label>
+          <div className="grid gap-2 sm:grid-cols-2">
+            <button
+              type="button"
               onClick={() => setReviewType('ai')}
-              className={`cursor-pointer rounded-xl border p-4 transition-all ${
+              className={`rounded-lg border px-4 py-3 text-left text-sm transition-colors ${
                 reviewType === 'ai'
                   ? 'border-primary bg-primary/5'
-                  : 'border-border hover:border-muted-foreground/30'
+                  : 'border-border hover:bg-muted/40'
               }`}
             >
-              <div className="flex items-start gap-3">
-                <div className={`rounded-lg p-2 ${reviewType === 'ai' ? 'bg-primary/10' : 'bg-muted'}`}>
-                  <Sparkles className={`h-5 w-5 ${reviewType === 'ai' ? 'text-primary' : 'text-muted-foreground'}`} />
-                </div>
-                <div className="flex-1">
-                  <div className="flex items-center justify-between mb-1">
-                    <h3 className="font-semibold">AI Analysis</h3>
-                    <Badge variant="secondary" className="text-xs">50 credits</Badge>
-                  </div>
-                  <p className="text-sm text-muted-foreground mb-2">
-                    Instant AI-powered analysis with compatibility scores
-                  </p>
-                  <ul className="text-xs text-muted-foreground space-y-1">
-                    <li className="flex items-center gap-1">
-                      <CheckCircle className="h-3 w-3" />
-                      Instant results
-                    </li>
-                    <li className="flex items-center gap-1">
-                      <CheckCircle className="h-3 w-3" />
-                      VC matching & scores
-                    </li>
-                    <li className="flex items-center gap-1">
-                      <CheckCircle className="h-3 w-3" />
-                      Improvement suggestions
-                    </li>
-                  </ul>
-                </div>
+              <div className="flex items-center justify-between gap-2">
+                <span className="font-medium">AI analysis</span>
+                <Badge variant="secondary" className="shrink-0 text-xs font-normal">
+                  {VIDEO_AI_CREDIT_COST} cr
+                </Badge>
               </div>
-            </div>
-
-            <div
+              <p className="mt-1 text-xs text-muted-foreground">Instant scores and VC matches</p>
+            </button>
+            <button
+              type="button"
               onClick={() => setReviewType('reviewer')}
-              className={`cursor-pointer rounded-xl border p-4 transition-all ${
+              className={`rounded-lg border px-4 py-3 text-left text-sm transition-colors ${
                 reviewType === 'reviewer'
                   ? 'border-primary bg-primary/5'
-                  : 'border-border hover:border-muted-foreground/30'
+                  : 'border-border hover:bg-muted/40'
               }`}
             >
-              <div className="flex items-start gap-3">
-                <div className={`rounded-lg p-2 ${reviewType === 'reviewer' ? 'bg-primary/10' : 'bg-muted'}`}>
-                  <User className={`h-5 w-5 ${reviewType === 'reviewer' ? 'text-primary' : 'text-muted-foreground'}`} />
-                </div>
-                <div className="flex-1">
-                  <div className="flex items-center justify-between mb-1">
-                    <h3 className="font-semibold">VC-Accepted Reviewer</h3>
-                    <Badge variant="secondary" className="text-xs bg-amber-500/15 text-amber-300 border border-amber-500/30">100 credits</Badge>
-                  </div>
-                  <p className="text-sm text-muted-foreground mb-2">
-                    Get reviewed by founders accepted to top VCs/accelerators
-                  </p>
-                  <ul className="text-xs text-muted-foreground space-y-1">
-                    <li className="flex items-center gap-1">
-                      <CheckCircle className="h-3 w-3" />
-                      Human expert feedback
-                    </li>
-                    <li className="flex items-center gap-1">
-                      <CheckCircle className="h-3 w-3" />
-                      Personalized VC recommendations
-                    </li>
-                    <li className="flex items-center gap-1">
-                      <CheckCircle className="h-3 w-3" />
-                      2-3 day turnaround
-                    </li>
-                  </ul>
-                </div>
+              <div className="flex items-center justify-between gap-2">
+                <span className="font-medium">Human reviewer</span>
+                <Badge variant="secondary" className="shrink-0 text-xs font-normal">
+                  {VIDEO_REVIEWER_CREDIT_COST} cr
+                </Badge>
               </div>
-            </div>
+              <p className="mt-1 text-xs text-muted-foreground">Founders vetted by top programs · ~2–3 days</p>
+            </button>
           </div>
+        </div>
 
-          {/* Reviewer Selection (if reviewer type selected) */}
           {reviewType === 'reviewer' && reviewers.length > 0 && (
-            <div className="mt-4 pt-4 border-t">
-              <Label className="text-sm font-medium mb-2 block">Select Reviewer (Optional)</Label>
-              <p className="text-xs text-muted-foreground mb-3">
-                Leave blank to be matched with the best available reviewer
+            <div className="space-y-2">
+              <Label className="text-sm text-muted-foreground">Reviewer (optional)</Label>
+              <p className="text-xs text-muted-foreground">
+                Skip to let us assign the best available reviewer.
               </p>
-              <div className="grid gap-2 max-h-48 overflow-y-auto">
+              <div className="max-h-40 space-y-1.5 overflow-y-auto rounded-md border border-border p-2">
                 {reviewers.map((reviewer) => (
-                  <div
+                  <button
                     key={reviewer.id}
+                    type="button"
                     onClick={() => setSelectedReviewer(selectedReviewer === reviewer.id ? null : reviewer.id)}
-                    className={`cursor-pointer rounded-lg border-2 p-3 transition-all ${
-                      selectedReviewer === reviewer.id
-                        ? 'border-primary bg-primary/5'
-                        : 'border-border hover:border-muted-foreground/30'
+                    className={`flex w-full items-center justify-between gap-2 rounded-md px-2 py-2 text-left text-sm transition-colors ${
+                      selectedReviewer === reviewer.id ? 'bg-primary/10' : 'hover:bg-muted/50'
                     }`}
                   >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
-                          <User className="h-5 w-5 text-primary" />
-                        </div>
-                        <div>
-                          <div className="font-medium text-sm">{reviewer.name}</div>
-                          <div className="text-xs text-muted-foreground">
-                            {reviewer.acceptedVC} • {reviewer.acceptedYear}
-                          </div>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {reviewer.averageRating > 0 && (
-                          <div className="flex items-center gap-1">
-                            <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
-                            <span className="text-xs font-medium">{reviewer.averageRating.toFixed(1)}</span>
-                          </div>
-                        )}
-                        {selectedReviewer === reviewer.id && (
-                          <CheckCircle className="h-4 w-4 text-primary" />
-                        )}
-                      </div>
-                    </div>
-                  </div>
+                    <span className="flex min-w-0 items-center gap-2">
+                      <User className="h-4 w-4 shrink-0 text-muted-foreground" />
+                      <span className="truncate font-medium">{reviewer.name}</span>
+                    </span>
+                    {reviewer.averageRating > 0 && (
+                      <span className="flex shrink-0 items-center gap-0.5 text-xs text-muted-foreground">
+                        <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
+                        {reviewer.averageRating.toFixed(1)}
+                      </span>
+                    )}
+                  </button>
                 ))}
               </div>
             </div>
           )}
-        </div>
 
-        {/* Credit Cost Section */}
-        <div className="rounded-lg border bg-muted/50 p-4">
-          <div className="flex items-center justify-between">
-            <div className="text-sm">
-              <div className="font-semibold flex items-center gap-2">
-                <Sparkles className="h-4 w-4 text-primary" />
-                {reviewType === 'ai' ? 'AI Video Pitch Analysis' : 'VC-Accepted Reviewer Review'}
-              </div>
-              <div className="text-muted-foreground">
-                Cost: {reviewType === 'ai' ? VIDEO_AI_CREDIT_COST : VIDEO_REVIEWER_CREDIT_COST} credits
-                {reviewType === 'reviewer' && ' • 2-3 day turnaround'}
-                {credits && (
-                  <span className="ml-2">
-                    • You have: <span className="font-semibold text-foreground">{credits.credits ?? 0}</span> credits
-                    {credits.isPremium && <Badge variant="secondary" className="ml-2 text-xs">Premium</Badge>}
-                  </span>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-sm text-muted-foreground">
+            {credits ? (
+              <>
+                This run:{' '}
+                <span className="font-medium text-foreground">
+                  {reviewType === 'ai' ? VIDEO_AI_CREDIT_COST : VIDEO_REVIEWER_CREDIT_COST}
+                </span>
+                {' · '}
+                Balance:{' '}
+                <span className="font-medium text-foreground">{credits.credits ?? 0}</span>
+                {credits.isPremium && (
+                  <Badge variant="secondary" className="ml-2 align-middle text-xs">
+                    Premium
+                  </Badge>
                 )}
-              </div>
-            </div>
-            {credits && (!credits.isPremium && (credits.credits ?? 0) < (reviewType === 'ai' ? VIDEO_AI_CREDIT_COST : VIDEO_REVIEWER_CREDIT_COST)) && (
-              <Link href="/pricing">
+              </>
+            ) : (
+              'Loading balance…'
+            )}
+          </p>
+          {credits &&
+            (!credits.isPremium &&
+              (credits.credits ?? 0) <
+                (reviewType === 'ai' ? VIDEO_AI_CREDIT_COST : VIDEO_REVIEWER_CREDIT_COST)) && (
+              <Link href="/pricing" className="shrink-0">
                 <Button variant="outline" size="sm">
-                  Buy Credits
+                  Add credits
                 </Button>
               </Link>
             )}
-          </div>
         </div>
 
         {file && (
           <Button 
             onClick={handleAnalyze} 
-            disabled={analyzing || !credits || (!credits.isPremium && (credits.credits ?? 0) < (reviewType === 'ai' ? VIDEO_AI_CREDIT_COST : VIDEO_REVIEWER_CREDIT_COST)) || (reviewType === 'reviewer' && !selectedReviewer)}
+            disabled={
+              analyzing ||
+              !credits ||
+              (!credits.isPremium &&
+                (credits.credits ?? 0) <
+                  (reviewType === 'ai' ? VIDEO_AI_CREDIT_COST : VIDEO_REVIEWER_CREDIT_COST))
+            }
             className="w-full"
             size="lg"
           >
             {analyzing ? (
               <>
                 <Sparkles className="mr-2 h-4 w-4 animate-spin" />
-                Analyzing Video Pitch...
+                Analyzing…
               </>
             ) : !credits ? (
               <>
                 <Sparkles className="mr-2 h-4 w-4 animate-spin" />
-                Loading credits...
+                Loading…
               </>
             ) : (
               <>
                 <Play className="mr-2 h-4 w-4" />
-                Analyze Video Pitch
+                Analyze video
               </>
             )}
           </Button>
         )}
-
-        <div className="rounded-lg border bg-muted/50 p-6">
-          <h3 className="mb-2 font-semibold flex items-center gap-2">
-            <Lightbulb className="h-4 w-4 text-primary" />
-            What You'll Get
-          </h3>
-          <ul className="space-y-2 text-sm text-muted-foreground">
-            <li className="flex items-start gap-2">
-              <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-              <span>Presentation score (delivery, clarity, engagement)</span>
-            </li>
-            <li className="flex items-start gap-2">
-              <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-              <span>Content score (substance, metrics, market fit)</span>
-            </li>
-            <li className="flex items-start gap-2">
-              <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-              <span>Top VC recommendations with application strategies</span>
-            </li>
-            <li className="flex items-start gap-2">
-              <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-              <span>Best approach for each VC (warm intro, cold email, timing)</span>
-            </li>
-          </ul>
-        </div>
       </CardContent>
     </Card>
 

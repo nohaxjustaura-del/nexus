@@ -1,6 +1,6 @@
 import { db } from "@/lib/db"
+import { formatVerifiedInvestorCount } from "@/lib/investor-public-stats"
 import { getCurrentUser } from "@/lib/auth"
-import { Card, CardContent } from "@/components/ui/card"
 import { parseJSON } from "@/lib/utils"
 import Link from "next/link"
 import { redirect } from "next/navigation"
@@ -446,95 +446,92 @@ export default async function DiscoverPage({
     showLimitedTailored = true
   }
 
-  return (
-    <div className="min-h-screen bg-white" data-page="discover">
-      <div className="container mx-auto max-w-7xl px-4 py-6 md:py-8">
-        {/* Clean Title */}
-        <div className="mb-8">
-          <h1 className="text-3xl md:text-4xl font-bold text-slate-900 mb-2">
-            1,002 Verified Investors
-          </h1>
-          <p className="text-slate-600 text-lg">
-            Find the right investors for your startup
-          </p>
-        </div>
+  const totalInDirectory = investors.length
+  const verifiedInDirectory = investors.reduce((n, inv) => n + (inv.verified ? 1 : 0), 0)
+  const verifiedLabel = formatVerifiedInvestorCount(verifiedInDirectory)
 
-        {/* Clean Tab Navigation */}
-        <div className="mb-6 border-b border-slate-200">
-          <nav className="flex gap-6 -mb-px">
+  return (
+    <div className="min-h-screen bg-background" data-page="discover">
+      <div className="container mx-auto max-w-7xl px-4 py-6 md:py-10">
+        <header className="mb-6 md:mb-8">
+          <h1 className="font-heading text-2xl font-semibold tracking-tight text-foreground md:text-3xl">
+            Investors
+          </h1>
+          <p className="mt-1 text-sm text-muted-foreground md:text-base">
+            {verifiedLabel} verified investors
+            {totalInDirectory !== verifiedInDirectory
+              ? ` · ${totalInDirectory.toLocaleString('en-US')} profiles in directory`
+              : ' in directory'}
+            {showLimitedTailored ? ' · upgrade with analysis to see full tailored list' : ''}
+          </p>
+        </header>
+
+        <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
+          <nav
+            className="flex gap-1 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            aria-label="Founder directory sections"
+          >
+            {(
+              [
+                { href: '/founder/discover', label: 'Discover' },
+                { href: '/founder/matches', label: 'Matches' },
+                { href: '/founder/bookmarks', label: 'Bookmarks' },
+                { href: '/founder/my-analyses', label: 'Analyses' },
+              ] as const
+            ).map(({ href, label }) => (
+              <Link
+                key={href}
+                href={href}
+                className={`shrink-0 rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${
+                  href === '/founder/discover'
+                    ? 'bg-primary/15 text-foreground ring-1 ring-primary/20'
+                    : 'text-muted-foreground hover:bg-muted/70 hover:text-foreground'
+                }`}
+              >
+                {label}
+              </Link>
+            ))}
+          </nav>
+
+          <div
+            className="inline-flex shrink-0 rounded-lg border border-border bg-muted/30 p-1"
+            role="group"
+            aria-label="List mode"
+          >
             <Link
               href="/founder/discover"
-              className="px-1 py-3 text-sm font-semibold border-b-2 border-blue-600 text-blue-600 transition-colors"
+              className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+                !viewAll ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
+              }`}
             >
-              Discover
+              For you
             </Link>
             <Link
-              href="/founder/matches"
-              className="px-1 py-3 text-sm font-medium text-slate-600 hover:text-slate-900 border-b-2 border-transparent hover:border-slate-300 transition-colors"
+              href="/founder/discover?all=1"
+              className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+                viewAll ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
+              }`}
             >
-              Matches
+              All ({totalInDirectory.toLocaleString('en-US')})
             </Link>
-            <Link
-              href="/founder/bookmarks"
-              className="px-1 py-3 text-sm font-medium text-slate-600 hover:text-slate-900 border-b-2 border-transparent hover:border-slate-300 transition-colors"
-            >
-              Bookmarks
-            </Link>
-            <Link
-              href="/founder/my-analyses"
-              className="px-1 py-3 text-sm font-medium text-slate-600 hover:text-slate-900 border-b-2 border-transparent hover:border-slate-300 transition-colors"
-            >
-              My Analyses
-            </Link>
-          </nav>
-        </div>
-
-        {/* Toggle Switch */}
-        <div className="mb-6 flex items-center gap-2">
-          <Link
-            href="/founder/discover"
-            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-              !viewAll
-                ? 'bg-blue-600 text-white'
-                : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-            }`}
-          >
-            Tailored
-          </Link>
-          <Link
-            href="/founder/discover?all=1"
-            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-              viewAll
-                ? 'bg-blue-600 text-white'
-                : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-            }`}
-          >
-            All ({investors.length})
-          </Link>
+          </div>
         </div>
 
         {verificationBanner && (
-          <Card className="mb-4 border-yellow-300 bg-yellow-50">
-            <CardContent className="py-4 text-sm text-yellow-800">
-              Your identity verification is <strong>{verificationBanner.status}</strong>. You can still browse matches; some actions may require approval.
-            </CardContent>
-          </Card>
+          <div className="mb-4 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2.5 text-sm text-amber-950 dark:text-amber-100">
+            Verification is <strong className="font-medium">{verificationBanner.status}</strong>. You can still browse; some actions may need approval.
+          </div>
         )}
 
+        <p className="mb-4 text-sm text-muted-foreground">
+          {filteredInvestors.length} {filteredInvestors.length === 1 ? 'result' : 'results'}
+          {!viewAll && backgroundReasons.length > 0 && (
+            <span className="text-muted-foreground/80"> · {backgroundReasons[0]}</span>
+          )}
+        </p>
 
-        {/* Results count */}
-        <div className="mb-6">
-          <p className="text-sm text-slate-600">
-            Showing {filteredInvestors.length} {filteredInvestors.length === 1 ? 'investor' : 'investors'}
-            {!viewAll && backgroundReasons.length > 0 && (
-              <span className="ml-1">• Tailored to {backgroundReasons[0].toLowerCase()}</span>
-            )}
-          </p>
-        </div>
-
-        {/* Client Component Wrapper - handles all client-side rendering */}
         <DiscoverClient
-          investors={filteredInvestors.map(inv => ({
+          investors={filteredInvestors.map((inv) => ({
             id: inv.id,
             firmName: inv.firmName,
             name: inv.name,
@@ -551,6 +548,8 @@ export default async function DiscoverPage({
             decisionSpeed: inv.decisionSpeed,
             leadFollow: inv.leadFollow,
             ownershipTarget: inv.ownershipTarget,
+            checkMin: inv.checkMin,
+            checkMax: inv.checkMax,
             applicationUrl: inv.applicationUrl,
             websiteUrl: inv.websiteUrl,
             twitterUrl: inv.twitterUrl,

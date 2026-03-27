@@ -1,9 +1,11 @@
 #!/usr/bin/env tsx
 
 /**
- * START BACKGROUND WORKER
- * 
- * Starts the automated background worker for real-time data updates
+ * Start the CLI maintenance worker (lib/background-worker.ts).
+ *
+ * Schedules thesis/profile refresh windows, Exa pre-warm, embeddings, validation,
+ * and Prisma→Supabase vc_directory sync. Use `--loop` for continuous timers
+ * (npm run worker:start). This process is separate from the Next.js in-process worker UI.
  */
 
 import { startWorker } from '../lib/background-worker'
@@ -32,7 +34,7 @@ async function main() {
   logger.info('SCRIPT', '✅ Worker started successfully')
   logger.info(
     'SCRIPT',
-    '💡 Jobs repeat on a timer; VC research drains the queue batch-by-batch (resume via DB). Ctrl+C to stop.'
+    '💡 Jobs run on timers; VC research drains batches from the DB queue. Pair with npm run workers:all for discover ingest. Ctrl+C to stop.',
   )
 }
 

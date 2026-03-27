@@ -6,19 +6,21 @@ import Link from 'next/link'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import { Mail, Loader2, ArrowLeft, Clock, X } from 'lucide-react'
+import { Mail, Loader2, ArrowLeft, Clock, X, UserRound } from 'lucide-react'
 import { CLIENT_STORAGE } from '@/lib/client-storage-keys'
+import { useAuthSession } from '@/components/auth-session-provider'
 
 type ApprovalModalVariant = 'pending' | 'rejected'
 
 export default function LoginPage() {
   const router = useRouter()
+  const { loading: authLoading, authenticated, verified } = useAuthSession()
   const searchParams = useSearchParams()
   const redirectUrl = searchParams.get('redirect') || searchParams.get('next') || ''
   const [email, setEmail] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const [existingAccountBanner, setExistingAccountBanner] = useState(false)
+  const [accountExistsModalOpen, setAccountExistsModalOpen] = useState(false)
   const [approvalModal, setApprovalModal] = useState<{ open: boolean; variant: ApprovalModalVariant }>({
     open: false,
     variant: 'pending',
@@ -26,9 +28,9 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (searchParams.get('accountExists') !== '1') return
-    setExistingAccountBanner(true)
     const prefill = searchParams.get('email')?.trim()
     if (prefill?.includes('@')) setEmail(prefill)
+    setAccountExistsModalOpen(true)
     const next = new URLSearchParams()
     if (redirectUrl) next.set('redirect', redirectUrl)
     const qs = next.toString()
@@ -45,37 +47,20 @@ export default function LoginPage() {
   }, [searchParams, router, redirectUrl])
 
   useEffect(() => {
-    let cancelled = false
-    ;(async () => {
-      try {
-        const res = await fetch('/api/auth/check', {
-          credentials: 'include',
-          headers: { 'Cache-Control': 'no-cache' },
-        })
-        const data = await res.json().catch(() => ({}))
-        if (cancelled) return
-        if (data?.authenticated) {
-          const defaultVerified = '/founder/dashboard'
-          const target = redirectUrl || (data?.verified ? defaultVerified : '/founder/onboarding')
-          window.location.replace(target)
-        }
-      } catch {
-        /* ignore */
-      }
-    })()
-    return () => {
-      cancelled = true
-    }
-  }, [redirectUrl])
+    if (authLoading || !authenticated) return
+    const defaultVerified = '/founder/dashboard'
+    const target = redirectUrl || (verified ? defaultVerified : '/founder/onboarding')
+    window.location.replace(target)
+  }, [authLoading, authenticated, verified, redirectUrl])
 
   useEffect(() => {
-    if (!approvalModal.open) return
+    if (!approvalModal.open && !accountExistsModalOpen) return
     const prev = document.body.style.overflow
     document.body.style.overflow = 'hidden'
     return () => {
       document.body.style.overflow = prev
     }
-  }, [approvalModal.open])
+  }, [approvalModal.open, accountExistsModalOpen])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -105,7 +90,6 @@ export default function LoginPage() {
         const text = await response.text()
         console.error('Non-JSON response:', text.substring(0, 500))
         setError('Server error. Please check console for details.')
-        setLoading(false)
         return
       }
 
@@ -121,12 +105,12 @@ export default function LoginPage() {
             open: true,
             variant: data.code === 'ACCOUNT_REJECTED' ? 'rejected' : 'pending',
           })
-          setLoading(false)
           return
         }
-        const errorMsg = data.error || data.message || 'Something went wrong'
-        setError(errorMsg)
-        setLoading(false)
+        const base = data.error || data.message || 'Something went wrong'
+        const detail =
+          typeof data.details === 'string' && data.details.trim() ? data.details.trim() : ''
+        setError(detail ? `${base} ${detail}` : base)
         return
       }
 
@@ -141,8 +125,9 @@ export default function LoginPage() {
 
         let targetUrl = redirectUrl
         if (!targetUrl) {
-          if (data.user?.userType === 'investor') targetUrl = '/vc/dashboard'
-          else if (data.user?.userType === 'mentor') targetUrl = '/'
+          const t = data.user?.userType
+          if (t === 'investor' || t === 'vc') targetUrl = '/vc/dashboard'
+          else if (t === 'mentor') targetUrl = '/'
           else targetUrl = '/founder/dashboard'
         }
 
@@ -169,14 +154,55 @@ export default function LoginPage() {
       } else {
         setError(err.message || 'Failed to send sign-in link. Please try again.')
       }
+    } finally {
       setLoading(false)
     }
   }
 
   const closeApprovalModal = () => setApprovalModal((m) => ({ ...m, open: false }))
+  const closeAccountExistsModal = () => setAccountExistsModalOpen(false)
 
   return (
     <div className="flex min-h-[calc(100vh-3.25rem)] items-center justify-center p-5 sm:p-8 relative">
+      {accountExistsModalOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="account-exists-modal-title"
+          onClick={closeAccountExistsModal}
+        >
+          <Card
+            className="relative w-full max-w-md border-border/50 shadow-lg"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              onClick={closeAccountExistsModal}
+              className="absolute right-3 top-3 rounded-full p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+              aria-label="Close"
+            >
+              <X className="h-4 w-4" />
+            </button>
+            <CardHeader className="space-y-2 text-center pb-2 pt-8">
+              <div className="mx-auto w-12 h-12 rounded-full flex items-center justify-center bg-primary/12 ring-1 ring-border/60">
+                <UserRound className="w-6 h-6 text-primary" />
+              </div>
+              <CardTitle id="account-exists-modal-title" className="font-heading text-xl font-semibold tracking-tight">
+                You already have an account
+              </CardTitle>
+              <CardDescription className="text-base text-muted-foreground leading-relaxed px-1">
+                An account with this email is already registered. Use “Send Sign-In Link” below to log in.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="pt-2 pb-6">
+              <Button type="button" className="w-full rounded-full" onClick={closeAccountExistsModal}>
+                OK
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      )}
       {approvalModal.open && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm"
@@ -240,11 +266,6 @@ export default function LoginPage() {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
-            {existingAccountBanner && (
-              <div className="p-3 text-sm text-amber-950 bg-amber-500/15 border border-amber-500/30 rounded-md">
-                An account with this email already exists. Log in below to get a sign-in link.
-              </div>
-            )}
             <div className="space-y-2">
               <label htmlFor="email" className="text-sm font-medium">
                 Email Address

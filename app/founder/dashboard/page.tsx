@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -10,9 +9,12 @@ import { Search, Sparkles, Target, Bookmark, Crown, Shield, ArrowRight, FileText
 import Link from 'next/link'
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
+import { computeFounderProfileCompletenessPercentUi } from '@/lib/founder-profile-completeness'
+import { useAuthSession } from '@/components/auth-session-provider'
+import { getUserCreditsClient } from '@/lib/client/user-credits-client'
 
 export default function FounderDashboard() {
-  const router = useRouter()
+  const { isAdmin } = useAuthSession()
   const [loading, setLoading] = useState(true)
   const [credits, setCredits] = useState<{ credits: number; isPremium: boolean } | null>(null)
   const [stats, setStats] = useState<{
@@ -22,31 +24,16 @@ export default function FounderDashboard() {
     profileCompleteness: number
     recentAnalyses: any[]
   } | null>(null)
-  const [isAdmin, setIsAdmin] = useState(false)
-
   useEffect(() => {
     let isMounted = true
+    const maxWaitMs = 25_000
+    const maxWait = window.setTimeout(() => {
+      if (isMounted) setLoading(false)
+    }, maxWaitMs)
 
-    fetch('/api/auth/check', { credentials: 'include' })
-      .then((res) => res.json())
-      .then((data) => {
-        if (!isMounted) return
-        if (!data?.authenticated) {
-          router.push('/signup')
-          return
-        }
-        setIsAdmin(Boolean(data?.isAdmin))
-        setLoading(false)
-      })
-      .catch(() => {
-        if (!isMounted) return
-        router.push('/signup')
-      })
-
-    fetch('/api/user/credits', { credentials: 'include' })
-      .then((res) => res.json())
-      .then((data) => {
-        if (isMounted) setCredits(data)
+    getUserCreditsClient()
+      .then(({ ok, data }) => {
+        if (isMounted && ok) setCredits(data as { credits: number; isPremium: boolean })
       })
       .catch(() => {})
 
@@ -60,54 +47,47 @@ export default function FounderDashboard() {
       fetch('/api/bookmarks', { credentials: 'include' })
         .then((r) => r.json())
         .catch(() => ({ total: 0 })),
-    ]).then(([analysesData, profileData, bookmarksData]) => {
-      if (!isMounted) return
+    ])
+      .then(([analysesData, profileData, bookmarksData]) => {
+        if (!isMounted) return
 
-      const analyses = (analysesData.analyses || []).filter((a: any) => a.type !== 'resume')
-      const founder = profileData.founder || profileData.profile
-      const bookmarksCount = typeof bookmarksData.total === 'number' ? bookmarksData.total : 0
+        const analyses = (analysesData.analyses || []).filter((a: any) => a.type !== 'resume')
+        const founder = profileData.founder || profileData.profile
+        const bookmarksCount = typeof bookmarksData.total === 'number' ? bookmarksData.total : 0
 
-      let completeness = 0
-      if (founder) {
-        const fields = [
-          founder.name,
-          founder.startupName,
-          founder.bio,
-          founder.stage,
-          founder.sectors,
-          founder.location,
-          founder.fundingNeed,
-          founder.pitchDeck,
-          founder.videoPitchUrl,
-          founder.linkedinUrl,
-        ]
-        const filledFields = fields.filter((f) => f && f !== '' && f !== '[]').length
-        completeness = Math.round((filledFields / fields.length) * 100)
-      }
+        const verificationStatus = profileData.verification?.status ?? null
+        const completeness = computeFounderProfileCompletenessPercentUi(founder, verificationStatus)
 
-      const matchesCount = analyses.reduce((sum: number, a: any) => {
-        const count = a.result?.matchCount || a.result?.matches?.length || 0
-        return sum + (typeof count === 'number' ? count : 0)
-      }, 0)
+        const matchesCount = analyses.reduce((sum: number, a: any) => {
+          const count = a.result?.matchCount || a.result?.matches?.length || 0
+          return sum + (typeof count === 'number' ? count : 0)
+        }, 0)
 
-      setStats({
-        analysesCount: analyses.length,
-        bookmarksCount,
-        matchesCount,
-        profileCompleteness: completeness,
-        recentAnalyses: analyses.slice(0, 5),
+        setStats({
+          analysesCount: analyses.length,
+          bookmarksCount,
+          matchesCount,
+          profileCompleteness: completeness,
+          recentAnalyses: analyses.slice(0, 5),
+        })
       })
-    }).catch(() => {})
+      .catch(() => {})
+      .finally(() => {
+        window.clearTimeout(maxWait)
+        if (isMounted) setLoading(false)
+      })
 
     return () => {
       isMounted = false
+      window.clearTimeout(maxWait)
     }
-  }, [router])
+  }, [])
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background">
-        <div className="container mx-auto max-w-3xl px-4 py-8 md:py-12">
+      <div className="relative min-h-screen bg-background">
+        <div className="pointer-events-none fixed inset-0 -z-10 bg-page-mesh" aria-hidden />
+        <div className="page-shell-narrow">
           <Skeleton className="mb-8 h-10 w-48" />
           <Skeleton className="mb-6 h-36 w-full" />
           <div className="grid grid-cols-3 gap-3">
@@ -148,13 +128,14 @@ export default function FounderDashboard() {
   ] as const
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="container mx-auto max-w-3xl px-4 py-8 md:py-12">
+    <div className="relative min-h-screen bg-background">
+      <div className="pointer-events-none fixed inset-0 -z-10 bg-page-mesh" aria-hidden />
+      <div className="page-shell-narrow">
         {isAdmin && (
           <div className="mb-6 flex flex-col gap-3 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-2 text-sm text-amber-100">
               <Shield className="h-4 w-4 shrink-0 text-amber-400" aria-hidden />
-              <span>Admin mode — open the admin hub for approvals and VC tools.</span>
+              <span>Admin mode: open the admin hub for approvals and VC tools.</span>
             </div>
             <Link
               href="/admin/dashboard"

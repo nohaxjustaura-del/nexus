@@ -352,7 +352,7 @@ export function PitchIdeaAnalysisTab() {
                   Analysis Complete
                 </CardTitle>
                 <CardDescription className="mt-2">
-                  Your pitch idea has been analyzed by AI trained on real investor feedback
+                  Feedback reflects patterns from real investor reviews and rubrics
                 </CardDescription>
               </div>
               <Button onClick={() => {
@@ -491,7 +491,7 @@ export function PitchIdeaAnalysisTab() {
                   </CardDescription>
                 </div>
                 <Badge className="bg-gradient-to-r from-primary to-blue-600 text-white px-4 py-1.5 text-sm">
-                  AI Matched
+                  From your pitch
                 </Badge>
               </div>
             </CardHeader>
@@ -669,59 +669,19 @@ export function PitchIdeaAnalysisTab() {
 
   return (
     <div className="space-y-6">
-      <Card className="mx-auto max-w-4xl w-full border border-primary/25 bg-gradient-to-br from-primary/8 via-background to-violet-500/8">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Lightbulb className="h-5 w-5 text-primary" />
-            Pitch Idea Analysis
-          </CardTitle>
-          <CardDescription className="text-base">
-            Get feedback on your pitch idea from AI trained on real investor feedback
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid md:grid-cols-3 gap-4">
-            <div className="p-4 rounded-lg bg-card/80 border border-primary/15">
-              <div className="flex items-center gap-2 mb-2">
-                <Target className="h-5 w-5 text-primary" />
-                <h4 className="font-semibold text-sm">Real Investor Insights</h4>
-              </div>
-              <p className="text-xs text-muted-foreground">
-                AI trained on feedback from real VCs and investors. Get the same insights they look for.
-              </p>
-            </div>
-            <div className="p-4 rounded-lg bg-card/80 border border-primary/15">
-              <div className="flex items-center gap-2 mb-2">
-                <TrendingUp className="h-5 w-5 text-primary" />
-                <h4 className="font-semibold text-sm">Actionable Improvements</h4>
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Specific suggestions to strengthen your pitch and make it more compelling to investors.
-              </p>
-            </div>
-            <div className="p-4 rounded-lg bg-card/80 border border-primary/15">
-              <div className="flex items-center gap-2 mb-2">
-                <Lightbulb className="h-5 w-5 text-primary" />
-                <h4 className="font-semibold text-sm">VC Recommendations</h4>
-              </div>
-              <p className="text-xs text-muted-foreground">
-                See which VCs might be interested in your idea based on their investment thesis.
-              </p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card className="mx-auto max-w-4xl w-full">
-        <CardHeader>
-          <CardTitle>Share Your Pitch Idea</CardTitle>
+      <Card className="border-border shadow-none">
+        <CardHeader className="space-y-1 pb-2">
+          <CardTitle className="text-lg">Pitch idea</CardTitle>
           <CardDescription>
-            Type your idea directly or upload a document. We'll analyze it and give you feedback.
+            Text or a small document · {PITCH_IDEA_CREDIT_COST} credits per run
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-6">
-          {/* Input Mode Toggle */}
-          <div className="flex gap-2 p-1 bg-muted rounded-lg">
+        <CardContent className="space-y-5 pt-2">
+          <div
+            className="inline-flex rounded-lg border border-border p-0.5"
+            role="group"
+            aria-label="Input type"
+          >
             <button
               type="button"
               onClick={() => {
@@ -729,15 +689,14 @@ export function PitchIdeaAnalysisTab() {
                 setIdeaFile(null)
                 setError(null)
               }}
-              className={`flex-1 px-4 py-2 rounded-md text-sm font-medium transition-all ${
+              className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
                 inputMode === 'text'
-                  ? 'bg-card text-foreground shadow-sm ring-1 ring-border'
+                  ? 'bg-muted text-foreground'
                   : 'text-muted-foreground hover:text-foreground'
               }`}
               disabled={analyzing}
             >
-              <FileText className="inline-block w-4 h-4 mr-2" />
-              Type Text
+              Write
             </button>
             <button
               type="button"
@@ -746,23 +705,24 @@ export function PitchIdeaAnalysisTab() {
                 setIdeaText('')
                 setError(null)
               }}
-              className={`flex-1 px-4 py-2 rounded-md text-sm font-medium transition-all ${
+              className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
                 inputMode === 'file'
-                  ? 'bg-card text-foreground shadow-sm ring-1 ring-border'
+                  ? 'bg-muted text-foreground'
                   : 'text-muted-foreground hover:text-foreground'
               }`}
               disabled={analyzing}
             >
-              <Upload className="inline-block w-4 h-4 mr-2" />
-              Upload Document
+              Upload
             </button>
           </div>
 
           {/* Text Input */}
           {inputMode === 'text' && (
             <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="idea">Your Pitch Idea or Product Concept *</Label>
+              <div className="flex items-center justify-between gap-2">
+                <Label htmlFor="idea" className="text-sm font-normal text-muted-foreground">
+                  Your idea
+                </Label>
                 <div className="flex items-center gap-2">
                   {isTranscribing && (
                     <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
@@ -798,31 +758,26 @@ export function PitchIdeaAnalysisTab() {
                   setIdeaText(e.target.value)
                   setError(null)
                 }}
-                placeholder="Describe your startup idea, product concept, or pitch. What problem are you solving? Who is your target market? What makes your solution unique?&#10;&#10;💡 Tip: Click the mic button to dictate your idea using your voice."
-                className={`flex min-h-[200px] w-full rounded-xl border-2 ${
-                  isRecording
-                    ? 'border-primary/50 bg-primary/[0.02]'
-                    : 'border-border focus:border-primary bg-background'
-                } px-4 py-3 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 transition-all`}
+                placeholder="Problem, who it's for, and what you're building. Use the mic to dictate."
+                className={`flex min-h-[180px] w-full rounded-lg border bg-background px-3 py-2.5 text-sm ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${
+                  isRecording ? 'border-primary/40' : 'border-border'
+                }`}
                 required
                 disabled={analyzing}
               />
-              <p className="text-xs text-muted-foreground">
-                Be specific about your idea, target market, and what makes it unique. The more detail, the better the feedback.
-              </p>
             </div>
           )}
 
           {/* File Upload */}
           {inputMode === 'file' && (
             <div className="space-y-2">
-              <Label htmlFor="idea-file">Upload Your Pitch Document *</Label>
+              <Label htmlFor="idea-file" className="text-sm font-normal text-muted-foreground">
+                Document
+              </Label>
               <div className="flex flex-col gap-3">
                 <div
-                  className={`flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-xl transition-all ${
-                    ideaFile
-                      ? 'border-primary bg-primary/5'
-                      : 'border-border hover:border-primary/50 bg-muted/40'
+                  className={`flex h-28 w-full flex-col items-center justify-center rounded-lg border border-dashed transition-colors ${
+                    ideaFile ? 'border-primary/40 bg-primary/5' : 'border-border bg-muted/20 hover:bg-muted/35'
                   }`}
                 >
                   {ideaFile ? (
@@ -846,13 +801,12 @@ export function PitchIdeaAnalysisTab() {
                       </Button>
                     </div>
                   ) : (
-                    <label htmlFor="idea-file" className="flex flex-col items-center cursor-pointer w-full h-full justify-center">
-                      <Upload className="w-8 h-8 text-muted-foreground/65 mb-2" />
-                      <p className="text-sm font-medium text-muted-foreground">
-                        Click to upload or drag and drop
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        PDF, DOCX, DOC, or TXT (max 10MB)
+                    <label htmlFor="idea-file" className="flex h-full w-full cursor-pointer flex-col items-center justify-center px-4">
+                      <Upload className="mb-2 h-7 w-7 text-muted-foreground/70" />
+                      <p className="text-sm text-muted-foreground">
+                        <span className="font-medium text-primary">Choose file</span>
+                        {' · '}
+                        PDF, DOC, TXT · 10MB max
                       </p>
                     </label>
                   )}
@@ -876,74 +830,62 @@ export function PitchIdeaAnalysisTab() {
                   disabled={analyzing}
                 />
               </div>
-              <p className="text-xs text-muted-foreground">
-                Upload a document containing your pitch idea, business plan, or product description.
-              </p>
             </div>
           )}
 
           {error && (
-            <div className="rounded-lg border border-red-500 bg-red-50 p-4 text-sm text-red-700">
-              <div className="flex items-start gap-2 mb-3">
-                <AlertCircle className="h-5 w-5 mt-0.5 shrink-0" />
-                <div className="flex-1">
-                  <div className="font-semibold text-base mb-1">Error</div>
-                  <div className="text-red-800">{error.split('\n\n')[0]}</div>
+            <div className="rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2.5 text-sm text-destructive">
+              <div className="flex items-start gap-2">
+                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                <div className="min-w-0 flex-1 space-y-2">
+                  <p>{error.split('\n\n')[0]}</p>
+                  {error.includes('What went wrong:') && (
+                    <div className="space-y-1 border-t border-destructive/20 pt-2 text-xs opacity-95">
+                      <p>{error.split('What went wrong:')[1]?.split('Why:')[0]?.trim()}</p>
+                      {error.includes('Why:') && (
+                        <p>{error.split('Why:')[1]?.split('How to fix:')[0]?.trim()}</p>
+                      )}
+                      {error.includes('How to fix:') && (
+                        <ul className="list-decimal space-y-0.5 pl-4">
+                          {error
+                            .split('How to fix:')[1]
+                            ?.split('\n')
+                            .filter((line: string) => line.trim().match(/^\d+\./))
+                            .map((line: string, i: number) => (
+                              <li key={i}>{line.trim().replace(/^\d+\.\s*/, '')}</li>
+                            ))}
+                        </ul>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
-              
-              {error.includes('What went wrong:') && (
-                <div className="mt-3 pt-3 border-t border-red-200">
-                  <div className="font-semibold mb-1">What went wrong:</div>
-                  <div className="text-red-700 mb-3">{error.split('What went wrong:')[1]?.split('Why:')[0]?.trim()}</div>
-                  
-                  {error.includes('Why:') && (
-                    <>
-                      <div className="font-semibold mb-1">Why it failed:</div>
-                      <div className="text-red-700 mb-3">{error.split('Why:')[1]?.split('How to fix:')[0]?.trim()}</div>
-                    </>
-                  )}
-                  
-                  {error.includes('How to fix:') && (
-                    <>
-                      <div className="font-semibold mb-2">How to fix:</div>
-                      <ul className="list-decimal list-inside space-y-1 text-red-700">
-                        {error.split('How to fix:')[1]?.split('\n').filter((line: string) => line.trim().match(/^\d+\./)).map((line: string, i: number) => (
-                          <li key={i}>{line.trim().replace(/^\d+\.\s*/, '')}</li>
-                        ))}
-                      </ul>
-                    </>
-                  )}
-                </div>
-              )}
             </div>
           )}
 
-          <div className="rounded-lg border bg-muted/50 p-4">
-            <div className="flex items-center justify-between">
-              <div className="text-sm">
-                <div className="font-semibold flex items-center gap-2">
-                  <Sparkles className="h-4 w-4 text-primary" />
-                  Pitch Idea Analysis
-                </div>
-                <div className="text-muted-foreground">
-                  Cost: {PITCH_IDEA_CREDIT_COST} credits
-                  {credits && (
-                    <span className="ml-2">
-                      • You have: <span className="font-semibold text-foreground">{credits.credits ?? 0}</span> credits
-                      {credits.isPremium && <Badge variant="secondary" className="ml-2 text-xs">Premium</Badge>}
-                    </span>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-sm text-muted-foreground">
+              {credits ? (
+                <>
+                  Balance:{' '}
+                  <span className="font-medium text-foreground">{credits.credits ?? 0}</span>
+                  {credits.isPremium && (
+                    <Badge variant="secondary" className="ml-2 align-middle text-xs">
+                      Premium
+                    </Badge>
                   )}
-                </div>
-              </div>
-              {credits && (!credits.isPremium && (credits.credits ?? 0) < PITCH_IDEA_CREDIT_COST) && (
-                <Link href="/pricing">
-                  <Button variant="outline" size="sm">
-                    Buy Credits
-                  </Button>
-                </Link>
+                </>
+              ) : (
+                'Loading balance…'
               )}
-            </div>
+            </p>
+            {credits && (!credits.isPremium && (credits.credits ?? 0) < PITCH_IDEA_CREDIT_COST) && (
+              <Link href="/pricing" className="shrink-0">
+                <Button variant="outline" size="sm">
+                  Add credits
+                </Button>
+              </Link>
+            )}
           </div>
 
           <Button 
@@ -961,17 +903,17 @@ export function PitchIdeaAnalysisTab() {
             {analyzing ? (
               <>
                 <Sparkles className="mr-2 h-4 w-4 animate-spin" />
-                Analyzing...
+                Analyzing…
               </>
             ) : !credits ? (
               <>
                 <Sparkles className="mr-2 h-4 w-4 animate-spin" />
-                Loading credits...
+                Loading…
               </>
             ) : (
               <>
                 <Lightbulb className="mr-2 h-4 w-4" />
-                Analyze Pitch Idea
+                Analyze idea
               </>
             )}
           </Button>

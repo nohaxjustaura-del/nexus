@@ -399,7 +399,7 @@ export function getCurrentYCTrends(): {
 export async function analyzeYCBatchWithAI(
   companies: YCCompany[]
 ): Promise<BatchTrends> {
-  // Removed Gemini import - using OpenRouter/DeepSeek only
+  // Removed Gemini import - using OpenRouter (shared VC model) only
   
   const prompt = `You are a YC expert analyzing a batch of ${companies.length} accepted companies.
 
@@ -428,7 +428,7 @@ Return as JSON:
 }`
 
   try {
-    // Use OpenRouter with FREE DeepSeek model
+    // Use OpenRouter with configured VC extraction model (default Llama 3.3 70B)
     const { openrouterGenerateJson } = await import('./openrouter')
     
     const json = await openrouterGenerateJson({

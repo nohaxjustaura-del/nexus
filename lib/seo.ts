@@ -15,8 +15,9 @@ const siteUrl = getSiteUrl()
 
 const defaultMetadata = {
   title: BRAND_DEFAULT_TITLE,
-  description: 'AI-powered platform connecting founders with compatible VCs, angels, and mentors. Evidence-based matching by stage, sector, vision, and working style.',
-  image: '/og-image.png',
+  description:
+    'NEXUS ranks verified VCs, angels, and programs against your pitch using stage, sector, thesis, and how you tell your story, not keyword lists alone.',
+  image: `${siteUrl}/opengraph-image`,
   url: siteUrl,
 }
 
@@ -74,9 +75,10 @@ export function generateOrganizationSchema() {
     '@context': 'https://schema.org',
     '@type': 'Organization',
     name: BRAND_NAME,
-    description: 'AI-powered platform connecting founders with compatible VCs',
+    description:
+      'Fundraising intelligence that connects founders with verified investors aligned on stage, sector, thesis, and narrative.',
     url: siteUrl,
-    logo: `${siteUrl}/logo.png`,
+    logo: `${siteUrl}/nexus-logo.png`,
     sameAs: [
       // Add social media URLs here
     ],
@@ -89,7 +91,8 @@ export function generateWebsiteSchema() {
     '@type': 'WebSite',
     name: BRAND_NAME,
     url: siteUrl,
-    description: 'AI-powered platform connecting founders with compatible VCs',
+    description:
+      'Fundraising intelligence that connects founders with verified investors aligned on stage, sector, thesis, and narrative.',
     potentialAction: {
       '@type': 'SearchAction',
       target: `${siteUrl}/search?q={search_term_string}`,

@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { getCurrentUser } from '@/lib/auth'
-import { isAdminEmail, CREDIT_COSTS } from '@/lib/constants'
+import { getCurrentUserIncludingDevBypass } from '@/lib/auth'
+import { CREDIT_COSTS } from '@/lib/constants'
+import { grantsUnlimitedCreditsDisplay } from '@/lib/dev-ai-analysis-bypass'
 import { logger } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'
@@ -9,7 +10,7 @@ export const dynamic = 'force-dynamic'
 // GET: Get user credits
 export async function GET(request: NextRequest) {
   try {
-    const user = await getCurrentUser()
+    const user = await getCurrentUserIncludingDevBypass()
     
     if (!user) {
       return NextResponse.json(
@@ -34,7 +35,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Grant admin unlimited credits and premium
-    if (isAdminEmail(user.email)) {
+    if (grantsUnlimitedCreditsDisplay(user.email)) {
       // Parse purchases for admin too
       let purchases: string[] = []
       try {
@@ -78,7 +79,7 @@ export async function GET(request: NextRequest) {
 // POST: Use credits or unlock premium matches
 export async function POST(request: NextRequest) {
   try {
-    const user = await getCurrentUser()
+    const user = await getCurrentUserIncludingDevBypass()
     
     if (!user) {
       return NextResponse.json(
@@ -90,7 +91,7 @@ export async function POST(request: NextRequest) {
     const { action } = await request.json()
 
     // Admin gets infinite/unlocked access (no credit deduction)
-    if (isAdminEmail(user.email)) {
+    if (grantsUnlimitedCreditsDisplay(user.email)) {
       if (action === 'unlock_top_matches') {
         return NextResponse.json({ success: true, unlocked: true })
       }

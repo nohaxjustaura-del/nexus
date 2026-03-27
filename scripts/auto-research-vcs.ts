@@ -10,6 +10,20 @@ import { isLikelyRealFirmName } from '../lib/firm-name-quality'
 import { openrouterGenerateJson, hasOpenRouterKey, getVcExtractionModel } from '../lib/openrouter'
 import { normalizeResearchForDb } from '../lib/vc-research-normalize'
 import { gatherVCFirmRetrievalContext, getVcResearchPipelineEnvStatus } from '../lib/vc-research-retrieval'
+import {
+  sanitizeInvestmentThesis,
+  isDealAnnouncementThesis,
+} from '../lib/thesis-sanitize'
+
+/** True if research may write thesis: empty/short slot, or replacing a deal-headline mistaken for thesis. */
+export function shouldReplaceStoredThesis(existing: string | null | undefined, incoming?: string | null): boolean {
+  const inc = (incoming || '').trim()
+  if (!inc || inc.length < 20) return false
+  const cur = (existing || '').trim()
+  if (!cur || cur.length < 20) return true
+  if (isDealAnnouncementThesis(cur)) return true
+  return false
+}
 
 export interface VCResearchResult {
   firmName: string
@@ -34,6 +48,18 @@ export interface VCResearchResult {
 
 export type ResearchBatchMode = 'full' | 'thesis' | 'profile'
 
+/** Shared instructions so thesis ≠ deal PR pasted into the DB. */
+const THESIS_MANDATE_RULES = `
+
+Investment THESIS = the fund's ongoing mandate: stages, sectors, geographies, themes, and how they invest—not a single transaction.
+
+INVALID as thesis (use null instead):
+- Any line that is mainly one deal: "acquired a stake", "minority stake in [Company]", "invested in [Company]", "led the Series … round", "announced an investment", "closed a $… round"
+- Press-release style with "a leading [clinic/company/provider]…" tied to one name
+- Headlines or quotes about one portfolio company
+
+VALID: 2–5 sentences summarizing durable focus (e.g. early-stage B2B in Europe, climate hardware, etc.). If the text only supports deal news and not mandate, return null.`
+
 const contextSliceLen = () =>
   Math.min(28000, Math.max(8000, parseInt(process.env.VC_RESEARCH_CONTEXT_CHARS || '20000', 10) || 20000))
 
@@ -55,15 +81,18 @@ function normalizeThesisPayload(raw: unknown): Pick<VCResearchResult, 'thesis'> 
   if (!raw || typeof raw !== 'object') return {}
   const o = raw as Record<string, unknown>
   if (typeof o.thesis === 'string' && o.thesis.trim()) {
-    return { thesis: o.thesis.trim() }
+    const t = sanitizeInvestmentThesis(o.thesis.trim())
+    if (t) return { thesis: t }
   }
   if (o.thesis === null) return {}
   if (Array.isArray(o.key_findings) && o.key_findings.length) {
     const s = o.key_findings.map(String).join(' ').trim()
-    if (s) return { thesis: s.slice(0, 4000) }
+    const t = sanitizeInvestmentThesis(s.slice(0, 4000))
+    if (t) return { thesis: t }
   }
   if (typeof o.description === 'string' && o.description.trim().length > 40) {
-    return { thesis: o.description.trim().slice(0, 4000) }
+    const t = sanitizeInvestmentThesis(o.description.trim().slice(0, 4000))
+    if (t) return { thesis: t }
   }
   return {}
 }
@@ -74,21 +103,46 @@ async function extractThesisOnly(
 ): Promise<Pick<VCResearchResult, 'thesis'>> {
   try {
     const ctx = sliceContextForExtraction(rawContent)
-    const result = await openrouterGenerateJson<{ thesis: string | null }>({
-      system: `You extract the investment thesis for ONE venture fund whose name is given in the user message.
+    const systemFirst = `You extract the investment THESIS for ONE venture fund named in the user message.
 
 Your reply MUST be a single JSON object with exactly one key: "thesis".
-- "thesis" is either a string (2–5 sentences: stage, sectors, geography, themes) or null if the text does not describe that fund's investment focus.
-- Do NOT output article titles, dates, key_findings arrays, or any keys other than "thesis".`,
+- "thesis" is either a string (2–5 sentences: stages, sectors, geography, themes) or null if the text does not describe that fund's durable investment focus.
+- Do NOT output article titles, dates, key_findings arrays, or any keys other than "thesis".
+${THESIS_MANDATE_RULES}`
+
+    const result = await openrouterGenerateJson<{ thesis: string | null }>({
+      system: systemFirst,
       user: `Fund name: "${firmName}"\n\nSource text:\n${ctx}`,
       temperature: 0.15,
       model: getVcExtractionModel(),
       retryOnParseError: true,
     })
-    const normalized = normalizeThesisPayload(result)
+    let normalized = normalizeThesisPayload(result)
     if (normalized.thesis) return normalized
-    const t = (result as { thesis?: string | null }).thesis
-    return { thesis: typeof t === 'string' && t.trim() ? t.trim() : undefined }
+
+    const raw = (result as { thesis?: string | null }).thesis
+    const rawStr = typeof raw === 'string' ? raw.trim() : ''
+    const salvaged = rawStr ? sanitizeInvestmentThesis(rawStr) : undefined
+    if (salvaged) return { thesis: salvaged }
+
+    // Second pass: first answer was empty, too short, or looked like deal PR
+    if (rawStr.length >= 28 || isDealAnnouncementThesis(rawStr)) {
+      const retry = await openrouterGenerateJson<{ thesis: string | null }>({
+        system: `${systemFirst}
+
+STRICT RETRY: If the sources are mostly transaction news, output "thesis": null. Only output a string if you can describe the fund's ongoing strategy (not one company or one round).`,
+        user: `Fund name: "${firmName}"\n\nSource text:\n${ctx}`,
+        temperature: 0.1,
+        model: getVcExtractionModel(),
+        retryOnParseError: true,
+      })
+      normalized = normalizeThesisPayload(retry)
+      if (normalized.thesis) return normalized
+      const r2 = typeof retry.thesis === 'string' ? sanitizeInvestmentThesis(retry.thesis.trim()) : undefined
+      if (r2) return { thesis: r2 }
+    }
+
+    return {}
   } catch (e: any) {
     console.error(`   ⚠️ Thesis extraction failed for ${firmName}:`, e.message)
     return {}
@@ -163,7 +217,7 @@ ${sliceContextForExtraction(rawContent)}`,
 async function extractWithAI(firmName: string, rawContent: string): Promise<Partial<VCResearchResult>> {
   try {
     const result = await openrouterGenerateJson<{
-      thesis: string
+      thesis: string | null
       bio: string
       checkSizeMin: number | null
       checkSizeMax: number | null
@@ -182,6 +236,8 @@ async function extractWithAI(firmName: string, rawContent: string): Promise<Part
 - Return accurate JSON only. Do not invent fund sizes, portfolios, or URLs not supported by the text.
 - Prefer facts repeated across sources; when sources conflict, prefer the fund's primary site / press / official bio.
 - If unknown, use null for strings/numbers and [] for arrays.
+${THESIS_MANDATE_RULES}
+- For "thesis": use null if you only see deal headlines and cannot state durable mandate; never paste a single acquisition or stake announcement as thesis.
 
 Fund types: "Micro VC", "Venture Capital", "Accelerator", "CVC", "Angel Group", "Family Office", "Growth Equity"
 Lead/follow: "lead", "follow", "either"
@@ -190,14 +246,33 @@ Stages: "pre-seed", "seed", "Series A", "Series B", "Series C", "Growth" only.`,
 
 ${sliceContextForExtraction(rawContent)}
 
-Return JSON with: thesis (2-3 sentences, specific themes and stage if present), bio (2-3 sentences: who they are, founding vintage or notable background if stated), checkSizeMin (thousands USD, e.g. 500 = $500K), checkSizeMax (thousands), stages, sectors, geography (country/region level), fundType, leadFollow, portfolio (company names only, max 25), valueAddTags, websiteUrl (official fund site if explicit), linkedinUrl (company/fund page if explicit), applicationUrl (pitch form or email contact page if explicit)`,
+Return JSON with: thesis (2–4 sentences: ongoing investment focus, or null if not inferable beyond one-off deals), bio (2-3 sentences: who they are, founding vintage or notable background if stated), checkSizeMin (thousands USD, e.g. 500 = $500K), checkSizeMax (thousands), stages, sectors, geography (country/region level), fundType, leadFollow, portfolio (company names only, max 25), valueAddTags, websiteUrl (official fund site if explicit), linkedinUrl (company/fund page if explicit), applicationUrl (pitch form or email contact page if explicit)`,
       temperature: 0.15,
       model: getVcExtractionModel(),
       retryOnParseError: true,
     })
 
+    const thesisSan = sanitizeInvestmentThesis(result.thesis || undefined, firmName)
+    let thesisOut = thesisSan
+
+    if (!thesisOut && result.thesis && String(result.thesis).trim().length >= 28) {
+      const retry = await openrouterGenerateJson<{ thesis: string | null }>({
+        system: `Return ONE JSON object with key "thesis" only.
+${THESIS_MANDATE_RULES}
+If you cannot produce a mandate summary, use "thesis": null.`,
+        user: `Fund: "${firmName}"\n\nSources:\n${sliceContextForExtraction(rawContent)}`,
+        temperature: 0.1,
+        model: getVcExtractionModel(),
+        retryOnParseError: true,
+      })
+      thesisOut = sanitizeInvestmentThesis(
+        typeof retry.thesis === 'string' ? retry.thesis.trim() : undefined,
+        firmName,
+      )
+    }
+
     return {
-      thesis: result.thesis || undefined,
+      thesis: thesisOut,
       bio: result.bio || undefined,
       checkSizeMin: result.checkSizeMin ?? undefined,
       checkSizeMax: result.checkSizeMax ?? undefined,
@@ -301,8 +376,12 @@ export async function updateVCInDatabaseThesisOnly(research: VCResearchResult): 
       return false
     }
     const updateData: Record<string, unknown> = { verified: true }
-    if (research.thesis && (!existing.thesis || existing.thesis.length < 20)) {
-      updateData.thesis = research.thesis
+    const curThesis = (existing.thesis || '').trim()
+    const nextThesis = sanitizeInvestmentThesis(research.thesis)
+    if (isDealAnnouncementThesis(curThesis)) {
+      updateData.thesis = nextThesis ?? null
+    } else if (nextThesis && shouldReplaceStoredThesis(existing.thesis, nextThesis)) {
+      updateData.thesis = nextThesis
     }
     const fieldsUpdated = Object.keys(updateData).length > 1 ? 1 : 0
     if (fieldsUpdated > 0) {
@@ -420,8 +499,12 @@ async function updateVCInDatabase(research: VCResearchResult): Promise<boolean> 
     if (research.stages?.length && existing.stages === '[]') {
       updateData.stages = JSON.stringify(research.stages)
     }
-    if (research.thesis && (!existing.thesis || existing.thesis.length < 20)) {
-      updateData.thesis = research.thesis
+    const curThesis = (existing.thesis || '').trim()
+    const nextThesis = sanitizeInvestmentThesis(research.thesis)
+    if (isDealAnnouncementThesis(curThesis)) {
+      updateData.thesis = nextThesis ?? null
+    } else if (nextThesis && shouldReplaceStoredThesis(existing.thesis, nextThesis)) {
+      updateData.thesis = nextThesis
     }
     if (research.bio && (!existing.bio || existing.bio.length < 20)) {
       updateData.bio = research.bio

@@ -13,10 +13,10 @@ import {
   AlertCircle,
   CheckCircle,
   Lightbulb,
-  Target,
   ExternalLink,
   Star,
-  Crown
+  Crown,
+  FileText
 } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
@@ -557,116 +557,97 @@ export function PitchDeckAnalysisTab() {
 
   return (
     <div className="space-y-6">
-      {/* Explanation Section */}
-      <Card className="mx-auto max-w-4xl w-full border-2 border-primary/20 bg-gradient-to-br from-primary/5 via-background to-blue-50/30">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Sparkles className="h-5 w-5 text-primary" />
-            How Pitch Deck Analysis Works
-          </CardTitle>
-          <CardDescription className="text-base">
-            Get AI-powered insights tailored to your pitch
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid md:grid-cols-3 gap-4">
-            <div className="p-4 rounded-lg bg-card/75 border border-primary/10">
-              <div className="flex items-center gap-2 mb-2">
-                <Target className="h-5 w-5 text-primary" />
-                <h4 className="font-semibold text-sm">Perfect VC Matches</h4>
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Our AI analyzes your pitch deck and finds VCs that are the perfect fit for your business model, stage, sector, and traction.
-              </p>
-            </div>
-            <div className="p-4 rounded-lg bg-card/75 border border-primary/10">
-              <div className="flex items-center gap-2 mb-2">
-                <TrendingUp className="h-5 w-5 text-primary" />
-                <h4 className="font-semibold text-sm">Tailored Recommendations</h4>
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Get personalized suggestions on what to improve in your pitch deck and how to better position your startup for each VC.
-              </p>
-            </div>
-            <div className="p-4 rounded-lg bg-card/75 border border-primary/10">
-              <div className="flex items-center gap-2 mb-2">
-                <Lightbulb className="h-5 w-5 text-primary" />
-                <h4 className="font-semibold text-sm">Actionable Insights</h4>
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Understand your pitch strengths, identify weaknesses, and learn exactly what each VC looks for in pitches like yours.
-              </p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card className="mx-auto max-w-4xl w-full">
-        <CardHeader>
-          <CardTitle>Upload Your Pitch Deck</CardTitle>
+      <Card className="border-border shadow-none">
+        <CardHeader className="space-y-1 pb-2">
+          <CardTitle className="text-lg">Pitch deck</CardTitle>
           <CardDescription>
-            PDF or PPTX • Max 50MB
+            PDF, PPT, or PPTX · up to 50MB · {PITCH_DECK_CREDIT_COST} credits per run
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-6">
-        <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed p-12 text-center">
-          <Upload className="mb-4 h-12 w-12 text-muted-foreground" />
-          <Label htmlFor="pitch-deck-upload" className="cursor-pointer">
-            <span className="text-sm font-medium text-primary hover:underline">
-              Click to upload
-            </span>
-            <span className="text-sm text-muted-foreground"> or drag and drop</span>
-          </Label>
-          <Input
-            id="pitch-deck-upload"
-            type="file"
-            accept=".pdf,.pptx,.ppt"
-            onChange={handleFileChange}
-            className="hidden"
-          />
-          {file && (
-            <div className="mt-4">
-              <Badge variant="secondary">
-                <CheckCircle className="mr-1 h-3 w-3" />
-                {file.name}
-              </Badge>
-            </div>
-          )}
-        </div>
+        <CardContent className="space-y-5 pt-2">
+        {!file ? (
+          <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-border bg-muted/20 px-6 py-10 text-center">
+            <FileText className="mb-3 h-10 w-10 text-muted-foreground/70" />
+            <Label htmlFor="pitch-deck-upload" className="cursor-pointer">
+              <span className="text-sm font-medium text-primary hover:underline">
+                Choose file
+              </span>
+              <span className="text-sm text-muted-foreground"> or drop it here</span>
+            </Label>
+            <Input
+              id="pitch-deck-upload"
+              type="file"
+              accept=".pdf,.pptx,.ppt"
+              onChange={handleFileChange}
+              className="hidden"
+            />
+          </div>
+        ) : (
+          <div className="space-y-3">
+            <div className="flex items-center gap-3 rounded-lg border border-border bg-muted/30 px-4 py-3">
+                <FileText className="h-5 w-5 shrink-0 text-muted-foreground" />
+                <div className="flex-1 min-w-0">
+                  <p className="truncate text-sm font-medium">{file.name}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {(file.size / 1024 / 1024).toFixed(2)} MB
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setFile(null)
+                    setError(null)
+                  }}
+                  disabled={analyzing}
+                >
+                  Remove
+                </Button>
+              </div>
+            <Input
+              id="pitch-deck-upload-replace"
+              type="file"
+              accept=".pdf,.pptx,.ppt"
+              onChange={handleFileChange}
+              className="hidden"
+            />
+            <Label htmlFor="pitch-deck-upload-replace" className="cursor-pointer text-sm text-primary hover:underline">
+              Choose a different file
+            </Label>
+          </div>
+        )}
 
         {error && (
-          <div className="rounded-lg border border-red-500 bg-red-50 p-4 text-sm text-red-700 dark:bg-red-900/20 dark:text-red-400">
-            <AlertCircle className="mr-2 inline h-4 w-4" />
+          <div className="rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2.5 text-sm text-destructive">
+            <AlertCircle className="mr-2 inline h-4 w-4 align-text-bottom" />
             {error}
           </div>
         )}
 
-        {/* Credit Cost Section */}
-        <div className="rounded-lg border bg-muted/50 p-4">
-          <div className="flex items-center justify-between">
-            <div className="text-sm">
-              <div className="font-semibold flex items-center gap-2">
-                <Sparkles className="h-4 w-4 text-primary" />
-                Pitch Deck Analysis
-              </div>
-              <div className="text-muted-foreground">
-                Cost: {PITCH_DECK_CREDIT_COST} credits
-                {credits && (
-                  <span className="ml-2">
-                    • You have: <span className="font-semibold text-foreground">{credits.credits ?? 0}</span> credits
-                    {credits.isPremium && <Badge variant="secondary" className="ml-2 text-xs">Premium</Badge>}
-                  </span>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-sm text-muted-foreground">
+            {credits ? (
+              <>
+                Balance:{' '}
+                <span className="font-medium text-foreground">{credits.credits ?? 0}</span>
+                {credits.isPremium && (
+                  <Badge variant="secondary" className="ml-2 align-middle text-xs">
+                    Premium
+                  </Badge>
                 )}
-              </div>
-            </div>
-            {credits && (!credits.isPremium && (credits.credits ?? 0) < PITCH_DECK_CREDIT_COST) && (
-              <Link href="/pricing">
-                <Button variant="outline" size="sm">
-                  Buy Credits
-                </Button>
-              </Link>
+              </>
+            ) : (
+              'Loading balance…'
             )}
-          </div>
+          </p>
+          {credits && (!credits.isPremium && (credits.credits ?? 0) < PITCH_DECK_CREDIT_COST) && (
+            <Link href="/pricing" className="shrink-0">
+              <Button variant="outline" size="sm">
+                Add credits
+              </Button>
+            </Link>
+          )}
         </div>
 
         <Button 
@@ -678,45 +659,20 @@ export function PitchDeckAnalysisTab() {
           {analyzing ? (
             <>
               <Sparkles className="mr-2 h-4 w-4 animate-spin" />
-              Analyzing...
+              Analyzing…
             </>
           ) : !credits ? (
             <>
               <Sparkles className="mr-2 h-4 w-4 animate-spin" />
-              Loading credits...
+              Loading…
             </>
           ) : (
             <>
               <Upload className="mr-2 h-4 w-4" />
-              Analyze Pitch Deck
+              Analyze deck
             </>
           )}
         </Button>
-
-        <div className="rounded-lg border bg-muted/50 p-6">
-          <h3 className="mb-2 font-semibold flex items-center gap-2">
-            <Lightbulb className="h-4 w-4 text-primary" />
-            What You'll Get
-          </h3>
-          <ul className="space-y-2 text-sm text-muted-foreground">
-            <li className="flex items-start gap-2">
-              <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-              <span>Overall pitch quality score</span>
-            </li>
-            <li className="flex items-start gap-2">
-              <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-              <span>Detailed feedback on strengths and weaknesses</span>
-            </li>
-            <li className="flex items-start gap-2">
-              <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-              <span>Top VC matches based on your pitch content</span>
-            </li>
-            <li className="flex items-start gap-2">
-              <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-              <span>Market analysis and traction metrics extraction</span>
-            </li>
-          </ul>
-        </div>
       </CardContent>
     </Card>
     </div>

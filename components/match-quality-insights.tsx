@@ -16,36 +16,18 @@ import {
   BarChart3,
 } from "lucide-react"
 import Link from "next/link"
+import { computeFounderProfileCompletenessPercentUi } from "@/lib/founder-profile-completeness"
 
 interface MatchQualityInsightsProps {
   analyses: any[]
   founderProfile: any
   matches: any[]
+  /** When set (e.g. from /api/founder/profile), verified founders are not penalized for optional fields */
+  verificationStatus?: string | null
 }
 
-export function MatchQualityInsights({ analyses, founderProfile, matches }: MatchQualityInsightsProps) {
-  // Calculate profile completeness
-  const calculateCompleteness = () => {
-    if (!founderProfile) return 0
-    
-    const fields = [
-      founderProfile.name,
-      founderProfile.startupName,
-      founderProfile.bio,
-      founderProfile.stage,
-      founderProfile.sectors,
-      founderProfile.location,
-      founderProfile.fundingNeed,
-      founderProfile.pitchDeck,
-      founderProfile.videoPitchUrl,
-      founderProfile.linkedinUrl,
-    ]
-    
-    const filledFields = fields.filter(f => f && f !== '' && f !== '[]').length
-    return Math.round((filledFields / fields.length) * 100)
-  }
-
-  const completeness = calculateCompleteness()
+export function MatchQualityInsights({ analyses, founderProfile, matches, verificationStatus }: MatchQualityInsightsProps) {
+  const completeness = computeFounderProfileCompletenessPercentUi(founderProfile, verificationStatus)
 
   // Get latest analysis
   const latestAnalysis = analyses.length > 0 ? analyses[0] : null
@@ -71,11 +53,11 @@ export function MatchQualityInsights({ analyses, founderProfile, matches }: Matc
     const suggestions: string[] = []
     
     if (completeness < 70) {
-      suggestions.push('Complete your profile to unlock more matches')
+      suggestions.push('Complete your profile for stronger match lists')
     }
     
     if (!founderProfile?.videoPitchUrl) {
-      suggestions.push('Add a video pitch to increase matches by 30%')
+      suggestions.push('Add a video pitch URL so matches can use delivery context')
     }
     
     if (!founderProfile?.pitchDeck) {
@@ -139,7 +121,7 @@ export function MatchQualityInsights({ analyses, founderProfile, matches }: Matc
             </Badge>
           </div>
           <CardDescription>
-            Complete your profile to unlock more VC matches
+            A fuller profile usually surfaces better VC matches
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -166,7 +148,7 @@ export function MatchQualityInsights({ analyses, founderProfile, matches }: Matc
                     Bio
                   </li>
                 )}
-                {!founderProfile?.linkedinUrl && (
+                {!founderProfile?.linkedinUrl && !founderProfile?.linkedin && (
                   <li className="flex items-center gap-2">
                     <XCircle className="h-4 w-4 text-red-500" />
                     LinkedIn URL

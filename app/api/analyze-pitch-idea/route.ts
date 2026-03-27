@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { getCurrentUserOrAdmin } from '@/lib/auth'
+import { getCurrentUser } from '@/lib/auth'
 import { runMatchingPipeline } from '@/lib/matching/matching-orchestrator'
 import { logger } from '@/lib/logger'
 import { validatePitchIdea } from '@/lib/content-validator'
-import { ADMIN_EMAIL, CREDIT_COSTS } from '@/lib/constants'
+import { CREDIT_COSTS, isAdminEmail } from '@/lib/constants'
 import { rateLimitMiddleware, RATE_LIMITS } from '@/lib/rate-limit'
 import { parseJSON } from '@/lib/utils'
 import { getComprehensiveFounderContext, buildAIPromptContext } from '@/lib/founder-context'
@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
     
     let user
     try {
-      user = await getCurrentUserOrAdmin()
+      user = await getCurrentUser()
     } catch (authError: any) {
       logger.error('[ANALYZE-PITCH-IDEA] Auth error:', authError)
       return NextResponse.json(
@@ -220,7 +220,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check credits (admin bypass) - but don't deduct yet
-    if (user.email !== ADMIN_EMAIL) {
+    if (!isAdminEmail(user.email)) {
       const userCredits = await db.userCredits.findUnique({
         where: { userId: user.id },
       })
@@ -296,7 +296,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // 🚀 OPTIMIZED: Concise prompt for faster responses — scores come from runScoringPipeline()
+    // 🚀 OPTIMIZED: Concise prompt for faster responses; scores come from runScoringPipeline()
     const analysisPrompt = `Expert VC analyst. Analyze this pitch:
 
 ${contextPrompt ? `FOUNDER: ${contextPrompt.substring(0, 500)}\n\n` : ''}${ycTrendsAnalysis?.insights[0] ? `TREND: ${ycTrendsAnalysis.insights[0].title}\n\n` : ''}PITCH: "${idea.substring(0, 2000)}"
@@ -334,7 +334,7 @@ Be specific and actionable.`
       // (rest of handler expects `analysis` to exist below)
 
       // Deduct credits AFTER successful analysis (admin bypass)
-      if (user.email !== ADMIN_EMAIL) {
+      if (!isAdminEmail(user.email)) {
         try {
           await db.userCredits.update({
             where: { userId: user.id },
@@ -583,7 +583,7 @@ Be specific and actionable.`
       }
 
       // -----------------------------------------------------------------------
-      // MULTI-PASS SCORING PIPELINE — replaces Universal Analysis Engine
+      // MULTI-PASS SCORING PIPELINE (replaces Universal Analysis Engine)
       // -----------------------------------------------------------------------
       let rubricAnalysis: any = null
       let scoringResult: Awaited<ReturnType<typeof runScoringPipeline>> | null = null
@@ -595,7 +595,12 @@ Be specific and actionable.`
         logger.log('[ANALYZE-PITCH-IDEA] Running Market Intelligence + Scoring Pipeline...')
 
         const marketContext = await getDeepMarketContext(domain, problem)
-        scoringResult = await runScoringPipeline(idea, founderContext ?? (founder as unknown as import('@/lib/founder-context').ComprehensiveFounderContext), marketContext)
+        scoringResult = await runScoringPipeline(
+          idea,
+          founderContext ?? (founder as unknown as import('@/lib/founder-context').ComprehensiveFounderContext),
+          marketContext,
+          'IDEA',
+        )
         rubricAnalysis = scoringResult.rubricCompatible
 
         // Map pipeline tier to a ycFitScore for backward compatibility with UI
@@ -609,7 +614,7 @@ Be specific and actionable.`
         analysis.founderFit = scoringResult.categoryScores.team
         analysis.ycFitScore = YC_FIT_MAP[scoringResult.tier] ?? 60
 
-        logger.log(`[ANALYZE-PITCH-IDEA] Scoring Pipeline completed — finalScore: ${scoringResult.finalScore}`)
+        logger.log(`[ANALYZE-PITCH-IDEA] Scoring Pipeline completed; finalScore: ${scoringResult.finalScore}`)
       } catch (scoringError: any) {
         logger.error('[ANALYZE-PITCH-IDEA] Scoring Pipeline failed (non-critical):', scoringError?.message)
       }

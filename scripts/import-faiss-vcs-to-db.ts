@@ -1,6 +1,6 @@
 /**
  * Import all VCs from FAISS data file into the database
- * This syncs the 1002 VCs from the FAISS index to the Investor table
+ * This syncs VCs from the FAISS index JSON into the Investor table
  * 
  * Usage: npx tsx scripts/import-faiss-vcs-to-db.ts
  */

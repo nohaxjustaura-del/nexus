@@ -3,8 +3,8 @@
  * Run maintenance + growth workers in parallel (one terminal).
  *
  * Processes:
- *   1. scripts/worker-start.ts --loop — maintenance on existing investors (thesis/profile refresh, Exa cache, embeddings, validation, vc_directory sync)
- *   2. scripts/vc-supabase-ingest-worker.ts --discover — finds NEW firm names (Exa), then full researchVC + ingest per candidate → Prisma + Supabase (this is how new VCs enter the DB)
+ *   1. scripts/worker-start.ts --loop — maintenance on existing investors (monthly thesis/profile windows, Exa pre-warm, embeddings on timer, validation, vc_directory sync)
+ *   2. scripts/vc-supabase-ingest-worker.ts --discover — discovers new firm names via Exa, runs full VC research + ingest per candidate → Prisma Investor + Supabase vc_directory
  *
  * Do NOT also run npm run research-worker unless you want duplicate Exa/OpenRouter load.
  *

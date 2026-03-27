@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { getUserFromRequest } from '@/lib/auth'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -11,6 +12,11 @@ function toInt(value: any, fallback: number = 0) {
 
 export async function POST(request: NextRequest) {
   try {
+    const user = await getUserFromRequest(request)
+    if (!user) {
+      return NextResponse.json({ error: 'Sign in required to claim a profile' }, { status: 401 })
+    }
+
     const contentType = request.headers.get('content-type') || ''
     if (!contentType.includes('application/json')) {
       return NextResponse.json({ error: 'Invalid content type' }, { status: 400 })
@@ -53,6 +59,12 @@ export async function POST(request: NextRequest) {
     }
 
     const normalizedEmail = email.toLowerCase().trim()
+    if (normalizedEmail !== user.email.toLowerCase().trim()) {
+      return NextResponse.json(
+        { error: 'Email must match the account you signed in with' },
+        { status: 403 }
+      )
+    }
     // If an unverified claim already exists for this email, block duplicates
     const existing = await db.investor.findUnique({
       where: { email: normalizedEmail },

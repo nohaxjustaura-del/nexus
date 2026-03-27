@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { Button } from '@/components/ui/button'
+import { Button, buttonVariants } from '@/components/ui/button'
+import { cn } from '@/lib/utils'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -24,6 +25,11 @@ import {
   Users
 } from 'lucide-react'
 import { toast } from '@/components/ui/toast-simple'
+import {
+  YcInsiderFounderRequestModal,
+  type YcFounderKey,
+  type YcRequestType,
+} from '@/components/yc-insider-founder-request-modal'
 
 export default function YCInsiderPage() {
   const [loading, setLoading] = useState(true)
@@ -31,6 +37,17 @@ export default function YCInsiderPage() {
   const [credits, setCredits] = useState(0)
   const [purchases, setPurchases] = useState<string[]>([])
   const [purchasing, setPurchasing] = useState<string | null>(null)
+  const [requestModal, setRequestModal] = useState<{
+    open: boolean
+    founderKey: YcFounderKey
+    founderName: string
+    requestType: YcRequestType
+  }>({
+    open: false,
+    founderKey: 'william',
+    founderName: '',
+    requestType: 'ask',
+  })
 
   useEffect(() => {
     async function load() {
@@ -89,24 +106,39 @@ export default function YCInsiderPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-muted-foreground">Loading...</div>
+      <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
+        <div className="text-zinc-400">Loading...</div>
       </div>
     )
   }
 
+  const openFounderRequest = (founderKey: YcFounderKey, founderName: string, requestType: YcRequestType) => {
+    if (!isPremium) {
+      toast.error('Upgrade to Premium to message founders.')
+      return
+    }
+    setRequestModal({ open: true, founderKey, founderName, requestType })
+  }
+
   return (
-    <div className="min-h-screen bg-background">
-      <div className="container max-w-5xl mx-auto px-4 py-12">
+    <div className="min-h-screen bg-zinc-950 text-zinc-100">
+      <YcInsiderFounderRequestModal
+        open={requestModal.open}
+        onOpenChange={(open) => setRequestModal((m) => ({ ...m, open }))}
+        founderKey={requestModal.founderKey}
+        founderName={requestModal.founderName}
+        requestType={requestModal.requestType}
+      />
+      <div className="container max-w-7xl mx-auto px-4 py-12">
         {/* Hero */}
         <div className="mb-10">
           {/* Credits Display */}
           <div className="flex justify-end mb-4">
-            <div className="inline-flex items-center gap-3 px-4 py-2 rounded-lg bg-slate-900 text-white">
-              <Sparkles className="h-4 w-4 text-yellow-400" />
+            <div className="inline-flex items-center gap-3 px-4 py-2 rounded-lg border border-zinc-700 bg-zinc-900 text-zinc-100">
+              <Sparkles className="h-4 w-4 text-amber-400" />
               <span className="text-sm font-semibold">{credits} Credits</span>
               <Link href="/pricing">
-                <Button size="sm" variant="secondary" className="h-7 text-xs">
+                <Button size="sm" variant="secondary" className="h-7 text-xs bg-zinc-800 text-zinc-100 hover:bg-zinc-700">
                   Buy More
                 </Button>
               </Link>
@@ -114,27 +146,27 @@ export default function YCInsiderPage() {
           </div>
 
           <div className="text-center">
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-orange-500/10 border border-orange-500/30 mb-4">
-              <Sparkles className="h-4 w-4 text-orange-600" />
-              <span className="text-sm font-semibold text-orange-700">Verified • YC W26</span>
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-amber-500/35 bg-amber-500/10 mb-4">
+              <Sparkles className="h-4 w-4 text-amber-400" />
+              <span className="text-sm font-semibold text-amber-200">Verified • YC W26</span>
             </div>
-            <h1 className="mb-3 text-4xl md:text-5xl font-bold text-foreground">
+            <h1 className="mb-3 text-4xl md:text-5xl font-bold text-zinc-50">
               Steal YC-Winning Decisions, Not Just Decks
             </h1>
-            <p className="mx-auto max-w-2xl text-pretty text-lg leading-relaxed text-muted-foreground">
+            <p className="mx-auto max-w-2xl text-pretty text-lg leading-relaxed text-zinc-400">
               Annotated deck, interview patterns, traction timeline, and decision logic, organized into actionable templates.
             </p>
-            <div className="flex items-center justify-center gap-6 mt-6 text-sm text-slate-500">
-              <div className="flex items-center gap-1">
-                <CheckCircle className="h-4 w-4 text-green-600" />
+            <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 mt-6 text-sm text-zinc-400">
+              <div className="flex items-center gap-1.5">
+                <CheckCircle className="h-4 w-4 shrink-0 text-emerald-400" />
                 <span>Verified YC W26</span>
               </div>
-              <div className="flex items-center gap-1">
-                <CheckCircle className="h-4 w-4 text-green-600" />
+              <div className="flex items-center gap-1.5">
+                <CheckCircle className="h-4 w-4 shrink-0 text-emerald-400" />
                 <span>Actionable templates</span>
               </div>
-              <div className="flex items-center gap-1">
-                <CheckCircle className="h-4 w-4 text-green-600" />
+              <div className="flex items-center gap-1.5">
+                <CheckCircle className="h-4 w-4 shrink-0 text-emerald-400" />
                 <span>Decision breakdowns</span>
               </div>
             </div>
@@ -142,25 +174,30 @@ export default function YCInsiderPage() {
         </div>
 
         {!isPremium && (
-          <Card className="mb-10 border-orange-500/30 bg-gradient-to-br from-orange-500/12 to-card">
+          <Card className="mb-10 border-amber-500/35 bg-gradient-to-br from-amber-950/40 to-zinc-900/90 text-zinc-100">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-orange-900">
-                <Lock className="h-5 w-5 text-orange-600" />
+              <CardTitle className="flex items-center gap-2 text-amber-100">
+                <Lock className="h-5 w-5 text-amber-400" />
                 Unlock YC Insider Access
               </CardTitle>
-              <CardDescription className="text-muted-foreground">
+              <CardDescription className="text-zinc-400">
                 Get operator-grade breakdowns from founders currently in YC W26
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="flex items-center justify-between pt-4 border-t">
-                <p className="text-sm text-muted-foreground">
+              <div className="flex flex-col gap-4 pt-4 border-t border-zinc-700 sm:flex-row sm:items-center sm:justify-between">
+                <p className="text-sm text-zinc-400">
                   Access decision logic, templates, and insider intelligence you can't Google
                 </p>
-                {/* @ts-ignore */}
-                <Button asChild className="bg-orange-600 hover:bg-orange-700">
-                  <Link href="/pricing">Upgrade to Premium</Link>
-                </Button>
+                <Link
+                  href="/pricing"
+                  className={cn(
+                    buttonVariants(),
+                    'shrink-0 bg-amber-500 text-zinc-950 hover:bg-amber-400'
+                  )}
+                >
+                  Upgrade to Premium
+                </Link>
               </div>
             </CardContent>
           </Card>
@@ -170,91 +207,137 @@ export default function YCInsiderPage() {
         <div className={`${!isPremium ? 'opacity-50 pointer-events-none select-none' : ''} space-y-8`}>
           
           {/* Founders */}
-          <Card className="border-2">
+          <Card className="border border-zinc-700 bg-zinc-900/80 shadow-none">
             <CardHeader>
-              <CardTitle>Meet the Founders</CardTitle>
-              <CardDescription>William Namgyal and Inigo Lenderking are currently in Y Combinator Winter 2026 (YC W26) with their startup Luel</CardDescription>
+              <CardTitle className="text-zinc-50">Meet the Founders</CardTitle>
+              <CardDescription className="text-zinc-400">
+                William Namgyal and Inigo Lenderking are currently in Y Combinator Winter 2026 (YC W26) with their startup Luel
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="grid md:grid-cols-2 gap-6">
                 {/* William */}
                 <div className="flex items-start gap-3">
-                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold flex-shrink-0">
+                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center text-white font-bold flex-shrink-0 ring-2 ring-zinc-700">
                     WN
                   </div>
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <h4 className="font-semibold">William Namgyal</h4>
-                      <Badge className="bg-orange-100 text-orange-800 border-orange-500/35 text-xs">YC W26</Badge>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex flex-wrap items-center gap-2 mb-1">
+                      <h4 className="font-semibold text-zinc-50">William Namgyal</h4>
+                      <Badge className="border-amber-500/40 bg-amber-500/20 text-amber-100 text-xs hover:bg-amber-500/25">
+                        YC W26
+                      </Badge>
                     </div>
-                    <p className="text-sm text-muted-foreground mb-2">
-                      Co-Founder & CEO at <strong>Luel</strong>, currently in <strong>Y Combinator W26</strong>. Berkeley M.E.T.
+                    <p className="text-sm text-zinc-400 mb-2">
+                      Co-Founder & CEO at <strong className="text-zinc-200">Luel</strong>, currently in{' '}
+                      <strong className="text-zinc-200">Y Combinator W26</strong>. Berkeley M.E.T.
                     </p>
                     <div className="mb-3">
-                      <Badge variant="outline" className="text-xs">Product + Strategy</Badge>
+                      <Badge
+                        variant="outline"
+                        className="text-xs border-zinc-600 bg-zinc-800/80 text-zinc-300"
+                      >
+                        Product + Strategy
+                      </Badge>
                     </div>
-                    <div className="flex gap-2">
-                      {/* @ts-ignore */}
-                      <Button asChild size="sm" variant="outline" disabled={!isPremium}>
-                        <Link href={isPremium ? 'mailto:support@nexus.local?subject=Question%20for%20William' : '#'}>
-                          <MessageSquare className="h-3 w-3 mr-1.5" />
-                          Ask
-                        </Link>
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        disabled={!isPremium}
+                        className="border-zinc-600 bg-zinc-800 text-zinc-100 hover:bg-zinc-700 hover:text-white"
+                        onClick={() => openFounderRequest('william', 'William Namgyal', 'ask')}
+                      >
+                        <MessageSquare className="h-3 w-3 mr-1.5" />
+                        Ask
                       </Button>
-                      {/* @ts-ignore */}
-                      <Button asChild size="sm" variant="ghost" disabled={!isPremium}>
-                        <Link href={isPremium ? 'mailto:support@nexus.local?subject=Book%20Session' : '#'}>
-                          <Calendar className="h-3 w-3 mr-1.5" />
-                          Book
-                        </Link>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        disabled={!isPremium}
+                        className="border-zinc-600 bg-zinc-800 text-zinc-100 hover:bg-zinc-700 hover:text-white"
+                        onClick={() => openFounderRequest('william', 'William Namgyal', 'book')}
+                      >
+                        <Calendar className="h-3 w-3 mr-1.5" />
+                        Book
                       </Button>
-                      {/* @ts-ignore */}
-                      <Button asChild size="sm" variant="ghost">
-                        <a href="https://www.linkedin.com/in/william-namgyal-0294a6260/" target="_blank" rel="noopener noreferrer">
-                          <ExternalLink className="h-3 w-3" />
-                        </a>
-                      </Button>
+                      <a
+                        href="https://www.linkedin.com/in/william-namgyal-0294a6260/"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        aria-label="William on LinkedIn"
+                        className={cn(
+                          buttonVariants({ variant: 'ghost', size: 'sm' }),
+                          'text-zinc-300 hover:bg-zinc-800 hover:text-white'
+                        )}
+                      >
+                        <ExternalLink className="h-3 w-3" />
+                      </a>
                     </div>
                   </div>
                 </div>
 
                 {/* Inigo */}
                 <div className="flex items-start gap-3">
-                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-green-500 to-blue-600 flex items-center justify-center text-white font-bold flex-shrink-0">
+                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-emerald-500 to-cyan-600 flex items-center justify-center text-white font-bold flex-shrink-0 ring-2 ring-zinc-700">
                     IL
                   </div>
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <h4 className="font-semibold">Inigo Lenderking</h4>
-                      <Badge className="bg-orange-100 text-orange-800 border-orange-500/35 text-xs">YC W26</Badge>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex flex-wrap items-center gap-2 mb-1">
+                      <h4 className="font-semibold text-zinc-50">Inigo Lenderking</h4>
+                      <Badge className="border-amber-500/40 bg-amber-500/20 text-amber-100 text-xs hover:bg-amber-500/25">
+                        YC W26
+                      </Badge>
                     </div>
-                    <p className="text-sm text-muted-foreground mb-2">
-                      Co-Founder at <strong>Luel</strong>, currently in <strong>Y Combinator W26</strong>. Berkeley dropout.
+                    <p className="text-sm text-zinc-400 mb-2">
+                      Co-Founder at <strong className="text-zinc-200">Luel</strong>, currently in{' '}
+                      <strong className="text-zinc-200">Y Combinator W26</strong>. Berkeley dropout.
                     </p>
                     <div className="mb-3">
-                      <Badge variant="outline" className="text-xs">Growth + Operations</Badge>
+                      <Badge
+                        variant="outline"
+                        className="text-xs border-zinc-600 bg-zinc-800/80 text-zinc-300"
+                      >
+                        Growth + Operations
+                      </Badge>
                     </div>
-                    <div className="flex gap-2">
-                      {/* @ts-ignore */}
-                      <Button asChild size="sm" variant="outline" disabled={!isPremium}>
-                        <Link href={isPremium ? 'mailto:support@nexus.local?subject=Question%20for%20Inigo' : '#'}>
-                          <MessageSquare className="h-3 w-3 mr-1.5" />
-                          Ask
-                        </Link>
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        disabled={!isPremium}
+                        className="border-zinc-600 bg-zinc-800 text-zinc-100 hover:bg-zinc-700 hover:text-white"
+                        onClick={() => openFounderRequest('inigo', 'Inigo Lenderking', 'ask')}
+                      >
+                        <MessageSquare className="h-3 w-3 mr-1.5" />
+                        Ask
                       </Button>
-                      {/* @ts-ignore */}
-                      <Button asChild size="sm" variant="ghost" disabled={!isPremium}>
-                        <Link href={isPremium ? 'mailto:support@nexus.local?subject=Book%20Session' : '#'}>
-                          <Calendar className="h-3 w-3 mr-1.5" />
-                          Book
-                        </Link>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        disabled={!isPremium}
+                        className="border-zinc-600 bg-zinc-800 text-zinc-100 hover:bg-zinc-700 hover:text-white"
+                        onClick={() => openFounderRequest('inigo', 'Inigo Lenderking', 'book')}
+                      >
+                        <Calendar className="h-3 w-3 mr-1.5" />
+                        Book
                       </Button>
-                      {/* @ts-ignore */}
-                      <Button asChild size="sm" variant="ghost">
-                        <a href="https://www.linkedin.com/in/inigo-lenderking-8476a4266/" target="_blank" rel="noopener noreferrer">
-                          <ExternalLink className="h-3 w-3" />
-                        </a>
-                      </Button>
+                      <a
+                        href="https://www.linkedin.com/in/inigo-lenderking-8476a4266/"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        aria-label="Inigo on LinkedIn"
+                        className={cn(
+                          buttonVariants({ variant: 'ghost', size: 'sm' }),
+                          'text-zinc-300 hover:bg-zinc-800 hover:text-white'
+                        )}
+                      >
+                        <ExternalLink className="h-3 w-3" />
+                      </a>
                     </div>
                   </div>
                 </div>
@@ -263,24 +346,26 @@ export default function YCInsiderPage() {
           </Card>
 
           {/* Premium Modules */}
-          <div className="space-y-4">
+          <div className="space-y-4 [&_h3]:text-zinc-50 [&_.text-muted-foreground]:text-zinc-400">
             
             {/* Module 1: Application Deconstruction */}
-            <Card className="border-2 hover:border-purple-500/35 transition-colors relative">
+            <Card className="relative border border-zinc-700 bg-zinc-900/50 transition-colors hover:border-violet-500/40">
               {hasPurchased('application-deconstruction') && (
                 <div className="absolute top-3 right-3">
-                  <CheckCircle className="h-5 w-5 text-green-600" />
+                  <CheckCircle className="h-5 w-5 text-emerald-400" />
                 </div>
               )}
               <CardHeader className="pb-3">
                 <div className="flex items-start gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-purple-100 flex items-center justify-center flex-shrink-0">
-                    <FileText className="h-5 w-5 text-purple-600" />
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-violet-500/15">
+                    <FileText className="h-5 w-5 text-violet-300" />
                   </div>
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
                       <CardTitle className="text-lg">Application Deconstruction</CardTitle>
-                      <Badge className="bg-purple-100 text-purple-700 text-xs">Most Valuable</Badge>
+                      <Badge className="border border-violet-500/35 bg-violet-500/20 text-xs text-violet-200">
+                        Most Valuable
+                      </Badge>
                     </div>
                     <CardDescription className="text-xs">Raw YC application answers + why each works + fill-in templates</CardDescription>
                   </div>
@@ -293,26 +378,26 @@ export default function YCInsiderPage() {
                   </p>
                   <div className="grid grid-cols-2 gap-2 text-xs">
                     <div className="flex items-center gap-1 text-muted-foreground">
-                      <CheckCircle className="h-3 w-3 text-green-600" />
+                      <CheckCircle className="h-3 w-3 text-emerald-400" />
                       <span>Raw application answers</span>
                     </div>
                     <div className="flex items-center gap-1 text-muted-foreground">
-                      <CheckCircle className="h-3 w-3 text-green-600" />
+                      <CheckCircle className="h-3 w-3 text-emerald-400" />
                       <span>"Why this works" analysis</span>
                     </div>
                     <div className="flex items-center gap-1 text-muted-foreground">
-                      <CheckCircle className="h-3 w-3 text-green-600" />
+                      <CheckCircle className="h-3 w-3 text-emerald-400" />
                       <span>Risk flags avoided</span>
                     </div>
                     <div className="flex items-center gap-1 text-muted-foreground">
-                      <CheckCircle className="h-3 w-3 text-green-600" />
+                      <CheckCircle className="h-3 w-3 text-emerald-400" />
                       <span>Fill-in templates</span>
                     </div>
                   </div>
                 </div>
                 {hasPurchased('application-deconstruction') ? (
                   <Button 
-                    className="w-full" 
+                    className="w-full bg-zinc-100 text-zinc-900 hover:bg-white" 
                     size="sm"
                     onClick={async (e) => {
                       e.preventDefault()
@@ -363,16 +448,16 @@ export default function YCInsiderPage() {
             </Card>
 
             {/* Module 2: Pitch Deck Autopsy */}
-            <Card className="border-2 hover:border-blue-300 transition-colors relative">
+            <Card className="relative border border-zinc-700 bg-zinc-900/50 transition-colors hover:border-sky-500/40">
               {hasPurchased('pitch-deck-autopsy') && (
                 <div className="absolute top-3 right-3">
-                  <CheckCircle className="h-5 w-5 text-green-600" />
+                  <CheckCircle className="h-5 w-5 text-emerald-400" />
                 </div>
               )}
               <CardHeader className="pb-3">
                 <div className="flex items-start gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0">
-                    <FileText className="h-5 w-5 text-blue-600" />
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-sky-500/15">
+                    <FileText className="h-5 w-5 text-sky-300" />
                   </div>
                   <div className="flex-1">
                     <CardTitle className="text-lg">Pitch Deck Autopsy</CardTitle>
@@ -387,26 +472,26 @@ export default function YCInsiderPage() {
                   </p>
                   <div className="grid grid-cols-2 gap-2 text-xs">
                     <div className="flex items-center gap-1 text-muted-foreground">
-                      <CheckCircle className="h-3 w-3 text-green-600" />
+                      <CheckCircle className="h-3 w-3 text-emerald-400" />
                       <span>Full annotated deck</span>
                     </div>
                     <div className="flex items-center gap-1 text-muted-foreground">
-                      <CheckCircle className="h-3 w-3 text-green-600" />
+                      <CheckCircle className="h-3 w-3 text-emerald-400" />
                       <span>Critical 5 slides spotlight</span>
                     </div>
                     <div className="flex items-center gap-1 text-muted-foreground">
-                      <CheckCircle className="h-3 w-3 text-green-600" />
+                      <CheckCircle className="h-3 w-3 text-emerald-400" />
                       <span>YC question predictions</span>
                     </div>
                     <div className="flex items-center gap-1 text-muted-foreground">
-                      <CheckCircle className="h-3 w-3 text-green-600" />
+                      <CheckCircle className="h-3 w-3 text-emerald-400" />
                       <span>Deck checklist</span>
                     </div>
                   </div>
                 </div>
                 {hasPurchased('pitch-deck-autopsy') ? (
                   <Button 
-                    className="w-full" 
+                    className="w-full bg-zinc-100 text-zinc-900 hover:bg-white" 
                     size="sm"
                     onClick={async (e) => {
                       e.preventDefault()
@@ -457,16 +542,16 @@ export default function YCInsiderPage() {
             </Card>
 
             {/* Module 3: Interview Simulator */}
-            <Card className="border-2 hover:border-green-300 transition-colors relative">
+            <Card className="relative border border-zinc-700 bg-zinc-900/50 transition-colors hover:border-emerald-500/40">
               {hasPurchased('interview-simulator') && (
                 <div className="absolute top-3 right-3">
-                  <CheckCircle className="h-5 w-5 text-green-600" />
+                  <CheckCircle className="h-5 w-5 text-emerald-400" />
                 </div>
               )}
               <CardHeader className="pb-3">
                 <div className="flex items-start gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-green-100 flex items-center justify-center flex-shrink-0">
-                    <Target className="h-5 w-5 text-green-600" />
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-emerald-500/15">
+                    <Target className="h-5 w-5 text-emerald-300" />
                   </div>
                   <div className="flex-1">
                     <CardTitle className="text-lg">Interview Simulator</CardTitle>
@@ -481,26 +566,26 @@ export default function YCInsiderPage() {
                   </p>
                   <div className="grid grid-cols-2 gap-2 text-xs">
                     <div className="flex items-center gap-1 text-muted-foreground">
-                      <CheckCircle className="h-3 w-3 text-green-600" />
+                      <CheckCircle className="h-3 w-3 text-emerald-400" />
                       <span>Actual interview questions</span>
                     </div>
                     <div className="flex items-center gap-1 text-muted-foreground">
-                      <CheckCircle className="h-3 w-3 text-green-600" />
+                      <CheckCircle className="h-3 w-3 text-emerald-400" />
                       <span>Their winning answers</span>
                     </div>
                     <div className="flex items-center gap-1 text-muted-foreground">
-                      <CheckCircle className="h-3 w-3 text-green-600" />
+                      <CheckCircle className="h-3 w-3 text-emerald-400" />
                       <span>YC intent analysis</span>
                     </div>
                     <div className="flex items-center gap-1 text-muted-foreground">
-                      <CheckCircle className="h-3 w-3 text-green-600" />
+                      <CheckCircle className="h-3 w-3 text-emerald-400" />
                       <span>Follow-up patterns</span>
                     </div>
                   </div>
                 </div>
                 {hasPurchased('interview-simulator') ? (
                   <Button 
-                    className="w-full" 
+                    className="w-full bg-zinc-100 text-zinc-900 hover:bg-white" 
                     size="sm"
                     onClick={async (e) => {
                       e.preventDefault()
@@ -551,16 +636,16 @@ export default function YCInsiderPage() {
             </Card>
 
             {/* Module 4: Metrics Timeline */}
-            <Card className="border-2 hover:border-amber-500/35 transition-colors relative">
+            <Card className="relative border border-zinc-700 bg-zinc-900/50 transition-colors hover:border-amber-500/40">
               {hasPurchased('metrics-timeline') && (
                 <div className="absolute top-3 right-3">
-                  <CheckCircle className="h-5 w-5 text-green-600" />
+                  <CheckCircle className="h-5 w-5 text-emerald-400" />
                 </div>
               )}
               <CardHeader className="pb-3">
                 <div className="flex items-start gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-amber-100 flex items-center justify-center flex-shrink-0">
-                    <BarChart3 className="h-5 w-5 text-amber-600" />
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-amber-500/15">
+                    <BarChart3 className="h-5 w-5 text-amber-300" />
                   </div>
                   <div className="flex-1">
                     <CardTitle className="text-lg">Metrics Snapshot Timeline</CardTitle>
@@ -575,26 +660,26 @@ export default function YCInsiderPage() {
                   </p>
                   <div className="grid grid-cols-2 gap-2 text-xs">
                     <div className="flex items-center gap-1 text-muted-foreground">
-                      <CheckCircle className="h-3 w-3 text-green-600" />
+                      <CheckCircle className="h-3 w-3 text-emerald-400" />
                       <span>90/30/0 day snapshots</span>
                     </div>
                     <div className="flex items-center gap-1 text-muted-foreground">
-                      <CheckCircle className="h-3 w-3 text-green-600" />
+                      <CheckCircle className="h-3 w-3 text-emerald-400" />
                       <span>Growth rate analysis</span>
                     </div>
                     <div className="flex items-center gap-1 text-muted-foreground">
-                      <CheckCircle className="h-3 w-3 text-green-600" />
+                      <CheckCircle className="h-3 w-3 text-emerald-400" />
                       <span>Retention signals</span>
                     </div>
                     <div className="flex items-center gap-1 text-muted-foreground">
-                      <CheckCircle className="h-3 w-3 text-green-600" />
+                      <CheckCircle className="h-3 w-3 text-emerald-400" />
                       <span>How they framed progress</span>
                     </div>
                   </div>
                 </div>
                 {hasPurchased('metrics-timeline') ? (
                   <Button 
-                    className="w-full" 
+                    className="w-full bg-zinc-100 text-zinc-900 hover:bg-white" 
                     size="sm"
                     onClick={async (e) => {
                       e.preventDefault()
@@ -645,16 +730,16 @@ export default function YCInsiderPage() {
             </Card>
 
             {/* Module 5: Distribution Diary */}
-            <Card className="border-2 hover:border-indigo-300 transition-colors relative">
+            <Card className="relative border border-zinc-700 bg-zinc-900/50 transition-colors hover:border-indigo-500/40">
               {hasPurchased('distribution-diary') && (
                 <div className="absolute top-3 right-3">
-                  <CheckCircle className="h-5 w-5 text-green-600" />
+                  <CheckCircle className="h-5 w-5 text-emerald-400" />
                 </div>
               )}
               <CardHeader className="pb-3">
                 <div className="flex items-start gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-indigo-100 flex items-center justify-center flex-shrink-0">
-                    <Zap className="h-5 w-5 text-indigo-600" />
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-indigo-500/15">
+                    <Zap className="h-5 w-5 text-indigo-300" />
                   </div>
                   <div className="flex-1">
                     <CardTitle className="text-lg">Distribution Diary</CardTitle>
@@ -669,26 +754,26 @@ export default function YCInsiderPage() {
                   </p>
                   <div className="grid grid-cols-2 gap-2 text-xs">
                     <div className="flex items-center gap-1 text-muted-foreground">
-                      <CheckCircle className="h-3 w-3 text-green-600" />
+                      <CheckCircle className="h-3 w-3 text-emerald-400" />
                       <span>First 10 customer stories</span>
                     </div>
                     <div className="flex items-center gap-1 text-muted-foreground">
-                      <CheckCircle className="h-3 w-3 text-green-600" />
+                      <CheckCircle className="h-3 w-3 text-emerald-400" />
                       <span>Outreach scripts (DM/email)</span>
                     </div>
                     <div className="flex items-center gap-1 text-muted-foreground">
-                      <CheckCircle className="h-3 w-3 text-green-600" />
+                      <CheckCircle className="h-3 w-3 text-emerald-400" />
                       <span>Channel experiments</span>
                     </div>
                     <div className="flex items-center gap-1 text-muted-foreground">
-                      <CheckCircle className="h-3 w-3 text-green-600" />
+                      <CheckCircle className="h-3 w-3 text-emerald-400" />
                       <span>What didn't work + why</span>
                     </div>
                   </div>
                 </div>
                 {hasPurchased('distribution-diary') ? (
                   <Button 
-                    className="w-full" 
+                    className="w-full bg-zinc-100 text-zinc-900 hover:bg-white" 
                     size="sm"
                     onClick={async (e) => {
                       e.preventDefault()
@@ -739,16 +824,16 @@ export default function YCInsiderPage() {
             </Card>
 
             {/* Module 6: Demo Teardown */}
-            <Card className="border-2 hover:border-rose-300 transition-colors relative">
+            <Card className="relative border border-zinc-700 bg-zinc-900/50 transition-colors hover:border-rose-500/40">
               {hasPurchased('demo-teardown') && (
                 <div className="absolute top-3 right-3">
-                  <CheckCircle className="h-5 w-5 text-green-600" />
+                  <CheckCircle className="h-5 w-5 text-emerald-400" />
                 </div>
               )}
               <CardHeader className="pb-3">
                 <div className="flex items-start gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-rose-100 flex items-center justify-center flex-shrink-0">
-                    <Video className="h-5 w-5 text-rose-600" />
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-rose-500/15">
+                    <Video className="h-5 w-5 text-rose-300" />
                   </div>
                   <div className="flex-1">
                     <CardTitle className="text-lg">Demo Teardown</CardTitle>
@@ -763,26 +848,26 @@ export default function YCInsiderPage() {
                   </p>
                   <div className="grid grid-cols-2 gap-2 text-xs">
                     <div className="flex items-center gap-1 text-muted-foreground">
-                      <CheckCircle className="h-3 w-3 text-green-600" />
+                      <CheckCircle className="h-3 w-3 text-emerald-400" />
                       <span>Full application video</span>
                     </div>
                     <div className="flex items-center gap-1 text-muted-foreground">
-                      <CheckCircle className="h-3 w-3 text-green-600" />
+                      <CheckCircle className="h-3 w-3 text-emerald-400" />
                       <span>Timestamp breakdowns</span>
                     </div>
                     <div className="flex items-center gap-1 text-muted-foreground">
-                      <CheckCircle className="h-3 w-3 text-green-600" />
+                      <CheckCircle className="h-3 w-3 text-emerald-400" />
                       <span>What to copy</span>
                     </div>
                     <div className="flex items-center gap-1 text-muted-foreground">
-                      <CheckCircle className="h-3 w-3 text-green-600" />
+                      <CheckCircle className="h-3 w-3 text-emerald-400" />
                       <span>Demo script</span>
                     </div>
                   </div>
                 </div>
                 {hasPurchased('demo-teardown') ? (
                   <Button 
-                    className="w-full" 
+                    className="w-full bg-zinc-100 text-zinc-900 hover:bg-white" 
                     size="sm"
                     onClick={async (e) => {
                       e.preventDefault()
@@ -833,27 +918,29 @@ export default function YCInsiderPage() {
             </Card>
 
             {/* Bundle Deal */}
-            <Card className="border-2 border-orange-500/35 bg-gradient-to-br from-orange-500/10 to-card">
+            <Card className="border border-amber-500/35 bg-gradient-to-br from-amber-950/50 to-zinc-900/90">
               <CardHeader>
-                <div className="flex items-center gap-2 mb-2">
-                  <Sparkles className="h-5 w-5 text-orange-600" />
+                <div className="mb-2 flex flex-wrap items-center gap-2">
+                  <Sparkles className="h-5 w-5 text-amber-400" />
                   <CardTitle className="text-xl">Complete Insider Pack</CardTitle>
-                  <Badge className="bg-orange-100 text-orange-700">Save 40 Credits</Badge>
+                  <Badge className="border border-amber-500/40 bg-amber-500/20 text-amber-100">
+                    Save 40 Credits
+                  </Badge>
                 </div>
                 <CardDescription>Get all 6 modules + bonus templates</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-sm text-zinc-400">
                     Everything above plus exclusive bonus: Founder Operating System (weekly cadence, decision principles, tool stack)
                   </p>
-                  <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                  <div className="flex flex-col gap-3 rounded-lg border border-zinc-700 bg-zinc-950/50 p-3 sm:flex-row sm:items-center sm:justify-between">
                     <div>
-                      <div className="text-sm text-muted-foreground">Individual: 360 credits</div>
-                      <div className="text-2xl font-bold text-foreground">Bundle: 320 credits</div>
+                      <div className="text-sm text-zinc-400">Individual: 360 credits</div>
+                      <div className="text-2xl font-bold text-zinc-50">Bundle: 320 credits</div>
                     </div>
                     <Button 
-                      className="bg-orange-600 hover:bg-orange-700"
+                      className="bg-amber-500 text-zinc-950 hover:bg-amber-400"
                       onClick={(e) => {
                         e.preventDefault()
                         e.stopPropagation()
@@ -871,23 +958,23 @@ export default function YCInsiderPage() {
           </div>
 
           {/* Why This Matters */}
-          <Card className="border-2 bg-muted/50">
+          <Card className="border border-zinc-700 bg-zinc-900/60">
             <CardHeader>
               <CardTitle>Why This Is Different</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid md:grid-cols-3 gap-4 text-sm">
+              <div className="grid gap-4 text-sm md:grid-cols-3">
                 <div>
-                  <div className="font-semibold text-foreground mb-1">Not Google-able</div>
-                  <p className="text-muted-foreground">Decision logic, templates, and insider patterns you can't find anywhere else</p>
+                  <div className="mb-1 font-semibold text-zinc-100">Not Google-able</div>
+                  <p className="text-zinc-400">Decision logic, templates, and insider patterns you can't find anywhere else</p>
                 </div>
                 <div>
-                  <div className="font-semibold text-foreground mb-1">Actionable Templates</div>
-                  <p className="text-muted-foreground">Fill-in frameworks you can use immediately for your own application</p>
+                  <div className="mb-1 font-semibold text-zinc-100">Actionable Templates</div>
+                  <p className="text-zinc-400">Fill-in frameworks you can use immediately for your own application</p>
                 </div>
                 <div>
-                  <div className="font-semibold text-foreground mb-1">Verified & Current</div>
-                  <p className="text-muted-foreground">From founders currently in YC W26, not outdated advice from years ago</p>
+                  <div className="mb-1 font-semibold text-zinc-100">Verified & Current</div>
+                  <p className="text-zinc-400">From founders currently in YC W26, not outdated advice from years ago</p>
                 </div>
               </div>
             </CardContent>

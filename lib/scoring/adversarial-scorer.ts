@@ -150,6 +150,7 @@ export async function getBullScore(
       system: BULL_SYSTEM,
       user: buildBullUserPrompt(facts, pitchSummary),
       temperature: 0.3,
+      forceOpenRouter: true,
     })
     return normalizeBullResult(raw)
   } catch (error: any) {
@@ -253,6 +254,7 @@ export async function getBearScore(
       system: buildBearSystem(stage),
       user: buildBearUserPrompt(facts, pitchSummary),
       temperature: 0.3,
+      forceOpenRouter: true,
     })
     return normalizeBearResult(raw)
   } catch (error: any) {
@@ -305,26 +307,6 @@ export async function getAdversarialScore(
     blendedScore >= 50 ? "MEDIUM" :
     blendedScore >= 30 ? "LOW"    :
     "PASS"
-
-  // ── DEBUG: adversarial full output ────────────────────────────────────────
-  console.log(`\n${"═".repeat(72)}`)
-  console.log(`  ADVERSARIAL SCORER — BULL vs BEAR (stage: ${stage})`)
-  console.log(`${"═".repeat(72)}`)
-  console.log(`\n  🐂 BULL CASE  (score: ${bullResult.bullScore}/100, win prob: ${bullResult.winProbability}%)`)
-  console.log(`  Fund-returner path: ${bullResult.fundReturnerCase}`)
-  console.log(`  Key insights:`)
-  bullResult.keyInsights.forEach((s, i) => console.log(`    ${i + 1}. ${s}`))
-  console.log(`\n  🐻 BEAR CASE  (score: ${bearResult.bearScore}/100)`)
-  console.log(`  Likely death scenario: ${bearResult.likelyDeathScenario}`)
-  console.log(`  Incumbent threat:      ${bearResult.incumbentThreat}`)
-  console.log(`  Founder risk flags:`)
-  bearResult.founderRiskFlags.forEach((f, i) => console.log(`    ${i + 1}. ${f}`))
-  console.log(`  Regret risk (FOMO): ${bearResult.gaveUpTooEarlyRisk ? "YES — might regret passing" : "No"}`)
-  console.log(`\n  BLENDED: ${blendedScore}/100  |  CONVICTION: ${conviction}`)
-  console.log(`  Weights: bull=${weights.bull} bear=${weights.bear} (stage: ${stage})`)
-  console.log(`  Formula: ${bullResult.bullScore}×${weights.bull} + (100-${bearResult.bearScore})×${weights.bear} = ${blendedScore}`)
-  console.log(`${"═".repeat(72)}\n`)
-  // ── END DEBUG ─────────────────────────────────────────────────────────────
 
   logger.log(
     `[ADVERSARIAL-SCORER] Complete — bull:${bullResult.bullScore} bear:${bearResult.bearScore} ` +

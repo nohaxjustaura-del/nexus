@@ -1,1002 +1,1393 @@
 1. .406 Ventures
-2. 1517 Fund
-3. 1confirmation
-4. 2048 Ventures
-5. 37 Angels
-6. 500 Global
-7. 500 Global – Flagship Accelerator
-8. 500 Startups (500 Global)
-9. 776 Fellowship
-10. 7wireVentures
-11. 8VC
-12. AI Ventures
-13. AI2 Incubator
-14. AMD Ventures
-15. ARCH Venture Partners
-16. AT&T Ventures
-17. AWS Activate
-18. AWS Impact Accelerator
-19. AbbVie Ventures
-20. Abstraction Capital
-21. Accel
-22. Accomplice
-23. Acre Venture Partners
-24. Acrew Capital
-25. Acrew Fund
-26. Activate Capital
-27. Active Capital
-28. Adobe Ventures
-29. Afore Capital
-30. AgFunder
-31. Air Force SBIR
-32. Airbus Ventures
-33. Albany Venture Partners
-34. Albuquerque Ventures
-35. Alchemist Accelerator
-36. Alexa Fund
-37. Aligned Partners
-38. Alliance DAO
-39. Alliance of Angels
-40. Ally Ventures
-41. AlphaLab
-42. AlphaLab Gear
-43. Altos Ventures
-44. Amazon Alexa Fund
-45. Amex Ventures
-46. Amgen Ventures
-47. Amplify Partners
-48. Amplify.LA
-49. Andreessen Horowitz
-50. Andreessen Horowitz (a16z)
-51. Andreessen Horowitz Bio
-52. AngelList Syndicates
-53. AngelMD
-54. Angels Forum
-55. Antler
-56. Antler (US Programs)
-57. Anzu Partners
-58. Apollo Health Ventures
-59. Arch Grants
-60. Arizona Ventures
-61. Arkansas Venture Capital
-62. Arm Ventures
-63. Array Ventures
-64. Artemis Fund
-65. Ascend VC
-66. Ashoka
-67. Ashoka Fellowship
-68. Aspect Ventures
-69. Atlanta Ventures
-70. Atlassian Ventures
-71. Atomic
-72. Atomico
-73. Augment Ventures
-74. Aviation Venture Partners
-75. B Capital Group
-76. B2B Seed Partners
-77. BBG Ventures
-78. BBVA USA Ventures
-79. BITKRAFT Ventures
-80. BMW i Ventures
-81. Background Capital
-82. Backstage Capital
-83. Backstage Capital Fund II
-84. Bain Capital Ventures
-85. Balderton Capital
-86. Banana Capital
-87. Band of Angels
-88. Bank of America Strategic Solutions
-89. BankTech Ventures
-90. Base Ventures
-91. Base10 Partners
-92. Base10 Partners Seed
-93. Baseline Ventures
-94. Basis Set Ventures
-95. Bay Area Angels
-96. Beauty Tech Fund
-97. Bee Partners
-98. Benchmark
-99. Berkeley Angel Network
-100. Berkeley SkyDeck
-101. Berkeley SkyDeck (Cohort Program)
-102. Bessemer Seed
-103. Beta Boom
-104. Betaspring
-105. Better Food Ventures
-106. Bezos Expeditions
-107. Binance Labs
-108. Bio Seed Fund
-109. Birmingham Venture Partners
-110. Bison Capital
-111. Black Ambition
-112. Bling Capital
-113. Block
-114. Bloom Tech Ventures
-115. Bloomberg Beta
-116. Blumberg Capital
-117. Boeing HorizonX
-118. Boldstart Ventures
-119. Bolt
-120. Bond
-121. Boom Startup
-122. Boost VC
-123. Boston Harbor Angels
-124. Bow Capital
-125. Bowery Capital
-126. BoxGroup
-127. Bragiel Brothers
-128. Breakthrough Energy Ventures
-129. Breyer Capital
-130. Broom Ventures
-131. Brown Venture Labs
-132. Buffalo Ventures
-133. Bullpen Capital
-134. CMU Swartz Center
-135. CMU Ventures
-136. Cake Ventures
-137. Calm Fund
-138. Caltech CIE
-139. Caltech Ventures
-140. Camber Creek
-141. Camwest
-142. Canaan
-143. Canaan Partners
-144. Cannabis Ventures
-145. Canvas Ventures
-146. Capital Factory
-147. Capital Innovators
-148. Capital One Ventures
-149. Capitol Post
-150. Carolina Angel Network
-151. Cartier Women's Initiative
-152. Carya Venture Partners
-153. Cascade Seed Fund
-154. Caterpillar Ventures
-155. Cendana Capital
-156. Central Ohio Angel Fund
-157. Chan Zuckerberg Initiative
-158. Chapter One
-159. Chapter One
-160. Charge Ventures
-161. Charlotte Angel Fund
-162. Charlotte Venture Partners
-163. Charter Communications Ventures
-164. Cherry Tree & Company
-165. Chevron Technology Ventures
-166. Chicago Innovation
-167. Chicago Ventures
-168. Chingona Ventures
-169. CincyTech
-170. Cisco Investments
-171. Citadel Securities Ventures
-172. Citi Ventures
-173. Citizens Bank Ventures
-174. City Light Capital
-175. Clean Energy Ventures
-176. Clearco
-177. Cleveland Clinic Innovations
-178. Climate VC
-179. Closed Loop Partners
-180. Coalition Operators
-181. Coastal Ventures
-182. Coatue
-183. Coca-Cola Founders
-184. Code2040
-185. Codecademy Ventures
-186. Coinbase Ventures
-187. Collab Capital
-188. Columbia Startup Lab
-189. Columbia Venture Partners
-190. Comcast NBCUniversal LIFT Labs (Powered by Techstars)
-191. Comcast Ventures
-192. Compound
-193. Confluent Ventures
-194. ConocoPhillips Ventures
-195. ConsenSys Mesh
-196. Construction Tech Ventures
-197. Consumer Lab
-198. Contrary
-199. Contrary
-200. Converge
-201. Conviction Embed
-202. Cornell Ventures
-203. Cornell eLab
-204. Correlation Ventures
-205. Costanoa Ventures
-206. Costanoa Ventures
-207. Cota Capital
-208. Counter Ventures
-209. Coursera Ventures
-210. Cowboy Ventures
-211. Craft Ventures
-212. Craft Ventures
-213. Creative Destruction Lab
-214. CrossCut Ventures
-215. Crosslink Capital
-216. Crypto Fund
-217. Cultivation Capital
-218. Cultivian Sandbox Ventures
-219. DCVC
-220. DCVC (Data Collective)
-221. DEFY Partners
-222. DOD SBIR
-223. DOE SBIR
-224. DST Global
-225. Dartmouth Entrepreneurship
-226. Data Elite Ventures
-227. DataTribe
-228. Databricks Ventures
-229. Deciens Capital
-230. Deerfield Management
-231. Dell Technologies Capital
-232. Department of Energy SBIR
-233. Detroit Venture Partners
-234. DevTools Ventures
-235. Devlabs
-236. Digital Currency Group
-237. Digitalundivided (BIG)
-238. Discover Ventures
-239. Diversity Ventures
-240. Docent Capital
-241. Dorm Room Fund
-242. Dragonfly
-243. Draper Richards Kaplan
-244. Dreamit Ventures
-245. Drive by DraftKings
-246. Duke Energy Ventures
-247. Duke Innovation
-248. Duke Innovation & Entrepreneurship
-249. ERA (Entrepreneurs Roundtable Accelerator)
-250. Earnest Capital
-251. Echoing Green
-252. Echoing Green Fellowship
-253. Eclipse Ventures
-254. EdTech Incubator
-255. Elad Gil
-256. Elastic Ventures
-257. Electric Capital
-258. Element Ventures
-259. Elemental Excelerator
-260. Elemental Impact
-261. Elevate Ventures
-262. Elevation Partners
-263. ElevenLabs Startup Grants Program
-264. Emergence Capital
-265. Emergent Ventures
-266. Emerson Collective
-267. Energy Impact Partners
-268. Eniac Ventures
-269. Enterprise First
-270. Entrepreneur First
-271. Epic Ventures
-272. Ericsson Ventures
-273. Evolution Equity Partners
-274. Expa
-275. Expansion
-276. ExxonMobil Technology Ventures
-277. F-Cubed
-278. FACTORY
-279. FAST Fellowship
-280. FJ Labs
-281. Fast Forward
-282. Fathom Fund
-283. Fearless Fund
-284. FedEx Small Business Grant Contest
-285. Felicis
-286. Felicis Ventures
-287. Fifth Wall
-288. Fifty Years
-289. FinTech Collective
-290. FinTop Capital
-291. Finistere Ventures
-292. Fintech First
-293. Fintech Ventures
-294. Firestreak Ventures
-295. First Check Ventures
-296. First Mile Ventures
-297. First Round Capital
-298. FirstMark Capital
-299. Fiserv Ventures
-300. Flatiron School Ventures
-301. Fledge
-302. Floodgate
-303. Flybridge
-304. Flybridge Capital
-305. Flybridge Capital
-306. Flybridge Capital Partners
-307. Ford Ventures
-308. Forefront Venture Partners
-309. Forerunner Ventures
-310. Forerunner Ventures
-311. Formation 8
-312. Formation 8 Partners
-313. Formation Capital
-314. Forum Ventures
-315. Forward Partners
-316. Foundation Capital
-317. Founder Collective
-318. Founder Institute
-319. NEXUS
-320. Founders Fund
-321. Founders' Co-op
-322. Foundry Group
-323. Framework Ventures
-324. Free Ventures
-325. Fuel Capital
-326. FullCircle
-327. Fusion Fund
-328. GE Ventures
-329. GGV Accelerate
-330. GGV Capital
-331. GLG Ventures
-332. GM Ventures
-333. GOAT Capital
-334. GSV Ventures
-335. GV (Google Ventures)
-336. GV Seed
-337. Gaingels
-338. Galaxy Digital
-339. Galaxy Interactive
-340. Galvanize Ventures
-341. Garage Capital
-342. Gates Ventures
-343. Genacast Ventures
-344. General Assembly Ventures
-345. General Catalyst
-346. Generalist Capital
-347. Generation Investment Management
-348. Generator Ventures
-349. Georgia Tech Ventures
-350. Gigafund
-351. GitHub Accelerator
-352. GitLab Ventures
-353. Glasswing Ventures
-354. GoAhead Ventures
-355. Golden Seeds
-356. Goldman Sachs Growth Equity
-357. Goldman Sachs Principal Investments
-358. Good Growth Capital
-359. Good Ventures
-360. Goodwater Capital
-361. Goodwater Capital
-362. Google Cloud for Startups
-363. Google for Startups Accelerator
-364. Google for Startups Black Founders Fund (US)
-365. Google for Startups Founders Funds
-366. Gradient Ventures
-367. Graph Ventures
-368. Green Bank Ventures
-369. Green Seed
-370. Greenberg Capital
-371. Greycroft
-372. Greylock Edge
-373. Greylock Partners
-374. Greylock Partners
-375. Griffin Gaming Partners
-376. Grishin Robotics
-377. GroTech Ventures
-378. Guild Capital
-379. HAX
-380. HAX (SOSV)
-381. HF0 Residency
-382. HP Tech Ventures
-383. HPE Pathfinder
-384. Halcyon Incubator Fellowship
-385. Halogen Ventures
-386. Hardware Ventures
-387. Harlem Capital
-388. Harpoon Ventures
-389. Harvard Innovation Labs
-390. Haun Ventures
-391. Haystack
-392. Headline
-393. HealthCare Ventures
-394. HealthTech Capital
-395. HealthTech Ventures
-396. HealthX Ventures
-397. Healthbox
-398. Healthier Capital
-399. Heavybit
-400. High Alpha
-401. High Trek Ventures
-402. Hillside Ventures
-403. Homebrew
-404. Homebrew Fund
-405. Horizon Ventures
-406. Horsley Bridge Partners
-407. House Fund
-408. HubSpot Ventures
-409. Human Ventures
-410. Hustle Fund
-411. Hyde Park Angels
-412. IA Ventures
-413. IBM Hyper Protect Accelerator
-414. IBM Ventures
-415. ICONIQ Capital
-416. ICONIQ Growth
-417. IVP
-418. Idaho Ventures
-419. Idealab Studio
-420. Ignition Partners
-421. Impact Ventures
-422. Indeed Ventures
-423. Index Ventures
-424. Index Ventures
-425. Indiana Angel Network
-426. Indie.vc
-427. IndieBio (SOSV)
-428. IndieBio NYC
-429. IndieBio SF
-430. Industrious Ventures
-431. Industry Ventures
-432. Initialized Capital
-433. Initialized Management
-434. Innosphere Ventures
-435. Innovation Endeavors
-436. Innovation Works
-437. Inovia Capital
-438. Insight Partners
-439. Insight Partners Seed
-440. Inspired Capital
-441. Intel Capital
-442. Intel Liftoff for Startups
-443. Interplay Ventures
-444. Invest Detroit Ventures
-445. Iowa Ventures
-446. Iterative VC
-447. J.P. Morgan Innovation Economy
-448. J.P. Morgan Strategic Investments
-449. JLABS (Johnson & Johnson)
-450. JPL Ventures
-451. JPMorgan Strategic Investments
-452. Jackson Square Ventures
-453. Jane VC
-454. January Ventures
-455. Javelin Venture Partners
-456. Johnson & Johnson Innovation
-457. Jump Fund
-458. Jumpstart Foundry
-459. Jumpstart Ventures
-460. KC Rise Fund
-461. Kansas City Ventures
-462. Kapor Capital
-463. Katapult Accelerator
-464. Keiretsu Forum
-465. Kernel
-466. Keyhorse Capital
-467. Khan Academy
-468. Khosla Impact
-469. Khosla Ventures
-470. Khosla Ventures Seed
-471. Kima Ventures
-472. Kind Ventures
-473. Kleiner Perkins
-474. Kleiner Perkins
-475. Knollwood Advisory
-476. Kraken Ventures
-477. LAUNCH
-478. LAUNCH Accelerator
-479. LG Technology Ventures
-480. LSEC Venture Grant
-481. LVP
-482. Lachy Groom
-483. Laconia Capital Group
-484. Las Vegas Tech Fund
-485. Latitud Fellowship
-486. Latitud Ventures
-487. Launch Angels
-488. Launch House
-489. Launch Tennessee Angels
-490. Launchpad Capital
-491. Launchpad LA
-492. Lead Edge Capital
-493. Leadout Capital
-494. Learn Capital
-495. Learn Ventures
-496. LegalTech Fund
-497. Lemniscap
-498. Lemnos
-499. Lenovo Capital
-500. Lerer Hippeau
-501. Liberty Ventures
-502. Lighter Capital
-503. Lightspeed
-504. Lightspeed Origin
-505. Lightspeed Venture Partners
-506. Lightspeed Venture Partners
-507. Liquid 2 Ventures
-508. Live Oak Ventures
-509. LocalGlobe US
-510. Lockheed Martin Ventures
-511. Logistics Venture Partners
-512. Lombardstreet Ventures
-513. Long Journey Ventures
-514. Louisville Ventures
-515. Lowercarbon Capital
-516. Ludlow Ventures
-517. Lunar Ventures
-518. Lux Capital
-519. M12
-520. M12 (Microsoft Ventures)
-521. M12 (Microsoft Ventures)
-522. M13
-523. MIT Sandbox
-524. MIT Sandbox Innovation Fund
-525. MIT delta v
-526. ML Seed Fund
-527. MOX
-528. MaC Venture Capital
-529. Madrona Venture Group
-530. Makers Fund
-531. Manufacturing Ventures
-532. Market Seed
-533. MassChallenge
-534. Mastercard Start Path
-535. Mastercard Ventures
-536. Matchstick Ventures
-537. Material Impact
-538. Matrix Partners
-539. Matrix Partners
-540. Maven Ventures
-541. Maverick Ventures
-542. Maveron
-543. Mayo Clinic Ventures
-544. Menlo Inception Fund
-545. Menlo Ventures
-546. Menlo Ventures
-547. Menlo Ventures Seed
-548. Merck GHI Fund
-549. Meta Start
-550. MetaProp
-551. Metamorphic Ventures
-552. Miami Angels
-553. Michigan Ventures
-554. Micro VC
-555. Micron Ventures
-556. Microsoft for Startups
-557. Microsoft for Startups Founders Hub
-558. Milwaukee Tech Hub Capital
-559. Mohr Davidow Ventures
-560. MongoDB Ventures
-561. Montana Ventures
-562. Moonshots Capital
-563. Morgan Stanley Expansion Capital
-564. Morgan Stanley Multicultural Innovation Lab
-565. Morgenthaler
-566. Motivate Venture Capital
-567. Motorola Solutions Ventures
-568. Mozilla Builders
-569. Mucker Capital
-570. MuckerLab
-571. Multicoin Capital
-572. Music Tech Fund
-573. NASA SBIR
-574. NEA
-575. NEA (National Endowment for Arts)
-576. NEA (New Enterprise Associates)
-577. NEA Growth
-578. NEA Seed
-579. NEH (National Endowment for Humanities)
-580. NFX
-581. NFX Bio
-582. NFX Fast Track
-583. NFX Guild
-584. NIH SBIR
-585. NSF I-Corps
-586. NVIDIA Inception
-587. NXT Ventures
-588. NYC Accelerator
-589. NYCEDC Founder Fellowship
-590. National Institutes of Health SBIR
-591. National Institutes of Health SBIR
-592. National Science Foundation SBIR
-593. National Science Foundation SBIR
-594. Naval Ravikant
-595. Nebraska Angels
-596. Neo
-597. Neo (Neo Scholars & Founders)
-598. Neural Capital
-599. New Atlantic Ventures
-600. New Enterprise Associates
-601. New Mexico Angels
-602. New View Capital
-603. New York Angels
-604. NewLab
-605. NewStack Ventures
-606. Newtopia VC
-607. Next Coast Ventures
-608. NextGen Venture Partners
-609. NextView Ventures
-610. Nexus Venture Partners
-611. Night Ventures
-612. Northwestern Ventures
-613. Norwest Venture Partners
-614. Norwest Venture Partners
-615. Not Boring Capital
-616. Notation Capital
-617. Notation Capital II
-618. Novartis Venture Fund
-619. Nyca Partners
-620. Oak HC/FT
-621. Obvious Ventures
-622. Ocean Ventures
-623. Okapi Venture Capital
-624. Oklahoma Ventures
-625. Omidyar Network
-626. On Deck
-627. On Deck Founders Fellowship
-628. Open Ocean
-629. OpenAI Startup Fund
-630. OpenSea Ventures
-631. Operator Collective
-632. Operator Partners
-633. Oracle Ventures
-634. Oracle for Startups
-635. OrbiMed
-636. Osage
-637. Osage University Partners
-638. Outlier Ventures
-639. Outside VC
-640. Owl Ventures
-641. P&G Ventures
-642. PIVA Capital
-643. PNC Ventures
-644. PSL Ventures
-645. Pace Capital
-646. Pachd
-647. Panoramic Ventures
-648. Pantera Capital
-649. Paradigm
-650. Partech
-651. Partners Innovation
-652. Paxion Capital Partners
-653. PayPal Ventures
-654. Pear Garage
-655. Pear VC
-656. Pear VC Garage
-657. PearX
-658. PearX (Pear VC)
-659. Pebblebed
-660. Pelion Venture Partners
-661. Penn Center for Innovation
-662. Penn Venture Lab
-663. Penn Ventures
-664. Pentland
-665. PepsiCo Ventures
-666. Pet Tech Fund
-667. Petrichor
-668. Petrock Capital
-669. Pfizer Ventures
-670. Piedmont Angel Network
-671. Pillar VC
-672. Pioneer
-673. Pipe
-674. Pipeline Angels
-675. Playground Global
-676. Plug and Play
-677. Plug and Play Tech Center
-678. Pluralsight Ventures
-679. Point Nine Capital
-680. Point72 Ventures
-681. Polaris Partners
-682. Porsche Ventures
-683. Portage Ventures
-684. Portfolia
-685. Portfolio Ventures
-686. Portland Seed Fund
-687. Powerhouse Ventures
-688. Praxis Business Accelerator
-689. Precursor Ventures
-690. Precursor Ventures Pre-Seed
-691. Prehype
-692. Prelude Ventures
-693. Presidio Ventures
-694. Primary
-695. Primary Venture Partners
-696. Prime Impact Fund
-697. Prime Movers Lab
-698. Princeton Entrepreneurship
-699. Princeton Innovation
-700. Principia
-701. Pritzker Group Venture Capital
-702. Promus Ventures
-703. Proof VC
-704. Propel Venture Partners
-705. QED Investors
-706. Qualcomm Ventures
-707. Qualia Capital
-708. Queens Angels
-709. Queens Collective
-710. QueensBridge Venture Partners
-711. Quiet Capital
-712. RRE Ventures
-713. RTX Ventures
-714. Race Capital
-715. Radical Ventures
-716. Rain Capital
-717. Raleigh Founded
-718. Rally Ventures
-719. Ranch Ventures
-720. RareBreed Ventures
-721. Razor's Edge Ventures
-722. ReThink Impact
-723. Reach Capital
-724. Reach Capital (fka Imagine K12)
-725. Realm Partners
-726. Redis Ventures
-727. Redpoint Ventures
-728. Refactor Capital
-729. Reforge
-730. Remarkable Ventures
-731. Remote First Capital
-732. Renegade Partners
-733. Resolute Ventures
-734. Retail Innovation Fund
-735. Rethink Education
-736. RevTech Labs
-737. Revel Partners
-738. Revolution
-739. Revolution - Rise of the Rest Seed Fund
-740. Revolution Ventures
-741. Ribbit Capital
-742. Rice Business Plan Competition
-743. Rice Innovation
-744. Richmond Ventures
-745. Ridge Ventures
-746. Rise of the Rest Seed Fund
-747. River Park Ventures
-748. Riverside Acceleration Capital
-749. Robert Bosch Venture Capital
-750. Robin Hood Ventures
-751. Rochester Ventures
-752. Rock Health
-753. RocketSpace
-754. Rockies Venture Club
-755. Root Ventures
-756. Rough Draft Ventures
-757. S2G Ventures
-758. SAP.iO Foundry (US Locations)
-759. SAP.iO Fund
-760. SBIR (Small Business Innovation Research)
-761. SBIR/STTR Grants (America's Seed Fund)
-762. STTR (Small Business Technology Transfer)
-763. SV Angel
-764. SVB Capital
-765. SafeGraph Ventures
-766. Salesforce Ventures
-767. Salesforce Ventures Fund
-768. Samsung NEXT
-769. Sand Hill Angels
-770. Sand Hill Road Partners
-771. Sapphire Ventures
-772. Scale Venture Partners
-773. Scale Venture Partners
-774. Scenario Ventures
-775. Schmidt Futures
-776. Schneider Electric Ventures
-777. Science Inc
-778. Scout Ventures
-779. Scribble Ventures
-780. Seagate Technology
-781. Security Seed
-782. Seed San Francisco
-783. Seedcamp US
-784. Sequoia Arc
-785. Sequoia Capital
-786. Sequoia Heritage
-787. Sequoia Scout Program
-788. Seraph Group
-789. ServiceNow Ventures
-790. SeventySix Capital
-791. Sharp Ventures
-792. Shasta Ventures
-793. Shell Ventures
-794. Sherpa Capital
-795. Shopify Fund
-796. Shrug Capital
-797. Siemens Next47
-798. Sierra Ventures
-799. Sigma Prime Ventures
-800. SignalFire
-801. SignalFire
-802. Signia Venture Partners
-803. Silicon Valley Angels
-804. Silver Lake
-805. SilverTech Ventures
-806. Silverton Partners
-807. SkyDeck
-808. SkyView Capital
-809. Slack Fund
-810. Slauson & Co
-811. Slow Ventures
-812. Snowflake Ventures
-813. Social Capital
-814. SocialStarts
-815. Soma Capital
-816. Sony Innovation Fund
-817. Sosnoff Ventures
-818. South Park Commons
-819. South Park Commons Fund
-820. South Park Commons Residency
-821. Space Ventures
-822. Space.VC
-823. Spark Capital
-824. Spark Growth
-825. SparkLabs Group
-826. Splunk Ventures
-827. SportsTech Fund
-828. Springbank Collective
-829. Stanford LEAD
-830. Stanford StartX
-831. StartOut Growth Lab
-832. StartX
-833. Starting Line
-834. Stellation Capital
-835. Storm Ventures
-836. Stride VC
-837. Stripe
-838. Stripe Atlas
-839. Stripes
-840. Summit Partners
-841. Susa Ventures
-842. Sutter Hill Ventures
-843. Sway Ventures
-844. Synchrony Ventures
-845. Syracuse Ventures
-846. TA Associates
-847. TD Bank Ventures
-848. TPG Growth
-849. Takeda Ventures
-850. Talis Capital
-851. Tallwave Capital
-852. Tamber Ventures
-853. Target Accelerators
-854. Tavistock Group
-855. Tech Coast Angels
-856. Tech Square Ventures
-857. Techstars
-858. Techstars (Accelerator programs)
-859. Techstars Alumni Fund
-860. Techstars Austin
-861. Techstars Austin Accelerator
-862. Techstars Chicago Accelerator
-863. Techstars LA Accelerator
-864. Techstars Miami Accelerator
-865. Techstars NYC Accelerator
-866. Techstars Seattle Accelerator
-867. Techstars Space Accelerator
-868. Tenaya Capital
-869. The Garage at Northwestern
-870. The General Partnership
-871. The House Fund (Berkeley-Focused)
-872. The Resilience Reserve
-873. Thiel Fellowship
-874. Thiel Foundation
-875. Third Rock Ventures
-876. Third Sphere
-877. Thoma Bravo
-878. Thomvest Ventures
-879. Threshold Ventures
-880. Threshold Ventures
-881. Thrive Capital
-882. Thrive Capital
-883. Thrive Earlier Stage
-884. Tiger Global Management
-885. Tiny VC
-886. Toba Capital
-887. Tory Burch Foundation Fellows Program
-888. Toyota Ventures
-889. Tri-State Angels
-890. Tribe Capital
-891. Trinity Ventures
-892. TriplePoint Capital
-893. TruCrew
-894. Truck VC
-895. Trucks VC
-896. Truist Ventures
-897. Tusk Venture Partners
-898. Tusk Ventures
-899. Twilio Ventures
-900. Two Sigma Ventures
-901. U.S. Bank Ventures
-902. UCLA Anderson VentureAccelerator
-903. UCLA Ventures
-904. UCSD StartR
-905. UCSF Catalyst Fund
-906. UChicago Ventures
-907. UIUC Ventures
-908. UP2398 Ventures
-909. USC Stevens Center
-910. USC Ventures
-911. USDA SBIR
-912. UT Austin Ventures
-913. UW CoMotion
-914. UW Ventures
-915. Udacity Ventures
-916. Udemy Ventures
-917. Ulu Ventures
-918. Uncork Capital
-919. Uncorrelated Ventures
-920. Underscore VC
-921. Unilever Ventures
-922. Union Labs
-923. Union Square Ventures
-924. Uniswap Labs Ventures
-925. Unshackled Ventures
-926. Unusual Ventures
-927. Unusual Ventures
-928. UpWest
-929. Upfront Ventures
-930. Upside Partnership
-931. Urban Innovation Fund
-932. Urban-X
-933. VITALIZE Venture Capital
-934. VMware Ventures
-935. VU Venture Partners
-936. Valleyoak Ventures
-937. VamosVentures
-938. Variant Fund
-939. Vela Partners
-940. Velocity (Village Global)
-941. Venrock
-942. Venture Highway
-943. VentureOut
-944. VentureWell E-Team Program
-945. Verbena Capital
-946. Verissimo Ventures
-947. Verizon Ventures
-948. Versant Ventures
-949. Version One Ventures
-950. Vertex Ventures US
-951. Vesta Ventures
-952. Village Global
-953. Visa Ventures
-954. Visible Capital
-955. Visible Hands
-956. Voltage Ventures
-957. Volvo Tech Fund
-958. Voyager Capital
-959. Voyager Ventures
-960. Vulcan Capital
-961. Walkabout Ventures
-962. Walmart Ventures
-963. WaveMaker Partners
-964. Wayfinder Ventures
-965. WeWork Labs
-966. Weekend Fund
-967. Wells Fargo Strategic Capital
-968. Wesley Clover
-969. WestWave Capital
-970. Western Digital Ventures
-971. Wildcat Venture Partners
-972. Willow Tree Ventures
-973. Wing VC
-974. Wischoff Ventures
-975. Wonder Ventures
-976. Work-Bench
-977. Work-Life Ventures
-978. WorkLife Ventures
-979. Workbench
-980. Workday Ventures
-981. XFUND
-982. XFactor Ventures
-983. XRC Ventures (XRC Labs)
-984. Y Combinator
-985. YC Continuity
-986. YC Growth
-987. YC Research
-988. Yale Ventures
-989. Yes VC
-990. Z Fellows
-991. Zeal Capital Partners
-992. Zendesk Ventures
-993. Zetta Venture Partners
-994. Zoom Apps Fund
-995. a16z Crypto
-996. betaworks
-997. bp ventures
-998. dlab
-999. eFounders
-1000. edX
-1001. gener8tor
-1002. mHUB
+2. “LPs,” “capital commitments,” or “final close” mentioned in posts
+3. # 10 VC Funds with Fresh Capital for 2026 Investments
+4. # GMO Launches New Fund for Fintech and AI Startups
+5. # January Proptech Venture Capital: Sharply Higher Capital Deployment
+6. # Kyoto University Launches KYOTO-iCAP Fund III for Startup Investment
+7. # Mexican investment veterans launch MXN 5bn infra debt fund
+8. # Paris-based VC firm Elaia closes €134M deeptech seed fund
+9. # Updata Partners Closes $875 Million Software Growth Equity Fund
+10. ## Frist Cressey Ventures closes $425M fund to revolutionize healthcare
+11. ## Notice of Establishment of KYOTO-iCAP Fund No. 3
+12. ## Overview of the KYOTO-iCAP Fund Ⅲ
+13. ## Overview of the Nordic VC ecosystem
+14. ## Why This $6M Fund Matters
+15. ## 個人がVCに直接投資 Bダッシュ・野村が国内初、デジタル証券活用
+16. ### A Strategy of "Patient Capital"
+17. ### CEE VC SUMMIT 2026
+18. ### Fund
+19. === Query: crossover fund venture web3 2026 Middle East ===
+20. === Query: first-time fund manager healthcare 2027 Europe debut ===
+21. === Query: rolling fund logistics investors deployments 2027 ===
+22. === Query: rolling fund proptech investors deployments 2026 ===
+23. === Query: venture capital 2026 portfolio investment SaaS announced ===
+24. === Query: venture capital SPV deployment proptech UK ===
+25. > David Charbonneau,Boreal Ventures
+26. 1517 Fund
+27. 1confirmation
+28. 2048 Ventures
+29. 37 Angels
+30. 43North
+31. 500 Global
+32. 500 Global – Flagship Accelerator
+33. 500 Startups (500 Global)
+34. 776 Fellowship
+35. 7wireVentures
+36. 875 Million Raised For Software Growth Equity Fund VIII
+37. 8VC
+38. A EduLab Capital Partners
+39. A New Dedicated Fund
+40. a16z Crypto
+41. AbbVie Ventures
+42. About Healthier Capital
+43. About MASNA Ventures
+44. About Motivate Fund III Fund Thesis Fund
+45. About Valhalla Ventures Valhalla Ventures
+46. About Zeytoon Ventures
+47. Abstraction Capital
+48. Accel
+49. Accel India
+50. Accel India (US Operations)
+51. Access the Latin America VC Report 2026 here
+52. Accomplice
+53. ACE Ventures
+54. Acre Venture Partners
+55. Acrew Capital
+56. Acrew Fund
+57. Activate Capital
+58. Active Capital
+59. ACV Fund
+60. ADB Ventures
+61. Adiwale Fund
+62. Adobe Ventures
+63. Afore Capital
+64. African Transition Acceleration Fund
+65. AgFunder
+66. AI Ventures
+67. AI2 Incubator
+68. Air Force SBIR
+69. Air Street Capital
+70. Air Street Capital Fund
+71. Air Street Capital Fund III: $232M for AI-first startups
+72. Airbus Ventures
+73. Alate Partners
+74. Albany Venture Partners
+75. Albuquerque Ventures
+76. Alchemist Accelerator
+77. Alexa Fund
+78. Aligned Partners
+79. Alliance DAO
+80. Alliance of Angels
+81. Ally Ventures
+82. AlphaLab
+83. AlphaLab Gear
+84. Altos Ventures
+85. Alumni Ventures Deep Tech Fund
+86. Amazon Alexa Fund
+87. Ambition Capital
+88. AMD Ventures
+89. Amex Ventures
+90. Amgen Ventures
+91. Amplify Partners
+92. Amplify.LA
+93. Analysis Ascend Capital Partners
+94. Analysis Boreal Ventures
+95. Analysis Iris Ventures
+96. Analysis MVP Ventures
+97. Ananda Impact Ventures secures €73M first close for impact fund
+98. Andreessen Horowitz
+99. Andreessen Horowitz (a16z)
+100. Andreessen Horowitz Bio
+101. Andreessen Horowitz Seed
+102. AngelList Syndicates
+103. AngelMD
+104. AngelPad
+105. Angels Forum
+106. Announced With Google AI Futures Fund
+107. Announcements tagged with LP partners, anchor investors, or university endowments
+108. Announcing Primary Fund V
+109. Antler
+110. Antler (US Programs)
+111. Anzu Partners
+112. Apex Fund
+113. Apollo Health Ventures
+114. Arch Grants
+115. ARCH Venture Partners
+116. ArcTern Ventures
+117. Argor Capital
+118. Arieli Group
+119. Arizona Ventures
+120. Arkansas Venture Capital
+121. Arm Ventures
+122. Array Ventures
+123. Artemis Fund
+124. Ascend Capital
+125. Ascend Capital Closes $791M Healthcare Fund II
+126. Ascend VC
+127. Ashoka
+128. Ashoka Fellowship
+129. Aspect Ventures
+130. Asset Classes Private EquityReal EstatePublic EquitiesConsumer GoodsVenture Capital
+131. AT&T Ventures
+132. Atempo Growth Holds Third Closing of Fund II, at €455M
+133. Atlanta Ventures
+134. Atlassian Ventures
+135. Atomic
+136. Atomico
+137. Atomico V Closes $820M Fund; British Patient Capital Invests
+138. Augment Ventures
+139. Australian Cyber Security Magazine Macquarie Technology Group
+140. Aviation Venture Partners
+141. AWS Activate
+142. AWS Impact Accelerator
+143. Axiom Partners
+144. Axiom Partners raises $52m for AI-focused debut fund
+145. B Capital Group
+146. B2B Seed Partners
+147. Background Capital
+148. Backstage Capital
+149. Backstage Capital Fund II
+150. backtrace Fund I final closes at €50m
+151. Bain Capital Ventures
+152. Balderton Capital
+153. Baltic Innovation Fund
+154. Banana Capital
+155. Band of Angels
+156. Bank of America Strategic Solutions
+157. BankTech Ventures
+158. Base Ventures
+159. Base10 Partners
+160. Base10 Partners Seed
+161. Baseline Ventures
+162. Basis Set Ventures
+163. Battery Ventures
+164. Bay Area Angels
+165. BBG Ventures
+166. BBVA USA Ventures
+167. BDC Capital
+168. Beauty Tech Fund
+169. Bee Partners
+170. Bell Ventures
+171. Benchmark
+172. Berkeley Angel Network
+173. Berkeley SkyDeck
+174. Berkeley SkyDeck (Cohort Program)
+175. Bessemer Seed
+176. Bessemer Venture Partners
+177. Beta Boom
+178. Betaspring
+179. betaworks
+180. Better Food Ventures
+181. Bezos Expeditions
+182. Billion Fund
+183. Billion Raised For Global Innovation Fund
+184. Binance Labs
+185. Bio Seed Fund
+186. Biotech Fund
+187. Birmingham Venture Partners
+188. Bison Capital
+189. BITKRAFT Ventures
+190. Black Ambition
+191. Black Forest Labs
+192. Black-founded funds — Curated VC Funds
+193. Bling Capital
+194. Block
+195. Blockchain Capital
+196. Bloom Tech Ventures
+197. Bloomberg Beta
+198. Blue Earth Capital
+199. Blumberg Capital
+200. BMW i Ventures
+201. Boeing HorizonX
+202. Boldstart Ventures
+203. Bolt
+204. Bond
+205. Bonfire Ventures
+206. Boom Startup
+207. Boomtown Accelerators
+208. Boost VC
+209. Boreal Fund
+210. Boreal Ventures closes on $43m for Fund II, targeting $60m
+211. Boreal Ventures Launches $60M Fund II
+212. Boreal Ventures Raises $43M for Seed-Stage Tech Fund
+213. Bosch Ventures
+214. Boston Harbor Angels
+215. Bow Capital
+216. Bowery Capital
+217. BoxGroup
+218. bp ventures
+219. Bragiel Brothers
+220. Brazil The Latam VC
+221. Breakthrough Energy Ventures
+222. Breyer Capital
+223. Bridgelat
+224. British Business Bank Redrice Ventures Fund
+225. British Patient Capital
+226. Broom Ventures
+227. Brown Venture Labs
+228. Buffalo Ventures
+229. Bullpen Capital
+230. Cake Ventures
+231. Calm Fund
+232. Caltech CIE
+233. Caltech Ventures
+234. Camber Creek
+235. Camwest
+236. Canaan
+237. Canaan Partners
+238. Canadian Tech Fund
+239. Canadian VC
+240. Cannabis Ventures
+241. Canvas Ventures
+242. Capital Factory
+243. Capital Innovators
+244. Capital One Ventures
+245. Capitol Post
+246. Carolina Angel Network
+247. Cartier Women's Initiative
+248. Carya Venture Partners
+249. Cascade Seed Fund
+250. Category II Alternative Investment Fund
+251. Caterpillar Ventures
+252. CEE VC
+253. Cendana Capital
+254. Cento Ventures
+255. Central Ohio Angel Fund
+256. Ceres VC Fund
+257. Chan Zuckerberg Initiative
+258. Chapter One
+259. Charge Ventures
+260. Charlotte Angel Fund
+261. Charlotte Venture Partners
+262. Charter Communications Ventures
+263. Cherry Tree & Company
+264. Chevron Technology Ventures
+265. Chicago Innovation
+266. Chicago Ventures
+267. Chinaccelerator
+268. Chingona Ventures
+269. CincyTech
+270. Cisco Investments
+271. Citadel Securities Ventures
+272. Citi Ventures
+273. Citizens Bank Ventures
+274. City Light Capital
+275. Clean Energy Ventures
+276. Clearco
+277. Clemson Alumni Venture Fund
+278. Cleveland Clinic Innovations
+279. Climate Innovation Capital
+280. Climate VC
+281. ClimateIC
+282. Close Secured For Europe Deep Tech Growth Fund
+283. Closed Loop Partners
+284. Cloudberry Ventures
+285. Cloudberry Ventures Raises €50M for AI &amp; Deep Tech
+286. CMU Swartz Center
+287. CMU Ventures
+288. Co-Founder & General Parnter, Hustle Fund
+289. Co-Founder, Noon Ventures
+290. Coalition Operators
+291. Coastal Ventures
+292. Coastlands Capital
+293. Coatue
+294. Coca-Cola Founders
+295. Cocoon Capital
+296. Code2040
+297. Codecademy Ventures
+298. Coinbase Ventures
+299. Collab Capital
+300. Columbia Startup Lab
+301. Columbia Venture Partners
+302. Comcast NBCUniversal LIFT Labs (Powered by Techstars)
+303. Comcast Ventures
+304. Compound
+305. Confluent Ventures
+306. ConocoPhillips Ventures
+307. ConsenSys Mesh
+308. Construction Tech Ventures
+309. Constructor Capital
+310. Consumer Lab
+311. Contents: Fund formation: A strategic blueprint
+312. Contrary
+313. Converge
+314. Conviction Embed
+315. Cornell eLab
+316. Cornell Ventures
+317. Correlation Ventures
+318. Costanoa Ventures
+319. Cota Capital
+320. Counter Ventures
+321. Coursera Ventures
+322. Cowboy Ventures
+323. Craft Ventures
+324. Creative Destruction Lab
+325. Crore Maiden Fund
+326. Crore Venture Capital Fund
+327. Cross Capital
+328. Cross Capital I Limited Partnership
+329. CrossCut Ventures
+330. Crosslink Capital
+331. CRV
+332. Crypto Fund
+333. Cultivation Capital
+334. Cultivian Sandbox Ventures
+335. Curated VC
+336. Dartmouth Entrepreneurship
+337. Data Elite Ventures
+338. Databricks Ventures
+339. DataTribe
+340. DCVC
+341. DCVC (Data Collective)
+342. Deciens Capital
+343. Deep Tech Cloudberry Ventures
+344. Deep Tech XTech Ventures
+345. Deepankur Malhotra, founder, Kairon Capital
+346. DeepTech Seed Fund
+347. Deerfield Management
+348. DEFY Partners
+349. Dell Technologies Capital
+350. Department of Energy SBIR
+351. Desjardins Capital
+352. Detroit Venture Partners
+353. Devlabs
+354. DevTools Ventures
+355. Die Equity
+356. Digital Currency Group
+357. Digital Economy LatAm Fund
+358. Digital Venture Fund
+359. Digitalundivided (BIG)
+360. Dilutive Capital
+361. Discover Ventures
+362. Diversity Ventures
+363. dlab
+364. Docent Capital
+365. DOD SBIR
+366. DOE SBIR
+367. Dorm Room Fund
+368. Downing Ventures
+369. Dragonfly
+370. Draper Richards Kaplan
+371. Dreamit Ventures
+372. Drive by DraftKings
+373. Drive Capital
+374. DST Global
+375. Duke Energy Ventures
+376. Duke Innovation
+377. Duke Innovation & Entrepreneurship
+378. Early-stage climate ventures (pre-seed to Series A)
+379. Earlybird
+380. Earnest Capital
+381. Earthshot Ventures
+382. Echoing Green
+383. Echoing Green Fellowship
+384. Eclipse Ventures
+385. EdTech Incubator
+386. edX
+387. eFounders
+388. Elad Gil
+389. Elaia closes its third deep-tech seed fund at €134M
+390. Elastic Ventures
+391. Electric Capital
+392. Element Ventures
+393. Elemental Excelerator
+394. Elemental Impact
+395. Elevate Ventures
+396. Elevation Partners
+397. ElevenLabs Startup Grants Program
+398. Emergence Capital
+399. Emergent Ventures
+400. Emerging Fund
+401. Emerson Collective
+402. Energy Impact Partners
+403. Eniac Ventures
+404. Enterprise Capital
+405. Enterprise First
+406. Entrepreneur First
+407. Epic Ventures
+408. EQT Ventures
+409. ERA (Entrepreneurs Roundtable Accelerator)
+410. Era Ventures
+411. Ericsson Ventures
+412. European Investment Fund
+413. European VC
+414. Evergreen fund structure, purpose-built to driv
+415. Everything Startup - New VC Funds - Elaia
+416. Eviny Ventures
+417. Evolution Equity
+418. Evolution Equity Partners
+419. Expa
+420. Expansion
+421. ExxonMobil Technology Ventures
+422. F-Cubed
+423. FACTORY
+424. Family Office Investments
+425. FAST Fellowship
+426. Fast Forward
+427. Fathom Fund
+428. Fearless Fund
+429. Featured Funds Craft Ventures First Round Capital
+430. FedEx Small Business Grant Contest
+431. Felicis
+432. Felicis Ventures
+433. Female Founders Fund
+434. Fifth Digital Venture Fund
+435. Fifth Fund
+436. Fifth Wall
+437. Fifty Years
+438. Fika Ventures
+439. Finistere Ventures
+440. FinTech Collective
+441. Fintech First
+442. Fintech Ventures
+443. FinTop Capital
+444. Firestreak Ventures
+445. Firm Name
+446. First Check Ventures
+447. First Mile Ventures
+448. First Round Capital
+449. First Round Capital Seed
+450. First Round For New B2B Tech Fund
+451. FirstMark Capital
+452. Firstminute Capital
+453. FIRSTPICK closes €25M second fund to back Baltic founders
+454. Fiserv Ventures
+455. FJ Labs
+456. Flatiron School Ventures
+457. Fledge
+458. Floodgate
+459. Flybridge
+460. Flybridge Capital
+461. Flybridge Capital Partners
+462. Focused Fund
+463. Focused Fund Signals New Era for Software Lending
+464. Focussed Fund
+465. Fondo Capital
+466. Force Over Mass Capital
+467. Ford Ventures
+468. Forefront Venture Partners
+469. Forerunner Ventures
+470. Formation 8
+471. Formation 8 Partners
+472. Formation Capital
+473. Former Incubate Fund
+474. Forum Ventures
+475. Forward Partners
+476. Foundation Capital
+477. Founder and Partner, Aera VC
+478. Founder Collective
+479. Founder Institute
+480. Founder, Norrsken VC
+481. Founder, VC Sheet
+482. FounderMatch
+483. Founders Fund
+484. Founders Fund Closes $6B Growth Fund
+485. Founders or GPs of the fund include:
+486. Founders' Co-op
+487. Founding Partner, Nordic Eye Venture Capital
+488. Foundry Group
+489. FPV Ventures
+490. Framework Ventures
+491. Free Ventures
+492. Freestyle Capital
+493. Fresh Capital
+494. From Montis Capital
+495. Fuel Capital
+496. FullCircle
+497. Fund II Fund
+498. Fund III aims to intervene at the
+499. Fund III Air Street Capital
+500. Fund manager survey
+501. Fund Notable Investments
+502. Fund of the week: HealthCap IX
+503. fund/507237
+504. Funding Venture Capital
+505. Fusion Fund
+506. Future Africa - VC Fund Breakdown
+507. Future Industries Fund
+508. Gaingels
+509. Galaxy Digital
+510. Galaxy Interactive
+511. Galvanize Ventures
+512. Garage Capital
+513. Gates Ventures
+514. GE Ventures
+515. Genacast Ventures
+516. gener8tor
+517. General Assembly Ventures
+518. General Catalyst
+519. Generalist Capital
+520. Generation Investment Management
+521. Generator Ventures
+522. Georgia Tech Ventures
+523. GGV Accelerate
+524. GGV Capital
+525. Gigafund
+526. GitHub Accelerator
+527. GitLab Ventures
+528. Glasswing Ventures
+529. GLG Ventures
+530. Global Brain
+531. Global Startup Fund
+532. Global Technology Fund
+533. Global VC
+534. Globis Capital Partners
+535. GM Ventures
+536. GMO Internet Group Streamlines Top Management
+537. GoAhead Ventures
+538. GOAT Capital
+539. Golden Gate Ventures
+540. Golden Seeds
+541. Goldman Sachs Growth Equity
+542. Goldman Sachs Principal Investments
+543. Good Growth Capital
+544. Good Ventures
+545. Goodwater Capital
+546. Google Cloud for Startups
+547. Google for Startups Accelerator
+548. Google for Startups Black Founders Fund (US)
+549. Google for Startups Founders Funds
+550. Google Ventures
+551. Government Pension Fund
+552. GP VC
+553. Gradient Closes $220M Fund for Early AI Ventures
+554. Gradient Ventures
+555. Graph Ventures
+556. Green Seed
+557. Greenberg Capital
+558. Greycroft
+559. Greylock Edge
+560. Greylock Partners
+561. Griffin Gaming Partners
+562. Grishin Robotics
+563. GroTech Ventures
+564. Growth Equity
+565. Growth Fund
+566. Growth Warrior Capital
+567. GSR Ventures
+568. GSV Ventures
+569. Guild Capital
+570. GV
+571. GV (Google Ventures)
+572. GV Seed
+573. Halcyon Incubator Fellowship
+574. Hale Capital Partners
+575. Halogen Ventures
+576. Hardware Ventures
+577. Harlem Capital
+578. Harpoon Ventures
+579. Harvard Innovation Labs
+580. Haun Ventures
+581. HAX
+582. HAX (SOSV)
+583. Haystack
+584. HBF launches corporate venture capital fund for health innovation
+585. Headline
+586. Healthbox
+587. HealthCare Ventures
+588. Healthier Capital
+589. Healthier Capital Closes Fund
+590. HealthTech Capital
+591. HealthTech Ventures
+592. HealthX Ventures
+593. Heavybit
+594. Hetz Ventures
+595. HF0 Residency
+596. High Alpha
+597. High Trek Ventures
+598. Hillside Ventures
+599. Home UK Seraphim Closes SpaceTech Venture Fund, at Over $100M
+600. Homebrew
+601. Homebrew Fund
+602. Hony Capital
+603. Horizon Ventures
+604. Horsley Bridge Partners
+605. House Fund
+606. How Will Metaplanet Ventures
+607. Hoxton Ventures
+608. HP Tech Ventures
+609. HPE Pathfinder
+610. HubSpot Ventures
+611. Human Ventures
+612. Hunter Merghart (Castle Island Ventures) / VC Breakdown & Contact
+613. Hustle Fund
+614. HV Capital
+615. Hyde Park Angels
+616. IA Ventures
+617. IBM Hyper Protect Accelerator
+618. IBM Ventures
+619. ICONIQ Capital
+620. ICONIQ Growth
+621. Idaho Ventures
+622. Idealab Studio
+623. Ignition Partners
+624. II Hlayisani Capital
+625. Image Credit: XTech Ventures
+626. Impact Fund
+627. Impact Ventures
+628. Indeed Ventures
+629. Index Ventures
+630. Indiana Angel Network
+631. Indie.vc
+632. IndieBio (SOSV)
+633. IndieBio NYC
+634. IndieBio SF
+635. Industrious Ventures
+636. Industry Ventures
+637. Initialized Capital
+638. Initialized Management
+639. Innosphere Ventures
+640. Innovation Endeavors
+641. Innovation Healthier Capital
+642. Innovation Works
+643. Inovia Capital
+644. Insight Partners
+645. Insight Partners Seed
+646. Inspired Capital
+647. Intel Capital
+648. Intel Liftoff for Startups
+649. International Real Estate Partners
+650. Interplay Ventures
+651. Invest Detroit Ventures
+652. Investor Misuzu Matsumoto Launches Oikaze Ventures
+653. Iowa Ventures
+654. Islandbridge Capital
+655. Iterative VC
+656. IVP
+657. J.P. Morgan Innovation Economy
+658. J.P. Morgan Strategic Investments
+659. Jackson Square Ventures
+660. Jane VC
+661. January Proptech Venture Capital
+662. January Ventures
+663. Javelin Venture Partners
+664. JDI Group
+665. JLABS (Johnson & Johnson)
+666. Johnson & Johnson Innovation
+667. JPL Ventures
+668. JPMorgan Strategic Investments
+669. Jump Capital
+670. Jump Fund
+671. Jumpstart Foundry
+672. Jumpstart Ventures
+673. Kamay Ventures
+674. Kansas City Ventures
+675. Kapor Capital
+676. Katapult Accelerator
+677. KC Rise Fund
+678. Keenan Kwok (Aera VC) / VC Breakdown & Contact
+679. Keiretsu Forum
+680. Kernel
+681. Keyhorse Capital
+682. Khan Academy
+683. Khosla Impact
+684. Khosla Ventures
+685. Khosla Ventures Seed
+686. Kickstart Ventures
+687. Kima Ventures
+688. Kind Ventures
+689. Kleiner Perkins
+690. Knollwood Advisory
+691. Kraken Ventures
+692. Kyoto University Innovation Capital
+693. Lachy Groom
+694. Laconia Capital Group
+695. Largest Solo VC
+696. Las Vegas Tech Fund
+697. Lasse Clausen (1kx) / VC Breakdown & Contact
+698. LatAm VC
+699. Later Stage VC
+700. Latitud Fellowship
+701. Latitud Ventures
+702. LAUNCH
+703. LAUNCH Accelerator
+704. Launch Angels
+705. Launch House
+706. Launch Tennessee Angels
+707. Launches Venture Capital Fund And Asset Management Company
+708. Launchpad Capital
+709. Launchpad LA
+710. Lazard Elaia Capital
+711. LBA Logistics Value Fund
+712. Lead Edge Capital
+713. Leader Pax VC
+714. Leadout Capital
+715. Learn Capital
+716. Learn Ventures
+717. LegalTech Fund
+718. Lemniscap
+719. Lemnos
+720. Lenovo Capital
+721. Lerer Hippeau
+722. LG Technology Ventures
+723. Liberty Ventures
+724. Lighter Capital
+725. Lightspeed
+726. Lightspeed Origin
+727. Lightspeed Venture Partners
+728. Limited Partners
+729. Liquid 2 Ventures
+730. Live Oak Ventures
+731. LocalGlobe US
+732. Lockheed Martin Ventures
+733. Logistics Capital
+734. Logistics Management
+735. Logistics Venture Partners
+736. Lombardstreet Ventures
+737. London VC
+738. Long Journey Ventures
+739. Louisville Ventures
+740. Lowercarbon Capital
+741. LSEC Venture Grant
+742. Ludlow Ventures
+743. LUMO Fund wins €6M from Spain’s SETT
+744. Lunar Ventures
+745. Lux Capital
+746. Lux Ventures
+747. LVP
+748. M12
+749. M12 (Microsoft Ventures)
+750. M13
+751. MaC Venture Capital
+752. Madrona Venture Group
+753. Maia Ventures
+754. Makers Fund
+755. Manufacturing Ventures
+756. Market Seed
+757. Markets Accessibility Statement Skip Navigation Insight Partners
+758. MassChallenge
+759. Mastercard Start Path
+760. Mastercard Ventures
+761. Matchstick Ventures
+762. Material Impact
+763. Matrix Partners
+764. Maven Ventures
+765. Maverick Ventures
+766. Maveron
+767. MAYA Capital
+768. Mayfield Fund
+769. Mayo Clinic Ventures
+770. MedCity News Frist Cressey Ventures
+771. MENA Startup Digest SHARE Zeytoon Ventures
+772. Menlo Inception Fund
+773. Menlo Ventures
+774. Menlo Ventures Seed
+775. Merck GHI Fund
+776. Meta Start
+777. Metamorphic Ventures
+778. Metaplanet Expands Bitcoin Push With Ventures and Asset Unit
+779. Metaplanet Launches Bitcoin Venture Fund
+780. MetaProp
+781. mHUB
+782. Miami Angels
+783. Michigan Ventures
+784. Micro VC
+785. micro VC edtech Nordic 2026 new fund announcement
+786. Micron Ventures
+787. Microsoft for Startups
+788. Microsoft for Startups Founders Hub
+789. Million Africa Climate Venture Fund
+790. Million AI Fund Deploys Capital
+791. Million AI Startup Fund
+792. Million Climate Venture Fund
+793. Million First Fund
+794. Million Fund
+795. Million Global AI Growth Fund
+796. Million Software Growth Equity Fund
+797. Milwaukee Tech Hub Capital
+798. MIT delta v
+799. MIT Sandbox
+800. MIT Sandbox Innovation Fund
+801. ML Seed Fund
+802. Mohr Davidow Ventures
+803. MongoDB Ventures
+804. Montana Ventures
+805. Montis VC
+806. Moonshots Capital
+807. Morgan Stanley Expansion Capital
+808. Morgan Stanley Multicultural Innovation Lab
+809. Morgenthaler
+810. Motivate Fund
+811. Motivate Venture Capital
+812. Motorola Solutions Ventures
+813. MOX
+814. Mozilla Builders
+815. Mucker Capital
+816. MuckerLab
+817. Multicoin Capital
+818. Murph Capital
+819. Music Tech Fund
+820. NASA SBIR
+821. National Institutes of Health SBIR
+822. National Science Foundation SBIR
+823. National Security Strategic Investment Fund
+824. Naval Ravikant
+825. NEA
+826. NEA (National Endowment for Arts)
+827. NEA (New Enterprise Associates)
+828. NEA Growth
+829. NEA Seed
+830. Nebraska Angels
+831. NEH (National Endowment for Humanities)
+832. Neo
+833. Neo (Neo Scholars & Founders)
+834. Neuer VC
+835. Neuer VC Montis
+836. Neural Capital
+837. New Atlantic Ventures
+838. New Enterprise Associates
+839. New Mexico Angels
+840. New VC
+841. New VC teams join
+842. New Venture Fund
+843. New View Capital
+844. New York Angels
+845. NewLab
+846. News Defence VC
+847. NewStack Ventures
+848. Newtopia VC
+849. Next Coast Ventures
+850. NextGen Venture Partners
+851. NextView Ventures
+852. Nexus Venture Partners
+853. NFX
+854. NFX Bio
+855. NFX Fast Track
+856. NFX Guild
+857. Night Ventures
+858. NIH SBIR
+859. Niklas Adalberth (Norrsken VC) / VC Breakdown & Contact
+860. NN Social Innovation Fund
+861. No ads. No catch. Free from VC Sheet.
+862. Northern Horizon secures €140m for Nordic social infrastructure fund
+863. Northwestern Ventures
+864. Norwest Venture Partners
+865. Not Boring Capital
+866. Notable Investments
+867. Notation Capital
+868. Notation Capital II
+869. Notion Capital
+870. Novartis Venture Fund
+871. Novo Holdings
+872. Now open: PearX S26 applications - Pear VC
+873. NSF I-Corps
+874. NTT DOCOMO Group
+875. NVIDIA Inception
+876. NXT Ventures
+877. NYC Accelerator
+878. Nyca Partners
+879. NYCEDC Founder Fellowship
+880. Oak HC/FT
+881. Obvious Ventures
+882. Ocean Ventures
+883. Octopus Ventures
+884. Official Media Partners
+885. OIF Ventures
+886. Okapi Venture Capital
+887. Oklahoma Ventures
+888. Omidyar Network
+889. Omusubi Capital
+890. On Deck
+891. On Deck Founders Fellowship
+892. only event for VC fund managers in CEE
+893. Open Ocean
+894. OpenAI Startup Fund
+895. OpenSea Ventures
+896. Operator Collective
+897. Operator Partners
+898. Oracle for Startups
+899. Oracle Ventures
+900. OrbiMed
+901. Osage
+902. Osage University Partners
+903. Our AI Growth Fund
+904. Outlier Ventures
+905. Outside VC
+906. Overmatch Raises $250M Fund Two
+907. Owl Ventures
+908. Own Offtake Fund
+909. Oxford Properties Group
+910. P&G Ventures
+911. Pace Capital
+912. Pachd
+913. Panoramic Ventures
+914. Pantera Capital
+915. Paradigm
+916. Partech
+917. Partech Impact Fund
+918. Participaron Fen Ventures
+919. Partners Innovation
+920. Patient Capital
+921. Patient capital and support for SMEs to accelerate their growth
+922. Paxion Capital Partners
+923. PayPal Ventures
+924. Pear Garage
+925. Pear VC
+926. Pear VC Garage
+927. PearX
+928. PearX (Pear VC)
+929. Pebblebed
+930. Pelion Venture Partners
+931. Penn Center for Innovation
+932. Penn Venture Lab
+933. Penn Ventures
+934. Pentland
+935. PepsiCo Ventures
+936. Persistent ACV Fund
+937. Persistent Africa Climate Venture Fund
+938. Persistent Energy Capital
+939. Pet Tech Fund
+940. Petrichor
+941. Petrock Capital
+942. Pfizer Ventures
+943. Phoenix Venture Partners
+944. photo credit: Boreal Ventures
+945. Piedmont Angel Network
+946. Pillar VC
+947. Pioneer
+948. Pipe
+949. Pipeline Angels
+950. PIVA Capital
+951. Playground Global
+952. Plug and Play
+953. Plug and Play Tech Center
+954. Pluralsight Ventures
+955. PM Updata Partners
+956. PNC Ventures
+957. Point Nine Capital
+958. Point72 Ventures
+959. Polaris Partners
+960. Polish Development Fund
+961. Polychain Capital
+962. Porsche Ventures
+963. Portage Ventures
+964. Portfolia
+965. Portfolio Invts Crunched Hebbia Presight AI Quiet Capital
+966. Portfolio Ventures
+967. Portland Seed Fund
+968. Powerhouse Ventures
+969. Praxis Business Accelerator
+970. Pre-Seed VC Investors
+971. Precursor Ventures
+972. Precursor Ventures Pre-Seed
+973. Prehype
+974. Prelude Ventures
+975. Presidio Ventures
+976. Primary
+977. Primary Venture Partners
+978. Prime Impact Fund
+979. Prime Movers Lab
+980. Princeton Entrepreneurship
+981. Princeton Innovation
+982. Principia
+983. Pritzker Group Venture Capital
+984. Private Capital
+985. Private EquityReal EstatePublic EquitiesConsumer GoodsVenture Capital
+986. Prologis Strategic Capital
+987. Promus Ventures
+988. Proof VC
+989. Propel Venture Partners
+990. PropTech Farm Fund
+991. PSL Ventures
+992. Q Fund
+993. QED Investors
+994. Qualcomm Ventures
+995. Qualia Capital
+996. Queens Angels
+997. Queens Collective
+998. QueensBridge Venture Partners
+999. Quiet Capital
+1000. Quiet Capital launches Quiet Venture IV for undisclosed target size
+1001. Quona Capital
+1002. R3i Ventures
+1003. Race Capital
+1004. Radical Ventures
+1005. Rain Capital
+1006. Raising Venture Capital
+1007. Raleigh Founded
+1008. Rally Ventures
+1009. Ranch Ventures
+1010. RareBreed Ventures
+1011. Razor's Edge Ventures
+1012. Reach Capital
+1013. Reach Capital (fka Imagine K12)
+1014. Realm Partners
+1015. Redis Ventures
+1016. Redpoint Ventures
+1017. Refactor Capital
+1018. Reforge
+1019. Relay Ventures
+1020. Remarkable Ventures
+1021. Remote First Capital
+1022. Renegade Partners
+1023. Renewal Funds
+1024. Resolute Ventures
+1025. Resolve Growth Partners
+1026. Retail Innovation Fund
+1027. Rethink Education
+1028. ReThink Impact
+1029. Revel Partners
+1030. Revolution
+1031. Revolution - Rise of the Rest Seed Fund
+1032. Revolution Ventures
+1033. RevTech Labs
+1034. Ribbit Capital
+1035. Rice Business Plan Competition
+1036. Rice Innovation
+1037. Richmond Ventures
+1038. Ridge Ventures
+1039. Rise of the Rest Seed Fund
+1040. Risk Management
+1041. River Park Ventures
+1042. Riverside Acceleration Capital
+1043. Robert Bosch Venture Capital
+1044. Robin Hood Ventures
+1045. Rochester Ventures
+1046. Rock Health
+1047. RocketSpace
+1048. Rockies Venture Club
+1049. Root Ventures
+1050. Rosberg Ventures
+1051. Rough Draft Ventures
+1052. RRE Ventures
+1053. RTX Ventures
+1054. Rukam Capital
+1055. S2G Ventures
+1056. SaaS Khwarizmi Ventures
+1057. SafeGraph Ventures
+1058. Salesforce Ventures
+1059. Salesforce Ventures Fund
+1060. Samsung NEXT
+1061. San Francisco News AI VC
+1062. Sand Hill Angels
+1063. Sand Hill Road Partners
+1064. Sands Capital
+1065. SAP.iO Foundry (US Locations)
+1066. SAP.iO Fund
+1067. Sapphire Ventures
+1068. Saudi Tech Ventures
+1069. Saviu II Venture Capital Fund
+1070. Saviu Partners
+1071. SBIR (Small Business Innovation Research)
+1072. SBIR/STTR Grants (America's Seed Fund)
+1073. Scale Venture Partners
+1074. Scaling for the AI era: Fund V
+1075. Scenario Ventures
+1076. Schmidt Futures
+1077. Schneider Electric Ventures
+1078. Science Inc
+1079. Scout Ventures
+1080. Scribble Ventures
+1081. Seagate Technology
+1082. Search The African Development Bank Group
+1083. Security Seed
+1084. Seed Fund
+1085. Seed Investments
+1086. Seed San Francisco
+1087. seed seed fund 2026 biotech Southeast Asia closes
+1088. Seed Tech Fund
+1089. seed+speed Ventures prioritizes investments
+1090. Seedcamp
+1091. Seedcamp US
+1092. Seligman Ventures
+1093. Sequoia Arc
+1094. Sequoia Capital
+1095. Sequoia Capital (core fund)
+1096. Sequoia Capital Seed
+1097. Sequoia Heritage
+1098. Sequoia Scout Program
+1099. Seraph Group
+1100. Series A VC
+1101. Series X Capital
+1102. ServiceNow Ventures
+1103. SeventySix Capital
+1104. Shaan Patel Asset Management
+1105. Sharp Ventures
+1106. Shasta Ventures
+1107. Shell Ventures
+1108. Sherpa Capital
+1109. Shopify Fund
+1110. Shorooq Founding Partners
+1111. Shorooq launches $200m late-stage growth fund backed by QIA
+1112. Shrug Capital
+1113. Siemens Next47
+1114. Sierra Ventures
+1115. Sigma Prime Ventures
+1116. SignalFire
+1117. Signia Venture Partners
+1118. Silicon Gardens Fund
+1119. Silicon Valley Angels
+1120. Silver Lake
+1121. SilverTech Ventures
+1122. Silverton Partners
+1123. SkyDeck
+1124. SkyView Capital
+1125. Slack Fund
+1126. Slauson & Co
+1127. Slow Ventures
+1128. Snowflake Ventures
+1129. Social Capital
+1130. SocialStarts
+1131. Soma Capital
+1132. Sony Innovation Fund
+1133. Sosnoff Ventures
+1134. South Loop Ventures
+1135. South Park Commons
+1136. South Park Commons Fund
+1137. South Park Commons Residency
+1138. Sozo Ventures
+1139. Space Ventures
+1140. Space.VC
+1141. Spark Capital
+1142. Spark Growth
+1143. SparkLabs Group
+1144. Speedinvest Africa Fund
+1145. Splunk Ventures
+1146. SportsTech Fund
+1147. Springbank Collective
+1148. Squared Ventures
+1149. SR2 Defense Systems MASNA Ventures
+1150. Stage Climate Innovation The ACV Fund
+1151. stage venture capital investments
+1152. Staircase Ventures
+1153. Staircase Ventures founder and managing partner Janet Bannister.
+1154. Stanford LEAD
+1155. Stanford StartX
+1156. Stardom Ventures
+1157. Starting Line
+1158. StartOut Growth Lab
+1159. Startup News Staircase Ventures
+1160. StartX
+1161. Stellation Capital
+1162. Storm Ventures
+1163. Stride VC
+1164. Stripe
+1165. Stripe Atlas
+1166. Stripes
+1167. STTR (Small Business Technology Transfer)
+1168. Subject(s): Venture Fund
+1169. Summit Partners
+1170. SuperSeed Fund
+1171. SuperSeed Launches Physical AI Seed Fund
+1172. Support Valor Capital
+1173. Susa Ventures
+1174. Sutter Hill Ventures
+1175. SV Angel
+1176. SVB Capital
+1177. SVB Growth
+1178. Sway Ventures
+1179. SWEN Capital Partners
+1180. Synchrony Ventures
+1181. Syracuse Ventures
+1182. TA Associates
+1183. Takeda Ventures
+1184. Talis Capital
+1185. Tallwave Capital
+1186. Tamber Ventures
+1187. Target Accelerators
+1188. Targeting High Impact Defense Opportunities Masna Ventures
+1189. Tavistock Group
+1190. TD Bank Ventures
+1191. Tech Coast Angels
+1192. Tech Companies Healthier Capital
+1193. Tech Square Ventures
+1194. Tech Venture Fund
+1195. Technology Companies Accessibility Statement Skip Navigation Boreal Ventures
+1196. Techstars
+1197. Techstars (Accelerator programs)
+1198. Techstars Alumni Fund
+1199. Techstars Austin
+1200. Techstars Austin Accelerator
+1201. Techstars Chicago Accelerator
+1202. Techstars Farm to Fork Accelerator
+1203. Techstars Fintech Accelerator
+1204. Techstars Future of Work Accelerator
+1205. Techstars Healthcare Accelerator
+1206. Techstars Impact Accelerator
+1207. Techstars LA Accelerator
+1208. Techstars Miami Accelerator
+1209. Techstars Mobility Accelerator
+1210. Techstars Music Accelerator
+1211. Techstars NYC Accelerator
+1212. Techstars Retail Accelerator
+1213. Techstars Seattle Accelerator
+1214. Techstars Space Accelerator
+1215. Techstars Sustainability Accelerator
+1216. Tenaya Capital
+1217. Teralys Capital
+1218. The ACV Fund
+1219. The AI Growth Fund
+1220. The Cigna Group
+1221. The European Investment Fund
+1222. The Footprint Firm Closes Fund
+1223. The fund has already deployed capital into three companies:
+1224. The Fund will lo
+1225. The Garage at Northwestern
+1226. The General Partnership
+1227. The Godrej Group
+1228. The House Fund
+1229. The House Fund (Berkeley-Focused)
+1230. The Investment Capital
+1231. The Landbanking Group
+1232. The Nordic Web Ventures
+1233. The Persistent ACV Fund
+1234. The Resilience Reserve
+1235. Thiel Fellowship
+1236. Thiel Foundation
+1237. Third Fund
+1238. Third Rock Ventures
+1239. Third Sphere
+1240. Thoma Bravo
+1241. Thomvest
+1242. Thomvest Ventures
+1243. Threads summarizing the fund’s thesis or team background
+1244. Threshold Ventures
+1245. Thrive Capital
+1246. Thrive Earlier Stage
+1247. TIAA Ventures
+1248. Tiger Global Management
+1249. Tiny VC
+1250. Toba Capital
+1251. Together with successful founders, leading academic partners
+1252. Top Databases for Finding Venture Capital Firms Healthcare in 2026
+1253. Tory Burch Foundation Fellows Program
+1254. Toyo Seikan Group Holdings
+1255. Toyota Ventures
+1256. TPG Growth
+1257. Transport Overseas Group
+1258. Tri-State Angels
+1259. Tribe Capital
+1260. Trinity Ventures
+1261. TriplePoint Capital
+1262. Truck VC
+1263. Trucks VC
+1264. TruCrew
+1265. True Ventures
+1266. Truist Ventures
+1267. Trump Moss Adams Ventures
+1268. Tusk Venture Partners
+1269. Tusk Ventures
+1270. Tweets containing “fund close,” “emerging manager,” “LPs,” or “Fund II”
+1271. Twilio Ventures
+1272. Two Sigma Ventures
+1273. U.S. Bank Ventures
+1274. UChicago Ventures
+1275. UCLA Anderson VentureAccelerator
+1276. UCLA Ventures
+1277. UCSD StartR
+1278. UCSF Catalyst Fund
+1279. Udacity Ventures
+1280. Udemy Ventures
+1281. UIUC Ventures
+1282. UK sovereign AI fund launches with £500m for computing
+1283. Ulu Ventures
+1284. UnCorck Capital
+1285. Uncork Capital
+1286. Uncorrelated Ventures
+1287. Underscore VC
+1288. Unicorn India Ventures
+1289. Unilever Ventures
+1290. Union Labs
+1291. Union Square Ventures
+1292. Union Square Ventures (USV)
+1293. Uniswap Labs Ventures
+1294. university venture fund Latin America 2026 new investments
+1295. Unshackled Ventures
+1296. Unusual Ventures
+1297. UP2398 Ventures
+1298. Upfront Ventures
+1299. Upside Partnership
+1300. UpWest
+1301. Urban Innovation Fund
+1302. Urban-X
+1303. USA Search Home Saudi Arabia Masna Ventures
+1304. USC Stevens Center
+1305. USC Ventures
+1306. USDA SBIR
+1307. UT Austin Ventures
+1308. UTC Holdings
+1309. UTF Fund
+1310. UW CoMotion
+1311. UW Ventures
+1312. Valleyoak Ventures
+1313. Valor Capital Group
+1314. VamosVentures
+1315. Variant Fund
+1316. VC Funds
+1317. Vela Partners
+1318. Velocity (Village Global)
+1319. Venrock
+1320. Venture Arm GMO Internet Group
+1321. Venture Capital
+1322. Venture Capital— Deep Dives— Funding News
+1323. Venture Fund
+1324. Venture Highway
+1325. VentureOut
+1326. VentureWell E-Team Program
+1327. Verbena Capital
+1328. Verissimo Ventures
+1329. Verizon Ventures
+1330. Versant Ventures
+1331. Version One Ventures
+1332. Vertex Ventures US
+1333. Vesta Ventures
+1334. Viessmann Generations Group
+1335. Village Global
+1336. Visa Ventures
+1337. Visible Capital
+1338. Visible Hands
+1339. VITALIZE Venture Capital
+1340. VMware Ventures
+1341. Volpe Capital
+1342. Volt Capital
+1343. Voltage Ventures
+1344. Volvo Tech Fund
+1345. Voyager Capital
+1346. Voyager Ventures
+1347. VU Venture Partners
+1348. Vulcan Capital
+1349. Walkabout Ventures
+1350. Walmart Ventures
+1351. Waseda University Impact Capital
+1352. WaveMaker Partners
+1353. Wayfinder Ventures
+1354. We Boost
+1355. Weekend Fund
+1356. Wells Fargo Strategic Capital
+1357. Wesley Clover
+1358. Western Digital Ventures
+1359. WestWave Capital
+1360. WeWork Labs
+1361. Where are you visiting seraphim.vc from?
+1362. Wildcat Venture Partners
+1363. Willow Tree Ventures
+1364. Willpower Ventures
+1365. Wilson Sonsini Entrepreneurs Fund
+1366. Wing VC
+1367. Wischoff Ventures
+1368. With Fund
+1369. With HERAN HealthTech Fund
+1370. Women in Venture Capital
+1371. Wonder Ventures
+1372. Work-Bench
+1373. Work-Life Ventures
+1374. Workbench
+1375. Workday Ventures
+1376. WorkLife Ventures
+1377. XFactor Ventures
+1378. XFUND
+1379. XRC Ventures (XRC Labs)
+1380. XTech Ventures
+1381. Y Combinator
+1382. Yale Ventures
+1383. YC Continuity
+1384. YC Growth
+1385. YC Research
+1386. Yes VC
+1387. Yutori Scout Logo Emerging VC
+1388. Z Fellows
+1389. Zeal Capital Partners
+1390. Zendesk Ventures
+1391. Zetta Venture Partners
+1392. Zeytoon Ventures Fund
+1393. Zoom Apps Fund

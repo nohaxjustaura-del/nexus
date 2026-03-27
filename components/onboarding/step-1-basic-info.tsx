@@ -33,7 +33,7 @@ interface Step1BasicInfoProps {
   errors: { name?: string; email?: string; age?: string; education?: string; phone?: string }
   setErrors: (errors: { name?: string; email?: string; age?: string; education?: string; phone?: string }) => void
   setStep: (step: number) => void
-  /** Hide Continue — e.g. account profile editor with a single global Save */
+  /** Hide Continue (e.g. account profile editor with a single global Save). */
   hideNavigation?: boolean
   /** Lock primary email to the signed-in account */
   readOnlyEmail?: boolean

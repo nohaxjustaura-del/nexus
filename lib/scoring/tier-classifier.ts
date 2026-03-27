@@ -30,7 +30,13 @@
  */
 
 import { getAIClient } from "../ai"
-import { getModelName, getOllamaKeepAliveParams, isUsingOllama } from "../openrouter"
+import {
+  getModelNameForScoring,
+  getOllamaKeepAliveParams,
+  getOpenRouterClient,
+  getScoringLlmClient,
+  isUsingOllama,
+} from "../openrouter"
 import { logger } from "../logger"
 import type { VerifiedFacts, ReferenceAnchor, Tier, TierResult } from "./types"
 
@@ -309,10 +315,11 @@ export async function classifyTier(
 ): Promise<TierResult> {
   logger.log(`[TIER-CLASSIFIER] Starting independent tier classification (stage: ${stage})`)
 
-  const client = getAIClient()
-  const model = getModelName("gpt-4o")
+  const client = getScoringLlmClient() ?? getAIClient()
+  const model = getModelNameForScoring("gpt-4o")
+  const scoringUsesOllama = !getOpenRouterClient() && isUsingOllama()
   const useJsonObject =
-    (isUsingOllama() && process.env.OLLAMA_JSON_STRICT !== "false") ||
+    (scoringUsesOllama && process.env.OLLAMA_JSON_STRICT !== "false") ||
     model.includes("gpt")
 
   try {
@@ -325,7 +332,7 @@ export async function classifyTier(
       temperature: 0.2,
       max_tokens: 1000,
       ...(useJsonObject ? { response_format: { type: "json_object" } } : {}),
-      ...(isUsingOllama() ? getOllamaKeepAliveParams() : {}),
+      ...(scoringUsesOllama ? getOllamaKeepAliveParams() : {}),
     } as any)
 
     const content = completion.choices[0]?.message?.content ?? "{}"

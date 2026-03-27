@@ -1,4 +1,5 @@
 import type { VCResearchResult } from '../scripts/auto-research-vcs'
+import { sanitizeInvestmentThesis } from './thesis-sanitize'
 
 /** Prisma `Int` is PG int4; Investor check fields store **thousands USD** (500 = $500K). */
 const PG_INT4_MAX = 2_147_483_647
@@ -92,12 +93,14 @@ export function normalizeResearchForDb(
     checkSizeMin: sanitizeCheckSizeThousandsForInt4(r.checkSizeMin),
     checkSizeMax: sanitizeCheckSizeThousandsForInt4(r.checkSizeMax),
     stages,
-    thesis:
+    thesis: sanitizeInvestmentThesis(
       typeof r.thesis === 'string'
         ? r.thesis
         : r.thesis != null && r.thesis !== ''
           ? String(r.thesis)
           : undefined,
+      r.firmName,
+    ),
     bio: coerceBio(r.bio as unknown, r.firmName, fundType),
     sectors,
     geography,

@@ -16,6 +16,7 @@ import {
   Video,
   Presentation,
   Lightbulb,
+  Layers,
   Search,
   Filter,
   X
@@ -25,7 +26,7 @@ import { PitchFeedbackComparison } from "@/components/pitch-feedback-comparison"
 
 interface Analysis {
   id: string
-  type: 'video-pitch' | 'pitch-deck' | 'pitch-idea'
+  type: 'video-pitch' | 'unified-pitch' | 'pitch-deck' | 'pitch-idea'
   createdAt: string
   compatibilityScore: number
   confidence: number
@@ -39,7 +40,9 @@ export default function MyAnalysesPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
-  const [typeFilter, setTypeFilter] = useState<'all' | 'video-pitch' | 'pitch-deck' | 'pitch-idea'>('all')
+  const [typeFilter, setTypeFilter] = useState<
+    'all' | 'video-pitch' | 'unified-pitch' | 'pitch-deck' | 'pitch-idea'
+  >('all')
   const [sortBy, setSortBy] = useState<'date' | 'score'>('date')
 
   const loadAnalyses = async () => {
@@ -198,7 +201,7 @@ export default function MyAnalysesPage() {
             My Analyses
           </h1>
           <p className="text-muted-foreground text-lg">
-            View your previous AI analysis reports and VC matches
+            Past pitch runs, feedback, and VC matches in one place
           </p>
         </div>
 
@@ -242,6 +245,7 @@ export default function MyAnalysesPage() {
                     className="px-3 py-2 border border-border bg-card rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary text-foreground"
                   >
                     <option value="all">All Types</option>
+                    <option value="unified-pitch">Unified Pitch</option>
                     <option value="video-pitch">Video Pitch</option>
                     <option value="pitch-deck">Pitch Deck</option>
                     <option value="pitch-idea">Pitch Idea</option>
@@ -287,7 +291,7 @@ export default function MyAnalysesPage() {
               </div>
               <h3 className="text-2xl font-bold mb-3">No Analyses Yet</h3>
               <p className="text-muted-foreground mb-8 max-w-md mx-auto">
-                Get AI-powered feedback and VC matches by analyzing your pitch materials
+                Feedback and VC matches from your pitch materials
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 max-w-4xl mx-auto">
                 <Link href="/founder/pitch-deck">
@@ -330,7 +334,7 @@ export default function MyAnalysesPage() {
                       </div>
                       <h4 className="font-semibold mb-2">Pitch Idea</h4>
                       <p className="text-xs text-muted-foreground mb-4">
-                        Get feedback on your startup idea from AI trained on real investor feedback
+                        Structured feedback on your idea, aligned with how investors read decks
                       </p>
                       <Button size="sm" className="w-full">
                         Get Started
@@ -378,11 +382,13 @@ export default function MyAnalysesPage() {
                     <div>
                       <CardTitle className="flex items-center gap-2 text-lg font-bold">
                         <div className="p-2 rounded-lg bg-primary/10">
+                          {analysis.type === 'unified-pitch' && <Layers className="h-5 w-5 text-primary" />}
                           {analysis.type === 'video-pitch' && <Video className="h-5 w-5 text-primary" />}
                           {analysis.type === 'pitch-deck' && <Presentation className="h-5 w-5 text-primary" />}
                           {analysis.type === 'pitch-idea' && <Lightbulb className="h-5 w-5 text-primary" />}
                         </div>
-                        {analysis.type === 'video-pitch' ? 'Video Pitch Analysis Report' :
+                        {analysis.type === 'unified-pitch' ? 'Unified Pitch Analysis' :
+                         analysis.type === 'video-pitch' ? 'Video Pitch Analysis Report' :
                          analysis.type === 'pitch-deck' ? 'Pitch Deck Analysis Report' :
                          'Pitch Idea Analysis Report'}
                       </CardTitle>
@@ -428,12 +434,16 @@ export default function MyAnalysesPage() {
                 <CardContent>
                   {analysis.result ? (
                     <>
-                      {/* Video Pitch specific info */}
-                      {analysis.type === 'video-pitch' && (
+                      {/* Video / unified pitch file strip */}
+                      {(analysis.type === 'video-pitch' || analysis.type === 'unified-pitch') && (
                         <div className="mb-4 p-4 rounded-lg border bg-muted/30">
                           <h4 className="text-sm font-semibold mb-2 flex items-center gap-2">
-                            <Video className="h-4 w-4" />
-                            Video Pitch Analysis
+                            {analysis.type === 'unified-pitch' ? (
+                              <Layers className="h-4 w-4" />
+                            ) : (
+                              <Video className="h-4 w-4" />
+                            )}
+                            {analysis.type === 'unified-pitch' ? 'Unified pitch' : 'Video Pitch Analysis'}
                           </h4>
                           {analysis.fileName && (
                             <p className="text-xs text-muted-foreground">
@@ -547,12 +557,22 @@ export default function MyAnalysesPage() {
                       {/* Actions */}
                       <div className="flex gap-3 pt-4 border-t border-border">
                         <Link 
-                          href={analysis.type === 'video-pitch' ? '/founder/video-pitch' : '/founder/pitch-deck'} 
+                          href={
+                            analysis.type === 'unified-pitch'
+                              ? '/founder/ai-analysis'
+                              : analysis.type === 'video-pitch'
+                                ? '/founder/video-pitch'
+                                : '/founder/pitch-deck'
+                          } 
                           className="flex-1"
                         >
                           <Button variant="outline" className="w-full border-border hover:border-primary hover:bg-primary/5 transition-all">
                             <Sparkles className="mr-2 h-4 w-4" />
-                            {analysis.type === 'video-pitch' ? 'New Video Pitch' : 'New Pitch Deck'}
+                            {analysis.type === 'unified-pitch'
+                              ? 'New unified pitch'
+                              : analysis.type === 'video-pitch'
+                                ? 'New Video Pitch'
+                                : 'New Pitch Deck'}
                           </Button>
                         </Link>
                         {analysis.result?.matches && analysis.result.matches.length > 0 ? (

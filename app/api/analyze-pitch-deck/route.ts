@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { getCurrentUserOrAdmin } from '@/lib/auth'
+import { getCurrentUser } from '@/lib/auth'
 import { extractPitchDeckFeatures } from '@/lib/ai'
 import { runMatchingPipeline } from '@/lib/matching/matching-orchestrator'
 import { logger } from '@/lib/logger'
 import { validatePitchDeck } from '@/lib/content-validator'
-import { ADMIN_EMAIL, CREDIT_COSTS } from '@/lib/constants'
+import { CREDIT_COSTS, isAdminEmail } from '@/lib/constants'
 import { rateLimitMiddleware, RATE_LIMITS } from '@/lib/rate-limit'
 import { parseJSON } from '@/lib/utils'
 import { getComprehensiveFounderContext } from '@/lib/founder-context'
@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
     if (process.env.NODE_ENV === 'development') {
       logger.log('[ANALYZE-PITCH-DECK] Starting pitch deck analysis...')
     }
-    const user = await getCurrentUserOrAdmin()
+    const user = await getCurrentUser()
     
     if (!user) {
       if (process.env.NODE_ENV === 'development') {
@@ -179,7 +179,7 @@ export async function POST(request: NextRequest) {
     const CREDIT_COST = CREDIT_COSTS.PITCH_DECK
     
     // Skip credit check for admin
-    if (user.email !== ADMIN_EMAIL) {
+    if (!isAdminEmail(user.email)) {
       let userCredits = await db.userCredits.findUnique({
         where: { userId: user.id },
       })
@@ -303,7 +303,7 @@ export async function POST(request: NextRequest) {
       // If validation fails due to error, still proceed but log it
     }
 
-    // Analyze pitch deck (qualitative analysis only — scores come from pipeline)
+    // Analyze pitch deck (qualitative analysis only; scores come from pipeline)
     const features = await extractPitchDeckFeatures(deckText, founder)
 
     // 🆕 Get cached investors (faster) and comprehensive founder context
@@ -367,8 +367,13 @@ export async function POST(request: NextRequest) {
       logger.log('[ANALYZE-PITCH-DECK] Running Market Intelligence + Scoring Pipeline...')
 
       const marketContext = await getDeepMarketContext(domain, problem)
-      scoringResult = await runScoringPipeline(deckText, founderContext ?? (enhancedFounder as unknown as import('@/lib/founder-context').ComprehensiveFounderContext), marketContext)
-      logger.log(`[ANALYZE-PITCH-DECK] Scoring Pipeline completed — finalScore: ${scoringResult.finalScore}`)
+      scoringResult = await runScoringPipeline(
+        deckText,
+        founderContext ?? (enhancedFounder as unknown as import('@/lib/founder-context').ComprehensiveFounderContext),
+        marketContext,
+        'DECK',
+      )
+      logger.log(`[ANALYZE-PITCH-DECK] Scoring Pipeline completed; finalScore: ${scoringResult.finalScore}`)
     } catch (scoringError: any) {
       logger.error('[ANALYZE-PITCH-DECK] Scoring Pipeline failed (non-critical):', scoringError?.message)
     }

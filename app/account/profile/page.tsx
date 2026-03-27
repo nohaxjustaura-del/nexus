@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation'
 import { getCurrentUser } from '@/lib/auth'
+import { db } from '@/lib/db'
 import { FounderProfileEditor } from './founder-profile-editor'
 
 export const dynamic = 'force-dynamic'
@@ -17,8 +18,14 @@ export default async function AccountProfilePage() {
 
   const userType = user.userType || 'founder'
 
-  if (userType === 'vc') {
-    redirect('/vc/claim')
+  if (userType === 'vc' || userType === 'investor') {
+    const founder = await db.founder.findUnique({
+      where: { email: user.email },
+      select: { id: true },
+    })
+    if (!founder) {
+      redirect('/vc/profile')
+    }
   }
   if (userType === 'mentor') {
     redirect('/account')

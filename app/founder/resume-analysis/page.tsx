@@ -39,7 +39,7 @@ export default function ResumeAnalysisDisabledPage() {
           <div className="p-4 rounded-lg bg-orange-50 border border-orange-200">
             <p className="text-muted-foreground">
               We've found that resumes don't effectively capture what makes founders and their startups compelling to investors. 
-              Instead, we now offer two better ways to get AI-powered feedback and VC matches:
+              Instead, we now offer two better ways to get feedback and VC matches:
             </p>
           </div>
 
@@ -74,7 +74,7 @@ export default function ResumeAnalysisDisabledPage() {
                     <h3 className="font-semibold text-lg">Pitch Deck Analysis</h3>
                   </div>
                   <p className="text-sm text-muted-foreground mb-4">
-                    Upload your pitch deck and receive AI-powered feedback on your slides, messaging, and storytelling. 
+                    Upload your pitch deck for slide-by-slide notes on messaging and story. 
                     Get VC recommendations too.
                   </p>
                   <Button className="w-full">

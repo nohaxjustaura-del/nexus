@@ -49,6 +49,33 @@ async function main() {
     return
   }
 
+  // Pick dominant non-zero embedding dimension (DB may have 1024 Voyage or 3072 OpenAI, etc.)
+  const dimCounts = new Map<number, number>()
+  for (const inv of investors) {
+    if (!inv.embedding) continue
+    const emb = parseJSON<number[]>(inv.embedding, [])
+    if (emb.length === 0) continue
+    dimCounts.set(emb.length, (dimCounts.get(emb.length) || 0) + 1)
+  }
+  let targetDim = 1024
+  let maxCount = 0
+  for (const [dim, count] of dimCounts) {
+    if (count > maxCount) {
+      maxCount = count
+      targetDim = dim
+    }
+  }
+  if (dimCounts.size > 1) {
+    console.log(
+      `ℹ️  Multiple embedding sizes in DB; building FAISS with ${targetDim} dims (${maxCount} investors).\n`
+    )
+  }
+  if (targetDim !== 1024) {
+    console.log(
+      `⚠️  Pitch embeddings use Voyage (1024). This index is ${targetDim}-dim — Smart Match may fall back to in-memory until you run: npm run rebuild-faiss-index\n`
+    )
+  }
+
   // Prepare data for FAISS index
   const vcData: any[] = []
   const embeddings: number[][] = []
@@ -64,9 +91,10 @@ async function main() {
         continue
       }
 
-      // Check embedding dimension (should be 1024 for Voyage AI)
-      if (embedding.length !== 1024) {
-        console.log(`⚠️  Skipping ${investor.firmName} - wrong dimension (${embedding.length}, expected 1024)`)
+      if (embedding.length !== targetDim) {
+        console.log(
+          `⚠️  Skipping ${investor.firmName} - dimension ${embedding.length} (index uses ${targetDim})`
+        )
         continue
       }
 

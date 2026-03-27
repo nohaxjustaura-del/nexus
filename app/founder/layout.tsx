@@ -2,43 +2,44 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
+import { useAuthSession } from '@/components/auth-session-provider'
 
 export default function FounderLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const pathname = usePathname()
-  const [checking, setChecking] = useState(true)
   const [mounted, setMounted] = useState(false)
+  const { loading, authenticated, verified } = useAuthSession()
 
-  // Set mounted state to prevent hydration mismatch
   useEffect(() => {
     setMounted(true)
   }, [])
 
-  // CRITICAL: Block ALL redirects when on onboarding - do this immediately
+  const isOnboardingPage = pathname === '/founder/onboarding'
+  const isDiscoverPage = pathname === '/founder/discover' || pathname?.startsWith('/founder/discover/')
+
   useEffect(() => {
-    const isOnboardingPage = pathname === '/founder/onboarding'
-    if (!isOnboardingPage) return
-    
-    // Block router methods
+    const isOnboarding = pathname === '/founder/onboarding'
+    if (!isOnboarding) return
+
     const originalPush = router.push
     const originalReplace = router.replace
-    
-    router.push = function(href: string, options?: any) {
+
+    router.push = function (href: string, options?: object) {
       if (String(href).includes('discover')) {
         console.warn('[FOUNDER-LAYOUT] Blocked redirect to discover from layout')
         return Promise.resolve(false)
       }
       return originalPush.call(router, href, options)
     }
-    
-    router.replace = function(href: string, options?: any) {
+
+    router.replace = function (href: string, options?: object) {
       if (String(href).includes('discover')) {
         console.warn('[FOUNDER-LAYOUT] Blocked redirect to discover from layout')
         return Promise.resolve(false)
       }
       return originalReplace.call(router, href, options)
     }
-    
+
     return () => {
       router.push = originalPush
       router.replace = originalReplace
@@ -46,64 +47,39 @@ export default function FounderLayout({ children }: { children: React.ReactNode 
   }, [router, pathname])
 
   useEffect(() => {
-    let cancelled = false
-    
-    // CRITICAL: If we're on onboarding page, IMMEDIATELY allow access - don't check anything
-    // This prevents any redirects from happening before the page loads
-    const isOnboardingPage = pathname === '/founder/onboarding'
-    if (isOnboardingPage) {
-      setChecking(false)
-      return () => { cancelled = true }
+    if (!mounted || isOnboardingPage || isDiscoverPage || loading) return
+    if (!authenticated) {
+      const ret = encodeURIComponent(pathname || '/founder')
+      router.push(`/signup?next=${ret}`)
+      return
     }
-    
-    async function check() {
-      try {
-        const res = await fetch('/api/auth/check', {
-          method: 'GET',
-          headers: { 'Cache-Control': 'no-store' },
-          credentials: 'include',
-        })
-        const data = await res.json().catch(() => ({}))
-        if (cancelled) return
-        
-        const isAuthenticated = res.ok && data?.authenticated
-        const isVerified = data?.verified === true
-        const isDiscoverPage = pathname === '/founder/discover' || pathname?.startsWith('/founder/discover/')
-        
-        if (isDiscoverPage) {
-          setChecking(false)
-          return
-        }
-        
-        if (!isAuthenticated) {
-          const ret = encodeURIComponent(pathname || '/founder')
-          router.push(`/signup?next=${ret}`)
-          return
-        }
-        
-        if (!isVerified) {
-          const ret = encodeURIComponent(pathname || '/founder')
-          router.push(`/signup/thank-you?next=${ret}`)
-          return
-        }
-        
-        setChecking(false)
-      } catch (error) {
-        if (cancelled) return
-        const isDiscoverPage = pathname === '/founder/discover' || pathname?.startsWith('/founder/discover/')
-        const isOnboardingPage = pathname === '/founder/onboarding'
-        if (isDiscoverPage || isOnboardingPage) {
-          setChecking(false)
-          return
-        }
-        router.push('/signup/thank-you')
-      }
+    if (!verified) {
+      const ret = encodeURIComponent(pathname || '/founder')
+      router.push(`/signup/thank-you?next=${ret}`)
     }
-    check()
-    return () => { cancelled = true }
-  }, [router, pathname])
+  }, [mounted, loading, authenticated, verified, pathname, isOnboardingPage, isDiscoverPage, router])
 
-  if (!mounted || checking) {
+  if (!mounted) {
+    return (
+      <div
+        suppressHydrationWarning
+        className="flex min-h-[50vh] items-center justify-center bg-background px-4"
+      >
+        <div
+          suppressHydrationWarning
+          className="h-9 w-9 animate-pulse rounded-full bg-muted"
+          aria-hidden
+        />
+        <span className="sr-only">Loading</span>
+      </div>
+    )
+  }
+
+  if (isOnboardingPage || isDiscoverPage) {
+    return children
+  }
+
+  if (loading || !authenticated || !verified) {
     return (
       <div
         suppressHydrationWarning
@@ -121,5 +97,3 @@ export default function FounderLayout({ children }: { children: React.ReactNode 
 
   return children
 }
-
-

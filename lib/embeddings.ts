@@ -386,6 +386,10 @@ export function investorsToRankableEmbeddings(
   return out
 }
 
+/** After a dimension mismatch from the FAISS service, skip HTTP calls until process restart. */
+let faissSkipDueToDimensionMismatch = false
+let faissDimensionMismatchLogged = false
+
 /**
  * Rank VCs using FAISS service (faster, uses pre-built index)
  * Falls back to in-memory cosine similarity if service unavailable
@@ -394,8 +398,12 @@ export async function rankVCsWithFAISS(
   pitchEmbedding: number[],
   topK: number = 20
 ): Promise<RankedVC[]> {
+  if (faissSkipDueToDimensionMismatch) {
+    throw new Error('FAISS skipped: index/pitch embedding dimensions do not match (see faiss-service logs)')
+  }
+
   const faissServiceUrl = process.env.FAISS_SERVICE_URL || 'http://localhost:8001'
-  
+
   try {
     const response = await fetch(`${faissServiceUrl}/rank`, {
       method: 'POST',
@@ -409,11 +417,34 @@ export async function rankVCsWithFAISS(
     })
 
     if (!response.ok) {
-      throw new Error(`FAISS service returned ${response.status}`)
+      const body = await response.json().catch(() => null) as { detail?: string } | null
+      const detail =
+        typeof body?.detail === 'string'
+          ? body.detail
+          : body
+            ? JSON.stringify(body)
+            : `HTTP ${response.status}`
+
+      if (
+        response.status === 400 &&
+        /dimension mismatch|Embedding dimension mismatch/i.test(detail)
+      ) {
+        faissSkipDueToDimensionMismatch = true
+        if (!faissDimensionMismatchLogged) {
+          faissDimensionMismatchLogged = true
+          console.warn(
+            '[FAISS] Index embedding size does not match the current pitch model. ' +
+              'Regenerate the index (see faiss-service/README or npm run rebuild-faiss-index). ' +
+              'Skipping further FAISS HTTP calls until server restart.',
+          )
+        }
+      }
+
+      throw new Error(detail)
     }
 
     const results = await response.json()
-    
+
     // Convert FAISS API response to RankedVC format
     return results.map((vc: any) => ({
       id: vc.id,
@@ -422,11 +453,12 @@ export async function rankVCsWithFAISS(
       metadata: vc.metadata,
     }))
   } catch (error: any) {
-    // Check if it's a dimension mismatch error
-    if (error.message?.includes('dimension mismatch') || error.message?.includes('400')) {
-      console.warn('[FAISS] Dimension mismatch - FAISS index was built with different embedding dimensions. Falling back to in-memory ranking.')
-    } else {
-      console.warn('[FAISS] Service unavailable, falling back to in-memory ranking:', error.message)
+    if (!faissSkipDueToDimensionMismatch) {
+      if (error.message?.includes('dimension mismatch') || error.message?.includes('400')) {
+        console.warn('[FAISS] Request failed; falling back to in-memory ranking:', error.message)
+      } else {
+        console.warn('[FAISS] Service unavailable, falling back to in-memory ranking:', error.message)
+      }
     }
     throw error // Re-throw so caller can fall back
   }

@@ -5,21 +5,28 @@
 
 // Admin: set ADMIN_EMAIL in .env (comma-separated for multiple). No baked-in default — unset means no admin emails.
 // Client UI should use /api/auth/check `isAdmin`.
-function buildAdminEmailSet(): Set<string> {
+function parseAdminEmails(): { ordered: string[]; set: Set<string> } {
   const raw = process.env.ADMIN_EMAIL ?? ''
+  const ordered: string[] = []
   const set = new Set<string>()
   for (const part of raw.split(',')) {
     const e = part.trim().toLowerCase()
-    if (e.includes('@')) set.add(e)
+    if (e.includes('@') && !set.has(e)) {
+      set.add(e)
+      ordered.push(e)
+    }
   }
-  return set
+  return { ordered, set }
 }
 
-const adminEmailSet = buildAdminEmailSet()
+const { ordered: adminEmailsOrdered, set: adminEmailSet } = parseAdminEmails()
+
+/** Env order (deduped); used when resolving an admin DB user without a session. */
+export const ADMIN_EMAILS_ORDERED: readonly string[] = adminEmailsOrdered
 
 /** First admin in the list (legacy); use isAdminEmail() for access checks. */
 export const ADMIN_EMAIL: string | undefined =
-  adminEmailSet.size > 0 ? [...adminEmailSet][0] : undefined
+  adminEmailsOrdered.length > 0 ? adminEmailsOrdered[0] : undefined
 
 export function isAdminEmail(email: string | null | undefined): boolean {
   if (!email) return false
@@ -30,6 +37,7 @@ export function isAdminEmail(email: string | null | undefined): boolean {
 export const CREDIT_COSTS = {
   PITCH_IDEA: 15,
   PITCH_DECK: 30, // Fixed: was 50, should be 30
+  UNIFIED_PITCH: 50,
   VIDEO_PITCH: {
     REGULAR: 50,
     REVIEWER: 100,

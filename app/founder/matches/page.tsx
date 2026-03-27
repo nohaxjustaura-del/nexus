@@ -175,7 +175,7 @@ export default async function MatchesPage({
   if (!hasAnalysis) {
     return (
       <div className="min-h-screen bg-background">
-        <div className="container mx-auto max-w-6xl px-4 py-4 md:py-6">
+        <div className="container mx-auto max-w-7xl px-4 py-4 md:py-6">
           {/* Tab Navigation */}
           <div className="mb-4 border-b">
             <nav className="flex items-center gap-1 -mb-px">
@@ -216,16 +216,16 @@ export default async function MatchesPage({
                 Unlock Your Personalized VC Matches
               </CardTitle>
               <CardDescription className="mb-6 text-lg">
-                Get AI-powered compatibility scores and detailed match explanations by using our AI analysis features
+                Run a pitch analysis first, then you get compatibility scores, match notes, and a ranked list.
               </CardDescription>
               
               <div className="mx-auto mb-8 max-w-2xl space-y-4 text-left">
                 <div className="flex items-start gap-4 rounded-lg border border-border bg-card/80 p-4">
                   <Sparkles className="mt-1 h-6 w-6 shrink-0 text-primary" />
                   <div>
-                    <h3 className="mb-1 font-semibold">AI-Powered Analysis</h3>
+                    <h3 className="mb-1 font-semibold">Pitch analysis</h3>
                     <p className="text-sm text-muted-foreground">
-                      Use our AI analysis tools (resume analysis, video pitch review, etc.) to get personalized VC matches with evidence-based compatibility scores
+                      Use idea, deck, or video analysis to build a profile. We match from that, with scores you can read.
                     </p>
                   </div>
                 </div>
@@ -253,7 +253,7 @@ export default async function MatchesPage({
                 <Link href="/founder/ai-analysis">
                   <Button size="lg" className="bg-gradient-to-r from-primary to-blue-600 hover:from-primary/90 hover:to-blue-600/90 shadow-lg">
                     <Sparkles className="mr-2 h-5 w-5" />
-                    Use AI Analysis
+                    Run pitch analysis
                   </Button>
                 </Link>
                 <Link href="/founder/discover">
@@ -273,7 +273,7 @@ export default async function MatchesPage({
   if (topMatches.length === 0) {
     return (
       <div className="min-h-screen bg-background">
-        <div className="container mx-auto max-w-6xl px-4 py-4 md:py-6">
+        <div className="container mx-auto max-w-7xl px-4 py-4 md:py-6">
           {/* Tab Navigation */}
           <div className="mb-4 border-b">
             <nav className="flex items-center gap-1 -mb-px">
@@ -315,7 +315,7 @@ export default async function MatchesPage({
                 <Link href="/founder/ai-analysis">
                   <Button>
                     <Sparkles className="mr-2 h-4 w-4" />
-                    Use AI Analysis
+                    Run pitch analysis
                   </Button>
                 </Link>
                 <Link href="/founder/discover">
@@ -360,7 +360,7 @@ export default async function MatchesPage({
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="container mx-auto max-w-6xl px-4 py-4 md:py-6">
+      <div className="container mx-auto max-w-7xl px-4 py-4 md:py-6">
         {/* Tab Navigation */}
         <div className="mb-4 border-b">
           <nav className="flex items-center gap-1 -mb-px">
@@ -395,7 +395,7 @@ export default async function MatchesPage({
         <div className="mb-4">
           <h1 className="mb-2 text-3xl font-bold">Your Top VC Matches</h1>
           <p className="text-muted-foreground">
-            Evidence-based compatibility scores with detailed explanations
+            Compatibility scores with explanations tied to your materials
           </p>
         </div>
 

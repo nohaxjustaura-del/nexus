@@ -1,18 +1,18 @@
 /**
  * ===============================================================================
- * NARRATIVE GENERATOR — VC MATCHING PIPELINE v3
+ * NARRATIVE GENERATOR (VC MATCHING PIPELINE v3)
  * ===============================================================================
  *
  * Generates evidence-first briefing narratives for each ranked VC using
  * the configured LLM (Ollama: OLLAMA_MODEL, or OpenRouter default / OPENROUTER_VC_EXTRACTION_MODEL).
- * Writing task, not reasoning — temperature 0.3.
+ * Writing task, not reasoning; temperature 0.3.
  *
  * The LLM receives dimension labels and gate evidence strings as its only
  * source of truth. It is explicitly forbidden from using its background
  * knowledge about the VC.
  *
  * On any failure, a deterministic TypeScript fallback is returned using
- * the gate evidence strings directly — no second LLM call, never throws.
+ * the gate evidence strings directly (no second LLM call, never throws).
  */
 
 import { openrouterGenerateJson } from '@/lib/openrouter'
@@ -33,7 +33,7 @@ import type {
 const DEPLOYMENT_LABEL_ENGLISH: Record<InvestmentLabel, string> = {
   'HIGH':         'Actively deploying capital with recent fund activity.',
   'MEDIUM-HIGH':  'Appears to be actively deploying based on available signals.',
-  'MEDIUM':       'Deployment activity appears moderate — verify before outreach.',
+  'MEDIUM':       'Deployment activity appears moderate; verify before outreach.',
   'LOW-MEDIUM':   'Limited data on current deployment activity.',
   'LOW':          'This investor may not be actively deploying capital.',
 }
@@ -59,18 +59,18 @@ function topRecentSnippets(bundle: VCExaBundle, n: number): EnrichedExaSnippet[]
 /** Renders all 12 gate answers for the prompt. */
 function renderGateAnswers(g: InvestmentLikelihoodResult['gateAnswers']): string {
   const pairs: [string, string][] = [
-    ['Q1  (sector in portfolio last 6mo)', `${g.Q1.answer}  — ${g.Q1.evidence}`],
-    ['Q2  (stated thesis mentions sector)',  `${g.Q2.answer}  — ${g.Q2.evidence}`],
-    ['Q3  (stage represented in deals)',     `${g.Q3.answer}  — ${g.Q3.evidence}`],
-    ['Q4  (backed this archetype before)',   `${g.Q4.answer}  — ${g.Q4.evidence}`],
-    ['Q5  (archetype matches recent deals)', `${g.Q5.answer}  — ${g.Q5.evidence}`],
-    ['Q6  (avoidance signal for archetype)', `${g.Q6.answer}  — ${g.Q6.evidence}`],
-    ['Q7  (new investment last 3 months)',   `${g.Q7.answer}  — ${g.Q7.evidence}`],
-    ['Q8  (new fund last 12 months)',        `${g.Q8.answer}  — ${g.Q8.evidence}`],
-    ['Q9  (inactivity signal)',              `${g.Q9.answer}  — ${g.Q9.evidence}`],
-    ['Q10 (direct competitor in portfolio)', `${g.Q10.answer} — ${g.Q10.evidence}`],
-    ['Q11 (adjacent company suggesting appetite)', `${g.Q11.answer} — ${g.Q11.evidence}`],
-    ['Q12 (portfolio gap this founder fills)', `${g.Q12.answer} — ${g.Q12.evidence}`],
+    ['Q1  (sector in portfolio last 6mo)', `${g.Q1.answer}: ${g.Q1.evidence}`],
+    ['Q2  (stated thesis mentions sector)', `${g.Q2.answer}: ${g.Q2.evidence}`],
+    ['Q3  (stage represented in deals)', `${g.Q3.answer}: ${g.Q3.evidence}`],
+    ['Q4  (backed this archetype before)', `${g.Q4.answer}: ${g.Q4.evidence}`],
+    ['Q5  (archetype matches recent deals)', `${g.Q5.answer}: ${g.Q5.evidence}`],
+    ['Q6  (avoidance signal for archetype)', `${g.Q6.answer}: ${g.Q6.evidence}`],
+    ['Q7  (new investment last 3 months)', `${g.Q7.answer}: ${g.Q7.evidence}`],
+    ['Q8  (new fund last 12 months)', `${g.Q8.answer}: ${g.Q8.evidence}`],
+    ['Q9  (inactivity signal)', `${g.Q9.answer}: ${g.Q9.evidence}`],
+    ['Q10 (direct competitor in portfolio)', `${g.Q10.answer}: ${g.Q10.evidence}`],
+    ['Q11 (adjacent company suggesting appetite)', `${g.Q11.answer}: ${g.Q11.evidence}`],
+    ['Q12 (portfolio gap this founder fills)', `${g.Q12.answer}: ${g.Q12.evidence}`],
   ]
   return pairs.map(([q, a]) => `  ${q}:\n    ${a}`).join('\n')
 }
@@ -95,7 +95,7 @@ const SYSTEM_PROMPT = `You are a VC analyst writing a briefing memo for a founde
 STRICT RULES:
 1. Every claim must trace to a specific piece of evidence provided
 2. Never use: "strong alignment", "great fit", "exciting", "seems like", "appears to", "might be"
-3. If fit is weak, say so directly — do not sugarcoat
+3. If fit is weak, say so directly; do not sugarcoat
 4. Be specific: name actual companies, quote actual thesis language, reference actual dates from the evidence
 5. Maximum 3 sentences per section
 6. If you cannot cite specific evidence for a claim, do not make it`
@@ -110,7 +110,7 @@ function buildUserPrompt(
   const dl = likelihood.dimensionLabels
 
   return `INVESTOR: ${vc.firmName} (${vc.fundType ?? 'Venture Capital'})
-OVERALL INVESTMENT LIKELIHOOD: ${likelihood.label}${likelihood.hardVeto ? ' [HARD VETO — do not apply]' : ''}
+OVERALL INVESTMENT LIKELIHOOD: ${likelihood.label}${likelihood.hardVeto ? ' [HARD VETO: do not apply]' : ''}
 
 DIMENSION LABELS (derived from gate evidence, not scores):
   Thesis alignment:      ${dl.thesisAlignment}
@@ -148,7 +148,7 @@ Based on the gate evidence and dimension labels above, write a briefing memo in 
 }
 
 // ---------------------------------------------------------------------------
-// Fallback builder (pure TypeScript — used when GPT call fails)
+// Fallback builder (pure TypeScript; used when GPT call fails)
 // ---------------------------------------------------------------------------
 
 function buildFallback(
@@ -169,9 +169,9 @@ function buildFallback(
   // redFlag: only if hard veto or inactivity
   let redFlag: string | null = null
   if (likelihood.hardVeto && likelihood.vetoReason === 'competitor_in_portfolio') {
-    redFlag = `${vc.firmName} has a direct competitor to your startup in their portfolio — do not apply.`
+    redFlag = `${vc.firmName} has a direct competitor to your startup in their portfolio; do not apply.`
   } else if (likelihood.vetoReason === 'vc_likely_inactive') {
-    redFlag = `${vc.firmName} shows signals of reduced investment activity — verify they are still deploying before reaching out.`
+    redFlag = `${vc.firmName} shows signals of reduced investment activity; verify they are still deploying before reaching out.`
   }
 
   return {
@@ -179,7 +179,7 @@ function buildFallback(
     bestApproach: `Research ${vc.firmName}'s recent portfolio before reaching out and tailor your message to their stated thesis.`,
     timing,
     redFlag,
-    confidenceNote: 'Limited data available for this investor — treat this match as tentative.',
+    confidenceNote: 'Limited data available for this investor; treat this match as tentative.',
   }
 }
 
@@ -217,7 +217,7 @@ function validateNarrative(raw: unknown, fallback: MatchNarrative): MatchNarrati
 /**
  * Generates an evidence-first MatchNarrative for a single ranked VC.
  *
- * Never throws — returns a deterministic TypeScript fallback if GPT-4o-mini
+ * Never throws; returns a deterministic TypeScript fallback if GPT-4o-mini
  * fails or returns unparseable output.
  */
 export async function generateMatchNarrative(

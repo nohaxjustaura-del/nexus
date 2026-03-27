@@ -158,7 +158,7 @@ export function InvestorProfileModal({
       onClick={onClose}
     >
       <div 
-        className="relative w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-xl border border-border/80 bg-card shadow-2xl ring-1 ring-white/[0.06]"
+        className="relative w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-xl border border-border/50 bg-card shadow-lg"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}

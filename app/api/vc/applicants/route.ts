@@ -3,6 +3,10 @@ import { db } from '@/lib/db'
 import { getCurrentUser } from '@/lib/auth'
 import { parseJSON } from '@/lib/utils'
 import { logger } from '@/lib/logger'
+import {
+  founderMatchesInvestorThesis,
+  matchScoreForFounderInvestor,
+} from '@/lib/vc-founder-thesis-match'
 
 export const dynamic = 'force-dynamic'
 
@@ -51,62 +55,11 @@ export async function GET(request: NextRequest) {
     })
 
     // Filter founders by VC's investment criteria
-    const investorStages = parseJSON<string[]>(investor.stages, [])
-    const investorSectors = parseJSON<string[]>(investor.sectors, [])
-    const investorGeoFocus = parseJSON<string[]>(investor.geoFocus, [])
-
     const matchedFounders = founders
-      .filter(founder => {
-        // Stage match
-        const founderStage = founder.stage.toLowerCase()
-        const stageMatch = investorStages.some(stage => 
-          founderStage.includes(stage.toLowerCase()) || 
-          stage.toLowerCase().includes(founderStage)
-        )
-
-        // Sector match
-        const founderSectors = parseJSON<string[]>(founder.sectors, [])
-        const sectorMatch = investorSectors.some(sector =>
-          founderSectors.some(fs => 
-            fs.toLowerCase().includes(sector.toLowerCase()) ||
-            sector.toLowerCase().includes(fs.toLowerCase())
-          )
-        )
-
-        // Check size match
-        const checkSizeMatch = investor.checkMin && investor.checkMax &&
-                              founder.fundingNeed >= (investor.checkMin || 0) && 
-                              founder.fundingNeed <= (investor.checkMax || Infinity)
-
-        // Geo match (if VC has geo restrictions)
-        let geoMatch = true
-        if (investorGeoFocus.length > 0 && !investorGeoFocus.some(g => g.toLowerCase().includes('global'))) {
-          geoMatch = investorGeoFocus.some(geo =>
-            founder.location?.toLowerCase().includes(geo.toLowerCase()) ||
-            geo.toLowerCase().includes(founder.location?.toLowerCase() || '')
-          )
-        }
-
-        return stageMatch && sectorMatch && checkSizeMatch && geoMatch
-      })
+      .filter((founder) => founderMatchesInvestorThesis(founder, investor))
       .map(founder => {
-        // Calculate match score (simplified)
+        const matchScore = matchScoreForFounderInvestor(founder, investor)
         const founderSectors = parseJSON<string[]>(founder.sectors, [])
-        const sectorOverlap = founderSectors.filter(fs =>
-          investorSectors.some(is =>
-            fs.toLowerCase().includes(is.toLowerCase()) ||
-            is.toLowerCase().includes(fs.toLowerCase())
-          )
-        ).length
-
-        const sectorScore = investorSectors.length > 0 && founderSectors.length > 0
-          ? (sectorOverlap / Math.max(investorSectors.length, founderSectors.length)) * 100
-          : 0
-        const checkSizeScore = investor.checkMin && investor.checkMax &&
-                               founder.fundingNeed >= (investor.checkMin || 0) && 
-                               founder.fundingNeed <= (investor.checkMax || Infinity) ? 100 : 50
-
-        const matchScore = Math.round((sectorScore * 0.6 + checkSizeScore * 0.4))
 
         return {
           id: founder.id,

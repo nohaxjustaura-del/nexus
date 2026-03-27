@@ -45,6 +45,9 @@ import type {
   VCProfile,
 } from './types'
 
+/** Avoid repeating the long embedding-coverage warning on every analysis in dev. */
+let loggedLowEmbeddingCoverage = false
+
 // ---------------------------------------------------------------------------
 // Local types
 // ---------------------------------------------------------------------------
@@ -362,7 +365,11 @@ export async function runMatchingPipeline(
         return matched.length >= 5 ? matched : null
       } catch (e: any) {
         if (mode === 'faiss') {
-          logger.warn('[ORCHESTRATOR] FAISS service error:', e?.message ?? e)
+          const msg = String(e?.message ?? e)
+          // Dimension / skip messages are already surfaced from lib/embeddings (FAISS).
+          if (!/dimension mismatch|FAISS skipped:/i.test(msg)) {
+            logger.warn('[ORCHESTRATOR] FAISS service error:', msg)
+          }
         } else {
           logger.warn('[ORCHESTRATOR] In-memory vector rank error:', e?.message ?? e)
         }
@@ -383,11 +390,14 @@ export async function runMatchingPipeline(
       candidatePool = picked
     } else {
       if (fallbackRows.length < 5) {
-        logger.warn(
-          `[ORCHESTRATOR] Only ${fallbackRows.length} investors have embeddings matching current pitch model ` +
-            `(${pitchEmbedding.length} dims). Start the FAISS service (faiss-service/README) and/or run ` +
-            `VC embedding generation so more rows have vectors. Using top 20 mainstream VCs.`,
-        )
+        if (!loggedLowEmbeddingCoverage) {
+          loggedLowEmbeddingCoverage = true
+          logger.warn(
+            `[ORCHESTRATOR] Only ${fallbackRows.length} investors have embeddings matching current pitch model ` +
+              `(${pitchEmbedding.length} dims). Start the FAISS service (faiss-service/README) and/or run ` +
+              `VC embedding generation so more rows have vectors. Using top 20 mainstream VCs.`,
+          )
+        }
       } else {
         logger.warn(
           '[ORCHESTRATOR] Vector ranking yielded fewer than 5 DB matches — using top 20 mainstream VCs',

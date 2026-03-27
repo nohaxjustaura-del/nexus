@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Heart, Crown, Target, Eye, Send } from "lucide-react"
+import { Heart, Crown, Send } from "lucide-react"
 import Link from "next/link"
 import InvestorProfileModal from '@/components/investor-profile-modal'
 import { parseJSON } from '@/lib/utils'
@@ -91,101 +91,83 @@ export function VCCardClient({
   const safeStages = Array.isArray(stages) ? stages : []
   const safeValueAdd = Array.isArray(valueAdd) ? valueAdd : []
 
+  const checkMin = investor?.checkMin ?? investor?.checkSizeMin
+  const checkMax = investor?.checkMax ?? investor?.checkSizeMax
+  const checkLabel =
+    checkMin != null && checkMax != null
+      ? `$${checkMin >= 1000 ? `${Math.round(checkMin / 1000)}M` : `${checkMin}k`}–${
+          checkMax >= 1000 ? `${Math.round(checkMax / 1000)}M` : `${checkMax}k`
+        }`
+      : null
+
+  const uniqueValueTags = safeValueAdd
+    .filter((tag: string) => {
+      const lower = tag.toLowerCase()
+      return (
+        !lower.includes('focused') &&
+        !lower.includes('invests') &&
+        !lower.includes('additional') &&
+        tag.length < 28
+      )
+    })
+    .slice(0, 2)
+
   return (
     <>
       <Card
-        className={`group relative flex h-full min-h-[280px] cursor-pointer flex-col overflow-hidden border-border/70 bg-gradient-to-b from-card via-card to-card/92 transition-all duration-300 hover:border-primary/30 hover:shadow-[0_20px_48px_-28px_hsl(var(--primary)/0.35)] ${
-          isYC ? 'ring-1 ring-primary/20' : 'ring-1 ring-white/[0.04]'
+        className={`group flex h-full cursor-pointer flex-col border-border bg-card shadow-sm transition-shadow hover:border-border hover:shadow-md ${
+          isYC ? 'ring-1 ring-primary/15' : ''
         }`}
         onClick={() => setIsModalOpen(true)}
       >
-        {isYC && (
-          <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-primary/60 via-primary to-primary/60 opacity-90" />
-        )}
-
-        <CardHeader className="pb-3 pt-5 relative z-10 flex-1">
-          <div className="flex items-start justify-between gap-3 mb-3">
-            <div className="flex-1 min-w-0">
-              <CardTitle
-                className={`text-lg font-semibold leading-tight text-foreground ${isYC ? 'tracking-tight' : ''}`}
-              >
-                {investor?.firmName || 'Unknown Firm'}
-              </CardTitle>
-            </div>
-            <div className="flex flex-col items-end gap-1.5">
+        <CardHeader className="space-y-3 pb-3 pt-4">
+          <div className="flex items-start justify-between gap-2">
+            <CardTitle className="line-clamp-2 text-base font-semibold leading-snug">
+              {investor?.firmName || 'Unknown Firm'}
+            </CardTitle>
+            <div className="flex shrink-0 flex-wrap justify-end gap-1">
               {investor?.verified && (
-                <Badge
-                  variant="outline"
-                  className="text-xs font-normal text-muted-foreground border-border bg-transparent"
-                >
+                <Badge variant="secondary" className="text-[10px] font-normal">
                   Verified
                 </Badge>
               )}
-              {investor?.fundType && (
-                <Badge
-                  variant="outline"
-                  className="text-xs capitalize font-normal text-muted-foreground border-border"
-                >
-                  {investor.fundType}
-                </Badge>
-              )}
               {isYC && (
-                <Badge variant="outline" className="text-xs font-normal text-foreground border-foreground/30">
+                <Badge variant="outline" className="text-[10px] font-normal">
                   Featured
                 </Badge>
               )}
             </div>
           </div>
-          
-          {/* Description - truncated with "Read more" hint */}
-          <div className="mb-4">
-            <p className="text-sm text-foreground/85 leading-relaxed mb-2 font-medium">
-              {description || fullDescription || 'No description available.'}
-            </p>
-            <button
-              onClick={(e) => {
-                e.stopPropagation()
-                setIsModalOpen(true)
-              }}
-              className="text-xs text-muted-foreground hover:text-foreground underline-offset-4 hover:underline flex items-center gap-1 font-medium transition-colors"
-            >
-              <Eye className="h-3 w-3" />
-              View full description
-            </button>
-          </div>
-          
-          {/* Key Facts Row - stage, check, geo */}
-          <div className="flex flex-wrap gap-2 mb-3 text-xs">
+
+          <p className="line-clamp-3 text-sm leading-relaxed text-muted-foreground">
+            {description || fullDescription || 'No description yet.'}
+          </p>
+
+          <div className="flex flex-wrap gap-1.5 text-[11px] text-muted-foreground">
             {safeStages.length > 0 && (
-              <div className="flex items-center gap-1 border border-border bg-muted/40 text-foreground px-2 py-1 rounded-md">
-                <Target className="h-3 w-3 text-muted-foreground" />
-                <span className="font-medium">{safeStages.slice(0, 2).join(', ')}</span>
-              </div>
+              <span className="rounded-md bg-muted/80 px-2 py-0.5 font-medium text-foreground">
+                {safeStages.slice(0, 2).join(' · ')}
+              </span>
             )}
-            {investor?.checkSizeMin && investor?.checkSizeMax && (
-              <div className="flex items-center gap-1 border border-border bg-muted/40 text-foreground px-2 py-1 rounded-md">
-                <span className="font-medium tabular-nums">
-                  ${investor.checkSizeMin >= 1000 ? `${Math.round(investor.checkSizeMin/1000)}M` : `${investor.checkSizeMin}k`}–
-                  ${investor.checkSizeMax >= 1000 ? `${Math.round(investor.checkSizeMax/1000)}M` : `${investor.checkSizeMax}k`}
-                </span>
-              </div>
+            {checkLabel && (
+              <span className="rounded-md bg-muted/80 px-2 py-0.5 font-medium tabular-nums text-foreground">
+                {checkLabel}
+              </span>
             )}
             {investor?.leadFollow && (
-              <div className="flex items-center gap-1 border border-border bg-muted/40 text-foreground px-2 py-1 rounded-md">
-                <span className="font-medium capitalize">{investor.leadFollow === 'lead' ? 'Leads' : investor.leadFollow === 'follow' ? 'Follows' : 'Either'}</span>
-              </div>
+              <span className="rounded-md bg-muted/80 px-2 py-0.5 font-medium capitalize text-foreground">
+                {investor.leadFollow === 'lead' ? 'Leads' : investor.leadFollow === 'follow' ? 'Follows' : 'Lead or follow'}
+              </span>
+            )}
+            {investor?.decisionSpeed && (
+              <span className="rounded-md px-2 py-0.5">{investor.decisionSpeed}</span>
             )}
           </div>
-          
-          {/* Sectors - max 3 */}
+
           {safeSectors.length > 0 && (
-            <div className="flex flex-wrap gap-1.5 mb-2">
-              {safeSectors.slice(0, 3).map((sector: string, i: number) => (
-                <Badge
-                  key={i}
-                  variant="outline"
-                  className="text-xs font-normal text-muted-foreground border-border"
-                >
+            <div className="flex flex-wrap gap-1">
+              {safeSectors.slice(0, 4).map((sector: string, i: number) => (
+                <Badge key={i} variant="outline" className="text-[10px] font-normal text-muted-foreground">
                   {sector}
                 </Badge>
               ))}
@@ -193,87 +175,24 @@ export function VCCardClient({
           )}
         </CardHeader>
 
-        <CardContent className="pb-4 relative z-10 flex-1">
-          {/* Differentiator chips - max 3, unique only */}
-          <div className="space-y-2.5">
-            {safeValueAdd.length > 0 && (() => {
-              // Filter out generic/duplicate tags
-              const uniqueTags = safeValueAdd.filter((tag: string) => {
-                const lower = tag.toLowerCase()
-                // Keep only specific, non-generic tags
-                return !lower.includes('focused') && 
-                       !lower.includes('invests') && 
-                       !lower.includes('additional') &&
-                       tag.length < 25 // Keep it concise
-              }).slice(0, 3) // Max 3
-              
-              return uniqueTags.length > 0 && (
-                <div className="flex flex-wrap gap-1.5">
-                  {uniqueTags.map((tag: string, i: number) => (
-                    <Badge
-                      key={i}
-                      variant="outline"
-                      className="text-xs font-normal border-border text-muted-foreground"
-                    >
-                      {tag}
-                    </Badge>
-                  ))}
-                </div>
-              )
-            })()}
-            
-            {proofPoints && (Array.isArray(proofPoints) ? proofPoints.length > 0 : Object.keys(proofPoints).length > 0) && (
-              <div className="text-xs text-muted-foreground border border-border/60 bg-muted/30 px-2 py-1.5 rounded-md">
-                <span className="font-semibold text-foreground/85">Focus: </span>
-                {Array.isArray(proofPoints) 
-                  ? proofPoints.slice(0, 2).join(', ')
-                  : (() => {
-                      const firstKey = Object.keys(proofPoints)[0]
-                      const firstValue = (proofPoints as any)[firstKey]
-                      if (Array.isArray(firstValue)) {
-                        return firstValue.slice(0, 2).join(', ')
-                      }
-                      return firstKey
-                    })()
-                }
-              </div>
-            )}
-            
-            {investor?.personalityType && (
-              <div className="text-xs text-muted-foreground flex items-center gap-1.5">
-                <span className="font-semibold text-foreground/85">Style:</span>
-                <span className="capitalize">{String(investor.personalityType).replace('-', ' ')}</span>
-              </div>
-            )}
-            
-            {investor?.leadFollow && investor.leadFollow !== 'either' && (
-              <div className="text-xs text-muted-foreground flex items-center gap-1.5">
-                <span className="font-semibold text-foreground/85">
-                  {investor.leadFollow === 'lead' ? '✓ Leads' : 'Follows'} rounds
-                </span>
-                {investor?.decisionSpeed && (
-                  <span className="text-muted-foreground">• {investor.decisionSpeed}</span>
-                )}
-              </div>
-            )}
-          </div>
-          
-          {/* YC Insider subsection - only for Y Combinator */}
+        <CardContent className="flex flex-1 flex-col gap-2 pb-3 pt-0">
+          {uniqueValueTags.length > 0 && (
+            <p className="line-clamp-2 text-[11px] text-muted-foreground">{uniqueValueTags.join(' · ')}</p>
+          )}
+
           {isYC && (
-            <div className="mt-4 pt-4 border-t border-border">
-              <Link
-                href="/founder/yc-insider"
-                onClick={(e) => e.stopPropagation()}
-                className="flex items-center gap-2 text-xs font-medium border border-border rounded-md px-3 py-2 text-foreground hover:bg-muted/50 transition-colors"
-              >
-                <Crown className="h-4 w-4 text-muted-foreground" />
-                <span>YC Insider: tips and office hours</span>
-              </Link>
-            </div>
+            <Link
+              href="/founder/yc-insider"
+              onClick={(e) => e.stopPropagation()}
+              className="mt-auto flex items-center gap-1.5 rounded-md border border-border px-2 py-1.5 text-xs text-foreground hover:bg-muted/50"
+            >
+              <Crown className="h-3.5 w-3.5 text-muted-foreground" />
+              YC Insider
+            </Link>
           )}
         </CardContent>
 
-        <CardFooter className="mt-auto flex items-center gap-2 pt-4 border-t border-border/80 relative z-10 bg-muted/15">
+        <CardFooter className="mt-auto flex gap-2 border-t border-border/60 bg-muted/20 px-4 py-3">
           {profileComplete ? (
             <>
               {applicationLink ? (

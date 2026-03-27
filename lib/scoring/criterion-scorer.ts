@@ -544,6 +544,7 @@ export async function scoreByCriteria(
       system: SYSTEM_PROMPT,
       user: buildUserPrompt(criteria, facts, marketIntelligence, stage),
       temperature: 0.1,
+      forceOpenRouter: true,
     })
 
     llmAnswers = parseLLMAnswers(raw)

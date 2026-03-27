@@ -6,11 +6,17 @@ import { Menu, X } from 'lucide-react'
 import { Button } from './button'
 import { cn } from '@/lib/utils'
 
+export type MobileNavItem = {
+  href: string
+  label: string
+  /** Shown as a small section label above the item (omit when same as previous row) */
+  section?: string
+  /** Runs after closing the menu; use for mode switches before navigation */
+  onNavigate?: () => void
+}
+
 interface MobileNavProps {
-  links: Array<{
-    href: string
-    label: string
-  }>
+  links: MobileNavItem[]
 }
 
 export function MobileNav({ links }: MobileNavProps) {
@@ -29,32 +35,43 @@ export function MobileNav({ links }: MobileNavProps) {
         {isOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
       </Button>
 
-      {/* Mobile menu overlay */}
       {isOpen && (
         <>
-          <div 
-            className="fixed inset-0 bg-background/70 backdrop-blur-sm z-40"
+          <div
+            className="fixed inset-0 z-40 bg-background/70 backdrop-blur-sm"
             onClick={() => setIsOpen(false)}
             aria-hidden="true"
           />
-          <nav 
+          <nav
             className={cn(
-              "fixed left-0 right-0 top-14 z-50 max-h-[calc(100vh-3.5rem)] overflow-y-auto border-b border-border/60 bg-card/95 backdrop-blur-xl animate-slide-down shadow-none sm:top-16 sm:max-h-[calc(100vh-4rem)]"
+              'fixed left-0 right-0 top-28 z-50 max-h-[calc(100vh-7rem)] overflow-y-auto border-b border-border/50 bg-card/98 shadow-lg animate-slide-down sm:top-[7.5rem] sm:max-h-[calc(100vh-7.5rem)] lg:top-40 lg:max-h-[calc(100vh-10rem)]'
             )}
             role="navigation"
             aria-label="Mobile navigation"
           >
-            <div className="flex flex-col p-4 space-y-3">
-              {links.map((link) => (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  className="text-muted-foreground hover:text-foreground transition-colors font-medium py-2 px-4 rounded-lg hover:bg-muted/50"
-                  onClick={() => setIsOpen(false)}
-                >
-                  {link.label}
-                </Link>
-              ))}
+            <div className="flex flex-col gap-1 p-3 pb-5">
+              {links.map((link, i) => {
+                const showSection = Boolean(link.section && (i === 0 || links[i - 1]?.section !== link.section))
+                return (
+                  <div key={`${link.href}-${link.label}-${i}`}>
+                    {showSection && (
+                      <p className="mb-1 mt-3 first:mt-0 px-4 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                        {link.section}
+                      </p>
+                    )}
+                    <Link
+                      href={link.href}
+                      className="block rounded-lg px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-muted/50"
+                      onClick={() => {
+                        link.onNavigate?.()
+                        setIsOpen(false)
+                      }}
+                    >
+                      {link.label}
+                    </Link>
+                  </div>
+                )
+              })}
             </div>
           </nav>
         </>
@@ -62,7 +79,3 @@ export function MobileNav({ links }: MobileNavProps) {
     </div>
   )
 }
-
-
-
-

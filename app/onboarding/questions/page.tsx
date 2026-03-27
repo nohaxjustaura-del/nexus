@@ -112,10 +112,10 @@ export default function OnboardingQuestionsPage() {
       <div className="max-w-3xl mx-auto">
         <div className="mb-8">
           <h1 className="text-4xl font-bold text-slate-900 mb-2">
-            Let's Find Your Perfect Investors 🎯
+            Tell us about your startup
           </h1>
           <p className="text-lg text-slate-600">
-            Answer these questions so we can match you with the best VCs, accelerators, and funding programs
+            A few questions so we can line up VCs, accelerators, and programs that fit your stage and sector
           </p>
         </div>
 
@@ -234,7 +234,7 @@ export default function OnboardingQuestionsPage() {
                   id="oneLiner"
                   value={formData.oneLiner}
                   onChange={(e) => updateField('oneLiner', e.target.value)}
-                  placeholder="e.g., AI-powered code review for open source projects"
+                  placeholder="e.g., automated code review for open source maintainers"
                 />
                 <p className="text-xs text-slate-500 mt-1">Make it clear and specific</p>
               </div>

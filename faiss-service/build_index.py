@@ -54,7 +54,7 @@ def main():
     print(f"Saving index to {INDEX_PATH}")
     faiss.write_index(index, str(INDEX_PATH))
     
-    print(f"✅ FAISS index built successfully!")
+    print("[OK] FAISS index built successfully!")
     print(f"   - Dimension: {dimension}")
     print(f"   - Vectors: {index.ntotal}")
     print(f"   - Index file: {INDEX_PATH}")

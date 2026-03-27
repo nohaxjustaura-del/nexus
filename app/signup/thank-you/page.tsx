@@ -2,87 +2,53 @@
 
 import { useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
+import { useAuthSession } from '@/components/auth-session-provider'
 
 export const dynamic = 'force-dynamic'
 
 export default function SignupThankYouPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
+  const { loading: authLoading, authenticated, verified, user } = useAuthSession()
 
   useEffect(() => {
-    // Check if user is authenticated and verified - if so, redirect them away
-    async function checkAuth() {
-      try {
-        console.log('[THANK-YOU] Checking auth status...')
-        const res = await fetch('/api/auth/check', {
-          credentials: 'include',
-          headers: { 'Cache-Control': 'no-cache' }
-        })
-        const data = await res.json().catch(() => ({}))
-        
-        console.log('[THANK-YOU] Auth check result:', { authenticated: data?.authenticated, verified: data?.verified, userType: data?.user?.userType })
-        
-        // If user is authenticated and verified, check if they have a founder profile
-        if (data?.authenticated && data?.verified) {
-          // For founders, check if profile exists - if not, redirect to onboarding
-          if (data?.user?.userType === 'founder') {
-            try {
-              const profileRes = await fetch('/api/founder/profile', { credentials: 'include' })
-              if (profileRes.ok) {
-                const profileData = await profileRes.json()
-                console.log('[THANK-YOU] Profile check result:', { exists: profileData.exists })
-                if (!profileData.exists) {
-                  // No profile - redirect to onboarding (required during signup)
-                  console.log('[THANK-YOU] No profile found, redirecting to onboarding')
-                  router.replace('/founder/onboarding')
-                  return
-                }
-              } else {
-                // Profile check failed - redirect to onboarding to be safe
-                console.log('[THANK-YOU] Profile check failed, redirecting to onboarding')
+    if (authLoading) return
+
+    async function run() {
+      if (authenticated && verified) {
+        if (user?.userType === 'founder') {
+          try {
+            const profileRes = await fetch('/api/founder/profile', { credentials: 'include' })
+            if (profileRes.ok) {
+              const profileData = await profileRes.json()
+              if (!profileData.exists) {
                 router.replace('/founder/onboarding')
                 return
               }
-            } catch (e) {
-              // Error checking profile - redirect to onboarding
-              console.log('[THANK-YOU] Error checking profile, redirecting to onboarding:', e)
+            } else {
               router.replace('/founder/onboarding')
               return
             }
-          }
-          
-          // Profile exists - DO NOT redirect automatically
-          // User should be able to navigate themselves
-          // Only redirect if they explicitly have a next URL parameter
-          const nextUrl = searchParams.get('next')
-          console.log('[THANK-YOU] Next URL:', nextUrl)
-          if (nextUrl && nextUrl.includes('onboarding')) {
-            // User explicitly wants onboarding - allow it
-            console.log('[THANK-YOU] Redirecting to onboarding as requested:', nextUrl)
-            router.replace(nextUrl)
+          } catch {
+            router.replace('/founder/onboarding')
             return
           }
-          // DO NOT auto-redirect to discover - let user stay or navigate themselves
-          console.log('[THANK-YOU] Profile exists, staying on thank-you page - no auto-redirect')
-          // router.replace('/founder/discover')
-          // return
         }
-        
-        // If not authenticated at all, redirect to signup
-        if (!data?.authenticated) {
-          console.log('[THANK-YOU] Not authenticated, redirecting to signup')
-          router.replace('/signup')
-          return
+
+        const nextUrl = searchParams.get('next')
+        if (nextUrl && nextUrl.includes('onboarding')) {
+          router.replace(nextUrl)
         }
-      } catch (error) {
-        // On error, redirect to signup
-        console.error('[THANK-YOU] Error in checkAuth:', error)
+        return
+      }
+
+      if (!authenticated) {
         router.replace('/signup')
       }
     }
 
-    checkAuth()
-  }, [router, searchParams])
+    void run()
+  }, [authLoading, authenticated, verified, user, router, searchParams])
 
   return (
     <div className="min-h-screen bg-background">
@@ -103,5 +69,3 @@ export default function SignupThankYouPage() {
     </div>
   )
 }
-
-

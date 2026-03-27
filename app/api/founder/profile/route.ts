@@ -87,7 +87,7 @@ export async function GET(request: NextRequest) {
 
     const sessionEmail = user.email.toLowerCase().trim()
 
-    // Check if founder profile exists (must match auth email — same key as verify-id)
+    // Check if founder profile exists (must match auth email; same key as verify-id)
     const founder = await db.founder.findUnique({
       where: { email: sessionEmail },
     }).catch((err) => {
@@ -389,7 +389,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// PATCH: Update existing founder profile (account settings — no application email)
+// PATCH: Update existing founder profile (account settings; no application email)
 export async function PATCH(request: NextRequest) {
   try {
     const user = await getUserFromRequest(request)

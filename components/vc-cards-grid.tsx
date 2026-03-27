@@ -20,6 +20,8 @@ interface Investor {
   decisionSpeed?: string | null
   leadFollow?: string | null
   ownershipTarget?: string | null
+  checkMin?: number | null
+  checkMax?: number | null
   applicationUrl?: string | null
   websiteUrl?: string | null
   verified?: boolean | null
@@ -107,9 +109,11 @@ function VCCardsGrid({ investors, profileComplete, bookmarkedIds, onBookmarkChan
       behaviors.push('follows')
     }
     
-    if (investor.checkSizeMin && investor.checkSizeMax) {
-      const min = investor.checkSizeMin >= 1000 ? `$${Math.round(investor.checkSizeMin/1000)}M` : `$${investor.checkSizeMin}k`
-      const max = investor.checkSizeMax >= 1000 ? `$${Math.round(investor.checkSizeMax/1000)}M` : `$${investor.checkSizeMax}k`
+    const cMin = investor.checkMin ?? investor.checkSizeMin
+    const cMax = investor.checkMax ?? investor.checkSizeMax
+    if (cMin != null && cMax != null) {
+      const min = cMin >= 1000 ? `$${Math.round(cMin / 1000)}M` : `$${cMin}k`
+      const max = cMax >= 1000 ? `$${Math.round(cMax / 1000)}M` : `$${cMax}k`
       behaviors.push(`${min}–${max} checks`)
     }
     
@@ -227,7 +231,7 @@ function VCCardsGrid({ investors, profileComplete, bookmarkedIds, onBookmarkChan
   }
 
   return (
-    <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 xl:gap-6">
+    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
       {validInvestors.map((investor) => {
         try {
           const truncatedDescription = generateTruncatedDescription(investor)
