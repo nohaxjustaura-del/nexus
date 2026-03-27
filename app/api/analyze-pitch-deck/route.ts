@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { getCurrentUserOrAdmin } from '@/lib/auth'
+import { getUserForAiAnalysis } from '@/lib/auth'
 import { extractPitchDeckFeatures } from '@/lib/ai'
 import { runMatchingPipeline } from '@/lib/matching/matching-orchestrator'
 import { logger } from '@/lib/logger'
 import { validatePitchDeck } from '@/lib/content-validator'
-import { ADMIN_EMAIL, CREDIT_COSTS } from '@/lib/constants'
+import { CREDIT_COSTS } from '@/lib/constants'
+import { shouldEnforceAiCredits } from '@/lib/dev-ai-analysis-bypass'
 import { rateLimitMiddleware, RATE_LIMITS } from '@/lib/rate-limit'
 import { parseJSON } from '@/lib/utils'
 import { getComprehensiveFounderContext } from '@/lib/founder-context'
@@ -70,7 +71,7 @@ export async function POST(request: NextRequest) {
     if (process.env.NODE_ENV === 'development') {
       logger.log('[ANALYZE-PITCH-DECK] Starting pitch deck analysis...')
     }
-    const user = await getCurrentUserOrAdmin()
+    const user = await getUserForAiAnalysis(request)
     
     if (!user) {
       if (process.env.NODE_ENV === 'development') {
@@ -179,7 +180,7 @@ export async function POST(request: NextRequest) {
     const CREDIT_COST = CREDIT_COSTS.PITCH_DECK
     
     // Skip credit check for admin
-    if (user.email !== ADMIN_EMAIL) {
+    if (shouldEnforceAiCredits(user.email)) {
       let userCredits = await db.userCredits.findUnique({
         where: { userId: user.id },
       })

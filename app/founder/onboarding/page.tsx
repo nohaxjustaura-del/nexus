@@ -10,6 +10,7 @@ import { Step3Preferences } from "@/components/onboarding/step-3-preferences"
 import { Step5Verification } from "@/components/onboarding/step-5-verification"
 import { CLIENT_STORAGE } from '@/lib/client-storage-keys'
 import { toast } from '@/components/ui/toast-simple'
+import { getPostLoginPath } from '@/lib/constants'
 
 type OnboardingFormData = {
   name: string
@@ -123,7 +124,7 @@ export default function OnboardingPage() {
             data.profile &&
             data.verification?.status === 'approved'
           ) {
-            router.replace('/founder/dashboard')
+            router.replace(getPostLoginPath())
             return
           }
           if (data.exists && data.profile) {

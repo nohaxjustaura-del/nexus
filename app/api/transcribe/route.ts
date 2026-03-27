@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { getCurrentUser } from '@/lib/auth'
+import { getCurrentUserIncludingDevBypass } from '@/lib/auth'
 import { logger } from '@/lib/logger'
 import { saveFileToDisk, buildFounderSnapshot } from '@/lib/file-storage'
 
@@ -18,7 +18,7 @@ export const dynamic = 'force-dynamic'
  */
 export async function POST(request: NextRequest) {
   try {
-    const user = await getCurrentUser()
+    const user = await getCurrentUserIncludingDevBypass()
 
     if (!user) {
       return NextResponse.json(

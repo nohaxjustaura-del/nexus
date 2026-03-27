@@ -1,5 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // When running multiple `next dev` instances (different ports), each must use its own
+  // output dir or they corrupt the same `.next` (missing middleware / ENOENT chunk errors on Windows).
+  distDir: process.env.NEXT_DIST_PORT ? `.next-${process.env.NEXT_DIST_PORT}` : '.next',
+
   // Performance optimizations
   compress: true,
   poweredByHeader: false,

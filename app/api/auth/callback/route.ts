@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { syncPrismaUserFromAuth } from '@/lib/auth'
 import { resolveUserApprovalAccess } from '@/lib/user-approval-access'
 import { sendCursorDebugIngest } from '@/lib/cursor-debug-ingest'
+import { getPostLoginPath } from '@/lib/constants'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -32,7 +33,7 @@ export async function GET(request: NextRequest) {
     const tokenHash = requestUrl.searchParams.get('token_hash')
     const tokenType = requestUrl.searchParams.get('type') || 'email'
     const confirm = requestUrl.searchParams.get('confirm') || ''
-    const nextPath = requestUrl.searchParams.get('next') || '/founder/dashboard'
+    const nextPath = requestUrl.searchParams.get('next') || getPostLoginPath()
     const safeNext = nextPath.startsWith('/') ? nextPath : '/'
   // #region agent log
   sendCursorDebugIngest({
@@ -170,7 +171,7 @@ export async function GET(request: NextRequest) {
     console.error('auth callback unexpected failure:', error)
     const verify = new URL('/verify', request.url)
     verify.searchParams.set('error', 'callback')
-    verify.searchParams.set('redirect', '/founder/dashboard')
+    verify.searchParams.set('redirect', getPostLoginPath())
     return NextResponse.redirect(verify)
   }
 

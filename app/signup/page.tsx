@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Mail, Loader2 } from 'lucide-react'
 import { CLIENT_STORAGE } from '@/lib/client-storage-keys'
+import { getPostLoginPath } from '@/lib/constants'
 
 export default function SignUpPage() {
   const router = useRouter()
@@ -29,7 +30,7 @@ export default function SignUpPage() {
         const data = await res.json().catch(() => ({}))
         if (cancelled) return
         if (data?.authenticated) {
-          const target = redirectUrl || (data?.verified ? '/founder/dashboard' : '/founder/onboarding')
+          const target = redirectUrl || (data?.verified ? getPostLoginPath() : '/founder/onboarding')
           window.location.replace(target)
         }
       } catch {

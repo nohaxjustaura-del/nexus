@@ -9,13 +9,19 @@ import {
   sendMagicLinkEmail,
 } from '@/lib/email'
 import { resolveUserApprovalAccess } from '@/lib/user-approval-access'
+import { getPostLoginPath, resolvePostLoginRedirectFromRequestBody } from '@/lib/constants'
 import { sendCursorDebugIngest } from '@/lib/cursor-debug-ingest'
 
 export const dynamic = 'force-dynamic'
 
 export async function POST(request: NextRequest) {
   try {
-    const { email } = await request.json()
+    const body = await request.json()
+    const { email, redirect: redirectBody, next: nextBody } = body as {
+      email?: string
+      redirect?: string
+      next?: string
+    }
 
     if (!email || !email.includes('@')) {
       return NextResponse.json({ error: 'Please provide a valid email address' }, { status: 400 })
@@ -54,8 +60,9 @@ export async function POST(request: NextRequest) {
     // Regular users: generate a magic link + OTP via Supabase Admin API
     // and send the email ourselves through Resend.
     const siteUrl = getSiteUrl(request)
-    // Returning users should land on Hub (dashboard), not onboarding — signup still uses /founder/onboarding.
-    const callbackUrl = `${siteUrl}/api/auth/callback?next=${encodeURIComponent('/founder/dashboard')}`
+    const postLogin = resolvePostLoginRedirectFromRequestBody(redirectBody ?? nextBody)
+    // Returning users land on post-login path (default Hub); signup still uses /founder/onboarding.
+    const callbackUrl = `${siteUrl}/api/auth/callback?next=${encodeURIComponent(postLogin)}`
     // #region agent log
     sendCursorDebugIngest({
       runId: 'pre-fix-domain-send',
@@ -123,7 +130,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const oneTapLink = `${siteUrl}/auth/link?token_hash=${encodeURIComponent(tokenHash)}&type=magiclink&next=${encodeURIComponent('/founder/dashboard')}&email=${encodeURIComponent(normalizedEmail)}`
+    const oneTapLink = `${siteUrl}/auth/link?token_hash=${encodeURIComponent(tokenHash)}&type=magiclink&next=${encodeURIComponent(postLogin)}&email=${encodeURIComponent(normalizedEmail)}`
 
     const emailResult = await sendMagicLinkEmail(normalizedEmail, {
       magicLink: oneTapLink,

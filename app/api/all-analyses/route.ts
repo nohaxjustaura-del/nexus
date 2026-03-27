@@ -110,9 +110,10 @@ export async function GET() {
           }
         }
 
+        const isUnified = analysisResult?.pitchType === 'UNIFIED'
         return {
           id: pitch.id,
-          type: 'video-pitch',
+          type: isUnified ? 'unified-pitch' : 'video-pitch',
           createdAt: pitch.createdAt,
           compatibilityScore: analysisResult?.overallScore || 0,
           confidence: analysisResult?.confidence || 85,

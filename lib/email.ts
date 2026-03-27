@@ -12,17 +12,32 @@ const resend = new Resend(process.env.RESEND_API_KEY)
 
 function emailFromHeader(): string {
   const raw = process.env.RESEND_FROM_EMAIL
-  if (!raw) return `${BRAND_NAME} <onboarding@resend.dev>`
-  const trimmed = raw.trim()
-  // Vercel env UI sometimes stores quotes literally; strip one wrapping pair.
-  if (
-    (trimmed.startsWith('"') && trimmed.endsWith('"')) ||
-    (trimmed.startsWith("'") && trimmed.endsWith("'"))
-  ) {
-    const unwrapped = trimmed.slice(1, -1).trim()
-    if (unwrapped) return unwrapped
+  let result: string
+  if (!raw) {
+    result = `${BRAND_NAME} <onboarding@resend.dev>`
+  } else {
+    const trimmed = raw.trim()
+    // Vercel env UI sometimes stores quotes literally; strip one wrapping pair.
+    if (
+      (trimmed.startsWith('"') && trimmed.endsWith('"')) ||
+      (trimmed.startsWith("'") && trimmed.endsWith("'"))
+    ) {
+      const unwrapped = trimmed.slice(1, -1).trim()
+      result = unwrapped ? unwrapped : trimmed
+    } else {
+      result = trimmed
+    }
   }
-  return trimmed
+  // Resend requires `email@x` or `Name <email@x>`. Accept common env mistake: `NEXUS noreply@x.y` (no brackets).
+  if (!result.includes('<') && result.includes('@')) {
+    const loose = /^(.+?)\s+(\S+@\S+)$/.exec(result)
+    if (loose) {
+      const name = loose[1].trim()
+      const addr = loose[2].trim()
+      if (name && addr) result = `${name} <${addr}>`
+    }
+  }
+  return result
 }
 
 /** Stable string for logs and dev API responses (Resend returns { message } or plain strings). */

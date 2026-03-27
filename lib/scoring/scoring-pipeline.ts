@@ -272,8 +272,16 @@ async function generateCategoryDescriptions(
 ): Promise<CategoryDescriptions> {
   const fallback = buildFallbackDescriptions(categoryScores, adversarialResult, globalVerdict)
 
+  const unifiedNote =
+    pitchType === "UNIFIED"
+      ? `
+
+MULTI-SOURCE NOTE: This pitch may include structured Q&A, deck text, and/or a video transcript. Gaps in one source may be covered by another — evaluate holistically.
+`
+      : ""
+
   const userPrompt =
-`ANALYSIS TYPE: ${pitchType}
+`ANALYSIS TYPE: ${pitchType}${unifiedNote}
 
 --- FOUNDER DOSSIER ---
 ${pitchSummary}
@@ -377,7 +385,7 @@ export async function runScoringPipeline(
   const stage = founderContext.stage?.trim() || "pre-seed"
 
   const [factsResult, vaguenessAudit] = await Promise.all([
-    extractVerifiedFacts(rawPitch, founderContext).then(f => {
+    extractVerifiedFacts(rawPitch, founderContext, pitchType).then(f => {
       passesCompleted.push("fact-extraction")
       return f
     }),

@@ -1,21 +1,20 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { 
   FileText,
   Video,
   Lightbulb,
-  Shield
+  Shield,
+  Layers
 } from "lucide-react"
-import Link from "next/link"
-import { useRouter } from "next/navigation"
 import { PitchDeckAnalysisTab } from "@/components/ai-analysis/pitch-deck-tab"
 import { VideoPitchAnalysisTab } from "@/components/ai-analysis/video-pitch-tab"
 import { PitchIdeaAnalysisTab } from "@/components/ai-analysis/pitch-idea-tab"
+import { UnifiedPitchTab } from "@/components/ai-analysis/unified-pitch-tab"
 
 export default function AIAnalysisPage() {
-  const router = useRouter()
-  const [activeTab, setActiveTab] = useState('pitch-idea')
+  const [activeTab, setActiveTab] = useState('unified')
 
   return (
     <div className="min-h-screen bg-background">
@@ -40,7 +39,18 @@ export default function AIAnalysisPage() {
 
         {/* Tabs - Simplified */}
         <div className="mb-8 flex justify-center">
-          <nav className="inline-flex rounded-lg border border-border bg-card p-1">
+          <nav className="inline-flex flex-wrap justify-center gap-1 rounded-lg border border-border bg-card p-1">
+            <button
+              onClick={() => setActiveTab('unified')}
+              className={`flex items-center justify-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-colors ${
+                activeTab === 'unified'
+                  ? 'bg-primary text-primary-foreground'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-muted/60'
+              }`}
+            >
+              <Layers className="h-4 w-4" />
+              Unified
+            </button>
             <button
               onClick={() => setActiveTab('pitch-deck')}
               className={`flex items-center justify-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-colors ${
@@ -79,6 +89,7 @@ export default function AIAnalysisPage() {
 
         {/* Tab Content - Animated */}
         <div className="w-full animate-fade-in">
+          {activeTab === 'unified' && <UnifiedPitchTab />}
           {activeTab === 'pitch-deck' && <PitchDeckAnalysisTab />}
           {activeTab === 'video' && <VideoPitchAnalysisTab />}
           {activeTab === 'pitch-idea' && <PitchIdeaAnalysisTab />}

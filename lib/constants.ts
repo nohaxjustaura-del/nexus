@@ -5,31 +5,67 @@
 
 // Admin: set ADMIN_EMAIL in .env (comma-separated for multiple). No baked-in default — unset means no admin emails.
 // Client UI should use /api/auth/check `isAdmin`.
-function buildAdminEmailSet(): Set<string> {
+function parseAdminEmails(): { ordered: string[]; set: Set<string> } {
   const raw = process.env.ADMIN_EMAIL ?? ''
+  const ordered: string[] = []
   const set = new Set<string>()
   for (const part of raw.split(',')) {
     const e = part.trim().toLowerCase()
-    if (e.includes('@')) set.add(e)
+    if (e.includes('@') && !set.has(e)) {
+      set.add(e)
+      ordered.push(e)
+    }
   }
-  return set
+  return { ordered, set }
 }
 
-const adminEmailSet = buildAdminEmailSet()
+const { ordered: adminEmailsOrdered, set: adminEmailSet } = parseAdminEmails()
+
+/** Env order (deduped); used when resolving an admin DB user without a session. */
+export const ADMIN_EMAILS_ORDERED: readonly string[] = adminEmailsOrdered
 
 /** First admin in the list (legacy); use isAdminEmail() for access checks. */
 export const ADMIN_EMAIL: string | undefined =
-  adminEmailSet.size > 0 ? [...adminEmailSet][0] : undefined
+  adminEmailsOrdered.length > 0 ? adminEmailsOrdered[0] : undefined
 
 export function isAdminEmail(email: string | null | undefined): boolean {
   if (!email) return false
   return adminEmailSet.has(email.trim().toLowerCase())
 }
 
+/**
+ * Default path after successful sign-in when no `?redirect=` / `?next=` is present.
+ * Set `NEXT_PUBLIC_POST_LOGIN_REDIRECT=/founder/ai-analysis` in `.env.local` for local debugging.
+ */
+export function getPostLoginPath(): string {
+  const raw = process.env.NEXT_PUBLIC_POST_LOGIN_REDIRECT?.trim()
+  if (raw && raw.startsWith('/') && !raw.startsWith('//')) return raw
+  return '/founder/dashboard'
+}
+
+/** Where /login sends users after sign-in when the URL has no `redirect` / `next`. */
+export const LOGIN_DEFAULT_CONTINUE_PATH = '/founder/ai-analysis'
+
+export function resolveLoginContinuePathFromQuery(explicitFromQuery: string): string {
+  const t = explicitFromQuery.trim()
+  if (!t) return LOGIN_DEFAULT_CONTINUE_PATH
+  if (t.startsWith('/') && !t.startsWith('//')) return t
+  return getPostLoginPath()
+}
+
+/** Safe in-app path from login API body (`redirect` or `next`); invalid values use `getPostLoginPath()`. */
+export function resolvePostLoginRedirectFromRequestBody(raw: unknown): string {
+  if (typeof raw !== 'string') return getPostLoginPath()
+  const t = raw.trim()
+  if (t.startsWith('/') && !t.startsWith('//')) return t
+  return getPostLoginPath()
+}
+
 // Credit Costs for AI Analysis Features
 export const CREDIT_COSTS = {
   PITCH_IDEA: 15,
   PITCH_DECK: 30, // Fixed: was 50, should be 30
+  UNIFIED_PITCH: 50,
   VIDEO_PITCH: {
     REGULAR: 50,
     REVIEWER: 100,

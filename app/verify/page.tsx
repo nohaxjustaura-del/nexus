@@ -10,6 +10,7 @@ import { BRAND_NAME } from '@/lib/brand'
 import { RESEND_DEV_CONSOLE_FALLBACK_HINT } from '@/lib/resend-user-messages'
 import { CLIENT_STORAGE } from '@/lib/client-storage-keys'
 import { toast } from '@/components/ui/toast-simple'
+import { getPostLoginPath } from '@/lib/constants'
 
 const VERIFY_EMAIL_KEY = CLIENT_STORAGE.PENDING_VERIFY_EMAIL
 const USER_EMAIL_KEY = CLIENT_STORAGE.USER_EMAIL
@@ -56,7 +57,7 @@ export default function VerifyPage() {
         const data = await res.json().catch(() => ({}))
         if (cancelled) return
         if (data?.authenticated) {
-          const defaultVerified = '/founder/dashboard'
+          const defaultVerified = getPostLoginPath()
           const target = redirectUrl || (data?.verified ? defaultVerified : '/founder/onboarding')
           window.location.replace(target)
         }

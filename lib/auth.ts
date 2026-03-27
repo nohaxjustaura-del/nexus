@@ -5,7 +5,12 @@ import { cookies } from 'next/headers'
 import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { getSupabaseAuthUserFromRequest } from '@/lib/supabase/request-reader'
-import { ADMIN_EMAIL } from '@/lib/constants'
+import { ADMIN_EMAILS_ORDERED } from '@/lib/constants'
+import {
+  DEV_AI_BYPASS_COOKIE,
+  getDevAiBypassEmail,
+  isDevAiAnalysisBypassEnabled,
+} from '@/lib/dev-ai-analysis-bypass'
 
 export async function syncPrismaUserFromAuth(authUser: SupabaseAuthUser): Promise<PrismaUser | null> {
   const email = authUser.email?.toLowerCase().trim()
@@ -78,10 +83,13 @@ export async function getUserFromRequest(request: NextRequest): Promise<PrismaUs
 }
 
 export async function getAdminUser(): Promise<PrismaUser | null> {
-  const email = ADMIN_EMAIL?.toLowerCase()
-  if (!email) return null
+  if (ADMIN_EMAILS_ORDERED.length === 0) return null
   try {
-    return await db.user.findUnique({ where: { email } })
+    for (const email of ADMIN_EMAILS_ORDERED) {
+      const u = await db.user.findUnique({ where: { email } })
+      if (u) return u
+    }
+    return null
   } catch {
     return null
   }
@@ -100,6 +108,37 @@ export async function getUserFromRequestOrAdmin(
 ): Promise<PrismaUser | null> {
   const user = await getUserFromRequest(request)
   if (user) return user
+  return getAdminUser()
+}
+
+/**
+ * Supabase session, then dev AI-bypass cookie (local only), then admin fallback.
+ * Use for /founder/ai-analysis API routes.
+ */
+export async function getCurrentUserIncludingDevBypass(): Promise<PrismaUser | null> {
+  const u = await getCurrentUser()
+  if (u) return u
+  if (!isDevAiAnalysisBypassEnabled()) return null
+  try {
+    const cookieStore = await cookies()
+    const id = cookieStore.get(DEV_AI_BYPASS_COOKIE)?.value
+    if (!id) return null
+    const row = await db.user.findUnique({ where: { id } })
+    const expected = getDevAiBypassEmail()
+    if (!row || row.email !== expected) return null
+    return row
+  } catch {
+    return null
+  }
+}
+
+export async function getUserForAiAnalysis(request?: NextRequest): Promise<PrismaUser | null> {
+  if (request) {
+    const fromReq = await getUserFromRequest(request)
+    if (fromReq) return fromReq
+  }
+  const fromCookie = await getCurrentUserIncludingDevBypass()
+  if (fromCookie) return fromCookie
   return getAdminUser()
 }
 

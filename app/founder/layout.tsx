@@ -55,7 +55,32 @@ export default function FounderLayout({ children }: { children: React.ReactNode 
       setChecking(false)
       return () => { cancelled = true }
     }
-    
+
+    const aiAnalysisDevBypass =
+      process.env.NODE_ENV === 'development' &&
+      process.env.NEXT_PUBLIC_DEV_AI_ANALYSIS_BYPASS === 'true'
+    const onAiAnalysis =
+      pathname === '/founder/ai-analysis' ||
+      (pathname?.startsWith('/founder/ai-analysis/') ?? false)
+
+    if (onAiAnalysis && aiAnalysisDevBypass) {
+      ;(async () => {
+        try {
+          await fetch('/api/dev/ai-bypass/bootstrap', {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'Cache-Control': 'no-store' },
+          })
+        } catch {
+          /* ignore */
+        }
+        if (!cancelled) setChecking(false)
+      })()
+      return () => {
+        cancelled = true
+      }
+    }
+
     async function check() {
       try {
         const res = await fetch('/api/auth/check', {

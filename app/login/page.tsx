@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Mail, Loader2, ArrowLeft, Clock, X } from 'lucide-react'
 import { CLIENT_STORAGE } from '@/lib/client-storage-keys'
+import { resolveLoginContinuePathFromQuery } from '@/lib/constants'
 
 type ApprovalModalVariant = 'pending' | 'rejected'
 
@@ -15,6 +16,7 @@ export default function LoginPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const redirectUrl = searchParams.get('redirect') || searchParams.get('next') || ''
+  const continuePath = resolveLoginContinuePathFromQuery(redirectUrl)
   const [email, setEmail] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -55,8 +57,7 @@ export default function LoginPage() {
         const data = await res.json().catch(() => ({}))
         if (cancelled) return
         if (data?.authenticated) {
-          const defaultVerified = '/founder/dashboard'
-          const target = redirectUrl || (data?.verified ? defaultVerified : '/founder/onboarding')
+          const target = data?.verified ? continuePath : '/founder/onboarding'
           window.location.replace(target)
         }
       } catch {
@@ -66,7 +67,7 @@ export default function LoginPage() {
     return () => {
       cancelled = true
     }
-  }, [redirectUrl])
+  }, [continuePath])
 
   useEffect(() => {
     if (!approvalModal.open) return
@@ -97,7 +98,7 @@ export default function LoginPage() {
           'Content-Type': 'application/json',
         },
         credentials: 'include',
-        body: JSON.stringify({ email: trimmedEmail }),
+        body: JSON.stringify({ email: trimmedEmail, redirect: continuePath }),
       })
 
       const contentType = response.headers.get('content-type')
@@ -139,11 +140,10 @@ export default function LoginPage() {
           } catch { /* ignore */ }
         }
 
-        let targetUrl = redirectUrl
-        if (!targetUrl) {
+        let targetUrl = continuePath
+        if (!redirectUrl) {
           if (data.user?.userType === 'investor') targetUrl = '/vc/dashboard'
           else if (data.user?.userType === 'mentor') targetUrl = '/'
-          else targetUrl = '/founder/dashboard'
         }
 
         window.location.assign(targetUrl)
@@ -160,7 +160,7 @@ export default function LoginPage() {
         /* ignore */
       }
 
-      const verifyUrl = `/verify?email=${encodeURIComponent(resolvedEmail)}${redirectUrl ? `&redirect=${encodeURIComponent(redirectUrl)}` : ''}`
+      const verifyUrl = `/verify?email=${encodeURIComponent(resolvedEmail)}&redirect=${encodeURIComponent(continuePath)}`
       router.push(verifyUrl)
     } catch (err: any) {
       console.error('Login error:', err)
@@ -292,7 +292,7 @@ export default function LoginPage() {
             <div className="pt-4 border-t">
               <p className="text-sm text-center text-muted-foreground mb-2">
                 Don't have an account?{' '}
-                <Link href={`/signup${redirectUrl ? `?redirect=${encodeURIComponent(redirectUrl)}` : ''}`} className="text-primary hover:underline">
+                <Link href={`/signup?redirect=${encodeURIComponent(continuePath)}`} className="text-primary hover:underline">
                   Sign up
                 </Link>
               </p>

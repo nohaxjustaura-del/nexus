@@ -5,12 +5,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Mail } from 'lucide-react'
 import { BRAND_NAME } from '@/lib/brand'
+import { getPostLoginPath } from '@/lib/constants'
 
 export default function AuthLinkPage() {
   const params = useSearchParams()
   const tokenHash = params.get('token_hash') || ''
   const type = params.get('type') || 'magiclink'
-  const next = params.get('next') || '/founder/dashboard'
+  const next = params.get('next') || getPostLoginPath()
   const email = params.get('email') || ''
 
   const continueHref = `/api/auth/callback?confirm=1&token_hash=${encodeURIComponent(tokenHash)}&type=${encodeURIComponent(type)}&next=${encodeURIComponent(next)}`

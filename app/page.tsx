@@ -19,6 +19,7 @@ import {
   Check,
 } from 'lucide-react'
 import { track as trackEvent } from '@/lib/analytics'
+import { getPostLoginPath } from '@/lib/constants'
 
 const track = (event: string, props?: Record<string, unknown>) => {
   try {
@@ -100,7 +101,7 @@ export default function Home() {
                   if (!mounted || !isAuthenticated) {
                     router.push('/signup')
                   } else {
-                    router.push('/founder/dashboard')
+                    router.push(getPostLoginPath())
                   }
                 }}
                 className="h-12 px-8 text-base font-semibold ring-1 ring-primary/30"

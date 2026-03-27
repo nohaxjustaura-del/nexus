@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { getCurrentUserOrAdmin } from '@/lib/auth'
+import { getUserForAiAnalysis } from '@/lib/auth'
 import { runMatchingPipeline } from '@/lib/matching/matching-orchestrator'
 import { logger } from '@/lib/logger'
 import { validatePitchIdea } from '@/lib/content-validator'
-import { ADMIN_EMAIL, CREDIT_COSTS } from '@/lib/constants'
+import { CREDIT_COSTS } from '@/lib/constants'
+import { shouldEnforceAiCredits } from '@/lib/dev-ai-analysis-bypass'
 import { rateLimitMiddleware, RATE_LIMITS } from '@/lib/rate-limit'
 import { parseJSON } from '@/lib/utils'
 import { getComprehensiveFounderContext, buildAIPromptContext } from '@/lib/founder-context'
@@ -35,7 +36,7 @@ export async function POST(request: NextRequest) {
     
     let user
     try {
-      user = await getCurrentUserOrAdmin()
+      user = await getUserForAiAnalysis(request)
     } catch (authError: any) {
       logger.error('[ANALYZE-PITCH-IDEA] Auth error:', authError)
       return NextResponse.json(
@@ -220,7 +221,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check credits (admin bypass) - but don't deduct yet
-    if (user.email !== ADMIN_EMAIL) {
+    if (shouldEnforceAiCredits(user.email)) {
       const userCredits = await db.userCredits.findUnique({
         where: { userId: user.id },
       })
@@ -334,7 +335,7 @@ Be specific and actionable.`
       // (rest of handler expects `analysis` to exist below)
 
       // Deduct credits AFTER successful analysis (admin bypass)
-      if (user.email !== ADMIN_EMAIL) {
+      if (shouldEnforceAiCredits(user.email)) {
         try {
           await db.userCredits.update({
             where: { userId: user.id },

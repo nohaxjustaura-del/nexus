@@ -14,7 +14,7 @@ import {
 
 interface Analysis {
   id: string
-  type: 'video-pitch' | 'pitch-deck' | 'pitch-idea'
+  type: 'video-pitch' | 'unified-pitch' | 'pitch-deck' | 'pitch-idea'
   createdAt: string
   compatibilityScore: number
   confidence: number
@@ -140,6 +140,7 @@ export function PitchFeedbackComparison({ analyses }: PitchFeedbackComparisonPro
                     </div>
                     <div>
                       <p className="text-sm font-medium text-foreground">
+                        {analysis.type === 'unified-pitch' && 'Unified Pitch'}
                         {analysis.type === 'video-pitch' && 'Video Pitch'}
                         {analysis.type === 'pitch-deck' && 'Pitch Deck'}
                         {analysis.type === 'pitch-idea' && 'Pitch Idea'}

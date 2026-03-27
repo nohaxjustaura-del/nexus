@@ -3,9 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
-    "dev:clean": "node scripts/optimize.js && next dev",
-    "dev:fresh": "node scripts/optimize.js && next dev",
+    "dev": "node scripts/next-dev-local.mjs",
+    "dev:clean": "node scripts/optimize.js && node scripts/next-dev-local.mjs",
+    "dev:fresh": "node scripts/optimize.js && node scripts/next-dev-local.mjs",
     "build": "node scripts/pre-build.js && next build",
     "postinstall": "prisma generate",
     "start": "next start",
