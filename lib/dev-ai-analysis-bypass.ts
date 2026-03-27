@@ -1,6 +1,7 @@
 import { db } from '@/lib/db'
 import type { User as PrismaUser } from '@prisma/client'
 import { isAdminEmail } from '@/lib/constants'
+import { isUnlimitedCreditsEmail } from '@/lib/unlimited-credits'
 
 /** HttpOnly cookie set by POST /api/dev/ai-bypass/bootstrap (local dev only). */
 export const DEV_AI_BYPASS_COOKIE = 'nexus_dev_ai_bypass_uid'
@@ -18,23 +19,25 @@ export function getDevAiBypassEmail(): string {
   return (process.env.DEV_AI_ANALYSIS_BYPASS_EMAIL || DEFAULT_BYPASS_EMAIL).toLowerCase().trim()
 }
 
-/** True when this user should not be charged AI analysis credits (dev sandbox account). */
-export function shouldEnforceAiCredits(email: string | null | undefined): boolean {
-  if (!email) return true
-  if (isAdminEmail(email)) return false
+/** Admin, UNLIMITED_CREDITS_EMAIL list, or dev AI-bypass sandbox — no credit charges. */
+export function bypassesAiCredits(email: string | null | undefined): boolean {
+  if (!email) return false
+  if (isAdminEmail(email)) return true
+  if (isUnlimitedCreditsEmail(email)) return true
   if (isDevAiAnalysisBypassEnabled() && email.trim().toLowerCase() === getDevAiBypassEmail()) {
-    return false
+    return true
   }
-  return true
+  return false
+}
+
+/** True when this user should be charged AI analysis credits. */
+export function shouldEnforceAiCredits(email: string | null | undefined): boolean {
+  return !bypassesAiCredits(email)
 }
 
 /** Same rule as /api/user/credits admin branch (unlimited display + skip deductions). */
 export function grantsUnlimitedCreditsDisplay(email: string | null | undefined): boolean {
-  if (!email) return false
-  if (isAdminEmail(email)) return true
-  return (
-    isDevAiAnalysisBypassEnabled() && email.trim().toLowerCase() === getDevAiBypassEmail()
-  )
+  return bypassesAiCredits(email)
 }
 
 export async function getOrCreateDevAiBypassUser(): Promise<PrismaUser> {

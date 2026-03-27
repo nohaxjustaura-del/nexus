@@ -37,7 +37,8 @@ export function CreditCounter({
     try {
       const { ok, data } = await getUserCreditsClient()
       if (ok) {
-        setCredits(typeof data.credits === 'number' ? data.credits : 0)
+        const n = typeof data.credits === 'number' ? data.credits : 0
+        setCredits(n)
       } else {
         setCredits(0)
       }

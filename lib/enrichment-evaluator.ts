@@ -1,8 +1,6 @@
 import { openrouterGenerateJson } from "./openrouter";
 import type { ExaSnippet } from "./exa-service";
 
-const MODEL = "openai/gpt-4o-mini";
-
 export interface VCSummary {
   recentPortfolio: string;
   currentHeat: string;
@@ -43,7 +41,7 @@ export async function generateVCSummary(
     : "No recent public commentary found.";
 
   const result = await openrouterGenerateJson<VCSummary>({
-    model: MODEL,
+    useVcPipeline: true,
     system: `You are an analyst that summarizes ${entityLabel} activity for founders. You MUST return a JSON object with exactly 3 fields, each containing exactly ONE sentence.
 
 Rules:
@@ -95,7 +93,7 @@ export async function detectConflict(
     .join("\n");
 
   const result = await openrouterGenerateJson<ConflictResult>({
-    model: MODEL,
+    useVcPipeline: true,
     system: `You are a competitive analysis expert. Determine if any of the VC's recent portfolio companies are DIRECT competitors to the founder's startup.
 
 A direct competitor means:

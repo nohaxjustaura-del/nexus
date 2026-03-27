@@ -19,19 +19,66 @@ function getResendClient(): Resend | null {
   return new Resend(key)
 }
 
+/** Single RFC-ish local@domain token (no display name, no angle brackets). */
+function looksLikeBareEmail(s: string): boolean {
+  if (s.includes(' ') || s.includes('<') || s.includes('>')) return false
+  const i = s.indexOf('@')
+  if (i <= 0 || i === s.length - 1) return false
+  const domain = s.slice(i + 1)
+  return domain.includes('.')
+}
+
+/**
+ * Resend rejects values like `NEXUS noreply@domain.com` (display name + space + email).
+ * Valid forms: `email@domain.com` or `Display Name <email@domain.com>`.
+ */
+function normalizeResendFromHeader(trimmed: string): string {
+  if (!trimmed) return trimmed
+  if (trimmed.includes('<') && trimmed.includes('>')) return trimmed
+  if (looksLikeBareEmail(trimmed)) return trimmed
+  const m = trimmed.match(/^(.+?)\s+(\S+@\S+\.\S+)$/)
+  if (m) {
+    const display = m[1].trim()
+    const addr = m[2].trim()
+    if (display && addr) return `${display} <${addr}>`
+  }
+  return trimmed
+}
+
 function emailFromHeader(): string {
   const raw = process.env.RESEND_FROM_EMAIL
   if (!raw) return `${BRAND_NAME} <onboarding@resend.dev>`
-  const trimmed = raw.trim()
+  let trimmed = raw.trim()
   // Vercel env UI sometimes stores quotes literally; strip one wrapping pair.
   if (
     (trimmed.startsWith('"') && trimmed.endsWith('"')) ||
     (trimmed.startsWith("'") && trimmed.endsWith("'"))
   ) {
     const unwrapped = trimmed.slice(1, -1).trim()
-    if (unwrapped) return unwrapped
+    if (unwrapped) trimmed = unwrapped
   }
-  return trimmed
+  const normalized = normalizeResendFromHeader(trimmed)
+  // #region agent log
+  fetch('http://127.0.0.1:7471/ingest/0f685c44-f6c8-4b99-b23e-84e0cc9d4f08', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '4b724e' },
+    body: JSON.stringify({
+      sessionId: '4b724e',
+      runId: 'post-fix-verify',
+      hypothesisId: 'H1-from-format',
+      location: 'lib/email.ts:emailFromHeader',
+      message: 'Resend from header after normalizeResendFromHeader',
+      data: {
+        hadEnv: true,
+        unwrappedHadAngleBrackets: trimmed.includes('<') && trimmed.includes('>'),
+        appliedBracketWrap: normalized !== trimmed,
+        normalizedHasAngleBrackets: normalized.includes('<') && normalized.includes('>'),
+      },
+      timestamp: Date.now(),
+    }),
+  }).catch(() => {})
+  // #endregion
+  return normalized
 }
 
 /** Stable string for logs and dev API responses (Resend returns { message } or plain strings). */

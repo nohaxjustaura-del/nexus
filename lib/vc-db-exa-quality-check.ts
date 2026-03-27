@@ -1,12 +1,12 @@
 /**
  * Cross-check a Prisma Investor row against fresh Exa retrieval + the configured LLM
- * (e.g. Ollama OLLAMA_MODEL=qwen2.5:7b with LLM_PREFER_OLLAMA=1).
+ * (Ollama when `OLLAMA_BASE_URL` is set — preferred for VC checks even if OpenRouter is configured).
  *
  * Used by the data-validation worker when WORKER_VALIDATION_EXA_SAMPLE > 0.
  */
 
 import { gatherVCFirmRetrievalContext } from './vc-research-retrieval'
-import { openrouterGenerateJson, hasVcLlmConfigured, getVcExtractionModel } from './openrouter'
+import { openrouterGenerateJson, hasVcLlmConfigured } from './openrouter'
 import { isLikelyRealFirmName } from './firm-name-quality'
 
 export type InvestorExaValidationPick = {
@@ -127,9 +127,9 @@ ${dbSnap}
 WEB EXCERPTS (Exa — use only as evidence; they may be incomplete):
 ${exaText}`,
     temperature: 0.15,
-    model: getVcExtractionModel(),
     maxTokens: 900,
     retryOnParseError: true,
+    useVcPipeline: true,
   })
 
   const score = Math.min(100, Math.max(0, Math.round(Number(judgment.score) || 0)))

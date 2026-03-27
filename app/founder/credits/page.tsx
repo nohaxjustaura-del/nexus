@@ -20,6 +20,7 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import DailyClaim from '@/components/daily-claim'
+import { normalizeUserCreditsApiPayload } from '@/lib/client/normalize-user-credits-api'
 
 interface CreditUsage {
   feature: string
@@ -30,7 +31,11 @@ interface CreditUsage {
 
 export default function CreditsPage() {
   const [loading, setLoading] = useState(true)
-  const [credits, setCredits] = useState<{ credits: number; isPremium: boolean } | null>(null)
+  const [credits, setCredits] = useState<{
+    credits: number
+    isPremium: boolean
+    unlimitedCredits?: boolean
+  } | null>(null)
   const [usage, setUsage] = useState<CreditUsage[]>([])
   const [recentActivity, setRecentActivity] = useState<any[]>([])
 
@@ -42,8 +47,13 @@ export default function CreditsPage() {
     try {
       // Load credits
       const creditsRes = await fetch('/api/user/credits', { credentials: 'include' })
-      const creditsData = await creditsRes.json()
-      setCredits(creditsData)
+      const creditsRaw = await creditsRes.json()
+      const n = normalizeUserCreditsApiPayload(creditsRaw)
+      setCredits({
+        credits: n.credits,
+        isPremium: n.isPremium,
+        unlimitedCredits: n.unlimitedCredits,
+      })
 
       // Load analyses to calculate usage
       const analysesRes = await fetch('/api/all-analyses', { credentials: 'include' })
@@ -128,7 +138,9 @@ export default function CreditsPage() {
                 <div>
                   <p className="text-sm text-muted-foreground mb-1">Current Balance</p>
                   <div className="flex items-baseline gap-2">
-                    <span className="text-5xl font-bold text-foreground">{credits?.credits ?? 0}</span>
+                    <span className="text-5xl font-bold text-foreground">
+                      {credits?.unlimitedCredits ? '∞' : (credits?.credits ?? 0).toLocaleString()}
+                    </span>
                     <span className="text-xl text-muted-foreground">credits</span>
                   </div>
                 </div>

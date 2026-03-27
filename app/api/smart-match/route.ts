@@ -12,7 +12,7 @@ import {
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 import { parseJSON } from '@/lib/utils'
-import { isAdminEmail } from '@/lib/constants'
+import { bypassesAiCredits } from '@/lib/dev-ai-analysis-bypass'
 
 const SMART_MATCH_COST = 50
 
@@ -44,8 +44,8 @@ export async function POST(req: NextRequest) {
       })
     }
 
-    const isAdmin = isAdminEmail(user.email)
-    if (!isAdmin && !userCredits.isPremium && (userCredits.credits ?? 0) < SMART_MATCH_COST) {
+    const skipCreditCost = bypassesAiCredits(user.email)
+    if (!skipCreditCost && !userCredits.isPremium && (userCredits.credits ?? 0) < SMART_MATCH_COST) {
       return NextResponse.json(
         {
           error: 'Insufficient credits',
@@ -160,7 +160,7 @@ export async function POST(req: NextRequest) {
     }
 
     let creditsRemaining = userCredits.credits ?? 0
-    if (!isAdmin && !userCredits.isPremium) {
+    if (!skipCreditCost && !userCredits.isPremium) {
       const updated = await db.userCredits.update({
         where: { userId: user.id },
         data: { credits: { decrement: SMART_MATCH_COST } },
@@ -171,7 +171,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       success: true,
       matches: rankedVCs,
-      creditsUsed: isAdmin || userCredits.isPremium ? 0 : SMART_MATCH_COST,
+      creditsUsed: skipCreditCost || userCredits.isPremium ? 0 : SMART_MATCH_COST,
       creditsRemaining,
     })
   } catch (error: any) {

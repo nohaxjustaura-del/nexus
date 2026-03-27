@@ -1,13 +1,15 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { Sparkles, AlertCircle, User, Video, FileText, CheckCircle, Lightbulb, Layers } from 'lucide-react'
+import { Progress } from '@/components/ui/progress'
+import { Sparkles, AlertCircle, Layers, User, Video, FileText, CheckCircle, Lightbulb } from 'lucide-react'
 import SmartMatchResults from '@/components/smart-match-results'
 import AnalysisDashboard from '@/components/analysis/AnalysisDashboard'
+import type { UniversalAnalysisResult } from '@/lib/universal-analysis-engine'
 import { STRUCTURED_QA_KEYS, type StructuredQaAnswers } from '@/lib/unified-pitch/structured-qa'
 import { CREDIT_COSTS } from '@/lib/constants'
 import {
@@ -18,12 +20,80 @@ import {
 const UNIFIED_CREDITS = CREDIT_COSTS.UNIFIED_PITCH
 const REVIEWER_CREDITS = CREDIT_COSTS.VIDEO_PITCH.REVIEWER
 
+function isSafeRubricForDashboard(raw: unknown): raw is UniversalAnalysisResult {
+  if (raw == null || typeof raw !== 'object') return false
+  const o = raw as Record<string, unknown>
+  if (typeof o.globalVerdict !== 'string') return false
+  const cat = o.categories
+  if (cat == null || typeof cat !== 'object') return false
+  const c = cat as Record<string, unknown>
+  for (const k of ['market', 'moat', 'founderFit', 'momentum'] as const) {
+    const x = c[k]
+    if (x == null || typeof x !== 'object') return false
+    const row = x as Record<string, unknown>
+    if (typeof row.score !== 'number' || !Number.isFinite(row.score)) return false
+    if (!Array.isArray(row.bullets)) return false
+  }
+  const ex = c.execution
+  if (ex != null && typeof ex === 'object') {
+    const row = ex as Record<string, unknown>
+    if (typeof row.score !== 'number' || !Array.isArray(row.bullets)) return false
+  }
+  return true
+}
+
+function postFormDataWithUploadProgress(
+  url: string,
+  formData: FormData,
+  onUploadProgress: (pct: number) => void,
+  onUploadFinished: () => void,
+): Promise<{ ok: boolean; status: number; data: unknown }> {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest()
+    xhr.open('POST', url)
+    xhr.withCredentials = true
+    xhr.responseType = 'text'
+
+    xhr.upload.onprogress = (e) => {
+      if (e.lengthComputable && e.total > 0) {
+        onUploadProgress(Math.min(100, Math.round((e.loaded / e.total) * 100)))
+      }
+    }
+    xhr.upload.onloadend = () => {
+      onUploadProgress(100)
+      onUploadFinished()
+    }
+
+    xhr.onload = () => {
+      let data: unknown
+      try {
+        data = xhr.responseText ? JSON.parse(xhr.responseText) : {}
+      } catch {
+        data = { parseError: true, snippet: String(xhr.responseText).slice(0, 200) }
+      }
+      resolve({
+        ok: xhr.status >= 200 && xhr.status < 300,
+        status: xhr.status,
+        data,
+      })
+    }
+    xhr.onerror = () => reject(new Error('Network error'))
+    xhr.onabort = () => reject(new Error('Request aborted'))
+
+    onUploadProgress(0)
+    xhr.send(formData)
+  })
+}
+
 export function UnifiedPitchTab() {
   const [answers, setAnswers] = useState<StructuredQaAnswers>({})
-  const [narrative, setNarrative] = useState('')
   const [deckFile, setDeckFile] = useState<File | null>(null)
   const [videoFile, setVideoFile] = useState<File | null>(null)
   const [analyzing, setAnalyzing] = useState(false)
+  const [uploadPct, setUploadPct] = useState(0)
+  const [uploadFinished, setUploadFinished] = useState(false)
+  const [serverSyntheticPct, setServerSyntheticPct] = useState(0)
+  const serverStartRef = useRef<number>(0)
   const [result, setResult] = useState<any>(null)
   const [error, setError] = useState<string | null>(null)
   const [warnings, setWarnings] = useState<string[]>([])
@@ -49,17 +119,63 @@ export function UnifiedPitchTab() {
     }
   }, [reviewType])
 
+  // #region agent log
+  useEffect(() => {
+    return () => {
+      fetch('http://127.0.0.1:7471/ingest/0f685c44-f6c8-4b99-b23e-84e0cc9d4f08', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '3018ec' },
+        body: JSON.stringify({
+          sessionId: '3018ec',
+          location: 'unified-pitch-tab.tsx:unmount',
+          message: 'UnifiedPitchTab unmounted',
+          data: {},
+          timestamp: Date.now(),
+          hypothesisId: 'D',
+        }),
+      }).catch(() => {})
+    }
+  }, [])
+  // #endregion
+
+  useEffect(() => {
+    if (!analyzing || !uploadFinished) return
+    serverStartRef.current = Date.now()
+    setServerSyntheticPct(35)
+    const id = window.setInterval(() => {
+      const elapsed = Date.now() - serverStartRef.current
+      // Ease toward ~92% over ~3 minutes so the bar keeps moving during long server work
+      const t = Math.min(1, elapsed / 180_000)
+      const eased = 35 + t * 57
+      setServerSyntheticPct((prev) => Math.max(prev, Math.min(92, eased)))
+    }, 800)
+    return () => window.clearInterval(id)
+  }, [analyzing, uploadFinished])
+
   const hasQa = STRUCTURED_QA_KEYS.some(({ key }) => !!(answers[key]?.trim()))
-  const hasNarrative = narrative.trim().length > 0
-  const canSubmit = hasQa || hasNarrative || !!deckFile || !!videoFile
+  const canSubmit = hasQa || !!deckFile || !!videoFile
   const creditCost = reviewType === 'reviewer' ? REVIEWER_CREDITS : UNIFIED_CREDITS
 
-  const fileInputClass =
-    'w-full max-w-full text-sm text-muted-foreground file:mr-3 file:inline-flex file:h-9 file:cursor-pointer file:items-center file:rounded-md file:border-0 file:bg-muted file:px-3 file:text-sm file:font-medium file:text-foreground'
+  const hasLargeUpload = !!(deckFile || videoFile)
+  const progressBarValue = !analyzing
+    ? 0
+    : !uploadFinished
+      ? hasLargeUpload
+        ? Math.round((uploadPct / 100) * 35)
+        : 30
+      : Math.min(100, Math.round(serverSyntheticPct))
+
+  const progressLabel = !analyzing
+    ? ''
+    : !uploadFinished && hasLargeUpload
+      ? `Uploading files… ${uploadPct}%`
+      : !uploadFinished
+        ? 'Sending request…'
+        : 'Analyzing on server (matching, scoring, market intel)…'
 
   const handleAnalyze = async () => {
     if (!canSubmit) {
-      setError('Add at least one: structured Q&A answers, a pitch narrative, a deck file, or a video.')
+      setError('Add at least one: Q&A answers, a pitch deck, or a video.')
       return
     }
     if (!credits) {
@@ -73,232 +189,263 @@ export function UnifiedPitchTab() {
       return
     }
     setAnalyzing(true)
+    setUploadPct(0)
+    setUploadFinished(false)
+    setServerSyntheticPct(0)
     setError(null)
     setWarnings([])
 
     try {
       const formData = new FormData()
       formData.append('qa', JSON.stringify(answers))
-      if (narrative.trim()) formData.append('narrative', narrative.trim())
       if (deckFile) formData.append('deck', deckFile)
       if (videoFile) formData.append('video', videoFile)
       formData.append('reviewType', reviewType)
       if (reviewType === 'reviewer' && selectedReviewer) formData.append('reviewerId', selectedReviewer)
 
-      const res = await fetch('/api/analyze-unified-pitch', {
+      const { ok, status, data } = await postFormDataWithUploadProgress(
+        '/api/analyze-unified-pitch',
+        formData,
+        (pct) => setUploadPct(pct),
+        () => setUploadFinished(true),
+      )
+
+      setUploadFinished(true)
+      setServerSyntheticPct(100)
+
+      const payload = data as Record<string, unknown>
+
+      // #region agent log
+      fetch('http://127.0.0.1:7471/ingest/0f685c44-f6c8-4b99-b23e-84e0cc9d4f08', {
         method: 'POST',
-        body: formData,
-        credentials: 'include',
-      })
-      const data = await res.json()
+        headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '3018ec' },
+        body: JSON.stringify({
+          sessionId: '3018ec',
+          location: 'unified-pitch-tab.tsx:handleAnalyze:afterXhr',
+          message: 'Unified pitch XHR completed',
+          data: {
+            status,
+            ok,
+            hasAnalysis: payload && typeof payload === 'object' && 'analysis' in payload,
+            matchedLen: Array.isArray((payload.analysis as any)?.matchedVCs)
+              ? (payload.analysis as any).matchedVCs.length
+              : -1,
+            parseError: payload?.parseError === true,
+          },
+          timestamp: Date.now(),
+          hypothesisId: 'A,E',
+        }),
+      }).catch(() => {})
+      // #endregion
 
-      if (!res.ok) {
-        if (res.status === 402) {
-          setError(data.message || 'Insufficient credits.')
+      if (!ok) {
+        if (status === 402) {
+          setError((payload.message as string) || 'Insufficient credits.')
           invalidateUserCreditsClientCache()
-          const { ok, data: cr } = await getUserCreditsClient()
-          if (ok) setCredits(cr as { credits: number; isPremium: boolean })
-          setAnalyzing(false)
+          const { ok: crOk, data: cr } = await getUserCreditsClient()
+          if (crOk) setCredits(cr as { credits: number; isPremium: boolean })
           return
         }
-        if (res.status === 404 && data.redirectTo) {
-          window.location.replace(data.redirectTo)
+        if (status === 404 && typeof payload.redirectTo === 'string') {
+          window.location.replace(payload.redirectTo as string)
           return
         }
-        throw new Error(data.message || data.error || 'Analysis failed')
+        throw new Error(
+          (payload.message as string) || (payload.error as string) || 'Analysis failed',
+        )
       }
 
-      if (data.reviewId) {
-        setResult({ reviewSubmitted: true, message: data.message, videoPitchId: data.videoPitchId })
-        setWarnings(data.warnings || [])
-      } else {
-        setResult({ ...data.analysis, videoPitchId: data.videoPitchId })
-        setWarnings(data.warnings || [])
+      if (payload.parseError) {
+        throw new Error('Invalid response from server. Try again or check the dev console.')
       }
+
+      if (payload.reviewId) {
+        setResult({
+          reviewSubmitted: true,
+          message: payload.message,
+          videoPitchId: payload.videoPitchId,
+        })
+        setWarnings((payload.warnings as string[]) || [])
+      } else {
+        const analysis = payload.analysis as Record<string, unknown> | undefined
+        setResult({ ...analysis, videoPitchId: payload.videoPitchId })
+        setWarnings((payload.warnings as string[]) || [])
+      }
+
+      // #region agent log
+      fetch('http://127.0.0.1:7471/ingest/0f685c44-f6c8-4b99-b23e-84e0cc9d4f08', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '3018ec' },
+        body: JSON.stringify({
+          sessionId: '3018ec',
+          location: 'unified-pitch-tab.tsx:handleAnalyze:afterSetResult',
+          message: 'setResult scheduled',
+          data: { reviewFlow: !!payload.reviewId },
+          timestamp: Date.now(),
+          hypothesisId: 'B',
+        }),
+      }).catch(() => {})
+      // #endregion
 
       invalidateUserCreditsClientCache()
-      const { ok, data: cr } = await getUserCreditsClient()
-      if (ok) setCredits(cr as { credits: number; isPremium: boolean })
+      const { ok: crOk, data: cr } = await getUserCreditsClient()
+      if (crOk) setCredits(cr as { credits: number; isPremium: boolean })
 
-      setTimeout(() => {
+      requestAnimationFrame(() => {
         document.getElementById('analysis-results')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-      }, 100)
+      })
     } catch (e: unknown) {
+      // #region agent log
+      fetch('http://127.0.0.1:7471/ingest/0f685c44-f6c8-4b99-b23e-84e0cc9d4f08', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '3018ec' },
+        body: JSON.stringify({
+          sessionId: '3018ec',
+          location: 'unified-pitch-tab.tsx:handleAnalyze:catch',
+          message: String(e instanceof Error ? e.message : e),
+          data: {},
+          timestamp: Date.now(),
+          hypothesisId: 'F',
+        }),
+      }).catch(() => {})
+      // #endregion
       setError(e instanceof Error ? e.message : 'Something went wrong.')
     } finally {
       setAnalyzing(false)
+      setUploadFinished(false)
+      setUploadPct(0)
+      setServerSyntheticPct(0)
     }
   }
 
+  const safeRubric =
+    result && !result.reviewSubmitted && isSafeRubricForDashboard(result.rubricAnalysis)
+      ? result.rubricAnalysis
+      : null
+
   return (
-    <div className="w-full space-y-8">
-      <Card className="overflow-hidden border-border/80 bg-card/80 shadow-sm ring-1 ring-border/40">
-        <CardHeader className="space-y-3 border-b border-border/80 bg-muted/20 pb-6 pt-6">
-          <div className="flex items-start gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-primary/25 bg-primary/10 text-primary">
-              <Layers className="h-5 w-5" aria-hidden />
-            </div>
-            <div className="min-w-0 space-y-2">
-              <CardTitle className="text-lg font-semibold tracking-tight">Full pitch review</CardTitle>
-              <CardDescription className="text-sm leading-relaxed">
-                Add structured answers and any supporting files or notes—at least one input is required.{' '}
-                <span className="text-foreground">
-                  {UNIFIED_CREDITS} credits (AI) · {REVIEWER_CREDITS} credits (human review)
-                </span>
-                .
-              </CardDescription>
-            </div>
-          </div>
+    <div className="mx-auto max-w-4xl space-y-6">
+      <Card className="border border-primary/25 bg-gradient-to-br from-primary/8 via-background to-violet-500/8">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Layers className="h-5 w-5 text-primary" />
+            One analysis — all your materials
+          </CardTitle>
+          <CardDescription>
+            Add structured answers, an optional deck, and/or a video. We combine everything you provide;{' '}
+            <span className="font-medium text-foreground">the more you share, the richer the score and investor matches</span>.{' '}
+            At least one source required.{' '}
+            <span className="font-medium text-foreground">{UNIFIED_CREDITS} credits</span> (AI) or{' '}
+            <span className="font-medium text-foreground">{REVIEWER_CREDITS}</span> with human review.
+          </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-10 pt-8">
-          <section className="space-y-5">
-            <div>
-              <h2 className="text-sm font-medium text-foreground">Structured Q&amp;A</h2>
-              <p className="mt-1 text-xs leading-normal text-muted-foreground">
-                Optional but recommended—answer the prompts that fit your stage.
-              </p>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Structured Q&A</CardTitle>
+          <CardDescription>Optional but recommended — answer any questions that apply.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {STRUCTURED_QA_KEYS.map(({ key, label }) => (
+            <div key={key} className="space-y-1.5">
+              <Label htmlFor={key}>{label}</Label>
+              <Textarea
+                id={key}
+                rows={3}
+                value={answers[key] || ''}
+                onChange={(e) => setAnswers((a) => ({ ...a, [key]: e.target.value }))}
+                placeholder="Your answer…"
+                className="resize-y min-h-[72px]"
+              />
             </div>
-            <div className="space-y-5">
-              {STRUCTURED_QA_KEYS.map(({ key, label }) => (
-                <div key={key} className="space-y-2">
-                  <Label htmlFor={key} className="text-sm font-normal text-foreground">
-                    {label}
-                  </Label>
-                  <Textarea
-                    id={key}
-                    rows={3}
-                    value={answers[key] || ''}
-                    onChange={(e) => setAnswers((a) => ({ ...a, [key]: e.target.value }))}
-                    placeholder="Your answer…"
-                    className="min-h-[5.5rem] resize-y"
-                  />
-                </div>
-              ))}
-            </div>
-          </section>
-
-          <div className="h-px bg-border" aria-hidden />
-
-          <section className="space-y-4">
-            <div>
-              <h2 className="text-sm font-medium text-foreground">Supporting materials</h2>
-              <p className="mt-1 text-xs leading-normal text-muted-foreground">
-                Deck, recording, and written context live in one place—add any combination; all are optional if your
-                Q&amp;A is enough.
-              </p>
-            </div>
-
-            <div className="overflow-hidden rounded-xl border border-border/80 bg-muted/10">
-              <div className="grid md:grid-cols-2 md:divide-x md:divide-border">
-                <div className="flex flex-col gap-3 border-b border-border p-5 md:border-b-0 md:p-6">
-                  <div className="flex items-center gap-2 text-sm font-medium text-foreground">
-                    <FileText className="h-4 w-4 shrink-0 text-primary/80" aria-hidden />
-                    Deck file
-                  </div>
-                  <p className="text-xs text-muted-foreground">PDF or PPTX</p>
-                  <input
-                    type="file"
-                    accept=".pdf,.pptx,.ppt,application/pdf,application/vnd.openxmlformats-officedocument.presentationml.presentation"
-                    onChange={(e) => setDeckFile(e.target.files?.[0] || null)}
-                    className={fileInputClass}
-                  />
-                  {deckFile && (
-                    <p className="truncate text-xs text-muted-foreground" title={deckFile.name}>
-                      {deckFile.name}
-                    </p>
-                  )}
-                </div>
-
-                <div className="flex flex-col gap-3 p-5 md:p-6">
-                  <div className="flex items-center gap-2 text-sm font-medium text-foreground">
-                    <Video className="h-4 w-4 shrink-0 text-primary/80" aria-hidden />
-                    Video file
-                  </div>
-                  <p className="text-xs text-muted-foreground">MP4, MOV, or WebM</p>
-                  <input
-                    type="file"
-                    accept="video/mp4,video/quicktime,video/webm,.mp4,.mov,.webm"
-                    onChange={(e) => setVideoFile(e.target.files?.[0] || null)}
-                    className={fileInputClass}
-                  />
-                  {videoFile && (
-                    <p className="truncate text-xs text-muted-foreground" title={videoFile.name}>
-                      {videoFile.name}
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              <div className="border-t border-border bg-background/40 p-5 md:p-6">
-                <div className="space-y-2">
-                  <Label htmlFor="pitch-narrative" className="text-sm font-normal text-foreground">
-                    Written pitch <span className="font-normal text-muted-foreground">(optional)</span>
-                  </Label>
-                  <p className="text-xs text-muted-foreground">
-                    One-pager, memo, or elevator pitch—anything not already covered above.
-                  </p>
-                  <Textarea
-                    id="pitch-narrative"
-                    rows={5}
-                    value={narrative}
-                    onChange={(e) => setNarrative(e.target.value)}
-                    placeholder="Paste or type your pitch summary here…"
-                    className="min-h-[7.5rem] resize-y"
-                  />
-                </div>
-              </div>
-            </div>
-          </section>
-
-          <div className="h-px bg-border" aria-hidden />
-
-          <section className="space-y-4">
-            <div className="flex items-center gap-2 text-sm font-medium text-foreground">
-              <User className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
-              Review type
-            </div>
-            <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
-              <label className="flex cursor-pointer items-center gap-2.5 text-sm">
-                <input
-                  type="radio"
-                  name="reviewType"
-                  className="h-4 w-4 shrink-0 accent-primary"
-                  checked={reviewType === 'ai'}
-                  onChange={() => setReviewType('ai')}
-                />
-                <span>AI analysis ({UNIFIED_CREDITS} credits)</span>
-              </label>
-              <label className="flex cursor-pointer items-center gap-2.5 text-sm">
-                <input
-                  type="radio"
-                  name="reviewType"
-                  className="h-4 w-4 shrink-0 accent-primary"
-                  checked={reviewType === 'reviewer'}
-                  onChange={() => setReviewType('reviewer')}
-                />
-                <span>Human reviewer ({REVIEWER_CREDITS} credits)</span>
-              </label>
-            </div>
-            {reviewType === 'reviewer' && (
-              <div className="space-y-2 pt-1">
-                <Label htmlFor="reviewer">Reviewer</Label>
-                <select
-                  id="reviewer"
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                  value={selectedReviewer || ''}
-                  onChange={(e) => setSelectedReviewer(e.target.value || null)}
-                >
-                  <option value="">Select…</option>
-                  {reviewers.map((r) => (
-                    <option key={r.id} value={r.id}>
-                      {r.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
-          </section>
+          ))}
         </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <FileText className="h-4 w-4" />
+            Pitch deck (optional)
+          </CardTitle>
+          <CardDescription>PDF or PPTX</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <input
+            type="file"
+            accept=".pdf,.pptx,.ppt,application/pdf,application/vnd.openxmlformats-officedocument.presentationml.presentation"
+            onChange={(e) => setDeckFile(e.target.files?.[0] || null)}
+            className="text-sm"
+          />
+          {deckFile && <p className="mt-2 text-sm text-muted-foreground">{deckFile.name}</p>}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <Video className="h-4 w-4" />
+            Video pitch (optional)
+          </CardTitle>
+          <CardDescription>MP4, MOV, or WebM</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <input
+            type="file"
+            accept="video/mp4,video/quicktime,video/webm,.mp4,.mov,.webm"
+            onChange={(e) => setVideoFile(e.target.files?.[0] || null)}
+            className="text-sm"
+          />
+          {videoFile && <p className="mt-2 text-sm text-muted-foreground">{videoFile.name}</p>}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <User className="h-4 w-4" />
+            Review type
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="radio"
+              name="reviewType"
+              checked={reviewType === 'ai'}
+              onChange={() => setReviewType('ai')}
+            />
+            AI analysis ({UNIFIED_CREDITS} credits)
+          </label>
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="radio"
+              name="reviewType"
+              checked={reviewType === 'reviewer'}
+              onChange={() => setReviewType('reviewer')}
+            />
+            Human reviewer ({REVIEWER_CREDITS} credits)
+          </label>
+        </CardContent>
+        {reviewType === 'reviewer' && (
+          <CardContent className="pt-0">
+            <Label htmlFor="reviewer">Reviewer</Label>
+            <select
+              id="reviewer"
+              className="mt-1 flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              value={selectedReviewer || ''}
+              onChange={(e) => setSelectedReviewer(e.target.value || null)}
+            >
+              <option value="">Select…</option>
+              {reviewers.map((r) => (
+                <option key={r.id} value={r.id}>
+                  {r.name}
+                </option>
+              ))}
+            </select>
+          </CardContent>
+        )}
       </Card>
 
       {error && (
@@ -316,6 +463,16 @@ export function UnifiedPitchTab() {
               <li key={w}>{w}</li>
             ))}
           </ul>
+        </div>
+      )}
+
+      {analyzing && (
+        <div className="space-y-2 rounded-lg border border-primary/20 bg-primary/5 p-4">
+          <p className="text-sm font-medium text-foreground">{progressLabel}</p>
+          <Progress value={progressBarValue} className="h-3" />
+          <p className="text-xs text-muted-foreground">
+            Upload share of the bar is exact; server work is a time-based estimate (runs can take 30s–several minutes).
+          </p>
         </div>
       )}
 
@@ -343,9 +500,9 @@ export function UnifiedPitchTab() {
 
       {result && !result.reviewSubmitted && (
         <div id="analysis-results" className="space-y-6">
-          {result.rubricAnalysis ? (
+          {safeRubric ? (
             <AnalysisDashboard
-              result={result.rubricAnalysis}
+              result={safeRubric}
               finalScore={result.finalScore ?? result.overallScore}
             />
           ) : (
@@ -367,7 +524,7 @@ export function UnifiedPitchTab() {
             </Card>
           )}
 
-          {!result.rubricAnalysis && (
+          {!safeRubric && (
             <Card>
               <CardContent className="space-y-6 pt-6">
                 <div className="grid gap-4 md:grid-cols-2">
