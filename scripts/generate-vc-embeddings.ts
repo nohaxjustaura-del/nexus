@@ -1,20 +1,37 @@
 /**
- * Generate and store embeddings for all VCs in the database
- * Uses Voyage AI (voyage-3)  -  1024 dimensions
- * Run this script to pre-compute VC embeddings for fast Smart Match
- * 
+ * Generate and store embeddings for all VCs in the database (Voyage voyage-3, 1024-dim).
+ * Skips investors that already have a valid 1024-d vector. Replaces legacy sizes (e.g. 3072)
+ * by re-embedding VC profile text — old vectors are not mathematically convertible to Voyage space.
+ *
  * Usage: npm run generate-vc-embeddings
- * 
- * Requirements: VOYAGE_API_KEY in .env
- * Rate limits: 3 RPM, 10K TPM
+ *
+ * Requirements: VOYAGE_API_KEY. Restricted tier: 3 RPM — script sends up to 3 VCs per request
+ * (~3× faster than one VC per request). Enable Voyage billing for higher RPM, or set
+ * VOYAGE_MIN_REQUEST_INTERVAL_MS lower only if your org allows it.
  */
 
 import { db as prisma } from '../lib/db'
-import { generateVCEmbedding } from '../lib/embeddings'
+import {
+  buildVCEmbeddingText,
+  EMBEDDING_DIMENSIONS,
+  EMBEDDING_MODEL,
+  generateBatchEmbeddings,
+  VOYAGE_EMBEDDINGS_MIN_INTERVAL_MS,
+} from '../lib/embeddings'
 import { parseJSON } from '../lib/utils'
 
+function formatVoyageSpacing(ms: number): string {
+  if (ms <= 0) return 'no delay between requests'
+  if (ms < 1000) return `${ms}ms between requests`
+  return `≥${ms / 1000}s between requests`
+}
+
 async function main() {
-  console.log('🚀 Starting VC embedding generation...\n')
+  console.log('🚀 Starting VC embedding generation (Voyage AI)...\n')
+  console.log(
+    `   Model: ${EMBEDDING_MODEL}, ${EMBEDDING_DIMENSIONS} dims — up to 3 VCs per HTTP request, ` +
+      `${formatVoyageSpacing(VOYAGE_EMBEDDINGS_MIN_INTERVAL_MS)}\n`,
+  )
 
   // Get all verified, public VCs
   const investors = await prisma.investor.findMany({
@@ -43,68 +60,83 @@ async function main() {
 
   console.log(`Found ${investors.length} investors\n`)
 
-  let generated = 0
-  let skipped = 0
-  let errors = 0
-  let apiCalls = 0
+  type Row = (typeof investors)[number]
+  const queue: { investor: Row; reason: string }[] = []
 
   for (const investor of investors) {
-    try {
-      // Skip if already has a valid 1024-dim embedding
-      if (investor.embedding) {
-        try {
-          const existing = JSON.parse(investor.embedding as string)
-          if (Array.isArray(existing) && existing.length === 1024) {
-            skipped++
-            continue
-          }
-          console.log(`🔄 Re-generating embedding for ${investor.firmName} (wrong dimension: ${existing.length})`)
-        } catch {
-          console.log(`🔄 Re-generating embedding for ${investor.firmName} (invalid stored embedding)`)
+    if (investor.embedding) {
+      try {
+        const existing = JSON.parse(investor.embedding as string)
+        if (Array.isArray(existing) && existing.length === EMBEDDING_DIMENSIONS) {
+          continue
         }
-      } else {
-        console.log(`🔄 Generating embedding for ${investor.firmName}...`)
+        queue.push({
+          investor,
+          reason: `stored ${existing.length} dims; need ${EMBEDDING_DIMENSIONS} for ${EMBEDDING_MODEL}`,
+        })
+      } catch {
+        queue.push({ investor, reason: 'invalid stored embedding' })
       }
+    } else {
+      queue.push({ investor, reason: 'missing embedding' })
+    }
+  }
 
-      const vcProfile = {
-        firmName: investor.firmName,
-        fundType: investor.fundType,
-        stages: parseJSON<string[]>(investor.stages, []),
-        sectors: parseJSON<string[]>(investor.sectors, []),
-        geography: parseJSON<string[]>(investor.geography || investor.geoFocus, []),
-        checkSizeMin: investor.checkSizeMin,
-        checkSizeMax: investor.checkSizeMax,
-        leadFollow: investor.leadFollow,
-        thesis: investor.thesis || undefined,
-        valueAddTags: parseJSON<string[]>(investor.valueAddTags, []),
-        portfolio: parseJSON<any[]>(investor.portfolio, [])
-          .map((p: any) => (typeof p === 'string' ? p : p.name || p.company))
-          .filter(Boolean),
-        notableInvestments: parseJSON<string[]>(investor.notableInvestments, []),
-      }
+  const skipped = investors.length - queue.length
+  if (skipped > 0) {
+    console.log(`⏭️  Skipping ${skipped} investors (already ${EMBEDDING_DIMENSIONS}-dim)\n`)
+  }
+  console.log(`📋 Queued ${queue.length} investors to embed\n`)
 
-      const embedding = await generateVCEmbedding(vcProfile)
-      apiCalls++
+  let generated = 0
+  let errors = 0
 
-      await prisma.investor.update({
-        where: { id: investor.id },
-        data: { embedding: JSON.stringify(embedding) },
-      })
-
-      console.log(`✅ Generated embedding for ${investor.firmName}`)
-      generated++
-    } catch (error: any) {
-      console.error(`❌ Error generating embedding for ${investor.firmName}:`, error.message)
-      errors++
-      apiCalls++
+  const BATCH = 3
+  for (let i = 0; i < queue.length; i += BATCH) {
+    if (i > 0 && VOYAGE_EMBEDDINGS_MIN_INTERVAL_MS > 0) {
+      await new Promise((r) => setTimeout(r, VOYAGE_EMBEDDINGS_MIN_INTERVAL_MS))
     }
 
-    // Rate limiting OUTSIDE try/catch  -  applies after every API call (success or error)
-    if (apiCalls > 0 && apiCalls % 3 === 0) {
-      console.log(`⏳ Rate-limit pause (60s) after ${apiCalls} API calls...`)
-      await new Promise(resolve => setTimeout(resolve, 60_000))
-    } else if (apiCalls > 0) {
-      await new Promise(resolve => setTimeout(resolve, 500))
+    const slice = queue.slice(i, i + BATCH)
+    for (const { investor, reason } of slice) {
+      console.log(`🔄 ${investor.firmName} (${reason})`)
+    }
+
+    try {
+      const texts = slice.map(({ investor }) =>
+        buildVCEmbeddingText({
+          firmName: investor.firmName ?? 'Unknown',
+          fundType: investor.fundType,
+          stages: parseJSON<string[]>(investor.stages, []),
+          sectors: parseJSON<string[]>(investor.sectors, []),
+          geography: parseJSON<string[]>(investor.geography || investor.geoFocus, []),
+          checkSizeMin: investor.checkSizeMin,
+          checkSizeMax: investor.checkSizeMax,
+          leadFollow: investor.leadFollow,
+          thesis: investor.thesis || undefined,
+          valueAddTags: parseJSON<string[]>(investor.valueAddTags, []),
+          portfolio: parseJSON<any[]>(investor.portfolio, [])
+            .map((p: any) => (typeof p === 'string' ? p : p.name || p.company))
+            .filter(Boolean),
+          notableInvestments: parseJSON<string[]>(investor.notableInvestments, []),
+        }),
+      )
+
+      const vectors = await generateBatchEmbeddings(texts)
+
+      for (let j = 0; j < slice.length; j++) {
+        const { investor } = slice[j]
+        const embedding = vectors[j]
+        await prisma.investor.update({
+          where: { id: investor.id },
+          data: { embedding: JSON.stringify(embedding) },
+        })
+        console.log(`✅ ${investor.firmName} (${embedding.length} dims)`)
+        generated++
+      }
+    } catch (error: any) {
+      console.error(`❌ Batch failed (${slice.map((s) => s.investor.firmName).join(', ')}):`, error.message)
+      errors += slice.length
     }
   }
 

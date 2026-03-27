@@ -10,7 +10,7 @@ type NexusWordmarkProps = {
   priority?: boolean
 }
 
-export function NexusWordmark({ className, heightClass = 'h-14 sm:h-16', priority }: NexusWordmarkProps) {
+export function NexusWordmark({ className, heightClass = 'h-28 sm:h-32', priority }: NexusWordmarkProps) {
   return (
     <img
       src={SRC}

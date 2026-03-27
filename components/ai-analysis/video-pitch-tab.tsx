@@ -438,7 +438,7 @@ export function VideoPitchAnalysisTab() {
       <div id="analysis-results" className="mx-auto max-w-6xl w-full space-y-6">
             {/* Rubric Analysis Dashboard */}
             {result.rubricAnalysis ? (
-              <AnalysisDashboard result={result.rubricAnalysis} />
+              <AnalysisDashboard result={result.rubricAnalysis} finalScore={result.finalScore ?? result.overallScore} />
             ) : (
               <Card className="border-2 border-primary/20">
                 <CardHeader>

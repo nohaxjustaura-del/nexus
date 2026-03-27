@@ -150,9 +150,6 @@ export function SiteHeader() {
 
   const isAdminRoute = Boolean(pathname?.startsWith('/admin'))
 
-  const modeLabel =
-    chrome === 'guest' ? null : chrome === 'investor' ? 'Investor' : 'Founder'
-
   const navShellClass =
     'inline-flex flex-wrap items-center justify-center gap-0.5 rounded-full border border-border/50 bg-muted/20 px-2 py-1'
 
@@ -165,24 +162,19 @@ export function SiteHeader() {
           : 'border-border/50 bg-background/90 supports-[backdrop-filter]:bg-background/80'
       )}
     >
-      <div className="container mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3 sm:px-6 sm:py-3.5 lg:grid lg:grid-cols-[auto_minmax(0,1fr)_auto] lg:items-center lg:gap-6 lg:px-6 lg:py-3">
+      <div className="container mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3 sm:px-6 sm:py-4 lg:grid lg:grid-cols-[auto_minmax(0,1fr)_auto] lg:items-center lg:gap-4 lg:px-6 lg:py-4">
         <div className="flex min-w-0 shrink-0 items-center gap-2 sm:gap-3 lg:min-w-0 lg:justify-self-start">
-          <Link
-            href={logoHref}
-            className="group flex min-w-0 items-center gap-2 rounded-md py-1 pr-1 transition-colors hover:bg-muted/30 sm:gap-2 sm:pr-1.5"
-          >
-            <span className="flex min-w-0 flex-col leading-none">
+          <div className="group flex min-w-0 items-center gap-2 rounded-md py-0.5 pr-1 sm:gap-2 sm:pr-1.5">
+            <Link
+              href={logoHref}
+              className="block shrink-0 rounded-md outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background group-hover:bg-muted/30"
+            >
               <NexusWordmark
                 priority
-                heightClass="h-12 sm:h-14 lg:h-16"
-                className="max-w-[15rem] sm:max-w-[19rem] lg:max-w-[24rem]"
+                heightClass="h-16 sm:h-20 lg:h-24"
+                className="max-w-[16rem] sm:max-w-[22rem] lg:max-w-[28rem]"
               />
-              {modeLabel && (
-                <span className="mt-1 hidden text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground sm:block">
-                  {modeLabel} workspace
-                </span>
-              )}
-            </span>
+            </Link>
             {isAdminRoute && (
               <span
                 className="hidden shrink-0 rounded-full border border-amber-500/35 bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-800 dark:text-amber-400 sm:inline"
@@ -191,7 +183,7 @@ export function SiteHeader() {
                 Admin
               </span>
             )}
-          </Link>
+          </div>
         </div>
 
         <nav
@@ -243,28 +235,32 @@ export function SiteHeader() {
           <div className="lg:hidden">
             <MobileNav links={mobileLinks} />
           </div>
-          {chrome === 'founder' && showInvestorSwitch && (
+          {showInvestorSwitch && chrome === 'founder' && (
             <button
               type="button"
+              title="Open investor workspace"
+              aria-label="Switch to investor workspace"
               onClick={() => {
                 setPreferredChrome('investor')
                 router.push('/vc/profile')
               }}
-              className="hidden shrink-0 whitespace-nowrap rounded-full border border-border/60 bg-background/80 px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:border-primary/30 hover:bg-muted/40 hover:text-foreground lg:inline-flex"
+              className="hidden h-8 shrink-0 rounded-full border border-border/80 bg-muted/20 px-3 text-sm font-medium text-foreground transition-colors hover:bg-muted/45 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background lg:inline-flex lg:items-center lg:justify-center"
             >
-              Investor workspace
+              Investor
             </button>
           )}
-          {chrome === 'investor' && showFounderSwitch && (
+          {authenticated && showFounderSwitch && chrome === 'investor' && (
             <button
               type="button"
+              title="Open founder workspace"
+              aria-label="Switch to founder workspace"
               onClick={() => {
                 setPreferredChrome('founder')
                 router.push('/founder/dashboard')
               }}
-              className="hidden shrink-0 whitespace-nowrap rounded-full border border-border/60 bg-background/80 px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:border-primary/30 hover:bg-muted/40 hover:text-foreground lg:inline-flex"
+              className="hidden h-8 shrink-0 rounded-full border border-border/80 bg-muted/20 px-3 text-sm font-medium text-foreground transition-colors hover:bg-muted/45 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background lg:inline-flex lg:items-center lg:justify-center"
             >
-              Founder workspace
+              Founder
             </button>
           )}
           <div className="hidden h-5 w-px bg-border/60 lg:block" aria-hidden />

@@ -10,6 +10,7 @@
  */
 
 import { db } from '../lib/db'
+import { EMBEDDING_DIMENSIONS } from '../lib/embeddings'
 import { parseJSON } from '../lib/utils'
 import { writeFileSync } from 'fs'
 import { join } from 'path'
@@ -49,7 +50,9 @@ async function main() {
     return
   }
 
-  // Pick dominant non-zero embedding dimension (DB may have 1024 Voyage or 3072 OpenAI, etc.)
+  // Smart Match + FAISS use voyage-3 pitch vectors (see lib/embeddings.ts). Always index that
+  // dimension — do not pick "dominant" dim or legacy OpenAI 3072 rows will exclude new Voyage rows.
+  const targetDim = EMBEDDING_DIMENSIONS
   const dimCounts = new Map<number, number>()
   for (const inv of investors) {
     if (!inv.embedding) continue
@@ -57,22 +60,22 @@ async function main() {
     if (emb.length === 0) continue
     dimCounts.set(emb.length, (dimCounts.get(emb.length) || 0) + 1)
   }
-  let targetDim = 1024
-  let maxCount = 0
-  for (const [dim, count] of dimCounts) {
-    if (count > maxCount) {
-      maxCount = count
-      targetDim = dim
-    }
-  }
-  if (dimCounts.size > 1) {
+  const countTarget = dimCounts.get(targetDim) ?? 0
+  const otherDims = [...dimCounts.entries()].filter(([d]) => d !== targetDim)
+  const skippedWrongDim = investors.reduce((n, inv) => {
+    if (!inv.embedding) return n
+    const emb = parseJSON<number[]>(inv.embedding, [])
+    return emb.length > 0 && emb.length !== targetDim ? n + 1 : n
+  }, 0)
+
+  console.log(
+    `ℹ️  Building FAISS for pitch alignment: ${targetDim}-dim (Voyage voyage-3). ` +
+      `${countTarget} investors match; ${skippedWrongDim} rows use other sizes (skipped).\n`
+  )
+  if (otherDims.length > 0) {
+    const parts = otherDims.map(([d, c]) => `${c}×${d}d`).join(', ')
     console.log(
-      `ℹ️  Multiple embedding sizes in DB; building FAISS with ${targetDim} dims (${maxCount} investors).\n`
-    )
-  }
-  if (targetDim !== 1024) {
-    console.log(
-      `⚠️  Pitch embeddings use Voyage (1024). This index is ${targetDim}-dim — Smart Match may fall back to in-memory until you run: npm run rebuild-faiss-index\n`
+      `   Legacy / other in DB: ${parts}. Run npm run generate-vc-embeddings to replace with ${targetDim}-dim Voyage vectors.\n`,
     )
   }
 
@@ -92,9 +95,6 @@ async function main() {
       }
 
       if (embedding.length !== targetDim) {
-        console.log(
-          `⚠️  Skipping ${investor.firmName} - dimension ${embedding.length} (index uses ${targetDim})`
-        )
         continue
       }
 
@@ -125,7 +125,11 @@ async function main() {
   }
 
   if (embeddings.length === 0) {
-    console.log('❌ No valid embeddings found')
+    console.log(
+      `❌ No ${targetDim}-dim embeddings found. Pitch + FAISS require Voyage-sized vectors.\n` +
+        `   Run: npm run generate-vc-embeddings\n` +
+        `   (Legacy 3072-dim rows must be re-embedded; they cannot be converted to 1024.)`,
+    )
     return
   }
 

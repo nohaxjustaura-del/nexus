@@ -128,6 +128,11 @@ Return a JSON object with exactly these fields:
 Exactly 3 keyInsights. No other fields. Return valid JSON only.`
 }
 
+function safeNumber(val: unknown, fallback: number): number {
+  const n = Number(val)
+  return Number.isFinite(n) ? n : fallback
+}
+
 function normalizeBullResult(raw: any): BullResult {
   return {
     fundReturnerCase: typeof raw?.fundReturnerCase === "string"
@@ -136,8 +141,8 @@ function normalizeBullResult(raw: any): BullResult {
     keyInsights: Array.isArray(raw?.keyInsights)
       ? raw.keyInsights.slice(0, 3).map(String)
       : ["Analysis unavailable."],
-    bullScore:      clamp(Number(raw?.bullScore)      ?? 40, 0, 100),
-    winProbability: clamp(Number(raw?.winProbability) ?? 15, 0, 100),
+    bullScore:      clamp(safeNumber(raw?.bullScore,      40), 0, 100),
+    winProbability: clamp(safeNumber(raw?.winProbability, 15), 0, 100),
   }
 }
 
@@ -182,7 +187,15 @@ function buildBearSystem(stage: string): string {
     "  seed:\n" +
     "    - No revenue model locked in\n" +
     "    - No named prior exits required\n" +
-    "    - Unit economics still being discovered\n\n" +
+    "    - Unit economics still being discovered\n" +
+    "    - Team still small (< 10 people)\n\n" +
+    "  series-a:\n" +
+    "    - Unit economics not yet fully optimized\n" +
+    "    - International expansion not started\n" +
+    "    - Some key hires still to be made\n\n" +
+    "  revenue/growth:\n" +
+    "    - Not yet profitable (growth-stage companies reinvest)\n" +
+    "    - Still refining go-to-market channels\n\n" +
     "TRUE red flags at ANY stage:\n" +
     "    - No working product or prototype\n" +
     "    - Zero founder-market fit evidence\n" +
@@ -239,7 +252,7 @@ function normalizeBearResult(raw: any): BearResult {
     founderRiskFlags: Array.isArray(raw?.founderRiskFlags)
       ? raw.founderRiskFlags.map(String)
       : ["Analysis unavailable."],
-    bearScore:         clamp(Number(raw?.bearScore) ?? 60, 0, 100),
+    bearScore:         clamp(safeNumber(raw?.bearScore, 60), 0, 100),
     gaveUpTooEarlyRisk: Boolean(raw?.gaveUpTooEarlyRisk),
   }
 }

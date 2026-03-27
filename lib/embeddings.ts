@@ -1,18 +1,38 @@
 /**
  * Embedding utilities for semantic matching between pitches and VCs
- * Uses Voyage AI embedding API (voyage-3)
+ * Uses Voyage AI `voyage-3` (1024 dimensions). Pitch and VC vectors must share this model/dim.
  *
- * voyage-3: 1024 dimensions, 200M free tokens for new accounts.
- * Rate limits: 3 RPM, 10K TPM — callers must respect these.
- * API: POST https://api.voyageai.com/v1/embeddings
+ * Legacy rows in DB may store 3072-dim vectors from another provider — they cannot be converted
+ * to Voyage space; run `npm run generate-vc-embeddings` to replace them with 1024-d Voyage vectors.
+ *
+ * Rate limits: default ~21s between requests (3 RPM free tier). Set VOYAGE_MIN_REQUEST_INTERVAL_MS
+ * to a lower value (e.g. 50) when your Voyage org allows higher RPM; use 0 to disable spacing (watch TPM/429).
  */
 
+import './load-env'
 import { parseJSON } from '@/lib/utils'
 
 const EMBEDDING_MODEL = 'voyage-3'
 const EMBEDDING_DIMENSIONS = 1024
 
-function getApiKey(): string {
+function resolveVoyageMinIntervalMs(): number {
+  const raw = process.env.VOYAGE_MIN_REQUEST_INTERVAL_MS
+  if (raw === undefined || String(raw).trim() === '') {
+    return 21_000
+  }
+  const n = Number(raw)
+  if (!Number.isFinite(n) || n < 0) {
+    return 21_000
+  }
+  return n
+}
+
+/** Minimum delay between Voyage embedding HTTP requests (same for single + batch calls). */
+export const VOYAGE_EMBEDDINGS_MIN_INTERVAL_MS = resolveVoyageMinIntervalMs()
+
+const VOYAGE_429_MAX_ATTEMPTS = 5
+
+function getVoyageApiKey(): string {
   const apiKey = process.env.VOYAGE_API_KEY
   if (!apiKey) {
     throw new Error('VOYAGE_API_KEY is required for Smart Match embeddings. Get one at https://dash.voyageai.com/')
@@ -20,20 +40,50 @@ function getApiKey(): string {
   return apiKey
 }
 
-async function callEmbedAPI(text: string): Promise<number[]> {
-  const apiKey = getApiKey()
+/**
+ * Single embeddings POST with 429 retries (billing / TPM / RPM bursts).
+ */
+async function postVoyageEmbeddings(body: Record<string, unknown>): Promise<Response> {
+  const apiKey = getVoyageApiKey()
+  let last429Body = ''
 
-  const res = await fetch('https://api.voyageai.com/v1/embeddings', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      input: [text],
-      model: EMBEDDING_MODEL,
-      input_type: 'document',
-    }),
+  for (let attempt = 0; attempt < VOYAGE_429_MAX_ATTEMPTS; attempt++) {
+    const res = await fetch('https://api.voyageai.com/v1/embeddings', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify(body),
+    })
+
+    if (res.status === 429) {
+      last429Body = await res.text()
+      if (attempt >= VOYAGE_429_MAX_ATTEMPTS - 1) {
+        break
+      }
+      const retryAfter = res.headers.get('retry-after')
+      const retrySec = retryAfter ? parseInt(retryAfter, 10) : NaN
+      const waitMs =
+        Number.isFinite(retrySec) && retrySec > 0 ? retrySec * 1000 : 65_000
+      console.warn(
+        `[Voyage] Rate limited (429), waiting ${Math.round(waitMs / 1000)}s before retry ${attempt + 2}/${VOYAGE_429_MAX_ATTEMPTS}...`,
+      )
+      await new Promise(r => setTimeout(r, waitMs))
+      continue
+    }
+
+    return res
+  }
+
+  throw new Error(`Voyage AI embedding error (429): ${last429Body}`)
+}
+
+async function callEmbedAPI(text: string): Promise<number[]> {
+  const res = await postVoyageEmbeddings({
+    input: [text],
+    model: EMBEDDING_MODEL,
+    input_type: 'document',
   })
 
   if (!res.ok) {
@@ -42,7 +92,15 @@ async function callEmbedAPI(text: string): Promise<number[]> {
   }
 
   const data = await res.json()
-  return data.data[0].embedding as number[]
+  const embedding = data.data[0].embedding as number[]
+  if (!Array.isArray(embedding) || embedding.length !== EMBEDDING_DIMENSIONS) {
+    throw new Error(
+      `Voyage embedding dimension mismatch: expected ${EMBEDDING_DIMENSIONS} (${EMBEDDING_MODEL}), got ${
+        Array.isArray(embedding) ? embedding.length : typeof embedding
+      }.`,
+    )
+  }
+  return embedding
 }
 
 // ============================================================================
@@ -390,6 +448,12 @@ export function investorsToRankableEmbeddings(
 let faissSkipDueToDimensionMismatch = false
 let faissDimensionMismatchLogged = false
 
+/** Dev / rebuild workflow: keep calling FAISS after mismatch so a rebuilt index works without restarting Next. */
+function faissRetryOnDimensionMismatch(): boolean {
+  const v = process.env.FAISS_RETRY_ON_DIMENSION_MISMATCH
+  return v === '1' || v === 'true'
+}
+
 /**
  * Rank VCs using FAISS service (faster, uses pre-built index)
  * Falls back to in-memory cosine similarity if service unavailable
@@ -398,6 +462,9 @@ export async function rankVCsWithFAISS(
   pitchEmbedding: number[],
   topK: number = 20
 ): Promise<RankedVC[]> {
+  if (faissRetryOnDimensionMismatch()) {
+    faissSkipDueToDimensionMismatch = false
+  }
   if (faissSkipDueToDimensionMismatch) {
     throw new Error('FAISS skipped: index/pitch embedding dimensions do not match (see faiss-service logs)')
   }
@@ -429,13 +496,18 @@ export async function rankVCsWithFAISS(
         response.status === 400 &&
         /dimension mismatch|Embedding dimension mismatch/i.test(detail)
       ) {
-        faissSkipDueToDimensionMismatch = true
+        if (!faissRetryOnDimensionMismatch()) {
+          faissSkipDueToDimensionMismatch = true
+        }
         if (!faissDimensionMismatchLogged) {
           faissDimensionMismatchLogged = true
           console.warn(
-            '[FAISS] Index embedding size does not match the current pitch model. ' +
-              'Regenerate the index (see faiss-service/README or npm run rebuild-faiss-index). ' +
-              'Skipping further FAISS HTTP calls until server restart.',
+            faissRetryOnDimensionMismatch()
+              ? '[FAISS] Index embedding size does not match the current pitch model. Regenerate the index; ' +
+                  'retrying every request (FAISS_RETRY_ON_DIMENSION_MISMATCH). Do not use in production.'
+              : '[FAISS] Index embedding size does not match the current pitch model. ' +
+                  'Regenerate the index (see faiss-service/README or npm run rebuild-faiss-index). ' +
+                  'Skipping further FAISS HTTP calls until server restart.',
           )
         }
       }
@@ -474,14 +546,17 @@ export async function rankVCsForPitch(
   if (useFAISS && (!vcEmbeddings || vcEmbeddings.length === 0)) {
     try {
       return await rankVCsWithFAISS(pitchEmbedding, topK)
-    } catch {
-      /* Caller must pass vcEmbeddings for in-memory ranking, or this throws below. */
+    } catch (e: unknown) {
+      const detail = e instanceof Error ? e.message : String(e)
+      throw new Error(
+        `No VC embeddings for in-memory fallback and FAISS failed: ${detail}`,
+      )
     }
   }
 
   // In-memory cosine similarity (requires vc rows with same embedding dimension as pitch)
   if (!vcEmbeddings || vcEmbeddings.length === 0) {
-    throw new Error('No VC embeddings provided and FAISS service unavailable')
+    throw new Error('No VC embeddings provided and FAISS path was not used')
   }
 
   // Calculate similarities
@@ -505,35 +580,28 @@ export async function rankVCsForPitch(
 
 /**
  * Generate embeddings for multiple texts in batch.
- * Voyage AI rate limits: 3 RPM, 10K TPM. We send batches of 3
- * with a 60-second pause between batches.
+ * Each HTTP call counts toward RPM. Restricted tier: 3 RPM — wait VOYAGE_EMBEDDINGS_MIN_INTERVAL_MS
+ * between requests; each request may include up to BATCH_SIZE strings (default 3).
  */
 export async function generateBatchEmbeddings(texts: string[]): Promise<number[][]> {
-  const apiKey = getApiKey()
+  /** One HTTP request can include multiple strings; 3 RPM = one request every ≥~20s on free tier. */
   const BATCH_SIZE = 3
-  const BATCH_DELAY_MS = 60_000
+  const BATCH_DELAY_MS = VOYAGE_EMBEDDINGS_MIN_INTERVAL_MS
 
   const embeddings: number[][] = []
 
   for (let i = 0; i < texts.length; i += BATCH_SIZE) {
     if (i > 0) {
-      console.log(`[EMBEDDINGS] Rate-limit pause (${BATCH_DELAY_MS / 1000}s) before batch ${Math.floor(i / BATCH_SIZE) + 1}...`)
+      console.log(`[EMBEDDINGS] Rate-limit pause (${Math.ceil(BATCH_DELAY_MS / 1000)}s) before batch ${Math.floor(i / BATCH_SIZE) + 1}...`)
       await new Promise(resolve => setTimeout(resolve, BATCH_DELAY_MS))
     }
 
     const batch = texts.slice(i, i + BATCH_SIZE)
 
-    const res = await fetch('https://api.voyageai.com/v1/embeddings', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        input: batch,
-        model: EMBEDDING_MODEL,
-        input_type: 'document',
-      }),
+    const res = await postVoyageEmbeddings({
+      input: batch,
+      model: EMBEDDING_MODEL,
+      input_type: 'document',
     })
 
     if (!res.ok) {
@@ -542,8 +610,19 @@ export async function generateBatchEmbeddings(texts: string[]): Promise<number[]
     }
 
     const data = await res.json()
-    for (const item of data.data) {
-      embeddings.push(item.embedding as number[])
+    const items = [...(data.data as { embedding: number[]; index?: number }[])].sort(
+      (a, b) => (a.index ?? 0) - (b.index ?? 0),
+    )
+    for (const item of items) {
+      const emb = item.embedding
+      if (!Array.isArray(emb) || emb.length !== EMBEDDING_DIMENSIONS) {
+        throw new Error(
+          `Voyage batch embedding dimension mismatch: expected ${EMBEDDING_DIMENSIONS} (${EMBEDDING_MODEL}), got ${
+            Array.isArray(emb) ? emb.length : typeof emb
+          }`,
+        )
+      }
+      embeddings.push(emb)
     }
 
     console.log(`[EMBEDDINGS] Batch ${Math.floor(i / BATCH_SIZE) + 1}/${Math.ceil(texts.length / BATCH_SIZE)} done (${embeddings.length}/${texts.length})`)
@@ -552,5 +631,5 @@ export async function generateBatchEmbeddings(texts: string[]): Promise<number[]
   return embeddings
 }
 
-/** Exported so scripts and other modules can access the configured dimensions */
-export { EMBEDDING_DIMENSIONS }
+/** Exported so scripts and other modules stay aligned with the live API config */
+export { EMBEDDING_DIMENSIONS, EMBEDDING_MODEL }

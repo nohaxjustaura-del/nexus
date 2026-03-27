@@ -467,9 +467,6 @@ export async function POST(request: NextRequest) {
       }
       
       pitchAnalysis = await analyzeVideoPitch(transcriptText, enhancedFounder)
-      // #region agent log
-      fetch('http://127.0.0.1:7471/ingest/0f685c44-f6c8-4b99-b23e-84e0cc9d4f08',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'e61823'},body:JSON.stringify({sessionId:'e61823',location:'analyze-video-pitch/route.ts:468',message:'H1+H3: pitchAnalysis after analyzeVideoPitch',data:{hasPitchAnalysis:!!pitchAnalysis,startupNameField:(pitchAnalysis as any)?.startupName||'MISSING',sectorFitKeys:Object.keys(pitchAnalysis?.sectorFit||{}),tractionRevenue:pitchAnalysis?.tractionMetrics?.revenue,tractionUsers:pitchAnalysis?.tractionMetrics?.users,strengthsCount:pitchAnalysis?.strengths?.length,productDiffs:pitchAnalysis?.productFit?.differentiators},timestamp:Date.now(),hypothesisId:'H1+H3'})}).catch(()=>{});
-      // #endregion
     } catch (aiError: any) {
       logger.error('[ANALYZE-VIDEO-PITCH] AI analysis error:', aiError)
       
@@ -660,10 +657,6 @@ export async function POST(request: NextRequest) {
       logger.log(`[ANALYZE-VIDEO-PITCH] Running Market Intelligence + Scoring Pipeline for "${videoEnhancedCtx.startupName}" (stage: ${videoEnhancedCtx.stage})...`)
 
       const marketContext = await getDeepMarketContext(domain, problem)
-
-      // #region agent log
-      fetch('http://127.0.0.1:7471/ingest/0f685c44-f6c8-4b99-b23e-84e0cc9d4f08',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'e61823'},body:JSON.stringify({sessionId:'e61823',location:'analyze-video-pitch/route.ts:scoring',message:'POST-FIX: data entering runScoringPipeline',data:{startupName:videoEnhancedCtx.startupName,stage:videoEnhancedCtx.stage,sectors:videoEnhancedCtx.sectors,bioPreview:videoEnhancedCtx.bio?.substring(0,120),videoStartupNameExtracted:videoStartupName,pitchType:'VIDEO'},timestamp:Date.now(),runId:'post-fix',hypothesisId:'H2+H4+H5'})}).catch(()=>{});
-      // #endregion
       scoringResult = await runScoringPipeline(transcriptText, videoEnhancedCtx, marketContext, "VIDEO")
       logger.log(`[ANALYZE-VIDEO-PITCH] Scoring Pipeline completed; finalScore: ${scoringResult.finalScore}`)
     } catch (scoringError: any) {

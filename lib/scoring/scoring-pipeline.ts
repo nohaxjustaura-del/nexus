@@ -21,8 +21,8 @@
  *     generateCategoryDescriptions() — DeepSeek
  *
  *   Phase 4 — Score fusion (TypeScript only, no LLM):
- *     Full:     catDescAvg*0.25 + criterion*0.20 + adversarial*0.30 + tier*0.20 + vagueness(±10)
- *     Fallback: criterion*0.30 + adversarial*0.40 + tier*0.25 + vagueness(±10)
+ *     Full:     catDescAvg*0.25 + criterion*0.20 + adversarial*0.30 + tier*0.25 + vagueness(±10)
+ *     Fallback: criterion*0.30 + adversarial*0.40 + tier*0.30 + vagueness(±10)
  *
  * Error resilience (plan §6j):
  *   Each pass has its own internal fallback so it never throws. If Phase 2
@@ -356,6 +356,34 @@ function convictionFromScore(score: number): AdversarialConviction {
   return "PASS"
 }
 
+/**
+ * Keep analyst prose while preventing score drift in the UI/logs.
+ * Some model-written verdicts include stale numeric claims that can conflict
+ * with the deterministic finalScore computed in TypeScript.
+ */
+function removeInlineScoreClaims(verdict: string): string {
+  if (!verdict) return ""
+  return verdict
+    // "With a score of 58..." / "score: 58/100" / "scored 58"
+    .replace(/\bwith a score of\s+\d{1,3}(?:\/100)?\b[.,;:]?/gi, "")
+    .replace(/\bscore\s*[:=]?\s*\d{1,3}(?:\/100)?\b[.,;:]?/gi, "")
+    .replace(/\bscored\s+\d{1,3}(?:\/100)?\b[.,;:]?/gi, "")
+    .replace(/\s{2,}/g, " ")
+    .trim()
+}
+
+function buildCalibratedVerdict(
+  modelVerdict: string,
+  finalScore: number,
+  tier: string,
+  conviction: AdversarialConviction,
+): string {
+  const lead = `Calibrated outcome: ${finalScore}/100 (${tier}, ${conviction} conviction).`
+  const cleaned = removeInlineScoreClaims(modelVerdict)
+  if (!cleaned) return lead
+  return `${lead} ${cleaned}`
+}
+
 // ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
@@ -401,9 +429,6 @@ export async function runScoringPipeline(
 
   // Build pitch summary once — used by adversarial scorer and tier classifier (both Phase 2)
   const pitchSummary = buildPitchSummary(facts, founderContext, marketIntelligence)
-  // #region agent log
-  fetch('http://127.0.0.1:7471/ingest/0f685c44-f6c8-4b99-b23e-84e0cc9d4f08',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'e61823'},body:JSON.stringify({sessionId:'e61823',location:'scoring-pipeline.ts:buildPitchSummary',message:'H2: pitchSummary content (first 300 chars)',data:{pitchSummaryPreview:pitchSummary.substring(0,300),ctxStartupName:founderContext.startupName,ctxStage:founderContext.stage,ctxSectors:founderContext.sectors,rawPitchPreview:rawPitch?.substring(0,150)},timestamp:Date.now(),hypothesisId:'H2'})}).catch(()=>{});
-  // #endregion
 
   // -------------------------------------------------------------------------
   // Phase 2 — criterion + adversarial + tier classification (all independent, parallel)
@@ -518,33 +543,43 @@ export async function runScoringPipeline(
   let vaguenessAdjustment: number
   const conviction = adversarialResult?.conviction ?? convictionFromScore(cFinal)
 
+  vaguenessAdjustment = Math.max(-10, Math.min(10,
+    vaguenessAudit.netAdjustment * 0.15,
+  ))
+
   if (categoryDescAvg !== null) {
+    // Full formula (weights sum to 1.0): 0.25 + 0.20 + 0.30 + 0.25 = 1.00
     const rawFusion =
       categoryDescAvg * 0.25 +
       cFinal          * 0.20 +
       aFinal          * 0.30 +
-      tFinal          * 0.20
-
-    vaguenessAdjustment = Math.max(-10, Math.min(10,
-      vaguenessAudit.netAdjustment * 0.15,
-    ))
+      tFinal          * 0.25
 
     finalScore = Math.round(
       Math.max(8, Math.min(100, rawFusion + vaguenessAdjustment)),
     )
   } else {
+    // Fallback formula (weights sum to 1.0): 0.30 + 0.40 + 0.30 = 1.00
     const rawFusion =
       cFinal * 0.30 +
       aFinal * 0.40 +
-      tFinal * 0.25
-
-    vaguenessAdjustment = Math.max(-10, Math.min(10,
-      vaguenessAudit.netAdjustment * 0.15,
-    ))
+      tFinal * 0.30
 
     finalScore = Math.round(
       Math.max(8, Math.min(100, rawFusion + vaguenessAdjustment)),
     )
+  }
+
+  // Ensure verdict text is always aligned with the deterministic fused score.
+  const calibratedVerdict = buildCalibratedVerdict(
+    categoryDescriptions.globalVerdict,
+    finalScore,
+    tier,
+    conviction,
+  )
+  categoryDescriptions = {
+    ...categoryDescriptions,
+    globalVerdict: calibratedVerdict,
   }
 
   // rubricCompatible now driven entirely by the Exa-grounded description pass
@@ -572,7 +607,7 @@ export async function runScoringPipeline(
   }
   const cWeight = categoryDescAvg !== null ? 0.20 : 0.30
   const aWeight = categoryDescAvg !== null ? 0.30 : 0.40
-  const tWeight = categoryDescAvg !== null ? 0.20 : 0.25
+  const tWeight = categoryDescAvg !== null ? 0.25 : 0.30
   console.log(`    Criterion score (normalized): ${criterionNormalized ?? "FAILED → substituted"} → ×${cWeight} = ${Math.round(cFinal * cWeight)}`)
   console.log(`    Adversarial blended:          ${adversarialBlended  ?? "FAILED → substituted"} → ×${aWeight} = ${Math.round(aFinal * aWeight)}`)
   console.log(`    Tier calibrated:              ${tierCalibrated      ?? "FAILED → substituted"} → ×${tWeight} = ${Math.round(tFinal * tWeight)}`)
@@ -620,7 +655,7 @@ export async function runScoringPipeline(
         ? Math.round(categoryDescAvg * 0.25) : null,
       criterionContribution:   Math.round(cFinal * (categoryDescAvg !== null ? 0.20 : 0.30)),
       adversarialContribution: Math.round(aFinal * (categoryDescAvg !== null ? 0.30 : 0.40)),
-      tierContribution:        Math.round(tFinal * (categoryDescAvg !== null ? 0.20 : 0.25)),
+      tierContribution:        Math.round(tFinal * (categoryDescAvg !== null ? 0.25 : 0.30)),
       vaguenessAdjustment,
       categoryDescAvg,
       formulaUsed: categoryDescAvg !== null ? 'full' : 'fallback',

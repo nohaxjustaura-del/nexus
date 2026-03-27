@@ -1,9 +1,10 @@
 /**
- * Check that all embeddings exist and are 1024-dimensional (Voyage AI).
+ * Check VC embeddings vs Smart Match (Voyage voyage-3, 1024-dim).
  * Run: npx tsx scripts/check-embeddings.ts
  */
 
 import { db } from '../lib/db'
+import { EMBEDDING_DIMENSIONS } from '../lib/embeddings'
 
 async function main() {
   console.log('🔍 Checking VC embeddings...\n')
@@ -28,7 +29,8 @@ async function main() {
     select: { id: true, firmName: true, embedding: true },
   })
 
-  let dim1024 = 0
+  let dimTarget = 0
+  let dim3072 = 0
   let dim768 = 0
   let dimOther = 0
   let invalid = 0
@@ -44,23 +46,31 @@ async function main() {
         invalid++
         continue
       }
-      if (arr.length === 1024) {
-        dim1024++
-      } else if (arr.length === 768) {
+      const len = arr.length
+      if (len === EMBEDDING_DIMENSIONS) {
+        dimTarget++
+      } else if (len === 3072) {
+        dim3072++
+        if (wrongDimExamples.length < 5) {
+          wrongDimExamples.push({ firmName: inv.firmName, dim: len })
+        }
+      } else if (len === 768) {
         dim768++
         if (wrongDimExamples.length < 5) {
-          wrongDimExamples.push({ firmName: inv.firmName, dim: arr.length })
+          wrongDimExamples.push({ firmName: inv.firmName, dim: len })
         }
       } else {
         dimOther++
         if (wrongDimExamples.length < 5) {
-          wrongDimExamples.push({ firmName: inv.firmName, dim: arr.length })
+          wrongDimExamples.push({ firmName: inv.firmName, dim: len })
         }
       }
     } catch {
       invalid++
     }
   }
+
+  console.log(`Smart Match expects: ${EMBEDDING_DIMENSIONS} dimensions (Voyage voyage-3)\n`)
 
   console.log('📊 Summary')
   console.log('─'.repeat(50))
@@ -69,7 +79,8 @@ async function main() {
   console.log(`Missing embedding:              ${missing}`)
   console.log('')
   console.log('Dimension breakdown (of those with embedding):')
-  console.log(`  1024 (Voyage AI ✓):           ${dim1024}`)
+  console.log(`  1024 (ready for Smart Match):  ${dimTarget}`)
+  console.log(`  3072 (legacy — re-embed):      ${dim3072}`)
   console.log(`  768 (old Gemini):             ${dim768}`)
   console.log(`  Other:                       ${dimOther}`)
   console.log(`  Invalid JSON:                ${invalid}`)
@@ -81,11 +92,17 @@ async function main() {
     console.log('')
   }
 
-  const allCorrect = missing === 0 && dim768 === 0 && dimOther === 0 && invalid === 0
+  const allCorrect =
+    missing === 0 &&
+    dimTarget === total &&
+    dim3072 === 0 &&
+    dim768 === 0 &&
+    dimOther === 0 &&
+    invalid === 0
   if (allCorrect) {
-    console.log('✅ All embeddings present and 1024-dimensional.')
+    console.log('✅ All embeddings present and 1024-dimensional (Voyage).')
   } else {
-    console.log('⚠️  Issues found. Run npm run generate-vc-embeddings to fix missing/wrong-dim embeddings.')
+    console.log('⚠️  Issues found. Run npm run generate-vc-embeddings to fill or replace wrong-dim rows.')
   }
 
   await db.$disconnect()

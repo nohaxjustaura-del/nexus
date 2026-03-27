@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getCurrentUser } from '@/lib/auth'
 import { db } from '@/lib/db'
 import {
+  EMBEDDING_DIMENSIONS,
   generatePitchEmbedding,
   rankVCsForPitch,
   generateVCEmbedding,
@@ -121,7 +122,12 @@ export async function POST(req: NextRequest) {
 
       if (investor.embedding) {
         try {
-          embedding = JSON.parse(investor.embedding as string)
+          const parsed = JSON.parse(investor.embedding as string)
+          if (Array.isArray(parsed) && parsed.length === EMBEDDING_DIMENSIONS) {
+            embedding = parsed
+          } else {
+            embedding = await generateVCEmbeddingForInvestor(investor)
+          }
         } catch {
           embedding = await generateVCEmbeddingForInvestor(investor)
         }

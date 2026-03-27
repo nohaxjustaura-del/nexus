@@ -79,7 +79,7 @@ const RAW_VAGUENESS_RULES: Array<{ pattern: string; penalty: number; reason: str
     reason: "Growth claimed without rate, timeframe, or absolute numbers",
   },
   {
-    pattern: "AI.powered|leverages AI|uses AI",
+    pattern: "AI.powered|leverages AI|uses AI(?!\\s+(vision|transformer|model|architecture|pipeline|embedding|diffusion|reinforcement|fine.tun))",
     penalty: 6,
     reason: "'AI-powered' without explaining what the AI actually does or why it's defensible",
   },

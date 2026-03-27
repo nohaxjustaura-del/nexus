@@ -506,14 +506,14 @@ function computeScores(results: CriterionResult[]): Omit<CriterionScoreResult, "
 function fallbackScoreResult(): CriterionScoreResult {
   return {
     criterionResults: [],
-    rawScore: 74,
+    rawScore: 50,
     maxPossible: MAX_POSSIBLE,
     scoreByCategory: {
-      market: 15, team: 15, traction: 12, product: 14,
-      business_model: 10, vision: 7, cross_section: 10,
-      penalties: -9,
+      market: 10, team: 10, traction: 8, product: 9,
+      business_model: 6, vision: 5, cross_section: 6,
+      penalties: -4,
     },
-    penaltiesApplied: 9,
+    penaltiesApplied: 4,
   }
 }
 

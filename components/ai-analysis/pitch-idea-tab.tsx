@@ -409,7 +409,7 @@ export function PitchIdeaAnalysisTab() {
 
         {/* Rubric Analysis Dashboard */}
         {analysis.rubricAnalysis && (
-          <AnalysisDashboard result={analysis.rubricAnalysis} />
+          <AnalysisDashboard result={analysis.rubricAnalysis} finalScore={analysis.finalScore ?? analysis.overallScore} />
         )}
 
         {/* Smart Match Results */}

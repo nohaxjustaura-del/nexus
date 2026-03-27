@@ -129,7 +129,7 @@ export default function RootLayout({ children }: RootLayoutProps) {
             <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
               <div className="flex flex-col gap-10 lg:flex-row lg:items-start lg:justify-between lg:gap-16">
                 <div className="max-w-sm shrink-0">
-                  <NexusWordmark heightClass="h-14 sm:h-16" className="max-w-[20rem] sm:max-w-[26rem]" />
+                  <NexusWordmark heightClass="h-28 sm:h-32" className="max-w-[40rem] sm:max-w-[52rem]" />
                   <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
                     Founder–investor matching and pitch tools. Built for clarity, not clutter.
                   </p>
