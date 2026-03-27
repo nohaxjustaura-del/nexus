@@ -192,15 +192,21 @@ export function AdminDashboardClient({
                 return (
                   <div
                     key={approval.email}
-                    className="flex items-center justify-between rounded-lg border border-yellow-200 bg-yellow-50/50 p-4 hover:bg-yellow-50 transition-colors"
+                    className="flex items-center justify-between rounded-lg border border-amber-500/20 bg-amber-500/[0.06] p-4 transition-colors hover:bg-amber-500/[0.09] dark:border-amber-400/15 dark:bg-amber-950/30 dark:hover:bg-amber-950/40"
                   >
                     <div className="flex items-center gap-3">
-                      <Mail className="h-5 w-5 text-yellow-600" />
-                      <div>
-                        <div className="font-medium">{approval.email}</div>
-                        <div className="text-xs text-muted-foreground">
-                          <Clock className="mr-1 inline h-3 w-3" />
-                          {approval.createdAt ? (mounted ? new Date(approval.createdAt).toLocaleString() : new Date(approval.createdAt).toISOString().slice(0, 10)) : 'Unknown'}
+                      <Mail className="h-5 w-5 shrink-0 text-amber-700/90 dark:text-amber-400/70" />
+                      <div className="min-w-0">
+                        <div className="font-medium text-foreground">{approval.email}</div>
+                        <div className="text-xs text-foreground/60 dark:text-foreground/55 mt-0.5 flex items-center gap-1">
+                          <Clock className="inline h-3 w-3 shrink-0 opacity-80" aria-hidden />
+                          <span>
+                            {approval.createdAt
+                              ? mounted
+                                ? new Date(approval.createdAt).toLocaleString()
+                                : new Date(approval.createdAt).toISOString().slice(0, 10)
+                              : 'Unknown'}
+                          </span>
                         </div>
                       </div>
                     </div>
@@ -208,7 +214,7 @@ export function AdminDashboardClient({
                       onClick={() => approveUserSignup(approval.email)}
                       disabled={isProcessing}
                       size="sm"
-                      className="bg-green-600 hover:bg-green-700"
+                      className="bg-emerald-700 text-white hover:bg-emerald-800 dark:bg-emerald-600 dark:hover:bg-emerald-500"
                     >
                       {isProcessing ? (
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />

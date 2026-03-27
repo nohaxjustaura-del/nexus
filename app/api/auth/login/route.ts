@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseAuthRouteClient } from '@/lib/supabase/route-handler'
 import { createSupabaseAdminClient } from '@/lib/supabase/admin'
-import { syncPrismaUserFromAuth } from '@/lib/auth'
 import { getSiteUrl } from '@/lib/site-url'
 import {
   RESEND_DEV_CONSOLE_FALLBACK_HINT,
@@ -9,7 +8,6 @@ import {
   formatResendErrorMessage,
   sendMagicLinkEmail,
 } from '@/lib/email'
-import { isAdminEmail } from '@/lib/constants'
 import { resolveUserApprovalAccess } from '@/lib/user-approval-access'
 import { sendCursorDebugIngest } from '@/lib/cursor-debug-ingest'
 
@@ -25,159 +23,11 @@ export async function POST(request: NextRequest) {
 
     const normalizedEmail = email.toLowerCase().trim()
 
-    const { supabase, applyAuthCookies } = createSupabaseAuthRouteClient(request)
+    const { applyAuthCookies } = createSupabaseAuthRouteClient(request)
     const adminClient = createSupabaseAdminClient()
 
-    // Admin bypass: generate link, verify OTP or token_hash server-side, and return an
-    // already-authenticated session so the admin never needs to check email.
-    if (isAdminEmail(normalizedEmail)) {
-      try {
-        let { data: linkData, error: linkError } = await adminClient.auth.admin.generateLink({
-          type: 'magiclink',
-          email: normalizedEmail,
-        })
-
-        // If the auth user does not exist yet, create a confirmed user and retry (some projects return "not found").
-        if (linkError) {
-          const msg = (linkError.message || '').toLowerCase()
-          const notFound =
-            msg.includes('user not found') ||
-            msg.includes('no user found') ||
-            msg.includes('not found') ||
-            (linkError as { status?: number }).status === 404
-          if (notFound) {
-            const { error: createErr } = await adminClient.auth.admin.createUser({
-              email: normalizedEmail,
-              email_confirm: true,
-            })
-            if (
-              createErr &&
-              !String(createErr.message || '')
-                .toLowerCase()
-                .includes('already been registered')
-            ) {
-              console.error('Admin bypass createUser error:', createErr)
-              return NextResponse.json(
-                {
-                  error: 'Admin login failed',
-                  ...(process.env.NODE_ENV === 'development'
-                    ? { details: createErr.message, step: 'createUser' }
-                    : {}),
-                },
-                { status: 500 }
-              )
-            }
-            // Always retry generateLink after create (or "already registered") — first error may be transient.
-            const retry = await adminClient.auth.admin.generateLink({
-              type: 'magiclink',
-              email: normalizedEmail,
-            })
-            linkData = retry.data
-            linkError = retry.error
-          }
-        }
-
-        if (linkError || !linkData) {
-          console.error('Admin bypass generateLink error:', linkError)
-          return NextResponse.json(
-            {
-              error: 'Admin login failed',
-              ...(process.env.NODE_ENV === 'development'
-                ? { details: linkError?.message, code: (linkError as { code?: string }).code }
-                : {}),
-            },
-            { status: 500 }
-          )
-        }
-
-        const props = linkData.properties
-        const emailOtp = props?.email_otp?.trim() || ''
-        const tokenHash =
-          typeof props?.hashed_token === 'string' && props.hashed_token.length > 0
-            ? props.hashed_token
-            : null
-
-        let verifiedUser = null as Awaited<ReturnType<typeof supabase.auth.verifyOtp>>['data']['user']
-        let verifyError: Awaited<ReturnType<typeof supabase.auth.verifyOtp>>['error'] | null = null
-
-        // Prefer numeric OTP when present; Supabase may omit email_otp on some projects — use hashed_token.
-        if (emailOtp) {
-          for (const type of ['email', 'magiclink'] as const) {
-            const { data, error } = await supabase.auth.verifyOtp({
-              email: normalizedEmail,
-              token: emailOtp,
-              type,
-            })
-            if (!error && data.user) {
-              verifiedUser = data.user
-              verifyError = null
-              break
-            }
-            verifyError = error
-          }
-        }
-
-        if (!verifiedUser && tokenHash) {
-          for (const type of ['email', 'magiclink', 'invite'] as const) {
-            const { data, error } = await supabase.auth.verifyOtp({
-              token_hash: tokenHash,
-              type,
-            })
-            if (!error && data.user) {
-              verifiedUser = data.user
-              verifyError = null
-              break
-            }
-            verifyError = error
-          }
-        }
-
-        if (!verifiedUser) {
-          console.error('Admin bypass verifyOtp error:', verifyError, {
-            hadOtp: Boolean(emailOtp),
-            hadTokenHash: Boolean(tokenHash),
-          })
-          return NextResponse.json(
-            {
-              error: 'Admin login verification failed',
-              ...(process.env.NODE_ENV === 'development'
-                ? {
-                    details: verifyError?.message,
-                    hadOtp: Boolean(emailOtp),
-                    hadTokenHash: Boolean(tokenHash),
-                  }
-                : {}),
-            },
-            { status: 500 }
-          )
-        }
-
-        const user = await syncPrismaUserFromAuth(verifiedUser)
-
-        const res = NextResponse.json({
-          success: true,
-          adminBypass: true,
-          user: user
-            ? { id: user.id, email: user.email, emailVerified: user.emailVerified, userType: user.userType }
-            : null,
-        })
-        applyAuthCookies(res)
-        return res
-      } catch (adminErr: any) {
-        console.error('Admin bypass error:', adminErr)
-        return NextResponse.json(
-          {
-            error: 'Admin login failed',
-            ...(process.env.NODE_ENV === 'development'
-              ? { details: adminErr?.message, step: 'exception' }
-              : {}),
-          },
-          { status: 500 }
-        )
-      }
-    }
-
-    // Regular users: require manual approval before we send a sign-in link.
+    // Admins use the same magic-link flow; resolveUserApprovalAccess auto-approves admin emails.
+    // Everyone else: require approval before we send a sign-in link.
     try {
       const { approved, status } = await resolveUserApprovalAccess(normalizedEmail)
       if (!approved) {
