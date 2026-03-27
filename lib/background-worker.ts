@@ -25,6 +25,7 @@
 
 import { db } from './db'
 import { logger } from './logger'
+import { isLikelyRealFirmName } from './firm-name-quality'
 import { researchVCsBatch } from '../scripts/auto-research-vcs'
 import { getLiveInvestorPulse } from './exa-service'
 import {
@@ -189,9 +190,10 @@ async function executeVCThesisResearch(): Promise<void> {
       orderBy: { updatedAt: 'asc' },
     })
 
-    const needingThesis = vcsToUpdate.filter(
-      (v) => !v.thesis || v.thesis.trim().length < 20,
-    )
+    const needingThesis = vcsToUpdate.filter((v) => {
+      if (!isLikelyRealFirmName(v.firmName)) return false
+      return !v.thesis || v.thesis.trim().length < 20
+    })
 
     if (needingThesis.length === 0) {
       logger.info('WORKER', '✅ Thesis queue empty — closing monthly thesis cycle')
@@ -268,7 +270,11 @@ async function executeVCProfileResearch(): Promise<void> {
       return
     }
 
-    const firmNames = vcsToUpdate.map((vc) => vc.firmName)
+    const firmNames = vcsToUpdate.map((vc) => vc.firmName).filter((name) => isLikelyRealFirmName(name))
+    if (firmNames.length === 0) {
+      logger.info('WORKER', '✅ Profile queue has no high-quality firm names; skipping this run')
+      return
+    }
     logger.info('WORKER', `📋 Profile batch ${firmNames.length}: ${firmNames.slice(0, 5).join(', ')}...`)
 
     await researchVCsBatch(firmNames, {

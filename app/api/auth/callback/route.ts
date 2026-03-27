@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
     const tokenHash = requestUrl.searchParams.get('token_hash')
     const tokenType = requestUrl.searchParams.get('type') || 'email'
     const confirm = requestUrl.searchParams.get('confirm') || ''
-    const nextPath = requestUrl.searchParams.get('next') || '/founder/onboarding'
+    const nextPath = requestUrl.searchParams.get('next') || '/founder/dashboard'
     const safeNext = nextPath.startsWith('/') ? nextPath : '/'
   // #region agent log
   sendCursorDebugIngest({
@@ -170,7 +170,7 @@ export async function GET(request: NextRequest) {
     console.error('auth callback unexpected failure:', error)
     const verify = new URL('/verify', request.url)
     verify.searchParams.set('error', 'callback')
-    verify.searchParams.set('redirect', '/founder/onboarding')
+    verify.searchParams.set('redirect', '/founder/dashboard')
     return NextResponse.redirect(verify)
   }
 

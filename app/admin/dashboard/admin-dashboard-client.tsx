@@ -16,9 +16,13 @@ import {
   Clock,
   Loader2,
   CheckCircle2,
-  ExternalLink
+  ExternalLink,
+  UserX,
+  ShieldOff,
 } from "lucide-react"
 import Link from "next/link"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import { toast } from '@/components/ui/toast-simple'
 import { FounderVerificationReviewPanel } from '@/components/admin/founder-verification-review-panel'
 import type { FounderVerificationReviewItem } from '@/lib/admin/founder-verifications'
@@ -65,6 +69,15 @@ export function AdminDashboardClient({
   const router = useRouter()
   const [processing, setProcessing] = useState<Set<string>>(new Set())
   const [mounted, setMounted] = useState(false)
+  const [revokeEmail, setRevokeEmail] = useState('')
+  const [revokeBusy, setRevokeBusy] = useState<'access' | 'verification' | null>(null)
+
+  const hasPending =
+    userApprovals.length +
+      founderVerificationPending.length +
+      vcClaims.length +
+      unverifiedVCs.length >
+    0
 
   useEffect(() => {
     setMounted(true)
@@ -80,6 +93,33 @@ export function AdminDashboardClient({
       }
       return next
     })
+  }
+
+  const patchUserAction = async (email: string, action: 'reject_signup' | 'revoke_access' | 'revoke_verification') => {
+    const res = await fetch(`/api/admin/users/${encodeURIComponent(email)}`, {
+      method: 'PATCH',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action }),
+    })
+    const data = await res.json().catch(() => ({}))
+    if (!res.ok) throw new Error(data?.error || 'Request failed')
+    return data
+  }
+
+  // Decline pending signup (queue only)
+  const rejectUserSignup = async (email: string) => {
+    if (!confirm(`Reject signup for ${email}? They will receive a rejection email.`)) return
+    setProcessingState(`reject-${email}`, true)
+    try {
+      await patchUserAction(email, 'reject_signup')
+      toast.success('Signup rejected')
+      router.refresh()
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : 'Reject failed')
+    } finally {
+      setProcessingState(`reject-${email}`, false)
+    }
   }
 
   // Approve user signup
@@ -133,6 +173,62 @@ export function AdminDashboardClient({
     }
   }
 
+  const runRevokeAccess = async () => {
+    const email = revokeEmail.trim().toLowerCase()
+    if (!email || !email.includes('@')) {
+      toast.error('Enter a valid email')
+      return
+    }
+    if (
+      !confirm(
+        `Revoke access for ${email}? This marks their signup as rejected and removes founder ID verification if present. They will receive a rejection email.`
+      )
+    ) {
+      return
+    }
+    setRevokeBusy('access')
+    try {
+      await patchUserAction(email, 'revoke_access')
+      toast.success('Access revoked')
+      setRevokeEmail('')
+      router.refresh()
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : 'Revoke failed')
+    } finally {
+      setRevokeBusy(null)
+    }
+  }
+
+  const runRevokeVerification = async () => {
+    const email = revokeEmail.trim().toLowerCase()
+    if (!email || !email.includes('@')) {
+      toast.error('Enter a valid email')
+      return
+    }
+    if (
+      !confirm(
+        `Revoke founder ID verification for ${email}? Signup approval status is unchanged; they may still have access if already approved another way.`
+      )
+    ) {
+      return
+    }
+    setRevokeBusy('verification')
+    try {
+      const data = await patchUserAction(email, 'revoke_verification')
+      if (data?.skipped) {
+        toast.success('No founder verification on file — nothing to revoke')
+      } else {
+        toast.success('Founder verification revoked')
+      }
+      setRevokeEmail('')
+      router.refresh()
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : 'Revoke failed')
+    } finally {
+      setRevokeBusy(null)
+    }
+  }
+
   // Bulk approve user signups
   const bulkApproveUserSignups = async () => {
     if (!confirm(`Approve all ${userApprovals.length} user signups?`)) return
@@ -157,6 +253,22 @@ export function AdminDashboardClient({
 
   return (
     <div className="space-y-6">
+      {!hasPending && (
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-12">
+            <CheckCircle2 className="mb-4 h-16 w-16 text-green-500" />
+            <h3 className="mb-2 text-xl font-semibold">Nothing pending</h3>
+            <p className="text-center text-muted-foreground">
+              New requests will show up here. Extra tools live under{' '}
+              <Link href="/admin/more" className="font-medium text-primary hover:underline">
+                More
+              </Link>
+              .
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
       {/* User Signups */}
       {userApprovals.length > 0 && (
         <Card>
@@ -188,11 +300,13 @@ export function AdminDashboardClient({
             <div className="space-y-2">
               {userApprovals.map((approval) => {
                 const id = `user-${approval.email}`
+                const rejectId = `reject-${approval.email}`
                 const isProcessing = processing.has(id)
+                const isRejecting = processing.has(rejectId)
                 return (
                   <div
                     key={approval.email}
-                    className="flex items-center justify-between rounded-lg border border-amber-500/20 bg-amber-500/[0.06] p-4 transition-colors hover:bg-amber-500/[0.09] dark:border-amber-400/15 dark:bg-amber-950/30 dark:hover:bg-amber-950/40"
+                    className="flex flex-col gap-3 rounded-lg border border-amber-500/20 bg-amber-500/[0.06] p-4 transition-colors hover:bg-amber-500/[0.09] dark:border-amber-400/15 dark:bg-amber-950/30 dark:hover:bg-amber-950/40 sm:flex-row sm:items-center sm:justify-between"
                   >
                     <div className="flex items-center gap-3">
                       <Mail className="h-5 w-5 shrink-0 text-amber-700/90 dark:text-amber-400/70" />
@@ -210,19 +324,35 @@ export function AdminDashboardClient({
                         </div>
                       </div>
                     </div>
-                    <Button
-                      onClick={() => approveUserSignup(approval.email)}
-                      disabled={isProcessing}
-                      size="sm"
-                      className="bg-emerald-700 text-white hover:bg-emerald-800 dark:bg-emerald-600 dark:hover:bg-emerald-500"
-                    >
-                      {isProcessing ? (
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      ) : (
-                        <CheckCircle className="mr-2 h-4 w-4" />
-                      )}
-                      Approve
-                    </Button>
+                    <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+                      <Button
+                        onClick={() => rejectUserSignup(approval.email)}
+                        disabled={isProcessing || isRejecting}
+                        size="sm"
+                        variant="outline"
+                        className="border-destructive/40 text-destructive hover:bg-destructive/10"
+                      >
+                        {isRejecting ? (
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        ) : (
+                          <XCircle className="mr-2 h-4 w-4" />
+                        )}
+                        Reject
+                      </Button>
+                      <Button
+                        onClick={() => approveUserSignup(approval.email)}
+                        disabled={isProcessing || isRejecting}
+                        size="sm"
+                        className="bg-emerald-700 text-white hover:bg-emerald-800 dark:bg-emerald-600 dark:hover:bg-emerald-500"
+                      >
+                        {isProcessing ? (
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        ) : (
+                          <CheckCircle className="mr-2 h-4 w-4" />
+                        )}
+                        Approve
+                      </Button>
+                    </div>
                   </div>
                 )
               })}
@@ -367,6 +497,63 @@ export function AdminDashboardClient({
           </CardContent>
         </Card>
       )}
+
+      <Card className="border-destructive/20">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <UserX className="h-4 w-4" />
+            Revoke by email
+          </CardTitle>
+          <CardDescription>
+            For accounts that are already approved or not on the queues above: remove access (signup + founder ID) or
+            revoke founder ID verification only.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="admin-revoke-email">Email</Label>
+            <Input
+              id="admin-revoke-email"
+              type="email"
+              autoComplete="email"
+              placeholder="user@example.com"
+              value={revokeEmail}
+              onChange={(e) => setRevokeEmail(e.target.value)}
+            />
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              variant="destructive"
+              size="sm"
+              disabled={revokeBusy !== null}
+              onClick={runRevokeAccess}
+            >
+              {revokeBusy === 'access' ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <UserX className="mr-2 h-4 w-4" />
+              )}
+              Revoke access
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="border-destructive/40 text-destructive hover:bg-destructive/10"
+              disabled={revokeBusy !== null}
+              onClick={runRevokeVerification}
+            >
+              {revokeBusy === 'verification' ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <ShieldOff className="mr-2 h-4 w-4" />
+              )}
+              Revoke verification
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   )
 }

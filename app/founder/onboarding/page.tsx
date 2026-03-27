@@ -117,6 +117,15 @@ export default function OnboardingPage() {
         
         if (response.ok) {
           const data = await response.json()
+          // Fully verified founders should use Hub — avoid looping them through onboarding after sign-in.
+          if (
+            data.exists &&
+            data.profile &&
+            data.verification?.status === 'approved'
+          ) {
+            router.replace('/founder/dashboard')
+            return
+          }
           if (data.exists && data.profile) {
             const p = data.profile
             setFormData(prev => ({

@@ -253,6 +253,11 @@ interface IntelligentMatchContext {
 }
 
 // ULTRA-SOPHISTICATED matching function with multi-factor analysis
+/**
+ * @deprecated Superseded by the gate-reasoner + investment-likelihood pipeline
+ * in lib/matching/. This function and all boost rules below it will be removed
+ * once route handlers are migrated to runMatchingPipeline().
+ */
 function calculateBaseMatch(founderData: any, investor: Investor): { score: number; evidence: string[] } {
   let score = 30 // 🚀 STRICTER: Lower base - make them earn it
   let evidence: string[] = []
@@ -540,6 +545,8 @@ export async function intelligentMatchVCs(
       }
     }
 
+    // @deprecated All transcript-based boost rules below are superseded by
+    // the gate-reasoner + investment-likelihood pipeline. Remove after migration.
     // 🆕 AI-NATIVE: Apply YC trends boost
     boost += ycTrendsResult.scoreAdjustment
     

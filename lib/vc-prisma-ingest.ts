@@ -1,5 +1,10 @@
 import { randomBytes } from 'crypto'
 import { db } from '@/lib/db'
+import { isLikelyRealFirmName } from '@/lib/firm-name-quality'
+import {
+  normalizeResearchForDb,
+  sanitizeCheckSizeThousandsForInt4,
+} from '@/lib/vc-research-normalize'
 import type { VCResearchResult } from '../scripts/auto-research-vcs'
 import { researchVC, updateVCInDatabase } from '../scripts/auto-research-vcs'
 
@@ -28,8 +33,8 @@ export async function createInvestorFromResearch(research: VCResearchResult): Pr
   const sectors = research.sectors?.length ? research.sectors : ['technology']
   const geography = research.geography?.length ? research.geography : []
 
-  const checkMin = research.checkSizeMin ?? 0
-  const checkMax = research.checkSizeMax ?? 0
+  const checkMin = sanitizeCheckSizeThousandsForInt4(research.checkSizeMin) ?? 0
+  const checkMax = sanitizeCheckSizeThousandsForInt4(research.checkSizeMax) ?? 0
 
   const inv = await db.investor.create({
     data: {
@@ -72,8 +77,14 @@ export async function ingestFirmToPrisma(firmName: string): Promise<{
   research: VCResearchResult | null
   isNew: boolean
 }> {
-  const research = await researchVC(firmName.trim())
-  if (!research) {
+  const raw = await researchVC(firmName.trim())
+  if (!raw) {
+    return { investor: null, research: null, isNew: false }
+  }
+
+  const research = normalizeResearchForDb(raw)
+  if (!isLikelyRealFirmName(research.firmName)) {
+    console.warn(`[VC-INGEST] Skipping low-quality discovered name: "${research.firmName}"`)
     return { investor: null, research: null, isNew: false }
   }
 

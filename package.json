@@ -41,6 +41,7 @@
     "worker:vc-supabase": "tsx scripts/vc-supabase-ingest-worker.ts",
     "worker:vc-discover": "tsx scripts/vc-supabase-ingest-worker.ts --discover --interval-ms 1800000",
     "workers:all": "tsx scripts/run-all-workers.ts",
+    "vc:review-low-quality": "tsx scripts/review-low-quality-vcs.ts",
     "embeddings:rebuild": "tsx scripts/rebuild-embeddings-auto.ts",
     "faiss:install": "cd faiss-service && python -m pip install -r requirements.txt",
     "faiss:start": "cd faiss-service && python faiss_api.py",

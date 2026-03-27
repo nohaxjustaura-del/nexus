@@ -6,7 +6,9 @@
  */
 
 import { db } from '../lib/db'
+import { isLikelyRealFirmName } from '../lib/firm-name-quality'
 import { openrouterGenerateJson, hasOpenRouterKey, getVcExtractionModel } from '../lib/openrouter'
+import { normalizeResearchForDb } from '../lib/vc-research-normalize'
 import { gatherVCFirmRetrievalContext, getVcResearchPipelineEnvStatus } from '../lib/vc-research-retrieval'
 
 export interface VCResearchResult {
@@ -287,6 +289,10 @@ async function researchVC(
 /** Apply only thesis (+ verified). */
 export async function updateVCInDatabaseThesisOnly(research: VCResearchResult): Promise<boolean> {
   try {
+    if (!isLikelyRealFirmName(research.firmName)) {
+      console.log(`   ⚠️ Skipping low-quality firm name: ${research.firmName}`)
+      return false
+    }
     const existing = await db.investor.findFirst({
       where: { firmName: research.firmName },
     })
@@ -316,6 +322,10 @@ export async function updateVCInDatabaseThesisOnly(research: VCResearchResult): 
 /** Apply profile fields only — never touches thesis. */
 export async function updateVCInDatabaseProfileOnly(research: VCResearchResult): Promise<boolean> {
   try {
+    if (!isLikelyRealFirmName(research.firmName)) {
+      console.log(`   ⚠️ Skipping low-quality firm name: ${research.firmName}`)
+      return false
+    }
     const existing = await db.investor.findFirst({
       where: { firmName: research.firmName },
     })
@@ -385,6 +395,10 @@ export async function updateVCInDatabaseProfileOnly(research: VCResearchResult):
 
 async function updateVCInDatabase(research: VCResearchResult): Promise<boolean> {
   try {
+    if (!isLikelyRealFirmName(research.firmName)) {
+      console.log(`   ⚠️ Skipping low-quality firm name: ${research.firmName}`)
+      return false
+    }
     const existing = await db.investor.findFirst({
       where: { firmName: research.firmName },
     })
@@ -489,9 +503,10 @@ async function researchVCsBatch(
   let failed = 0
 
   const apply = async (research: VCResearchResult) => {
-    if (mode === 'thesis') return updateVCInDatabaseThesisOnly(research)
-    if (mode === 'profile') return updateVCInDatabaseProfileOnly(research)
-    return updateVCInDatabase(research)
+    const n = normalizeResearchForDb(research)
+    if (mode === 'thesis') return updateVCInDatabaseThesisOnly(n)
+    if (mode === 'profile') return updateVCInDatabaseProfileOnly(n)
+    return updateVCInDatabase(n)
   }
 
   for (let i = 0; i < firmNames.length; i += maxConcurrent) {
@@ -552,7 +567,7 @@ async function main() {
     })
   } else if (args[0]) {
     const research = await researchVC(args[0])
-    if (research) await updateVCInDatabase(research)
+    if (research) await updateVCInDatabase(normalizeResearchForDb(research))
   } else {
     console.log(`
 Usage:

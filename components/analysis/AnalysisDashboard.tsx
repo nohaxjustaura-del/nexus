@@ -31,7 +31,7 @@ const CATEGORIES: CategoryMeta[] = [
   { key: 'moat',       label: 'Moat Integrity',     weight: '25%', icon: Shield,       liveVerified: true },
   { key: 'founderFit', label: 'Founder-Market Fit',  weight: '20%', icon: UserCheck,    liveVerified: false },
   { key: 'momentum',   label: 'Strategic Momentum',  weight: '25%', icon: Rocket,       liveVerified: false },
-  { key: 'execution',  label: 'Execution',           weight: '-',   icon: Presentation, liveVerified: false },
+  { key: 'execution',  label: 'Execution',           weight: '—',   icon: Presentation, liveVerified: false },
 ]
 
 // ---------------------------------------------------------------------------
@@ -74,7 +74,7 @@ const TIER_TEXT_CLASS: Record<Tier, string> = {
 
 function LiveVerifiedBadge() {
   return (
-    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-emerald-400 dark:text-emerald-400">
+    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
       <span className="relative flex h-1.5 w-1.5">
         <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
         <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500" />
@@ -192,9 +192,21 @@ function AnalysisTile({ meta, data, isOpen, onToggle, isLast }: TileProps) {
 
 export interface AnalysisDashboardProps {
   result: UniversalAnalysisResult
+  /** Pre-computed final score from runScoringPipeline(). When provided, shown
+   *  directly in the header card instead of recalculating from category weights. */
+  finalScore?: number
 }
 
-export default function AnalysisDashboard({ result }: AnalysisDashboardProps) {
+/** Fallback: equal-weighted average of all non-null category scores. */
+function averageCategoryScore(result: UniversalAnalysisResult): number {
+  const scores = Object.values(result.categories)
+    .filter((c): c is NonNullable<typeof c> => c !== null)
+    .map((c) => c.score)
+  if (scores.length === 0) return 0
+  return Math.round(scores.reduce((a, b) => a + b, 0) / scores.length)
+}
+
+export default function AnalysisDashboard({ result, finalScore }: AnalysisDashboardProps) {
   const [openKey, setOpenKey] = useState<string | null>(null)
 
   const visibleCategories = CATEGORIES.filter(
@@ -203,7 +215,7 @@ export default function AnalysisDashboard({ result }: AnalysisDashboardProps) {
 
   const toggle = (key: string) => setOpenKey((prev) => (prev === key ? null : key))
 
-  const weightedScore = computeWeightedScore(result)
+  const displayScore = finalScore ?? averageCategoryScore(result)
 
   return (
     <div className="space-y-6">
@@ -213,8 +225,8 @@ export default function AnalysisDashboard({ result }: AnalysisDashboardProps) {
           <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
             Weighted Rubric Score
           </p>
-          <p className={cn('text-3xl font-bold tabular-nums', TIER_TEXT_CLASS[getTier(weightedScore)])}>
-            {weightedScore}<span className="text-lg text-muted-foreground">/100</span>
+          <p className={cn('text-3xl font-bold tabular-nums', TIER_TEXT_CLASS[getTier(displayScore)])}>
+            {displayScore}<span className="text-lg text-muted-foreground">/100</span>
           </p>
         </div>
 
@@ -257,27 +269,3 @@ export default function AnalysisDashboard({ result }: AnalysisDashboardProps) {
   )
 }
 
-// ---------------------------------------------------------------------------
-// Weighted score computation
-// ---------------------------------------------------------------------------
-
-function computeWeightedScore(result: UniversalAnalysisResult): number {
-  const { market, moat, founderFit, momentum, execution } = result.categories
-
-  if (execution) {
-    const total =
-      market.score * 0.25 +
-      moat.score * 0.20 +
-      founderFit.score * 0.15 +
-      momentum.score * 0.20 +
-      execution.score * 0.20
-    return Math.round(total)
-  }
-
-  return Math.round(
-    market.score * 0.30 +
-    moat.score * 0.25 +
-    founderFit.score * 0.20 +
-    momentum.score * 0.25,
-  )
-}

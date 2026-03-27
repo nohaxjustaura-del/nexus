@@ -11,7 +11,7 @@ import {
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 import { parseJSON } from '@/lib/utils'
-import { isAdminEmail } from '@/lib/constants'
+import { ADMIN_EMAIL } from '@/lib/constants'
 
 const SMART_MATCH_COST = 50
 
@@ -43,7 +43,7 @@ export async function POST(req: NextRequest) {
       })
     }
 
-    const isAdmin = isAdminEmail(user.email)
+    const isAdmin = user.email === ADMIN_EMAIL
     if (!isAdmin && !userCredits.isPremium && (userCredits.credits ?? 0) < SMART_MATCH_COST) {
       return NextResponse.json(
         {

@@ -2,7 +2,16 @@ import OpenAI from "openai"
 import { getSiteUrl } from '@/lib/site-url'
 
 /**
- * Local Ollama (OpenAI-compatible API). Set OLLAMA_BASE_URL to prefer it over OpenRouter for VC extraction + helpers.
+ * Set `LLM_PREFER_OLLAMA=1` to use local Ollama first when both Ollama and OpenRouter are configured.
+ * Default: OpenRouter wins when `OPENROUTER_API_KEY` is set (app analyzer + shared LLM helpers use the cloud key).
+ */
+function llmPreferOllama(): boolean {
+  const v = process.env.LLM_PREFER_OLLAMA?.trim().toLowerCase()
+  return v === "1" || v === "true" || v === "yes"
+}
+
+/**
+ * Local Ollama (OpenAI-compatible API).
  * Example: OLLAMA_BASE_URL=http://127.0.0.1:11434/v1  and  OLLAMA_MODEL=llama3.2
  */
 export function getOllamaClient(): OpenAI | null {
@@ -31,13 +40,13 @@ export function getOpenRouterClient(): OpenAI | null {
   try {
     // ONLY use OpenRouter if OPENROUTER_API_KEY is explicitly set
     // Don't fall back to OPENAI_API_KEY here - that's handled in getAIClient
-    const apiKey = process.env.OPENROUTER_API_KEY
+    const apiKey = process.env.OPENROUTER_API_KEY?.trim()
     if (!apiKey) {
       return null
     }
 
     return new OpenAI({
-      apiKey: apiKey,
+      apiKey,
       baseURL: 'https://openrouter.ai/api/v1',
       defaultHeaders: {
         'HTTP-Referer': process.env.OPENROUTER_REFERER_URL || getSiteUrl(),
@@ -51,14 +60,41 @@ export function getOpenRouterClient(): OpenAI | null {
 }
 
 /**
- * Preferred LLM for chat-completions-style calls: Ollama (if OLLAMA_BASE_URL) else OpenRouter.
+ * Preferred LLM: OpenRouter when `OPENROUTER_API_KEY` is set (default), else Ollama.
+ * Override with `LLM_PREFER_OLLAMA=1` to use local Ollama first when both are configured.
  */
 export function getLlmClient(): OpenAI | null {
-  return getOllamaClient() ?? getOpenRouterClient()
+  const ollama = getOllamaClient()
+  const openRouter = getOpenRouterClient()
+  if (llmPreferOllama() && ollama) return ollama
+  if (openRouter) return openRouter
+  return ollama
 }
 
+/** True when requests are routed to the local Ollama client (not OpenRouter). */
 export function isUsingOllama(): boolean {
-  return !!getOllamaClient()
+  const ollama = getOllamaClient()
+  const openRouter = getOpenRouterClient()
+  if (llmPreferOllama()) return !!ollama
+  return !openRouter && !!ollama
+}
+
+/**
+ * Ollama-only: `keep_alive` on the chat payload so the model stays loaded between requests.
+ * Default `-1` = keep in memory until the Ollama process stops (Ollama API).
+ * Set `OLLAMA_KEEP_ALIVE=0` or `false` to omit (Ollama default unload).
+ * Or a duration string: `5m`, `1h`.
+ */
+export function getOllamaKeepAliveParams(): { keep_alive?: string | number } {
+  if (!process.env.OLLAMA_BASE_URL?.trim()) return {}
+  const raw = process.env.OLLAMA_KEEP_ALIVE?.trim()
+  if (raw === '0' || raw === 'false') return {}
+  let keepAlive: string | number = -1
+  if (raw && raw !== '-1') {
+    if (/^-?\d+$/.test(raw)) keepAlive = parseInt(raw, 10)
+    else keepAlive = raw
+  }
+  return { keep_alive: keepAlive }
 }
 
 /**
@@ -66,7 +102,7 @@ export function isUsingOllama(): boolean {
  * Prioritizes FREE models (DeepSeek, Gemini free tier)
  */
 export function getModelName(model: string = 'gpt-4o'): string {
-  if (process.env.OLLAMA_BASE_URL?.trim()) {
+  if (isUsingOllama()) {
     return process.env.OLLAMA_MODEL?.trim() || 'llama3.2'
   }
   // If using OpenRouter, prioritize FREE models
@@ -109,7 +145,7 @@ export function hasOpenRouterKey(): boolean {
 
 /** Model for VC JSON extraction (OpenRouter id e.g. deepseek/deepseek-chat, or Ollama tag e.g. llama3.2). */
 export function getVcExtractionModel(): string {
-  if (process.env.OLLAMA_BASE_URL?.trim()) {
+  if (isUsingOllama()) {
     return process.env.OLLAMA_MODEL?.trim() || 'llama3.2'
   }
   const m = process.env.OPENROUTER_VC_EXTRACTION_MODEL?.trim()
@@ -125,7 +161,7 @@ export function getVcExtractionMaxTokens(): number {
   const raw = process.env.VC_EXTRACTION_MAX_TOKENS?.trim()
   const n = raw ? parseInt(raw, 10) : NaN
   if (Number.isFinite(n) && n >= 256 && n <= 16000) return n
-  if (process.env.OLLAMA_BASE_URL?.trim()) return 8192
+  if (isUsingOllama()) return 8192
   return 2048
 }
 
@@ -159,7 +195,8 @@ export async function openrouterGenerateText(
     messages: [{ role: 'user', content: prompt }],
     temperature: options.temperature ?? 0.7,
     max_tokens: options.maxTokens ?? getVcExtractionMaxTokens(),
-  })
+    ...(isUsingOllama() ? getOllamaKeepAliveParams() : {}),
+  } as any)
 
   return response.choices[0]?.message?.content || ''
 }
@@ -254,6 +291,9 @@ export async function openrouterGenerateJson<T = any>(options: {
       if (ollamaStrict) {
         baseParams.response_format = { type: 'json_object' }
       }
+      if (isUsingOllama()) {
+        Object.assign(baseParams, getOllamaKeepAliveParams())
+      }
 
       const response = await client.chat.completions.create(baseParams as any)
       const choice = response.choices[0]
@@ -287,9 +327,27 @@ export async function openrouterGenerateJson<T = any>(options: {
   try {
     return await run(primaryModel)
   } catch (e: any) {
+    const msg = String(e?.message || e)
+    const modelMissing =
+      e?.status === 404 ||
+      e?.error?.type === "not_found_error" ||
+      /model ['"][^'"]+['"] not found|not_found_error/i.test(msg)
+    const canFallback404 =
+      !isUsingOllama() &&
+      getOpenRouterClient() &&
+      retryOnParseError &&
+      primaryModel !== VC_EXTRACTION_FALLBACK_MODEL &&
+      modelMissing
+    if (canFallback404) {
+      console.warn(
+        `[OPENROUTER] Model unavailable (${primaryModel}); retrying with ${VC_EXTRACTION_FALLBACK_MODEL}. ` +
+          `Set OPENROUTER_VC_EXTRACTION_MODEL to a valid id from openrouter.ai/models.`,
+      )
+      return await run(VC_EXTRACTION_FALLBACK_MODEL)
+    }
     const canFallbackOpenRouter =
       !isUsingOllama() && getOpenRouterClient() && retryOnParseError && primaryModel !== VC_EXTRACTION_FALLBACK_MODEL
-    if (canFallbackOpenRouter && /parse JSON|JSON/i.test(String(e?.message || e))) {
+    if (canFallbackOpenRouter && /parse JSON|JSON/i.test(msg)) {
       console.warn(`[OPENROUTER] Retrying with fallback model: ${VC_EXTRACTION_FALLBACK_MODEL}`)
       return await run(VC_EXTRACTION_FALLBACK_MODEL)
     }

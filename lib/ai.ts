@@ -12,7 +12,7 @@ export function getAIClient() {
       'No AI API key configured. Set OLLAMA_BASE_URL (local), OPENROUTER_API_KEY, or OPENAI_API_KEY.',
     )
   }
-  
+
   const OpenAI = require("openai").default
   return new OpenAI({
     apiKey: openaiKey,
@@ -725,7 +725,7 @@ export interface PitchDeckFeatures {
     pmfSignals?: string[]
     differentiators?: string[]
   }
-  overallScore: number
+  // overallScore is no longer produced here — call runScoringPipeline() for numeric scores.
 }
 
 export async function extractPitchDeckFeatures(
@@ -765,7 +765,6 @@ Provide a detailed analysis in JSON format with:
 9. productFit: Object with:
    - pmfSignals: Array of product-market fit signals mentioned
    - differentiators: Array of unique differentiators
-10. overallScore: Overall pitch quality score (0-100) based on clarity, completeness, traction, team, and market opportunity
 
 Be thorough and specific. Extract actual numbers and metrics when present. Format as valid JSON.`
 
@@ -787,7 +786,7 @@ Be thorough and specific. Extract actual numbers and metrics when present. Forma
           content: prompt,
         },
       ],
-      temperature: 0.3,
+      temperature: 0.2,
       max_tokens: 4000,
       response_format: { type: "json_object" },
     })
@@ -810,7 +809,6 @@ Be thorough and specific. Extract actual numbers and metrics when present. Forma
       marketAnalysis: parsed.marketAnalysis || {},
       teamAnalysis: parsed.teamAnalysis || {},
       productFit: parsed.productFit || {},
-      overallScore: parsed.overallScore || 50,
     }
   } catch (error: any) {
     logger.error("AI", "Pitch deck analysis failed:", error?.message || error)
@@ -825,7 +823,6 @@ Be thorough and specific. Extract actual numbers and metrics when present. Forma
       marketAnalysis: {},
       teamAnalysis: {},
       productFit: {},
-      overallScore: 50,
     }
   }
 }
@@ -867,9 +864,8 @@ export interface VideoPitchFeatures {
     pmfSignals?: string[]
     differentiators?: string[]
   }
-  presentationScore: number // 0-100
-  contentScore: number // 0-100
-  overallScore: number // 0-100
+  // Scores are no longer produced by this function.
+  // Call runScoringPipeline() after analyzeVideoPitch() to get numeric scores.
 }
 
 // VIDEO_PITCH_FIX_v2 - Force rebuild with robust JSON parsing
@@ -949,39 +945,6 @@ Provide a detailed analysis in JSON format with:
 10. productFit: Object with:
    - pmfSignals: Array of product-market fit signals mentioned
    - differentiators: Array of unique differentiators
-11. presentationScore: Presentation quality score (0-100) based on:
-   - Clarity of delivery (can I understand the value prop in 30 seconds?)
-   - Confidence and authentic energy
-   - Pacing and structure (hooks attention early, builds momentum)
-   - Memorability (would I remember this pitch tomorrow?)
-   - Engagement and personality (authentic, not robotic)
-   
-12. contentScore: Content quality score (0-100) based on:
-    - Problem clarity (is the pain point obvious?)
-    - Solution uniqueness (is it clear why this is better?)
-    - Value proposition clarity (can I explain it to someone else?)
-    - Business model understandability (how do they make money?)
-    - Competitive positioning (why them?)
-    - NOTE: Traction metrics are a BONUS, not required. A pitch with no metrics but crystal clear messaging can still score 80+
-
-13. overallScore: Overall pitch quality score (0-100) - CALIBRATION EXAMPLES:
-    - 90-100: Legendary. Would get funded (Dollar Shave Club, DoorDash, Airbnb level)
-    - 80-89: Excellent. Clear value prop, compelling story, would get a meeting
-    - 70-79: Good. Solid pitch that communicates value well
-    - 60-69: Average. Gets the point across but has gaps
-    - Below 60: Needs significant work
-
-IMPORTANT SCORING GUIDANCE:
-- CONTENT IS STILL KING: Problem clarity, solution, market opportunity, business model are the foundation
-- There are TWO paths to an excellent pitch:
-  * Path A (Dollar Shave Club): Personality + humor + crystal clear messaging = 90+
-  * Path B (DoorDash): Clear problem + huge market + solid execution story = 90+
-  * Both paths are equally valid!
-- A dry pitch with EXCELLENT content (clear problem, obvious market, strong traction) should score 85+
-- A funny pitch with WEAK content (no clear value prop, unclear business model) should score lower
-- Personality/memorability is a BONUS (+5-10 points) on top of solid content, NOT a replacement
-- Don't penalize for missing TAM/SAM/SOM if the market opportunity is obvious from context
-- Score based on: "Would a smart VC want to take this meeting?"
 
 Format as valid JSON.`
 
@@ -1064,9 +1027,6 @@ Format as valid JSON.`
         marketAnalysis: {},
         teamAnalysis: {},
         productFit: {},
-        presentationScore: 50,
-        contentScore: 50,
-        overallScore: 50,
       }
     }
     
@@ -1081,9 +1041,6 @@ Format as valid JSON.`
       marketAnalysis: result.marketAnalysis || {},
       teamAnalysis: result.teamAnalysis || {},
       productFit: result.productFit || {},
-      presentationScore: result.presentationScore || 50,
-      contentScore: result.contentScore || 50,
-      overallScore: result.overallScore || Math.round((result.presentationScore || 50) * 0.3 + (result.contentScore || 50) * 0.7),
     }
   } catch (error: any) {
     logger.error("AI", "Video pitch analysis failed:", error?.message || error)
@@ -1109,9 +1066,6 @@ Format as valid JSON.`
       marketAnalysis: {},
       teamAnalysis: {},
       productFit: {},
-      presentationScore: 50,
-      contentScore: 50,
-      overallScore: 50,
     }
   }
 }

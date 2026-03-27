@@ -2,9 +2,8 @@ import { db } from "@/lib/db"
 import { getCurrentUser } from "@/lib/auth"
 import { redirect } from "next/navigation"
 import { AdminDashboardClient } from "./admin-dashboard-client"
-import Link from "next/link"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Users, Building2, Shield, FileCheck, CheckCircle2, Clock } from "lucide-react"
+import { Users, Building2, Shield, FileCheck, Clock } from "lucide-react"
 import { isAdminEmail } from "@/lib/constants"
 import {
   enrichFounderVerifications,
@@ -152,41 +151,25 @@ export default async function AdminDashboardPage() {
           </Card>
         </div>
 
-        {/* All Pending Items */}
-        {stats.total > 0 ? (
-          <AdminDashboardClient
-            userApprovals={userApprovals.map((u) => ({
-              email: u.email,
-              status: u.status,
-              createdAt: u.createdAt.toISOString(),
-              reviewedAt: u.reviewedAt?.toISOString(),
-            }))}
-            founderVerificationPending={founderVerificationPending}
-            vcClaims={vcClaims.map(c => ({
-              ...c,
-              createdAt: c.createdAt.toISOString(),
-              idVerificationUrl: c.idVerificationUrl ?? undefined,
-            }))}
-            unverifiedVCs={unverifiedVCs.map(vc => ({
-              ...vc,
-              createdAt: vc.createdAt.toISOString(),
-            }))}
-          />
-        ) : (
-          <Card>
-            <CardContent className="flex flex-col items-center justify-center py-12">
-              <CheckCircle2 className="mb-4 h-16 w-16 text-green-500" />
-              <h3 className="mb-2 text-xl font-semibold">Nothing pending</h3>
-              <p className="text-center text-muted-foreground">
-                New requests will show up here. Extra tools live under{' '}
-                <Link href="/admin/more" className="font-medium text-primary hover:underline">
-                  More
-                </Link>
-                .
-              </p>
-            </CardContent>
-          </Card>
-        )}
+        {/* Pending queues + revoke tools */}
+        <AdminDashboardClient
+          userApprovals={userApprovals.map((u) => ({
+            email: u.email,
+            status: u.status,
+            createdAt: u.createdAt.toISOString(),
+            reviewedAt: u.reviewedAt?.toISOString(),
+          }))}
+          founderVerificationPending={founderVerificationPending}
+          vcClaims={vcClaims.map(c => ({
+            ...c,
+            createdAt: c.createdAt.toISOString(),
+            idVerificationUrl: c.idVerificationUrl ?? undefined,
+          }))}
+          unverifiedVCs={unverifiedVCs.map(vc => ({
+            ...vc,
+            createdAt: vc.createdAt.toISOString(),
+          }))}
+        />
       </div>
     </div>
   )

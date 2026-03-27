@@ -5,6 +5,7 @@ import { cookies } from 'next/headers'
 import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { getSupabaseAuthUserFromRequest } from '@/lib/supabase/request-reader'
+import { ADMIN_EMAIL } from '@/lib/constants'
 
 export async function syncPrismaUserFromAuth(authUser: SupabaseAuthUser): Promise<PrismaUser | null> {
   const email = authUser.email?.toLowerCase().trim()
@@ -74,6 +75,32 @@ export async function getUserFromRequest(request: NextRequest): Promise<PrismaUs
   } catch {
     return null
   }
+}
+
+export async function getAdminUser(): Promise<PrismaUser | null> {
+  const email = ADMIN_EMAIL?.toLowerCase()
+  if (!email) return null
+  try {
+    return await db.user.findUnique({ where: { email } })
+  } catch {
+    return null
+  }
+}
+
+/** Tries Supabase session first; falls back to admin user for analysis routes (scoring branch behavior). */
+export async function getCurrentUserOrAdmin(): Promise<PrismaUser | null> {
+  const user = await getCurrentUser()
+  if (user) return user
+  return getAdminUser()
+}
+
+/** Same as getUserFromRequest with admin fallback. */
+export async function getUserFromRequestOrAdmin(
+  request: NextRequest,
+): Promise<PrismaUser | null> {
+  const user = await getUserFromRequest(request)
+  if (user) return user
+  return getAdminUser()
 }
 
 /** @deprecated Legacy JWT session  -  use Supabase Auth. */

@@ -116,7 +116,7 @@ async function ingestOneFirm(
 function parseCli() {
   const argv = process.argv.slice(2)
   const out = {
-    delayMs: 2500,
+    delayMs: 1500,
     loop: false,
     intervalMs: 60 * 60 * 1000,
     filePath: null as string | null,
@@ -201,8 +201,9 @@ async function main() {
   const runContinuously = once ? false : loop || discover
 
   if (discover && runContinuously) {
+    const s = (intervalMs / 1000).toFixed(intervalMs % 1000 === 0 ? 0 : 1)
     console.log(
-      `🔁 Discover worker will repeat every ${intervalMs}ms (use --once for a single pass, --interval-ms to change).`,
+      `🔁 Discover: continuous loop until you stop (Ctrl+C). Pause between passes: ${intervalMs}ms (~${s}s). Use --once for a single pass.`,
     )
   }
 
@@ -212,7 +213,9 @@ async function main() {
       return
     }
     if (discover) {
-      console.log('\n🔎 Discover mode: dual Exa search → new firms only\n')
+      console.log(
+        '\n🔎 Discover mode: Exa lists candidate names → skip if already in DB → researchVC (full Exa+LLM) → Prisma + Supabase\n',
+      )
       const candidates = await discoverNewFirmNamesNotInDatabase({
         searchRounds: discoverRounds,
         resultsPerQuery: discoverPerQuery,

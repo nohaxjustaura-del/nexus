@@ -5,6 +5,7 @@
 
 import Exa from 'exa-js'
 import { db } from '@/lib/db'
+import { isLikelyRealFirmName } from '@/lib/firm-name-quality'
 
 const SECTORS = [
   'SaaS',
@@ -128,8 +129,93 @@ const JUNK_SUBSTRINGS = [
   'according to',
 ]
 
+const SUSPICIOUS_NAME_PHRASES = [
+  'venture builder fund',
+  'top vc',
+  'top venture capital',
+  'list of venture',
+  'best venture capital',
+]
+
+const GENERIC_ONLY_WORDS = new Set([
+  'africa',
+  'asia',
+  'europe',
+  'global',
+  'emerging',
+  'first',
+  'new',
+  'seed',
+  'preseed',
+  'pre',
+  'series',
+  'a',
+  'b',
+  'c',
+  'climate',
+  'ai',
+  'fintech',
+  'deeptech',
+  'health',
+  'healthcare',
+  'impact',
+  'growth',
+  'venture',
+  'ventures',
+  'capital',
+  'partners',
+  'fund',
+  'funds',
+  'investment',
+  'investments',
+  'management',
+  'equity',
+  'builder',
+  'holdings',
+  'group',
+  'labs',
+  'advisors',
+  'associates',
+  'vc',
+])
+
+function sanitizeExtractedName(raw: string): string {
+  let t = raw
+    .replace(/[“”"']/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+
+  // Some headlines arrive as "Source - Candidate Fund Name"; keep RHS only.
+  if (/[|:\-]/.test(t)) {
+    const parts = t
+      .split(/\s*[|:\-]\s*/)
+      .map((p) => p.trim())
+      .filter(Boolean)
+    if (parts.length >= 2) {
+      const rhs = parts[parts.length - 1]!
+      if (rhs.length >= 4 && rhs.length <= 110) t = rhs
+    }
+  }
+
+  t = t.replace(/^[^\w]+|[^\w)]+$/g, '').trim()
+  return t
+}
+
+function looksTooGenericName(name: string): boolean {
+  const words = name
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .split(/\s+/)
+    .filter(Boolean)
+
+  if (!words.length) return true
+  const nonGeneric = words.filter((w) => !GENERIC_ONLY_WORDS.has(w))
+  return nonGeneric.length === 0
+}
+
 function isPlausibleFundName(raw: string): boolean {
-  const t = raw.trim()
+  const t = sanitizeExtractedName(raw)
+  if (!isLikelyRealFirmName(t)) return false
   if (t.length < 3 || t.length > 120) return false
   const words = t.split(/\s+/).filter(Boolean)
   if (words.length > 10) return false
@@ -138,6 +224,10 @@ function isPlausibleFundName(raw: string): boolean {
   for (const j of JUNK_SUBSTRINGS) {
     if (lower.includes(j)) return false
   }
+  for (const bad of SUSPICIOUS_NAME_PHRASES) {
+    if (lower.includes(bad)) return false
+  }
+  if (looksTooGenericName(t)) return false
   if (/^\d+$/.test(t.replace(/\s/g, ''))) return false
   return true
 }
@@ -162,11 +252,11 @@ function extractFundNamesHeuristic(corpus: string): string[] {
   let m: RegExpExecArray | null
   const s = corpus.replace(/\r/g, '\n')
   while ((m = suffix.exec(s)) !== null) {
-    const name = `${m[1]} ${m[2]}`.replace(/\s+/g, ' ').trim()
+    const name = sanitizeExtractedName(`${m[1]} ${m[2]}`)
     if (isPlausibleFundName(name) && nameAllowedByYearWindow(s, name)) found.add(name)
   }
   for (const line of s.split('\n')) {
-    const bullet = line.replace(/^\s*[-*•\d.)]+\s*/, '').trim()
+    const bullet = sanitizeExtractedName(line.replace(/^\s*[-*•\d.)]+\s*/, '').trim())
     if (bullet.length < 6 || bullet.length > 100) continue
     if (!/\b(Capital|Ventures|Partners|VC|Fund)\b/i.test(bullet)) continue
     if (isPlausibleFundName(bullet) && nameAllowedByYearWindow(s, bullet)) found.add(bullet)

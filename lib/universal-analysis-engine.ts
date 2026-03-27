@@ -3,22 +3,34 @@
  * UNIVERSAL ANALYSIS ENGINE
  * ===============================================================================
  *
- * The "brain" behind every pitch analysis - video, text idea, or slide deck.
+ * @deprecated This module is superseded by the multi-pass scoring pipeline at
+ * lib/scoring/scoring-pipeline.ts.  All three route handlers (analyze-video-pitch,
+ * analyze-pitch-deck, analyze-pitch-idea) now call runScoringPipeline() instead of
+ * runUniversalAnalysis().  This file is retained for reference and any third-party
+ * integrations that have not yet migrated.
+ *
+ * TODO: Remove this file after confirming no remaining callers (post dashboard sprint).
+ *
+ * -------------------------------------------------------------------------------
+ * ORIGINAL DESCRIPTION
+ * -------------------------------------------------------------------------------
+ *
+ * The "brain" behind every pitch analysis — video, text idea, or slide deck.
  *
  * Takes three inputs:
- *   1. FounderDossier  - comprehensive founder + startup context
- *   2. AnalysisType    - VIDEO | IDEA | DECK (controls whether Execution is scored)
- *   3. DeepMarketContext - real-time Exa market intelligence
+ *   1. FounderDossier  — comprehensive founder + startup context
+ *   2. AnalysisType    — VIDEO | IDEA | DECK (controls whether Execution is scored)
+ *   3. DeepMarketContext — real-time Exa market intelligence
  *
  * Outputs a 2026 Institutional Rubric evaluation with bar-style scores (0-100)
  * and 4 high-density bullets per category, each grounded in a concrete data point.
  *
  * Scoring Pillars:
- *   Market Heat        (30%)  - competitive saturation, white-space, funding velocity
- *   Moat Integrity     (25%)  - defensibility against GPT-5/6, inference margins, MCP risks
- *   Founder-Market Fit (20%)  - pedigree, technical depth, domain credibility
- *   Strategic Momentum (25%)  - traction velocity by 2026 standards
- *   Execution          (only VIDEO/DECK) - clarity, communication, presentation quality
+ *   Market Heat        (30%)  — competitive saturation, white-space, funding velocity
+ *   Moat Integrity     (25%)  — defensibility against GPT-5/6, inference margins, MCP risks
+ *   Founder-Market Fit (20%)  — pedigree, technical depth, domain credibility
+ *   Strategic Momentum (25%)  — traction velocity by 2026 standards
+ *   Execution          (only VIDEO/DECK) — clarity, communication, presentation quality
  */
 
 import { logger } from "./logger"
@@ -158,9 +170,9 @@ You will receive:
 
 Evaluation Pillars:
 
-MARKET HEAT (30%): Use the Exa market data to identify if this is a Red Ocean or Blue Ocean. Quote specific competitor names and funding rounds from the SATURATION section. Identify Goliaths from the INCUMBENTS section - name the established giants that already own the customer relationship and assess whether their AI roadmap or recent acquisitions could crush this startup. Reference macro catalysts from the CATALYSTS section. If the market data is thin, flag the uncertainty.
+MARKET HEAT (30%): Use the Exa market data to identify if this is a Red Ocean or Blue Ocean. Quote specific competitor names and funding rounds from the SATURATION section. Identify Goliaths from the INCUMBENTS section — name the established giants that already own the customer relationship and assess whether their AI roadmap or recent acquisitions could crush this startup. Reference macro catalysts from the CATALYSTS section. If the market data is thin, flag the uncertainty.
 
-MOAT INTEGRITY (25%): Analyze "Inference Margins" and "Agentic Autonomy." Does this idea survive a GPT-5/6 release? Look for MCP (Model Context Protocol) risks - can a foundation model simply add this as a feature? Evaluate defensibility through data moats, network effects, or regulatory capture.
+MOAT INTEGRITY (25%): Analyze "Inference Margins" and "Agentic Autonomy." Does this idea survive a GPT-5/6 release? Look for MCP (Model Context Protocol) risks — can a foundation model simply add this as a feature? Evaluate defensibility through data moats, network effects, or regulatory capture.
 
 FOUNDER-MARKET FIT (20%): Does the dossier show the pedigree and technical depth required for this niche? Evaluate education, domain expertise, prior experience, and unique unfair advantages. A Stanford AI PhD building an AI company is different from a non-technical founder in the same space.
 
@@ -177,10 +189,10 @@ BULLET RULES:
 - If market data is insufficient, say so explicitly and adjust the score downward.
 
 SCORING CALIBRATION:
-- 90-100: Exceptional - clear outlier with strong signals across the board.
-- 70-89: Strong - fundable with minor concerns.
-- 40-69: Developing - needs specific improvements before funding.
-- 0-39: Critical - major red flags or insufficient data to evaluate.
+- 90-100: Exceptional — clear outlier with strong signals across the board.
+- 70-89: Strong — fundable with minor concerns.
+- 40-69: Developing — needs specific improvements before funding.
+- 0-39: Critical — major red flags or insufficient data to evaluate.
 
 globalVerdict: A single paragraph (3-5 sentences) giving the honest, unvarnished bottom line. Would you write this check? Why or why not?
 
@@ -224,7 +236,7 @@ Now produce the 2026 Institutional Rubric evaluation. Return ONLY the JSON objec
  * Run the Universal Analysis Engine.
  *
  * @param dossier  Comprehensive founder + startup context
- * @param type     VIDEO | IDEA | DECK - controls whether Execution is scored
+ * @param type     VIDEO | IDEA | DECK — controls whether Execution is scored
  * @param market   Real-time Exa market intelligence from getDeepMarketContext()
  * @returns        Structured scores + bullets + global verdict
  */
@@ -288,7 +300,7 @@ export async function runUniversalAnalysis(
   const result = normalizeResult(raw, type)
 
   logger.log(
-    `[UNIVERSAL-ENGINE] Scores - market:${result.categories.market.score} moat:${result.categories.moat.score} ` +
+    `[UNIVERSAL-ENGINE] Scores — market:${result.categories.market.score} moat:${result.categories.moat.score} ` +
     `fit:${result.categories.founderFit.score} momentum:${result.categories.momentum.score}` +
     (result.categories.execution ? ` exec:${result.categories.execution.score}` : ""),
   )

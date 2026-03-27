@@ -139,6 +139,10 @@ async function fetchFromExa(
 /**
  * Returns live enrichment data for a VC investor. Checks VCEnrichmentCache
  * first and only calls Exa if the cache is stale (>24h) or missing.
+ *
+ * @deprecated For the VC matching pipeline, use fetchVCExaBundle() from
+ * lib/matching/exa-enrichment.ts instead. This function is retained for
+ * other callers (e.g. investor profile page enrichment).
  */
 export async function getLiveInvestorPulse(
   vcName: string,

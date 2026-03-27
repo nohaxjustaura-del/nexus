@@ -54,7 +54,8 @@ export async function POST(request: NextRequest) {
     // Regular users: generate a magic link + OTP via Supabase Admin API
     // and send the email ourselves through Resend.
     const siteUrl = getSiteUrl(request)
-    const callbackUrl = `${siteUrl}/api/auth/callback?next=${encodeURIComponent('/founder/onboarding')}`
+    // Returning users should land on Hub (dashboard), not onboarding — signup still uses /founder/onboarding.
+    const callbackUrl = `${siteUrl}/api/auth/callback?next=${encodeURIComponent('/founder/dashboard')}`
     // #region agent log
     sendCursorDebugIngest({
       runId: 'pre-fix-domain-send',
@@ -122,7 +123,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const oneTapLink = `${siteUrl}/auth/link?token_hash=${encodeURIComponent(tokenHash)}&type=magiclink&next=${encodeURIComponent('/founder/onboarding')}&email=${encodeURIComponent(normalizedEmail)}`
+    const oneTapLink = `${siteUrl}/auth/link?token_hash=${encodeURIComponent(tokenHash)}&type=magiclink&next=${encodeURIComponent('/founder/dashboard')}&email=${encodeURIComponent(normalizedEmail)}`
 
     const emailResult = await sendMagicLinkEmail(normalizedEmail, {
       magicLink: oneTapLink,

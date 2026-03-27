@@ -151,10 +151,16 @@ export async function POST(request: NextRequest) {
         break
       }
 
+      case 'embeddings': {
+        const { default: runRebuild } = await import('@/scripts/rebuild-embeddings-auto')
+        result = await runRebuild()
+        break
+      }
+
       default:
         return NextResponse.json(
           {
-            error: `Unknown job type: ${jobType}. Valid: vc-research, vc-thesis-research, vc-profile-research, exa-enrichment, vc-directory-sync, data-validation`,
+            error: `Unknown job type: ${jobType}. Valid: vc-research, vc-thesis-research, vc-profile-research, exa-enrichment, vc-directory-sync, data-validation, embeddings`,
           },
           { status: 400 }
         )

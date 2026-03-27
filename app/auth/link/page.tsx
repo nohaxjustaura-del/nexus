@@ -10,7 +10,7 @@ export default function AuthLinkPage() {
   const params = useSearchParams()
   const tokenHash = params.get('token_hash') || ''
   const type = params.get('type') || 'magiclink'
-  const next = params.get('next') || '/founder/onboarding'
+  const next = params.get('next') || '/founder/dashboard'
   const email = params.get('email') || ''
 
   const continueHref = `/api/auth/callback?confirm=1&token_hash=${encodeURIComponent(tokenHash)}&type=${encodeURIComponent(type)}&next=${encodeURIComponent(next)}`

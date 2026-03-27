@@ -1,14 +1,16 @@
 /**
  * ===============================================================================
- * AI-NATIVE MATCHING SYSTEM v2  -  Surgical Funnel + Live Enrichment
+ * AI-NATIVE MATCHING SYSTEM v2 — Surgical Funnel + Live Enrichment
  * ===============================================================================
  *
- * FinalScore = (IntelligentScore × 0.4) + (VectorScore × 0.3) + (EnrichmentScore × 0.3)
+ * SUPERSEDED by lib/matching/matching-orchestrator.ts (v3.0).
+ * The formula below is no longer executed. See ranker.ts for
+ * the current scoring logic.
  *
- * Phase 1  -  Hard Filter:  Exclude VCs whose stages don't include the founder's stage
- * Phase 2  -  Vector Search: FAISS top-15 by semantic similarity
- * Phase 3  -  Live Enrichment: Exa web search + GPT-4o-mini summary (parallel)
- * Phase 4  -  Re-Scoring:  Conflict penalty (−50), weighted formula, sort top 10
+ * Phase 1 — Hard Filter:  Exclude VCs whose stages don't include the founder's stage
+ * Phase 2 — Vector Search: FAISS top-15 by semantic similarity
+ * Phase 3 — Live Enrichment: Exa web search + GPT-4o-mini summary (parallel)
+ * Phase 4 — Re-Scoring:  Conflict penalty (−50), weighted formula, sort top 10
  */
 
 import { Investor } from "@prisma/client"
@@ -234,7 +236,7 @@ function buildPitchText(
       `Location: ${founder.location || founderContext?.location}`,
   ].filter(Boolean)
 
-  // --- SUMMARY (the hook  -  up to 1000 chars) ---
+  // --- SUMMARY (the hook — up to 1000 chars) ---
   const summaryBody =
     pitchAnalysis?.oneLineSummary ||
     founder.bio?.substring(0, 1000) ||
@@ -296,7 +298,7 @@ function buildPitchText(
 }
 
 // ---------------------------------------------------------------------------
-// Stage normalisation  -  maps founder stages to VC stage labels stored in DB
+// Stage normalisation — maps founder stages to VC stage labels stored in DB
 // ---------------------------------------------------------------------------
 
 const STAGE_EXPANSION: Record<string, string[]> = {
@@ -325,10 +327,10 @@ function buildStageWhereConditions(founderStage: string) {
 /**
  * Surgical Funnel matching pipeline.
  *
- * Phase 1  -  Hard filter (Prisma WHERE): stage, visibility, check size
- * Phase 2  -  FAISS top-15
- * Phase 3  -  Live enrichment (Exa + GPT-4o-mini)
- * Phase 4  -  Re-score with conflict penalty, weighted formula, return top 10
+ * Phase 1 — Hard filter (Prisma WHERE): stage, visibility, check size
+ * Phase 2 — FAISS top-15
+ * Phase 3 — Live enrichment (Exa + GPT-4o-mini)
+ * Phase 4 — Re-score with conflict penalty, weighted formula, return top 10
  */
 export async function aiNativeMatchVCs(
   founder: any,
@@ -378,7 +380,7 @@ export async function aiNativeMatchVCs(
   )
 
   // -----------------------------------------------------------------------
-  // PHASE 1  -  Hard Filters (Prisma WHERE  -  rows that fail never reach the UI)
+  // PHASE 1 — Hard Filters (Prisma WHERE — rows that fail never reach the UI)
   //
   //  HARD FILTER 1  │ Stage       │ VC's stages JSON must contain at least
   //                 │             │ one stage the founder qualifies for.
@@ -394,7 +396,7 @@ export async function aiNativeMatchVCs(
   //  HARD FILTER 3b │ Check Size  │ Exclude when the founder's raise is
   //                 │ (too big)   │ more than 2× the VC's MAXIMUM check.
   //                 │             │ VCs with 0/null check sizes are NOT
-  //                 │             │ excluded  -  unknown data is not a
+  //                 │             │ excluded — unknown data is not a
   //                 │             │ reason to block.
   // -----------------------------------------------------------------------
 
@@ -422,18 +424,18 @@ export async function aiNativeMatchVCs(
   try {
     stageFiltered = await db.investor.findMany({
       where: {
-        // HARD FILTER 2  -  Visibility
+        // HARD FILTER 2 — Visibility
         isPublic: true,
         discoverable: true,
-        // HARD FILTER 1  -  Stage
+        // HARD FILTER 1 — Stage
         OR: stageConditions,
-        // HARD FILTER 3  -  Check size (exclude bad fits)
+        // HARD FILTER 3 — Check size (exclude bad fits)
         NOT: checkSizeExclusions.length > 0
           ? { OR: checkSizeExclusions }
           : undefined,
       },
     })
-    logger.log(`[AI-NATIVE] Phase 1  -  Hard filters (Prisma WHERE): ${stageFiltered.length} VCs passed (stage=${founderStage}, fundingNeed=${fundingNeed}K)`)
+    logger.log(`[AI-NATIVE] Phase 1 — Hard filters (Prisma WHERE): ${stageFiltered.length} VCs passed (stage=${founderStage}, fundingNeed=${fundingNeed}K)`)
     logger.log(`[AI-NATIVE]   Filter breakdown: stage=${stageConditions.length} stage variants, visibility=public+discoverable, checkSize=${checkSizeExclusions.length > 0 ? 'active' : 'skipped (no fundingNeed)'}`)
   } catch (dbErr: any) {
     logger.error('[AI-NATIVE] Prisma hard-filter query failed, falling back to passed-in investors:', dbErr?.message)
@@ -441,14 +443,14 @@ export async function aiNativeMatchVCs(
   }
 
   if (stageFiltered.length === 0) {
-    logger.warn('[AI-NATIVE] No VCs passed hard filters  -  falling back to visibility-only query')
+    logger.warn('[AI-NATIVE] No VCs passed hard filters — falling back to visibility-only query')
     stageFiltered = await db.investor.findMany({
       where: { isPublic: true, discoverable: true },
     })
   }
 
   // -----------------------------------------------------------------------
-  // PHASE 2  -  Vector Search: FAISS top-15 from stage-filtered set
+  // PHASE 2 — Vector Search: FAISS top-15 from stage-filtered set
   // -----------------------------------------------------------------------
 
   const stageFilteredIds = new Set(stageFiltered.map(vc => vc.id))
@@ -462,7 +464,7 @@ export async function aiNativeMatchVCs(
         // Ask FAISS for more than 20 so we can intersect with stage-filtered set
         const faissResults = await rankVCsForPitch(pitchEmbedding, [], 50, true)
         vectorMatches = faissResults.filter(r => stageFilteredIds.has(r.id)).slice(0, 15)
-        logger.log(`[AI-NATIVE] Phase 2  -  FAISS: ${faissResults.length} results, ${vectorMatches.length} after stage filter`)
+        logger.log(`[AI-NATIVE] Phase 2 — FAISS: ${faissResults.length} results, ${vectorMatches.length} after stage filter`)
       } catch (faissErr: any) {
         logger.warn('[AI-NATIVE] FAISS failed, falling back to stage-filtered set:', faissErr?.message)
       }
@@ -482,7 +484,7 @@ export async function aiNativeMatchVCs(
   }
 
   // -----------------------------------------------------------------------
-  // Intelligent matching (rule-based)  -  run on candidates
+  // Intelligent matching (rule-based) — run on candidates
   // -----------------------------------------------------------------------
 
   const resumeLikeFeatures: ResumeFeatures = resumeFeatures || {
@@ -533,13 +535,13 @@ export async function aiNativeMatchVCs(
   }
 
   // -----------------------------------------------------------------------
-  // PHASE 3  -  Live Enrichment (Exa + GPT-4o-mini)  -  parallel for all candidates
+  // PHASE 3 — Live Enrichment (Exa + GPT-4o-mini) — parallel for all candidates
   // -----------------------------------------------------------------------
 
   const pitchText = buildPitchText(founder, pitchAnalysis, transcript, founderContext)
   const primarySector = parseJSON<string[]>(founder.sectors || '[]', [])[0] || 'technology'
 
-  logger.log(`[AI-NATIVE] Phase 3  -  Enriching ${candidateInvestors.length} VCs via Exa (batched, 5/sec)...`)
+  logger.log(`[AI-NATIVE] Phase 3 — Enriching ${candidateInvestors.length} VCs via Exa (batched, 5/sec)...`)
 
   const EXA_BATCH_SIZE = 5
   const EXA_BATCH_DELAY_MS = 1200
@@ -597,7 +599,7 @@ export async function aiNativeMatchVCs(
     logger.log(`[AI-NATIVE] Exa batch ${Math.floor(i / EXA_BATCH_SIZE) + 1}/${Math.ceil(candidateInvestors.length / EXA_BATCH_SIZE)} complete`)
   }
 
-  logger.log(`[AI-NATIVE] Phase 3 complete  -  ${enrichmentMap.size}/${candidateInvestors.length} enriched`)
+  logger.log(`[AI-NATIVE] Phase 3 complete — ${enrichmentMap.size}/${candidateInvestors.length} enriched`)
 
   for (const vc of candidateInvestors) {
     const pulse = enrichmentMap.get(vc.id)
@@ -609,14 +611,18 @@ export async function aiNativeMatchVCs(
   }
 
   // -----------------------------------------------------------------------
-  // PHASE 4  -  Re-Scoring with weighted formula
+  // PHASE 4 — Re-Scoring with weighted formula
   //
+  // SUPERSEDED — route migration complete. This block is dead code.
+  // Replacement: lib/matching/gate-reasoner.ts + investment-likelihood.ts
+  //
+  // OLD (v2) formula — no longer executed:
   // FinalScore = (IntelligentScore × 0.4) + (VectorScore × 0.3) + (EnrichmentScore × 0.3)
   //
-  // EnrichmentScore starts at 50 (neutral) and adjusts:
+  // EnrichmentScore started at 50 (neutral) and adjusted:
   //   +25 if recent deals found
   //   +15 if thought leadership found
-  //   +10 if summary indicates alignment with founder
+  //   +10 if summary indicated alignment with founder
   //   −50 if direct conflict detected
   // -----------------------------------------------------------------------
 
@@ -635,7 +641,7 @@ export async function aiNativeMatchVCs(
     let conflictPenalty = 0
 
     if (pulse) {
-      // Low signal = potentially inactive VC  -  strong penalty so they don't rank #1
+      // Low signal = potentially inactive VC — strong penalty so they don't rank #1
       if (pulse.signalStrength === 0) {
         enrichmentScore -= 35
       } else if (pulse.signalStrength <= 1) {
@@ -713,13 +719,13 @@ export async function aiNativeMatchVCs(
   })
 
   // -----------------------------------------------------------------------
-  // Final Sort  -  top 10 by combinedScore
+  // Final Sort — top 10 by combinedScore
   // -----------------------------------------------------------------------
 
   scoredMatches.sort((a, b) => b.combinedScore - a.combinedScore)
   const top10 = scoredMatches.slice(0, 10)
 
-  logger.log(`[AI-NATIVE] Final  -  Top 10 scores: ${top10.map(m => `${m.investor.firmName}=${m.combinedScore}`).join(', ')}`)
+  logger.log(`[AI-NATIVE] Final — Top 10 scores: ${top10.map(m => `${m.investor.firmName}=${m.combinedScore}`).join(', ')}`)
 
   return top10
 }

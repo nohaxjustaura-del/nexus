@@ -435,7 +435,6 @@ Return as JSON:
       system: 'You are a YC expert analyzing batch trends. Return valid JSON.',
       user: prompt,
       temperature: 0.3,
-      model: 'deepseek/deepseek-chat', // FREE model!
     })
     
     return {

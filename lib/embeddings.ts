@@ -3,9 +3,11 @@
  * Uses Voyage AI embedding API (voyage-3)
  *
  * voyage-3: 1024 dimensions, 200M free tokens for new accounts.
- * Rate limits: 3 RPM, 10K TPM  -  callers must respect these.
+ * Rate limits: 3 RPM, 10K TPM — callers must respect these.
  * API: POST https://api.voyageai.com/v1/embeddings
  */
+
+import { parseJSON } from '@/lib/utils'
 
 const EMBEDDING_MODEL = 'voyage-3'
 const EMBEDDING_DIMENSIONS = 1024
@@ -328,6 +330,62 @@ export interface RankedVC {
   }
 }
 
+/** One row of VC vectors for in-memory cosine ranking (same model/dim as pitch embedding). */
+export type VcEmbeddingRow = {
+  id: string
+  firmName: string
+  embedding: number[]
+  metadata: Record<string, unknown>
+}
+
+/**
+ * Parse stored Investor.embedding JSON into rows usable by rankVCsForPitch(..., useFAISS: false).
+ * Skips rows with missing JSON, wrong length vs current pitch model, or parse errors.
+ */
+export function investorsToRankableEmbeddings(
+  investors: Array<{
+    id: string
+    firmName: string | null
+    embedding: string | null
+    stages: string
+    sectors: string
+    geography: string
+    geoFocus: string
+    checkSizeMin: number
+    checkSizeMax: number
+    fundType: string
+  }>,
+  pitchEmbeddingLength: number,
+): VcEmbeddingRow[] {
+  const out: VcEmbeddingRow[] = []
+  for (const inv of investors) {
+    if (!inv.embedding?.trim()) continue
+    let emb: number[]
+    try {
+      emb = JSON.parse(inv.embedding as string)
+    } catch {
+      continue
+    }
+    if (!Array.isArray(emb) || emb.length !== pitchEmbeddingLength) continue
+    out.push({
+      id: inv.id,
+      firmName: inv.firmName ?? '',
+      embedding: emb,
+      metadata: {
+        stages: parseJSON<string[]>(inv.stages, []),
+        sectors: parseJSON<string[]>(inv.sectors, []),
+        geography: parseJSON<string[]>(inv.geography || inv.geoFocus, []),
+        checkSize:
+          inv.checkSizeMin && inv.checkSizeMax
+            ? `$${inv.checkSizeMin}K-$${inv.checkSizeMax}K`
+            : undefined,
+        fundType: inv.fundType,
+      },
+    })
+  }
+  return out
+}
+
 /**
  * Rank VCs using FAISS service (faster, uses pre-built index)
  * Falls back to in-memory cosine similarity if service unavailable
@@ -385,11 +443,11 @@ export async function rankVCsForPitch(
     try {
       return await rankVCsWithFAISS(pitchEmbedding, topK)
     } catch {
-      // Fall through to in-memory ranking if FAISS fails
+      /* Caller must pass vcEmbeddings for in-memory ranking, or this throws below. */
     }
   }
 
-  // Fallback to in-memory cosine similarity
+  // In-memory cosine similarity (requires vc rows with same embedding dimension as pitch)
   if (!vcEmbeddings || vcEmbeddings.length === 0) {
     throw new Error('No VC embeddings provided and FAISS service unavailable')
   }

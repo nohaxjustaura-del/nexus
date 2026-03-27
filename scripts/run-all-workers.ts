@@ -3,21 +3,24 @@
  * Run maintenance + growth workers in parallel (one terminal).
  *
  * Processes:
- *   1. scripts/worker-start.ts --loop  — VC research, Exa enrichment pre-warm, validation, embeddings on timer
- *   2. scripts/vc-supabase-ingest-worker.ts --discover — dual-Exa discovery → Prisma (isPublic+discoverable) + Supabase vc_directory per firm; bg worker also runs periodic vc_directory catch-up for recent rows
+ *   1. scripts/worker-start.ts --loop — maintenance on existing investors (thesis/profile refresh, Exa cache, embeddings, validation, vc_directory sync)
+ *   2. scripts/vc-supabase-ingest-worker.ts --discover — finds NEW firm names (Exa), then full researchVC + ingest per candidate → Prisma + Supabase (this is how new VCs enter the DB)
  *
  * Do NOT also run npm run research-worker unless you want duplicate Exa/OpenRouter load.
  *
  * Env (optional):
- *   WORKERS_DISCOVER_INTERVAL_MS   (default 1800000 = 30m)
+ *   WORKERS_DISCOVER_INTERVAL_MS   (default 30000 = 30s pause between discover passes; use 10000–60000 for ~10s–1m; min 10s enforced in ingest worker)
  *   WORKERS_DISCOVER_MAX_NEW       (default 20)
  *   WORKERS_DISCOVER_ROUNDS        (default 5)
  *   WORKERS_DISCOVER_PER_QUERY     (default 10)
- *   WORKERS_DISCOVER_QUERY_DELAY_MS (default 1200)
- *   WORKERS_DISCOVER_DELAY_MS      (default 2500, delay after each firm ingest)
+ *   WORKERS_DISCOVER_QUERY_DELAY_MS (default 800)
+ *   WORKERS_DISCOVER_DELAY_MS      (default 1000, delay after each firm ingest)
+ *
+ * Discover runs forever (loop) until you press Ctrl+C — same as before, only the default pause is shorter.
  */
 
 import { spawn } from 'child_process'
+import 'dotenv/config'
 
 const children: ReturnType<typeof spawn>[] = []
 
@@ -74,16 +77,53 @@ process.on('SIGTERM', () => {
   setTimeout(() => process.exit(0), 500).unref()
 })
 
-const dInterval = process.env.WORKERS_DISCOVER_INTERVAL_MS || '1800000'
+const dInterval = process.env.WORKERS_DISCOVER_INTERVAL_MS || '30000'
 const dMaxNew = process.env.WORKERS_DISCOVER_MAX_NEW || '20'
 const dRounds = process.env.WORKERS_DISCOVER_ROUNDS || '5'
 const dPerQ = process.env.WORKERS_DISCOVER_PER_QUERY || '10'
-const dQDelay = process.env.WORKERS_DISCOVER_QUERY_DELAY_MS || '1200'
-const dAfter = process.env.WORKERS_DISCOVER_DELAY_MS || '2500'
+const dQDelay = process.env.WORKERS_DISCOVER_QUERY_DELAY_MS || '800'
+const dAfter = process.env.WORKERS_DISCOVER_DELAY_MS || '1000'
+
+const intervalMs = Math.max(0, parseInt(dInterval, 10) || 30000)
+const intervalSec = (intervalMs / 1000).toFixed(intervalMs % 1000 === 0 ? 0 : 1)
+
+function logPipelineAndEnv() {
+  const hasDb = !!process.env.DATABASE_URL?.trim()
+  const hasExa = !!process.env.EXA_API_KEY?.trim()
+  const hasLlm =
+    !!process.env.OPENROUTER_API_KEY?.trim() ||
+    (!!process.env.OLLAMA_BASE_URL?.trim() && !!process.env.OLLAMA_MODEL?.trim())
+  const hasSb =
+    !!process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() && !!process.env.SUPABASE_SERVICE_ROLE_KEY?.trim()
+
+  console.log('')
+  console.log('[workers] What runs:')
+  console.log(
+    '  • discover — Exa finds firm names not in DB → full VC research (Exa context + LLM extraction) → new/updated Prisma Investor + Supabase vc_directory',
+  )
+  console.log(
+    '  • bg — existing DB investors only: thesis/profile refresh windows, Exa cache warm, embeddings, validation, Prisma→Supabase catch-up',
+  )
+  console.log('[workers] Config check:')
+  console.log(`  • DATABASE_URL: ${hasDb ? 'set' : 'MISSING — Prisma will fail'}`)
+  console.log(`  • EXA_API_KEY: ${hasExa ? 'set' : 'MISSING — discover + per-firm research retrieval need this'}`)
+  console.log(
+    `  • LLM (OPENROUTER_API_KEY or OLLAMA_BASE_URL + OLLAMA_MODEL): ${hasLlm ? 'set' : 'MISSING — ingest will not create/update investors'}`,
+  )
+  console.log(`  • Supabase vc_directory: ${hasSb ? 'set' : 'incomplete — directory upserts may fail'}`)
+  if (!hasExa || !hasLlm || !hasDb) {
+    console.log('[workers] ⚠️  Fix missing env vars above or new firms will not be researched/saved.')
+  }
+  console.log('')
+}
 
 console.log('[workers] Starting: bg (worker-start --loop) + discover (vc-supabase-ingest-worker)')
+logPipelineAndEnv()
 console.log(
-  `[workers] Discover env: interval=${dInterval}ms max-new=${dMaxNew} rounds=${dRounds} per-query=${dPerQ}`,
+  `[workers] Discover env: interval=${dInterval}ms (~${intervalSec}s between passes) max-new=${dMaxNew} rounds=${dRounds} per-query=${dPerQ}`,
+)
+console.log(
+  '[workers] Discover runs continuously until Ctrl+C (infinite loop). Use --once only if you run the ingest script directly.',
 )
 
 spawnTsx('bg', ['scripts/worker-start.ts', '--loop'])
