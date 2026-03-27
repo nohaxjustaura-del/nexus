@@ -35,19 +35,58 @@ export type ResearchBatchMode = 'full' | 'thesis' | 'profile'
 const contextSliceLen = () =>
   Math.min(28000, Math.max(8000, parseInt(process.env.VC_RESEARCH_CONTEXT_CHARS || '20000', 10) || 20000))
 
+/** Smaller slice for local LLMs — less noise, fewer truncated JSON outputs. */
+function sliceContextForExtraction(raw: string): string {
+  const full = contextSliceLen()
+  if (!process.env.OLLAMA_BASE_URL?.trim()) {
+    return raw.substring(0, full)
+  }
+  const cap = Math.min(
+    full,
+    Math.max(6000, parseInt(process.env.VC_OLLAMA_CONTEXT_CHARS || '12000', 10) || 12000),
+  )
+  return raw.substring(0, cap)
+}
+
+/** Llama often returns article-shaped JSON; salvage a thesis string when possible. */
+function normalizeThesisPayload(raw: unknown): Pick<VCResearchResult, 'thesis'> {
+  if (!raw || typeof raw !== 'object') return {}
+  const o = raw as Record<string, unknown>
+  if (typeof o.thesis === 'string' && o.thesis.trim()) {
+    return { thesis: o.thesis.trim() }
+  }
+  if (o.thesis === null) return {}
+  if (Array.isArray(o.key_findings) && o.key_findings.length) {
+    const s = o.key_findings.map(String).join(' ').trim()
+    if (s) return { thesis: s.slice(0, 4000) }
+  }
+  if (typeof o.description === 'string' && o.description.trim().length > 40) {
+    return { thesis: o.description.trim().slice(0, 4000) }
+  }
+  return {}
+}
+
 async function extractThesisOnly(
   firmName: string,
   rawContent: string,
 ): Promise<Pick<VCResearchResult, 'thesis'>> {
   try {
+    const ctx = sliceContextForExtraction(rawContent)
     const result = await openrouterGenerateJson<{ thesis: string | null }>({
-      system: `You extract ONLY the investment thesis for this VC/investor from the text. Return JSON: { "thesis": string | null }. Be specific (themes, stage, sectors). If not stated, null.`,
-      user: `Firm: "${firmName}"\n\n${rawContent.substring(0, contextSliceLen())}`,
+      system: `You extract the investment thesis for ONE venture fund whose name is given in the user message.
+
+Your reply MUST be a single JSON object with exactly one key: "thesis".
+- "thesis" is either a string (2–5 sentences: stage, sectors, geography, themes) or null if the text does not describe that fund's investment focus.
+- Do NOT output article titles, dates, key_findings arrays, or any keys other than "thesis".`,
+      user: `Fund name: "${firmName}"\n\nSource text:\n${ctx}`,
       temperature: 0.15,
       model: getVcExtractionModel(),
       retryOnParseError: true,
     })
-    return { thesis: result.thesis || undefined }
+    const normalized = normalizeThesisPayload(result)
+    if (normalized.thesis) return normalized
+    const t = (result as { thesis?: string | null }).thesis
+    return { thesis: typeof t === 'string' && t.trim() ? t.trim() : undefined }
   } catch (e: any) {
     console.error(`   ⚠️ Thesis extraction failed for ${firmName}:`, e.message)
     return {}
@@ -79,14 +118,18 @@ async function extractProfileFieldsOnly(
       linkedinUrl: string | null
       applicationUrl: string | null
     }>({
-      system: `Extract structured VC profile data from Exa retrieval — do NOT include thesis. Return accurate JSON only.
+      system: `Extract structured VC profile data from Exa retrieval — do NOT include thesis.
+
+Return ONE JSON object with EXACTLY these keys and no others:
+bio, checkSizeMin, checkSizeMax, stages, sectors, geography, fundType, leadFollow, portfolio, valueAddTags, websiteUrl, linkedinUrl, applicationUrl
+Use null for unknown strings/numbers; use [] for empty arrays. Numbers are check sizes in thousands USD.
 
 Fund types: "Micro VC", "Venture Capital", "Accelerator", "CVC", "Angel Group", "Family Office", "Growth Equity"
 Lead/follow: "lead", "follow", "either"
 Stages: "pre-seed", "seed", "Series A", "Series B", "Series C", "Growth"`,
       user: `Firm: "${firmName}". Extract all available data except investment thesis:
 
-${rawContent.substring(0, contextSliceLen())}`,
+${sliceContextForExtraction(rawContent)}`,
       temperature: 0.15,
       model: getVcExtractionModel(),
       retryOnParseError: true,
@@ -143,7 +186,7 @@ Lead/follow: "lead", "follow", "either"
 Stages: "pre-seed", "seed", "Series A", "Series B", "Series C", "Growth" only.`,
       user: `Extract all available data for "${firmName}" from this material:
 
-${rawContent.substring(0, contextSliceLen())}
+${sliceContextForExtraction(rawContent)}
 
 Return JSON with: thesis (2-3 sentences, specific themes and stage if present), bio (2-3 sentences: who they are, founding vintage or notable background if stated), checkSizeMin (thousands USD, e.g. 500 = $500K), checkSizeMax (thousands), stages, sectors, geography (country/region level), fundType, leadFollow, portfolio (company names only, max 25), valueAddTags, websiteUrl (official fund site if explicit), linkedinUrl (company/fund page if explicit), applicationUrl (pitch form or email contact page if explicit)`,
       temperature: 0.15,
@@ -185,7 +228,9 @@ async function researchVC(
 
   try {
     if (!hasOpenRouterKey()) {
-      console.error(`   ⚠️ OPENROUTER_API_KEY is required for VC extraction (Exa supplies text).`)
+      console.error(
+        `   ⚠️ Set OPENROUTER_API_KEY or OLLAMA_BASE_URL (+ OLLAMA_MODEL) for VC extraction (Exa supplies text).`,
+      )
       return null
     }
 

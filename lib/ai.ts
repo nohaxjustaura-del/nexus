@@ -1,18 +1,16 @@
 import { logger } from "./logger"
-import { getOpenRouterClient, getModelName, hasOpenRouterKey } from "./openrouter"
+import { getLlmClient, getModelName } from "./openrouter"
 
-// Get AI client - prefers OpenRouter, falls back to OpenAI
+// Get AI client — Ollama or OpenRouter first (same as VC workers), then direct OpenAI
 export function getAIClient() {
-  // Prefer OpenRouter if available
-  if (hasOpenRouterKey()) {
-    const client = getOpenRouterClient()
-    if (client) return client
-  }
-  
-  // Fallback to OpenAI if OpenRouter not available
+  const llm = getLlmClient()
+  if (llm) return llm
+
   const openaiKey = process.env.OPENAI_API_KEY
   if (!openaiKey) {
-    throw new Error('No AI API key configured. Please set OPENROUTER_API_KEY or OPENAI_API_KEY environment variable.')
+    throw new Error(
+      'No AI API key configured. Set OLLAMA_BASE_URL (local), OPENROUTER_API_KEY, or OPENAI_API_KEY.',
+    )
   }
   
   const OpenAI = require("openai").default

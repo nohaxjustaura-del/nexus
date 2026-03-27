@@ -2,6 +2,28 @@ import OpenAI from "openai"
 import { getSiteUrl } from '@/lib/site-url'
 
 /**
+ * Local Ollama (OpenAI-compatible API). Set OLLAMA_BASE_URL to prefer it over OpenRouter for VC extraction + helpers.
+ * Example: OLLAMA_BASE_URL=http://127.0.0.1:11434/v1  and  OLLAMA_MODEL=llama3.2
+ */
+export function getOllamaClient(): OpenAI | null {
+  const raw = process.env.OLLAMA_BASE_URL?.trim()
+  if (!raw) return null
+  try {
+    let base = raw.replace(/\/$/, '')
+    if (!/\/v1$/i.test(base)) {
+      base = `${base}/v1`
+    }
+    return new OpenAI({
+      baseURL: base,
+      apiKey: process.env.OLLAMA_API_KEY?.trim() || 'ollama',
+    })
+  } catch (error) {
+    console.error('[Ollama] Failed to initialize client:', error)
+    return null
+  }
+}
+
+/**
  * Get OpenRouter client - a unified API for accessing multiple LLM providers
  * Uses OpenAI-compatible SDK with OpenRouter base URL
  */
@@ -29,10 +51,24 @@ export function getOpenRouterClient(): OpenAI | null {
 }
 
 /**
+ * Preferred LLM for chat-completions-style calls: Ollama (if OLLAMA_BASE_URL) else OpenRouter.
+ */
+export function getLlmClient(): OpenAI | null {
+  return getOllamaClient() ?? getOpenRouterClient()
+}
+
+export function isUsingOllama(): boolean {
+  return !!getOllamaClient()
+}
+
+/**
  * Get the model name for OpenRouter
  * Prioritizes FREE models (DeepSeek, Gemini free tier)
  */
 export function getModelName(model: string = 'gpt-4o'): string {
+  if (process.env.OLLAMA_BASE_URL?.trim()) {
+    return process.env.OLLAMA_MODEL?.trim() || 'llama3.2'
+  }
   // If using OpenRouter, prioritize FREE models
   if (process.env.OPENROUTER_API_KEY) {
     if (model === 'gpt-4o') {
@@ -57,17 +93,40 @@ export function getModelName(model: string = 'gpt-4o'): string {
 }
 
 /**
- * Check if OpenRouter is configured
+ * True if VC-style JSON extraction can run (OpenRouter credits or local Ollama).
  */
-export function hasOpenRouterKey(): boolean {
-  return !!(process.env.OPENROUTER_API_KEY)
+export function hasVcLlmConfigured(): boolean {
+  return !!(process.env.OLLAMA_BASE_URL?.trim() || process.env.OPENROUTER_API_KEY?.trim())
 }
 
-/** Model for VC JSON extraction (OpenRouter id, e.g. deepseek/deepseek-chat). */
+/**
+ * Check if OpenRouter is configured
+ * @deprecated Prefer hasVcLlmConfigured — name kept for compatibility; true for Ollama OR OpenRouter.
+ */
+export function hasOpenRouterKey(): boolean {
+  return hasVcLlmConfigured()
+}
+
+/** Model for VC JSON extraction (OpenRouter id e.g. deepseek/deepseek-chat, or Ollama tag e.g. llama3.2). */
 export function getVcExtractionModel(): string {
+  if (process.env.OLLAMA_BASE_URL?.trim()) {
+    return process.env.OLLAMA_MODEL?.trim() || 'llama3.2'
+  }
   const m = process.env.OPENROUTER_VC_EXTRACTION_MODEL?.trim()
   if (m) return m
   return 'deepseek/deepseek-chat'
+}
+
+/**
+ * Cap completion tokens. OpenRouter: default 2048 to reduce 402 risk.
+ * Ollama (local): default 8192 — 2048 often truncates long JSON and breaks parsing mid-string.
+ */
+export function getVcExtractionMaxTokens(): number {
+  const raw = process.env.VC_EXTRACTION_MAX_TOKENS?.trim()
+  const n = raw ? parseInt(raw, 10) : NaN
+  if (Number.isFinite(n) && n >= 256 && n <= 16000) return n
+  if (process.env.OLLAMA_BASE_URL?.trim()) return 8192
+  return 2048
 }
 
 const VC_EXTRACTION_FALLBACK_MODEL = 'openai/gpt-4o-mini'
@@ -83,38 +142,57 @@ export async function openrouterGenerateText(
     model?: string
   } = {}
 ): Promise<string> {
-  const client = getOpenRouterClient()
+  const client = getLlmClient()
   if (!client) {
-    throw new Error('OpenRouter not configured. Set OPENROUTER_API_KEY.')
+    throw new Error('No LLM configured. Set OLLAMA_BASE_URL (local Ollama) or OPENROUTER_API_KEY.')
   }
 
-  const model = options.model || 'deepseek/deepseek-chat' // FREE model!
-  
+  const model =
+    options.model ||
+    (isUsingOllama() ? getVcExtractionModel() : 'deepseek/deepseek-chat')
+
+  const tag = isUsingOllama() ? 'OLLAMA' : 'OPENROUTER'
+  console.log(`[${tag}] 🤖 Using model: ${model}`)
+
   const response = await client.chat.completions.create({
     model,
     messages: [{ role: 'user', content: prompt }],
     temperature: options.temperature ?? 0.7,
-    max_tokens: options.maxTokens ?? 4000,
+    max_tokens: options.maxTokens ?? getVcExtractionMaxTokens(),
   })
 
   return response.choices[0]?.message?.content || ''
 }
 
 /**
- * Generate JSON using OpenRouter
+ * Extract JSON from model output (prose, markdown fences, trailing junk).
+ * Prefers fenced ```json blocks; otherwise slices from first { or [ to last } or ].
  */
-function parseJsonFromModelContent(content: string, model: string): unknown {
-  let jsonText = content.trim()
-  const codeBlockMatch = jsonText.match(/```(?:json)?\s*(\{[\s\S]*?\})\s*```/)
-  if (codeBlockMatch) {
-    jsonText = codeBlockMatch[1]
+function parseJsonFromModelContent(content: string, _model: string): unknown {
+  let s = content.trim()
+  if (s.charCodeAt(0) === 0xfeff) s = s.slice(1)
+
+  // Longest ``` ... ``` block (non-greedy inner would truncate nested JSON — use full fence match)
+  const fenceOpen = s.match(/```(?:json)?\s*/)
+  if (fenceOpen && fenceOpen.index !== undefined) {
+    const start = fenceOpen.index + fenceOpen[0].length
+    const close = s.indexOf('```', start)
+    if (close > start) {
+      s = s.slice(start, close).trim()
+    }
   }
-  const firstBrace = jsonText.indexOf('{')
-  const lastBrace = jsonText.lastIndexOf('}')
-  if (firstBrace >= 0 && lastBrace > firstBrace) {
-    jsonText = jsonText.slice(firstBrace, lastBrace + 1)
+
+  const objStart = s.indexOf('{')
+  const arrStart = s.indexOf('[')
+  if (objStart >= 0 && (arrStart < 0 || objStart < arrStart)) {
+    const end = s.lastIndexOf('}')
+    if (end > objStart) s = s.slice(objStart, end + 1)
+  } else if (arrStart >= 0) {
+    const end = s.lastIndexOf(']')
+    if (end > arrStart) s = s.slice(arrStart, end + 1)
   }
-  return JSON.parse(jsonText)
+
+  return JSON.parse(s)
 }
 
 export async function openrouterGenerateJson<T = any>(options: {
@@ -122,59 +200,96 @@ export async function openrouterGenerateJson<T = any>(options: {
   user: string
   temperature?: number
   model?: string
+  /** Override max output tokens (defaults from getVcExtractionMaxTokens()). */
+  maxTokens?: number
   /** If true (default), retry once with a small OpenRouter model when JSON parse fails */
   retryOnParseError?: boolean
 }): Promise<T> {
-  const client = getOpenRouterClient()
+  const client = getLlmClient()
   if (!client) {
-    throw new Error('OpenRouter not configured. Set OPENROUTER_API_KEY.')
+    throw new Error('No LLM configured. Set OLLAMA_BASE_URL (local Ollama) or OPENROUTER_API_KEY.')
   }
 
-  const primaryModel = options.model || 'deepseek/deepseek-chat'
+  const primaryModel =
+    options.model ||
+    (isUsingOllama() ? getVcExtractionModel() : 'deepseek/deepseek-chat')
   const retryOnParseError = options.retryOnParseError !== false
+  const logTag = isUsingOllama() ? 'OLLAMA' : 'OPENROUTER'
 
   const run = async (model: string): Promise<T> => {
-    console.log(`[OPENROUTER] 🤖 Using model: ${model}`)
+    console.log(`[${logTag}] 🤖 Using model: ${model}`)
 
-    const response = await client.chat.completions.create({
-      model,
-      messages: [
-        {
-          role: 'system',
-          content:
-            options.system + '\n\nReturn ONLY valid JSON. No markdown, no code blocks, no explanations.',
-        },
-        {
-          role: 'user',
-          content:
-            options.user +
-            '\n\nIMPORTANT: Respond with ONLY the JSON object. No markdown code fences.',
-        },
-      ],
-      temperature: options.temperature ?? 0.7,
-      max_tokens: 4000,
-    })
+    const ollamaStrict =
+      isUsingOllama() && process.env.OLLAMA_JSON_STRICT !== 'false'
+    const temp =
+      options.temperature ??
+      (ollamaStrict ? 0.15 : 0.7)
 
-    const content = response.choices[0]?.message?.content || '{}'
-    console.log(`[OPENROUTER] 📄 Response length: ${content.length}, starts: ${content.substring(0, 100)}`)
+    let maxTok = options.maxTokens ?? getVcExtractionMaxTokens()
 
-    try {
-      return parseJsonFromModelContent(content, model) as T
-    } catch (parseError: any) {
-      console.error(`[OPENROUTER] ❌ JSON parse error:`, parseError.message)
-      console.error(`[OPENROUTER] Raw content:`, content.substring(0, 500))
-      throw new Error(`Failed to parse JSON from ${model}: ${parseError.message}`)
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const baseParams: Record<string, unknown> = {
+        model,
+        messages: [
+          {
+            role: 'system',
+            content:
+              options.system +
+              (ollamaStrict
+                ? '\n\nOutput a single JSON object only. No markdown, no code fences, no text before or after.'
+                : '\n\nReturn ONLY valid JSON. No markdown, no code blocks, no explanations.'),
+          },
+          {
+            role: 'user',
+            content:
+              options.user +
+              (ollamaStrict
+                ? '\n\nReply with one JSON object only.'
+                : '\n\nIMPORTANT: Respond with ONLY the JSON object. No markdown code fences.'),
+          },
+        ],
+        temperature: temp,
+        max_tokens: maxTok,
+      }
+      if (ollamaStrict) {
+        baseParams.response_format = { type: 'json_object' }
+      }
+
+      const response = await client.chat.completions.create(baseParams as any)
+      const choice = response.choices[0]
+      const content = choice?.message?.content || '{}'
+      const finishReason = choice?.finish_reason as string | undefined
+
+      console.log(`[${logTag}] 📄 Response length: ${content.length}, starts: ${content.substring(0, 100)}`)
+
+      if (finishReason === 'length' && isUsingOllama() && attempt < 2) {
+        const next = Math.min(16000, Math.max(maxTok * 2, maxTok + 4096))
+        if (next > maxTok) {
+          console.warn(
+            `[${logTag}] ⚠️ Output truncated (finish_reason=length); retrying with max_tokens=${next}`,
+          )
+          maxTok = next
+          continue
+        }
+      }
+
+      try {
+        return parseJsonFromModelContent(content, model) as T
+      } catch (parseError: any) {
+        console.error(`[${logTag}] ❌ JSON parse error:`, parseError.message)
+        console.error(`[${logTag}] Raw content:`, content.substring(0, 500))
+        throw new Error(`Failed to parse JSON from ${model}: ${parseError.message}`)
+      }
     }
+    throw new Error(`Unexpected: no JSON result from ${model}`)
   }
 
   try {
     return await run(primaryModel)
   } catch (e: any) {
-    if (
-      retryOnParseError &&
-      primaryModel !== VC_EXTRACTION_FALLBACK_MODEL &&
-      /parse JSON|JSON/i.test(String(e?.message || e))
-    ) {
+    const canFallbackOpenRouter =
+      !isUsingOllama() && getOpenRouterClient() && retryOnParseError && primaryModel !== VC_EXTRACTION_FALLBACK_MODEL
+    if (canFallbackOpenRouter && /parse JSON|JSON/i.test(String(e?.message || e))) {
       console.warn(`[OPENROUTER] Retrying with fallback model: ${VC_EXTRACTION_FALLBACK_MODEL}`)
       return await run(VC_EXTRACTION_FALLBACK_MODEL)
     }

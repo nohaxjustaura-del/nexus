@@ -3,16 +3,16 @@ import { getUserFromRequest } from '@/lib/auth'
 import { db } from '@/lib/db'
 import OpenAI from 'openai'
 import { FUND_COACH_SYSTEM_PROMPT } from '@/lib/ai-prompts'
-import { getOpenRouterClient, getModelName } from '@/lib/openrouter'
+import { getLlmClient, getModelName } from '@/lib/openrouter'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
-// Get AI client - supports both OpenRouter and OpenAI
+// Get AI client - Ollama / OpenRouter / OpenAI
 function getAIClient(): OpenAI | null {
-  const openRouterClient = getOpenRouterClient()
-  if (openRouterClient) {
-    return openRouterClient
+  const llm = getLlmClient()
+  if (llm) {
+    return llm
   }
   
   try {
@@ -123,13 +123,14 @@ Please analyze this founder and startup, provide detailed feedback, and match th
     const aiClient = getAIClient()
     if (!aiClient) {
       return NextResponse.json(
-        { error: 'AI service not configured', message: 'Please set OPENROUTER_API_KEY or OPENAI_API_KEY' },
+        { error: 'AI service not configured', message: 'Set OLLAMA_BASE_URL, OPENROUTER_API_KEY, or OPENAI_API_KEY' },
         { status: 503 }
       )
     }
 
     // Limit max_tokens for free tier OpenRouter accounts (reduce from 4000 to 3000 to be safe)
-    const maxTokens = process.env.OPENROUTER_API_KEY ? 3000 : 4000
+    const maxTokens =
+      (process.env.OLLAMA_BASE_URL?.trim() || process.env.OPENROUTER_API_KEY) ? 3000 : 4000
     
     const completion = await aiClient.chat.completions.create({
       model: getModelName('gpt-4-turbo-preview'), // Uses OpenRouter format if OpenRouter is configured

@@ -1,11 +1,11 @@
 import OpenAI from 'openai'
-import { getOpenRouterClient, getModelName } from './openrouter'
+import { getLlmClient, getModelName } from './openrouter'
 
 // Initialize AI client for validation
 function getAIClient(): OpenAI | null {
-  const openRouterClient = getOpenRouterClient()
-  if (openRouterClient) {
-    return openRouterClient
+  const llm = getLlmClient()
+  if (llm) {
+    return llm
   }
   
   try {
@@ -102,7 +102,8 @@ export async function validatePitchIdea(content: string): Promise<ValidationResu
   }
 
   try {
-    const maxTokens = process.env.OPENROUTER_API_KEY ? 500 : undefined
+    const maxTokens =
+      process.env.OLLAMA_BASE_URL?.trim() || process.env.OPENROUTER_API_KEY ? 500 : undefined
     
     const validationPrompt = `You are a content validator. Analyze this text and determine if it is a legitimate startup pitch idea or business concept.
 
@@ -229,7 +230,8 @@ export async function validatePitchDeck(content: string): Promise<ValidationResu
   const aiClient = getAIClient()
   if (aiClient) {
     try {
-      const maxTokens = process.env.OPENROUTER_API_KEY ? 500 : undefined
+      const maxTokens =
+      process.env.OLLAMA_BASE_URL?.trim() || process.env.OPENROUTER_API_KEY ? 500 : undefined
       
       const validationPrompt = `Analyze this text and determine if it is a legitimate pitch deck or business presentation.
 
@@ -358,7 +360,8 @@ export async function validateVideoPitch(transcript: string): Promise<Validation
   const aiClient = getAIClient()
   if (aiClient) {
     try {
-      const maxTokens = process.env.OPENROUTER_API_KEY ? 500 : undefined
+      const maxTokens =
+      process.env.OLLAMA_BASE_URL?.trim() || process.env.OPENROUTER_API_KEY ? 500 : undefined
       
       const validationPrompt = `Analyze this video transcript and determine if it is a legitimate startup pitch video.
 

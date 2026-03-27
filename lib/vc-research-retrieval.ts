@@ -1,6 +1,6 @@
 /**
  * VC firm research retrieval: two parallel Exa searches (different angles) + merged passages.
- * OpenRouter consumes merged text in auto-research-vcs (extraction only). Tavily is not used here.
+ * LLM (OpenRouter or local Ollama) consumes merged text in auto-research-vcs (extraction only). Tavily is not used here.
  */
 
 import Exa from 'exa-js'
@@ -17,6 +17,7 @@ export type VcResearchRetrievalSnapshot = {
 
 export function getVcResearchPipelineEnvStatus(): {
   exa: boolean
+  /** True when OpenRouter or Ollama is configured for JSON extraction */
   openrouter: boolean
 } {
   return {

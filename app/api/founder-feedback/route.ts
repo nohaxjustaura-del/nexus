@@ -3,15 +3,15 @@ import { db } from '@/lib/db'
 import { getCurrentUser } from '@/lib/auth'
 import { logger } from '@/lib/logger'
 import OpenAI from 'openai'
-import { getOpenRouterClient, getModelName } from '@/lib/openrouter'
+import { getLlmClient, getModelName } from '@/lib/openrouter'
 import { isAdminEmail, CREDIT_COSTS } from '@/lib/constants'
 import { rateLimitMiddleware, RATE_LIMITS } from '@/lib/rate-limit'
 
 // Get AI client - supports both OpenRouter and OpenAI
 function getAIClient(): OpenAI | null {
-  const openRouterClient = getOpenRouterClient()
-  if (openRouterClient) {
-    return openRouterClient
+  const llm = getLlmClient()
+  if (llm) {
+    return llm
   }
   
   try {
@@ -105,13 +105,14 @@ export async function POST(request: NextRequest) {
     const aiClient = getAIClient()
     if (!aiClient) {
       return NextResponse.json(
-        { error: 'AI service not configured', message: 'Please set OPENROUTER_API_KEY or OPENAI_API_KEY' },
+        { error: 'AI service not configured', message: 'Set OLLAMA_BASE_URL, OPENROUTER_API_KEY, or OPENAI_API_KEY' },
         { status: 503 }
       )
     }
 
     // Limit max_tokens for free tier OpenRouter accounts
-    const maxTokens = process.env.OPENROUTER_API_KEY ? 4000 : undefined
+    const maxTokens =
+      (process.env.OLLAMA_BASE_URL?.trim() || process.env.OPENROUTER_API_KEY) ? 4000 : undefined
     
     const completion = await aiClient.chat.completions.create({
       model: getModelName('gpt-4o'), // Uses OpenRouter format if OpenRouter is configured

@@ -259,7 +259,7 @@ export async function POST(request: NextRequest) {
         {
           error: 'Service Unavailable',
           message:
-            'OpenRouter is not configured. Please set OPENROUTER_API_KEY in your environment variables and restart the dev server.',
+            'No LLM for extraction. Set OLLAMA_BASE_URL (local Ollama) or OPENROUTER_API_KEY, then restart the dev server.',
           requiresConfiguration: true,
         },
         {

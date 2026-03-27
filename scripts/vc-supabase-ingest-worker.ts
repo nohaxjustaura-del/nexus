@@ -23,8 +23,8 @@
  *   NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY (required for Supabase sync)
  *   SUPABASE_VC_TABLE (optional, default vc_directory)
  *   DATABASE_URL (Prisma)
- *   OPENROUTER_API_KEY required for per-firm research (structured extraction after scrape)
- *   OPENROUTER_VC_EXTRACTION_MODEL optional (default deepseek/deepseek-chat on OpenRouter)
+ *   LLM: OPENROUTER_API_KEY or local OLLAMA_BASE_URL (+ OLLAMA_MODEL) for structured extraction after Exa
+ *   OPENROUTER_VC_EXTRACTION_MODEL optional when using OpenRouter (default deepseek/deepseek-chat)
  *   VC_RESEARCH_CONTEXT_CHARS, VC_RESEARCH_EXA_NUM_RESULTS
  *   --discover requires EXA_API_KEY only: two parallel Exa searches per round (no Tavily, no OpenRouter in discovery)
  *   Discover uses VC_DISCOVERY_CONTENT_SINCE (default 2026-01-01) for Exa startPublishedDate.
