@@ -55,7 +55,7 @@ export default function LoginPage() {
         const data = await res.json().catch(() => ({}))
         if (cancelled) return
         if (data?.authenticated) {
-          const defaultVerified = data?.isAdmin ? '/admin/dashboard' : '/founder/dashboard'
+          const defaultVerified = '/founder/dashboard'
           const target = redirectUrl || (data?.verified ? defaultVerified : '/founder/onboarding')
           window.location.replace(target)
         }
@@ -143,7 +143,7 @@ export default function LoginPage() {
         if (!targetUrl) {
           if (data.user?.userType === 'investor') targetUrl = '/vc/dashboard'
           else if (data.user?.userType === 'mentor') targetUrl = '/'
-          else targetUrl = '/admin/dashboard'
+          else targetUrl = '/founder/dashboard'
         }
 
         window.location.assign(targetUrl)

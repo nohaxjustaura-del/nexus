@@ -56,7 +56,7 @@ export default function VerifyPage() {
         const data = await res.json().catch(() => ({}))
         if (cancelled) return
         if (data?.authenticated) {
-          const defaultVerified = data?.isAdmin ? '/admin/dashboard' : '/founder/dashboard'
+          const defaultVerified = '/founder/dashboard'
           const target = redirectUrl || (data?.verified ? defaultVerified : '/founder/onboarding')
           window.location.replace(target)
         }
