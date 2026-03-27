@@ -10,7 +10,7 @@
 
 import { getCurrentUser } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
-import { isAdminEmail } from '@/lib/constants'
+import { bypassesAiCredits } from '@/lib/dev-ai-analysis-bypass'
 import { logger } from '@/lib/logger'
 
 // In-memory store for rate limiting (for development/single-instance)
@@ -36,7 +36,7 @@ interface RateLimitOptions {
   windowMs: number
   /** Identifier for the rate limit (e.g., 'analyze-pitch-idea') */
   identifier: string
-  /** Skip rate limit for admin users */
+  /** Skip rate limit for admin / UNLIMITED_CREDITS_EMAIL / dev AI bypass */
   skipAdmin?: boolean
 }
 
@@ -95,11 +95,11 @@ export async function checkRateLimit(
   const { limit, windowMs, identifier, skipAdmin = true } = options
 
   try {
-    // Check if user is admin (skip rate limit)
+    // Skip rate limit for same cohort as unlimited credits (admin list, UNLIMITED_CREDITS_EMAIL, dev bypass)
     if (skipAdmin) {
       try {
         const user = await getCurrentUser()
-        if (isAdminEmail(user?.email)) {
+        if (bypassesAiCredits(user?.email)) {
           return { allowed: true, remaining: limit, resetAt: Date.now() + windowMs }
         }
       } catch (error) {

@@ -13,7 +13,7 @@
  *   Step 4 — Pattern detection from transcript (Gemini, keywords only)
  *   Step 5 — FAISS vector search (top 20, up from 15)
  *   Step 6 — Rolling Exa + Gemini gate reasoning (max 5 concurrent Gemini)
- *   Step 7 — Narrative generation (GPT-4o-mini, all VCs in parallel)
+ *   Step 7 — Narrative generation (OpenRouter matching/scoring model, e.g. DeepSeek; all VCs in parallel)
  *   Step 8 — Rank and cut (top 12, pure TS)
  *   Step 9 — Return MatchingPipelineResult
  */

@@ -1,4 +1,4 @@
-﻿import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { getUserForAiAnalysis } from '@/lib/auth'
 import { extractPitchDeckFeatures, analyzeVideoPitch } from '@/lib/ai'
@@ -371,8 +371,16 @@ export async function POST(request: NextRequest) {
     try {
       const marketContext = await getDeepMarketContext(domain, problem)
       scoringResult = await runScoringPipeline(combinedRawPitch, unifiedCtx, marketContext, 'UNIFIED')
+      if (scoringResult.passesCompleted?.includes('degraded-error')) {
+        warnings.push(
+          'AI scoring used a fallback (for example LLM quota, billing, or an unexpected API error). Review narrative scores as approximate.',
+        )
+      }
     } catch (e) {
       logger.error('[UNIFIED-PITCH] scoring pipeline', e)
+      warnings.push(
+        'Full AI scoring could not run (market intelligence or scoring setup failed). Other analysis and matches may still appear.',
+      )
     }
 
     const sectorFitMerged: Record<string, number> = {}
@@ -520,9 +528,13 @@ export async function POST(request: NextRequest) {
           investor: {
             id: m.investor.id,
             firmName: m.investor.firmName,
+            fundType: m.investor.fundType,
             sectors: parseJSON<string[]>(m.investor.sectors || '[]', []),
-            stage: m.investor.stage,
+            stages: parseJSON<string[]>(m.investor.stages || '[]', []),
+            geography: parseJSON<string[]>(m.investor.geography || '[]', []),
             thesis: m.investor.thesis || '',
+            checkSizeMin: m.investor.checkSizeMin,
+            checkSizeMax: m.investor.checkSizeMax,
           },
         })),
         topVCRecommendations: matchedVCs.slice(0, 5).map((m: any) => ({

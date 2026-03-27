@@ -46,6 +46,7 @@ export async function GET(request: NextRequest) {
 
       return NextResponse.json({
         credits: Number.MAX_SAFE_INTEGER,
+        unlimitedCredits: true,
         isPremium: true,
         premiumExpiresAt: null,
         purchases,
@@ -63,6 +64,7 @@ export async function GET(request: NextRequest) {
     // Return actual credits (no auto-grant for production)
     return NextResponse.json({
       credits: credits.credits || 0,
+      unlimitedCredits: false,
       isPremium: credits.isPremium || false,
       premiumExpiresAt: credits.premiumExpiresAt || null,
       purchases,

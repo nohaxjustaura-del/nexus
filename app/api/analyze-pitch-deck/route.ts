@@ -5,7 +5,8 @@ import { extractPitchDeckFeatures } from '@/lib/ai'
 import { runMatchingPipeline } from '@/lib/matching/matching-orchestrator'
 import { logger } from '@/lib/logger'
 import { validatePitchDeck } from '@/lib/content-validator'
-import { CREDIT_COSTS, isAdminEmail } from '@/lib/constants'
+import { CREDIT_COSTS } from '@/lib/constants'
+import { shouldEnforceAiCredits } from '@/lib/dev-ai-analysis-bypass'
 import { rateLimitMiddleware, RATE_LIMITS } from '@/lib/rate-limit'
 import { parseJSON } from '@/lib/utils'
 import { getComprehensiveFounderContext } from '@/lib/founder-context'
@@ -178,8 +179,8 @@ export async function POST(request: NextRequest) {
     // Check credits (but don't deduct yet - will deduct after successful analysis)
     const CREDIT_COST = CREDIT_COSTS.PITCH_DECK
     
-    // Skip credit check for admin
-    if (!isAdminEmail(user.email)) {
+    // Skip credit check for admin / UNLIMITED_CREDITS_EMAIL / dev bypass
+    if (shouldEnforceAiCredits(user.email)) {
       let userCredits = await db.userCredits.findUnique({
         where: { userId: user.id },
       })

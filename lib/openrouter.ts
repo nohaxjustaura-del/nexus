@@ -2,8 +2,16 @@ import OpenAI from "openai"
 import { getSiteUrl } from '@/lib/site-url'
 
 /**
- * Set `LLM_PREFER_OLLAMA=1` to use local Ollama first when both Ollama and OpenRouter are configured.
- * Default: OpenRouter wins when `OPENROUTER_API_KEY` is set (app analyzer + shared LLM helpers use the cloud key).
+ * Routing overview (by **call site**, not by “first N requests”):
+ *
+ * - **VC pipeline** (`useVcPipeline: true`): **every** tagged call uses `getOllamaClient() ?? getOpenRouterClient()`.
+ *   - If `OLLAMA_BASE_URL` is set → **all** VC ingest / Exa JSON / match narratives / etc. go to **Ollama** (even with OpenRouter configured).
+ *   - If Ollama is **not** configured but `OPENROUTER_API_KEY` is set → those calls use **OpenRouter only** (same code path, no Ollama).
+ * - **Pitch scoring** (`forceOpenRouter: true`): uses **OpenRouter** when the key is set (~6 LLM passes: fact, criterion, adversarial×2, tier, category copy).
+ *   - If `OPENROUTER_API_KEY` is **missing**, `forceOpenRouter` is a no-op and the client falls through to `getLlmClient()` (often Ollama-only dev setups).
+ * - **Other analysis** (universal rubric, pitch idea, `openrouterGenerateJson` with neither flag): **`getLlmClient()`** → OpenRouter first when configured, else Ollama.
+ *
+ * `LLM_PREFER_OLLAMA=1` makes `getLlmClient()` prefer Ollama when both providers exist; it does not change VC pipeline (Ollama already wins there when configured).
  */
 function llmPreferOllama(): boolean {
   const v = process.env.LLM_PREFER_OLLAMA?.trim().toLowerCase()
@@ -60,7 +68,7 @@ export function getOpenRouterClient(): OpenAI | null {
 }
 
 /**
- * Preferred LLM: OpenRouter when `OPENROUTER_API_KEY` is set (default), else Ollama.
+ * Preferred LLM for **non–VC-pipeline** calls: OpenRouter when `OPENROUTER_API_KEY` is set, else Ollama.
  * Override with `LLM_PREFER_OLLAMA=1` to use local Ollama first when both are configured.
  */
 export function getLlmClient(): OpenAI | null {
@@ -154,15 +162,46 @@ export function getVcExtractionModel(): string {
 }
 
 /**
+ * VC ingest / Exa extraction / match narratives: **Ollama first** if `OLLAMA_BASE_URL` is set, else OpenRouter only.
+ */
+export function getVcPipelineLlmClient(): OpenAI | null {
+  return getOllamaClient() ?? getOpenRouterClient()
+}
+
+export function isVcPipelineUsingOllama(): boolean {
+  return !!getOllamaClient()
+}
+
+/** Model id for VC pipeline calls: local tag when Ollama is available, else OpenRouter VC model. */
+export function getVcPipelineModel(): string {
+  if (getOllamaClient()) {
+    return process.env.OLLAMA_MODEL?.trim() || 'llama3.2'
+  }
+  const m = process.env.OPENROUTER_VC_EXTRACTION_MODEL?.trim()
+  if (m) return m
+  return 'meta-llama/llama-3.3-70b-instruct'
+}
+
+/**
  * When `OPENROUTER_API_KEY` is set, scoring passes use this model (ignores `LLM_PREFER_OLLAMA`).
- * Falls back to `OPENROUTER_VC_EXTRACTION_MODEL` then Llama 3.3 70B.
+ * Falls back to `OPENROUTER_VC_EXTRACTION_MODEL`, then DeepSeek Chat on OpenRouter.
  */
 export function getScoringOpenRouterModel(): string {
   const scoring = process.env.OPENROUTER_SCORING_MODEL?.trim()
   if (scoring) return scoring
   const vc = process.env.OPENROUTER_VC_EXTRACTION_MODEL?.trim()
   if (vc) return vc
-  return 'meta-llama/llama-3.3-70b-instruct'
+  return 'deepseek/deepseek-chat'
+}
+
+/**
+ * Optional override id for match narratives when routing via OpenRouter only (no Ollama).
+ * Live narratives use `useVcPipeline: true` → {@link getVcPipelineModel} unless this env is read by a future callsite.
+ */
+export function getMatchingNarrativeOpenRouterModel(): string {
+  const m = process.env.OPENROUTER_MATCHING_MODEL?.trim()
+  if (m) return m
+  return getScoringOpenRouterModel()
 }
 
 /**
@@ -176,22 +215,13 @@ export function getScoringLlmClient(): OpenAI | null {
 }
 
 /**
- * Model id for tier / scoring helpers when routing may differ from `getModelName()` (Ollama-first override).
+ * Model id for tier classification and other scoring-adjacent OpenRouter calls.
+ * When OpenRouter is configured, always uses {@link getScoringOpenRouterModel} (default DeepSeek).
+ * Otherwise uses `getModelName()` (Ollama tag or direct OpenAI).
  */
 export function getModelNameForScoring(model: string = 'gpt-4o'): string {
   if (getOpenRouterClient()) {
-    if (model === 'gpt-4o') {
-      return 'openai/gpt-4o-mini'
-    }
-    if (process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY) {
-      if (model === 'gemini' || model.includes('gemini')) {
-        return 'google/gemini-2.0-flash-thinking-exp:free'
-      }
-    }
-    if (!model.includes('/')) {
-      return 'openai/gpt-4o-mini'
-    }
-    return model
+    return getScoringOpenRouterModel()
   }
   return getModelName(model)
 }
@@ -219,24 +249,28 @@ export async function openrouterGenerateText(
     temperature?: number
     maxTokens?: number
     model?: string
+    /** VC / match copy paths: use Ollama when configured, even if OpenRouter is set. */
+    useVcPipeline?: boolean
   } = {}
 ): Promise<string> {
-  const client = getLlmClient()
+  const useVc = options.useVcPipeline === true
+  const client = useVc ? getVcPipelineLlmClient() : getLlmClient()
   if (!client) {
     throw new Error('No LLM configured. Set OLLAMA_BASE_URL (local Ollama) or OPENROUTER_API_KEY.')
   }
 
-  const model = options.model ?? getVcExtractionModel()
+  const model = options.model ?? (useVc ? getVcPipelineModel() : getVcExtractionModel())
+  const onOllama = useVc ? isVcPipelineUsingOllama() : isUsingOllama()
 
-  const tag = isUsingOllama() ? 'OLLAMA' : 'OPENROUTER'
+  const tag = onOllama ? 'OLLAMA' : 'OPENROUTER'
   console.log(`[${tag}] 🤖 Using model: ${model}`)
 
   const response = await client.chat.completions.create({
     model,
     messages: [{ role: 'user', content: prompt }],
     temperature: options.temperature ?? 0.7,
-    max_tokens: options.maxTokens ?? getVcExtractionMaxTokens(),
-    ...(isUsingOllama() ? getOllamaKeepAliveParams() : {}),
+    max_tokens: resolveMaxTokensForRoute(onOllama, options.maxTokens),
+    ...(onOllama ? getOllamaKeepAliveParams() : {}),
   } as any)
 
   return response.choices[0]?.message?.content || ''
@@ -295,19 +329,30 @@ export async function openrouterGenerateJson<T = any>(options: {
    * (avoids routing scoring to local Ollama / e.g. Qwen).
    */
   forceOpenRouter?: boolean
+  /**
+   * VC ingest, Exa extraction, DB checks, match narratives: **Ollama first** when `OLLAMA_BASE_URL` is set,
+   * even if OpenRouter is configured. Ignored when `forceOpenRouter` is true.
+   */
+  useVcPipeline?: boolean
 }): Promise<T> {
   const openRouterClient = getOpenRouterClient()
   const forceOr = options.forceOpenRouter === true && !!openRouterClient
-  const client = forceOr ? openRouterClient! : getLlmClient()
+  const useVc = !forceOr && options.useVcPipeline === true
+
+  const client = forceOr
+    ? openRouterClient!
+    : useVc
+      ? getVcPipelineLlmClient()
+      : getLlmClient()
   if (!client) {
     throw new Error('No LLM configured. Set OLLAMA_BASE_URL (local Ollama) or OPENROUTER_API_KEY.')
   }
 
-  const effectiveUsingOllama = forceOr ? false : isUsingOllama()
+  const effectiveUsingOllama = forceOr ? false : useVc ? isVcPipelineUsingOllama() : isUsingOllama()
 
   const primaryModel =
     options.model ??
-    (forceOr ? getScoringOpenRouterModel() : getVcExtractionModel())
+    (forceOr ? getScoringOpenRouterModel() : useVc ? getVcPipelineModel() : getVcExtractionModel())
   const retryOnParseError = options.retryOnParseError !== false
   const logTag = effectiveUsingOllama ? 'OLLAMA' : 'OPENROUTER'
 

@@ -137,7 +137,7 @@ NOW GENERATE ONE HYPER-SPECIFIC BULLET (NO GENERIC FLUFF):
     const rationale = await openrouterGenerateText(prompt, {
       temperature: 0.8, // Higher temp for more creative connections
       maxTokens: 200,
-      model: 'meta-llama/llama-3.3-70b-instruct', // Fast and high-quality model
+      useVcPipeline: true,
     })
 
     // Clean up formatting

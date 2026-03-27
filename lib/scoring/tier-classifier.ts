@@ -22,7 +22,7 @@
  *   EARLY       (20-44):  floor=20, range=24
  *   PASS        (0-19):   floor=0,  range=19
  *
- * Model: GPT-4o, temperature 0.2
+ * Model: OpenRouter — OPENROUTER_SCORING_MODEL (default deepseek/deepseek-chat); Ollama — OLLAMA_MODEL. Temperature 0.2
  *
  * The tier classifier is INDEPENDENT — it does not receive scores from
  * other pipeline passes. It reasons only from verified facts, the pitch
@@ -315,14 +315,14 @@ export async function classifyTier(
 ): Promise<TierResult> {
   logger.log(`[TIER-CLASSIFIER] Starting independent tier classification (stage: ${stage})`)
 
-  const client = getScoringLlmClient() ?? getAIClient()
-  const model = getModelNameForScoring("gpt-4o")
-  const scoringUsesOllama = !getOpenRouterClient() && isUsingOllama()
-  const useJsonObject =
-    (scoringUsesOllama && process.env.OLLAMA_JSON_STRICT !== "false") ||
-    model.includes("gpt")
-
   try {
+    const client = getScoringLlmClient() ?? getAIClient()
+    const model = getModelNameForScoring("gpt-4o")
+    const scoringUsesOllama = !getOpenRouterClient() && isUsingOllama()
+    const useJsonObject =
+      (scoringUsesOllama && process.env.OLLAMA_JSON_STRICT !== "false") ||
+      !!getOpenRouterClient()
+
     const completion = await client.chat.completions.create({
       model,
       messages: [

@@ -30,6 +30,7 @@ import {
   type YcFounderKey,
   type YcRequestType,
 } from '@/components/yc-insider-founder-request-modal'
+import { normalizeUserCreditsApiPayload } from '@/lib/client/normalize-user-credits-api'
 
 export default function YCInsiderPage() {
   const [loading, setLoading] = useState(true)
@@ -54,10 +55,11 @@ export default function YCInsiderPage() {
       try {
         const res = await fetch('/api/user/credits', { credentials: 'include' })
         if (res.ok) {
-          const data = await res.json()
-          setIsPremium(Boolean(data?.isPremium))
-          setCredits(data?.credits || 0)
-          setPurchases(data?.purchases || [])
+          const raw = await res.json()
+          const n = normalizeUserCreditsApiPayload(raw)
+          setIsPremium(n.isPremium)
+          setCredits(n.credits)
+          setPurchases(n.purchases)
         }
       } catch (e) {
         // ignore
@@ -136,7 +138,9 @@ export default function YCInsiderPage() {
           <div className="flex justify-end mb-4">
             <div className="inline-flex items-center gap-3 px-4 py-2 rounded-lg border border-zinc-700 bg-zinc-900 text-zinc-100">
               <Sparkles className="h-4 w-4 text-amber-400" />
-              <span className="text-sm font-semibold">{credits} Credits</span>
+              <span className="text-sm font-semibold">
+                {credits >= Number.MAX_SAFE_INTEGER / 2 ? '∞' : credits} Credits
+              </span>
               <Link href="/pricing">
                 <Button size="sm" variant="secondary" className="h-7 text-xs bg-zinc-800 text-zinc-100 hover:bg-zinc-700">
                   Buy More

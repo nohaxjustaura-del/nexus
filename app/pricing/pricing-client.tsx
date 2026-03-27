@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { normalizeUserCreditsApiPayload } from '@/lib/client/normalize-user-credits-api'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -25,7 +26,11 @@ const creditCostBadge =
   "shrink-0 border border-zinc-300 bg-zinc-200 text-base font-medium text-zinc-900 shadow-none hover:bg-zinc-200 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100 dark:hover:bg-zinc-800 px-3 py-1"
 
 export default function PricingClient({ verifiedInvestorCountLabel }: { verifiedInvestorCountLabel: string }) {
-  const [credits, setCredits] = useState<{ credits: number; isPremium: boolean }>({ credits: 0, isPremium: false })
+  const [credits, setCredits] = useState<{
+    credits: number
+    isPremium: boolean
+    unlimitedCredits?: boolean
+  }>({ credits: 0, isPremium: false })
   const [loading, setLoading] = useState<string | null>(null)
   const [mounted, setMounted] = useState(false)
 
@@ -33,8 +38,11 @@ export default function PricingClient({ verifiedInvestorCountLabel }: { verified
     setMounted(true)
     fetch('/api/user/credits', { credentials: 'include' })
       .then(res => res.json())
-      .then(data => setCredits(data || { credits: 0, isPremium: false }))
-      .catch(() => setCredits({ credits: 0, isPremium: false }))
+      .then((raw) => {
+        const n = normalizeUserCreditsApiPayload(raw)
+        setCredits({ credits: n.credits, isPremium: n.isPremium, unlimitedCredits: n.unlimitedCredits })
+      })
+      .catch(() => setCredits({ credits: 0, isPremium: false, unlimitedCredits: false }))
   }, [])
 
   const handlePurchase = async (packageType: 'starter' | 'founder' | 'pro') => {
@@ -99,7 +107,10 @@ export default function PricingClient({ verifiedInvestorCountLabel }: { verified
           <div className="mt-4 inline-flex items-center gap-2 rounded-full bg-primary/10 px-4 py-2">
             <Zap className="h-4 w-4 text-primary" />
             <span className="text-sm font-medium">
-              Your Credits: <span className="text-primary font-bold">{mounted ? (credits.credits ?? 0).toLocaleString() : '0'}</span>
+              Your Credits:{' '}
+              <span className="text-primary font-bold">
+                {mounted ? (credits.unlimitedCredits ? '∞' : (credits.credits ?? 0).toLocaleString()) : '0'}
+              </span>
             </span>
             {mounted && credits.isPremium && (
               <Badge className="ml-2 border border-blue-500/40 bg-blue-600 text-white hover:bg-blue-600">

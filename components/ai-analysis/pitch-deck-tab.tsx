@@ -19,11 +19,9 @@ import {
   FileText
 } from "lucide-react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
 import { toast } from '@/components/ui/toast-simple'
 
 export function PitchDeckAnalysisTab() {
-  const router = useRouter()
   const [file, setFile] = useState<File | null>(null)
   const [analyzing, setAnalyzing] = useState(false)
   const [result, setResult] = useState<any>(null)
@@ -131,9 +129,9 @@ export function PitchDeckAnalysisTab() {
         console.error('Error loading credits:', err)
       }
 
-      // SUCCESS - Immediately redirect to results page (replace to prevent back navigation)
-      window.location.replace('/founder/my-analyses')
-      return // Exit immediately
+      setTimeout(() => {
+        document.getElementById('analysis-results')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      }, 100)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to analyze pitch deck. Please try again.')
     } finally {
@@ -175,7 +173,7 @@ export function PitchDeckAnalysisTab() {
 
   if (result) {
     const analysis = result.analysis || {}
-    const matches = result.matches || []
+    const matches = result.matches || analysis.matchedVCs || []
     const fellowships = result.fellowships || result.analysis?.fellowshipRecommendations || []
     
     // Extract niche signals
@@ -185,7 +183,7 @@ export function PitchDeckAnalysisTab() {
     const hasTraction = analysis.hasTraction || result.founderData?.hasTraction
     
     return (
-      <div className="space-y-6">
+      <div id="analysis-results" className="space-y-6">
         {/* Analysis Complete Header */}
         <Card className="border-2 border-primary/20 bg-gradient-to-br from-primary/5 to-blue-50/30">
           <CardHeader>
@@ -198,6 +196,13 @@ export function PitchDeckAnalysisTab() {
                 <CardDescription className="mt-2">
                   Your pitch deck has been analyzed against {matches.length} VCs
                 </CardDescription>
+                {(analysis.overallScore != null || analysis.finalScore != null) && (
+                  <p className="mt-3 text-2xl font-bold tabular-nums text-primary">
+                    {(analysis.overallScore ?? analysis.finalScore) as number}
+                    <span className="text-lg font-semibold text-muted-foreground">/100</span>
+                    <span className="ml-2 text-sm font-normal text-muted-foreground">overall</span>
+                  </p>
+                )}
               </div>
               <Button onClick={() => setResult(null)} variant="outline">
                 Analyze Another

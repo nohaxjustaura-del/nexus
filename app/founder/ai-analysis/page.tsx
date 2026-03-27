@@ -73,26 +73,43 @@ export default function AIAnalysisPage() {
         </div>
 
         <div className="pb-12">
-          {tab === 'unified' && (
-            <div id="ai-panel-unified" role="tabpanel" aria-labelledby="ai-tab-unified">
-              <UnifiedPitchTab />
-            </div>
-          )}
-          {tab === 'deck' && (
-            <div id="ai-panel-deck" role="tabpanel" aria-labelledby="ai-tab-deck">
-              <PitchDeckAnalysisTab />
-            </div>
-          )}
-          {tab === 'video' && (
-            <div id="ai-panel-video" role="tabpanel" aria-labelledby="ai-tab-video">
-              <VideoPitchAnalysisTab />
-            </div>
-          )}
-          {tab === 'idea' && (
-            <div id="ai-panel-idea" role="tabpanel" aria-labelledby="ai-tab-idea">
-              <PitchIdeaAnalysisTab />
-            </div>
-          )}
+          {/* Keep panels mounted so in-flight analysis and results survive tab switches (hidden ≠ unmount). */}
+          <div
+            id="ai-panel-unified"
+            role="tabpanel"
+            aria-labelledby="ai-tab-unified"
+            hidden={tab !== 'unified'}
+            className={tab === 'unified' ? '' : 'hidden'}
+          >
+            <UnifiedPitchTab />
+          </div>
+          <div
+            id="ai-panel-deck"
+            role="tabpanel"
+            aria-labelledby="ai-tab-deck"
+            hidden={tab !== 'deck'}
+            className={tab === 'deck' ? '' : 'hidden'}
+          >
+            <PitchDeckAnalysisTab />
+          </div>
+          <div
+            id="ai-panel-video"
+            role="tabpanel"
+            aria-labelledby="ai-tab-video"
+            hidden={tab !== 'video'}
+            className={tab === 'video' ? '' : 'hidden'}
+          >
+            <VideoPitchAnalysisTab />
+          </div>
+          <div
+            id="ai-panel-idea"
+            role="tabpanel"
+            aria-labelledby="ai-tab-idea"
+            hidden={tab !== 'idea'}
+            className={tab === 'idea' ? '' : 'hidden'}
+          >
+            <PitchIdeaAnalysisTab />
+          </div>
         </div>
       </div>
     </div>

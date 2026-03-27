@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { getCurrentUser } from '@/lib/auth'
-import { isAdminEmail } from '@/lib/constants'
+import { bypassesAiCredits } from '@/lib/dev-ai-analysis-bypass'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    const isPremium = Boolean(userCredits.isPremium) || isAdminEmail(user.email)
+    const isPremium = Boolean(userCredits.isPremium) || bypassesAiCredits(user.email)
     if (!isPremium) {
       return NextResponse.json(
         { error: 'Premium membership required to contact founders.' },

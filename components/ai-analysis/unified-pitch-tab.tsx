@@ -1,13 +1,15 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
+import { Progress } from '@/components/ui/progress'
 import { Sparkles, AlertCircle, Layers, User, Video, FileText, CheckCircle, Lightbulb } from 'lucide-react'
 import SmartMatchResults from '@/components/smart-match-results'
 import AnalysisDashboard from '@/components/analysis/AnalysisDashboard'
+import type { UniversalAnalysisResult } from '@/lib/universal-analysis-engine'
 import { STRUCTURED_QA_KEYS, type StructuredQaAnswers } from '@/lib/unified-pitch/structured-qa'
 import { CREDIT_COSTS } from '@/lib/constants'
 import {
@@ -18,11 +20,80 @@ import {
 const UNIFIED_CREDITS = CREDIT_COSTS.UNIFIED_PITCH
 const REVIEWER_CREDITS = CREDIT_COSTS.VIDEO_PITCH.REVIEWER
 
+function isSafeRubricForDashboard(raw: unknown): raw is UniversalAnalysisResult {
+  if (raw == null || typeof raw !== 'object') return false
+  const o = raw as Record<string, unknown>
+  if (typeof o.globalVerdict !== 'string') return false
+  const cat = o.categories
+  if (cat == null || typeof cat !== 'object') return false
+  const c = cat as Record<string, unknown>
+  for (const k of ['market', 'moat', 'founderFit', 'momentum'] as const) {
+    const x = c[k]
+    if (x == null || typeof x !== 'object') return false
+    const row = x as Record<string, unknown>
+    if (typeof row.score !== 'number' || !Number.isFinite(row.score)) return false
+    if (!Array.isArray(row.bullets)) return false
+  }
+  const ex = c.execution
+  if (ex != null && typeof ex === 'object') {
+    const row = ex as Record<string, unknown>
+    if (typeof row.score !== 'number' || !Array.isArray(row.bullets)) return false
+  }
+  return true
+}
+
+function postFormDataWithUploadProgress(
+  url: string,
+  formData: FormData,
+  onUploadProgress: (pct: number) => void,
+  onUploadFinished: () => void,
+): Promise<{ ok: boolean; status: number; data: unknown }> {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest()
+    xhr.open('POST', url)
+    xhr.withCredentials = true
+    xhr.responseType = 'text'
+
+    xhr.upload.onprogress = (e) => {
+      if (e.lengthComputable && e.total > 0) {
+        onUploadProgress(Math.min(100, Math.round((e.loaded / e.total) * 100)))
+      }
+    }
+    xhr.upload.onloadend = () => {
+      onUploadProgress(100)
+      onUploadFinished()
+    }
+
+    xhr.onload = () => {
+      let data: unknown
+      try {
+        data = xhr.responseText ? JSON.parse(xhr.responseText) : {}
+      } catch {
+        data = { parseError: true, snippet: String(xhr.responseText).slice(0, 200) }
+      }
+      resolve({
+        ok: xhr.status >= 200 && xhr.status < 300,
+        status: xhr.status,
+        data,
+      })
+    }
+    xhr.onerror = () => reject(new Error('Network error'))
+    xhr.onabort = () => reject(new Error('Request aborted'))
+
+    onUploadProgress(0)
+    xhr.send(formData)
+  })
+}
+
 export function UnifiedPitchTab() {
   const [answers, setAnswers] = useState<StructuredQaAnswers>({})
   const [deckFile, setDeckFile] = useState<File | null>(null)
   const [videoFile, setVideoFile] = useState<File | null>(null)
   const [analyzing, setAnalyzing] = useState(false)
+  const [uploadPct, setUploadPct] = useState(0)
+  const [uploadFinished, setUploadFinished] = useState(false)
+  const [serverSyntheticPct, setServerSyntheticPct] = useState(0)
+  const serverStartRef = useRef<number>(0)
   const [result, setResult] = useState<any>(null)
   const [error, setError] = useState<string | null>(null)
   const [warnings, setWarnings] = useState<string[]>([])
@@ -48,9 +119,59 @@ export function UnifiedPitchTab() {
     }
   }, [reviewType])
 
+  // #region agent log
+  useEffect(() => {
+    return () => {
+      fetch('http://127.0.0.1:7471/ingest/0f685c44-f6c8-4b99-b23e-84e0cc9d4f08', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '3018ec' },
+        body: JSON.stringify({
+          sessionId: '3018ec',
+          location: 'unified-pitch-tab.tsx:unmount',
+          message: 'UnifiedPitchTab unmounted',
+          data: {},
+          timestamp: Date.now(),
+          hypothesisId: 'D',
+        }),
+      }).catch(() => {})
+    }
+  }, [])
+  // #endregion
+
+  useEffect(() => {
+    if (!analyzing || !uploadFinished) return
+    serverStartRef.current = Date.now()
+    setServerSyntheticPct(35)
+    const id = window.setInterval(() => {
+      const elapsed = Date.now() - serverStartRef.current
+      // Ease toward ~92% over ~3 minutes so the bar keeps moving during long server work
+      const t = Math.min(1, elapsed / 180_000)
+      const eased = 35 + t * 57
+      setServerSyntheticPct((prev) => Math.max(prev, Math.min(92, eased)))
+    }, 800)
+    return () => window.clearInterval(id)
+  }, [analyzing, uploadFinished])
+
   const hasQa = STRUCTURED_QA_KEYS.some(({ key }) => !!(answers[key]?.trim()))
   const canSubmit = hasQa || !!deckFile || !!videoFile
   const creditCost = reviewType === 'reviewer' ? REVIEWER_CREDITS : UNIFIED_CREDITS
+
+  const hasLargeUpload = !!(deckFile || videoFile)
+  const progressBarValue = !analyzing
+    ? 0
+    : !uploadFinished
+      ? hasLargeUpload
+        ? Math.round((uploadPct / 100) * 35)
+        : 30
+      : Math.min(100, Math.round(serverSyntheticPct))
+
+  const progressLabel = !analyzing
+    ? ''
+    : !uploadFinished && hasLargeUpload
+      ? `Uploading files… ${uploadPct}%`
+      : !uploadFinished
+        ? 'Sending request…'
+        : 'Analyzing on server (matching, scoring, market intel)…'
 
   const handleAnalyze = async () => {
     if (!canSubmit) {
@@ -68,6 +189,9 @@ export function UnifiedPitchTab() {
       return
     }
     setAnalyzing(true)
+    setUploadPct(0)
+    setUploadFinished(false)
+    setServerSyntheticPct(0)
     setError(null)
     setWarnings([])
 
@@ -79,50 +203,125 @@ export function UnifiedPitchTab() {
       formData.append('reviewType', reviewType)
       if (reviewType === 'reviewer' && selectedReviewer) formData.append('reviewerId', selectedReviewer)
 
-      const res = await fetch('/api/analyze-unified-pitch', {
+      const { ok, status, data } = await postFormDataWithUploadProgress(
+        '/api/analyze-unified-pitch',
+        formData,
+        (pct) => setUploadPct(pct),
+        () => setUploadFinished(true),
+      )
+
+      setUploadFinished(true)
+      setServerSyntheticPct(100)
+
+      const payload = data as Record<string, unknown>
+
+      // #region agent log
+      fetch('http://127.0.0.1:7471/ingest/0f685c44-f6c8-4b99-b23e-84e0cc9d4f08', {
         method: 'POST',
-        body: formData,
-        credentials: 'include',
-      })
-      const data = await res.json()
+        headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '3018ec' },
+        body: JSON.stringify({
+          sessionId: '3018ec',
+          location: 'unified-pitch-tab.tsx:handleAnalyze:afterXhr',
+          message: 'Unified pitch XHR completed',
+          data: {
+            status,
+            ok,
+            hasAnalysis: payload && typeof payload === 'object' && 'analysis' in payload,
+            matchedLen: Array.isArray((payload.analysis as any)?.matchedVCs)
+              ? (payload.analysis as any).matchedVCs.length
+              : -1,
+            parseError: payload?.parseError === true,
+          },
+          timestamp: Date.now(),
+          hypothesisId: 'A,E',
+        }),
+      }).catch(() => {})
+      // #endregion
 
-      if (!res.ok) {
-        if (res.status === 402) {
-          setError(data.message || 'Insufficient credits.')
+      if (!ok) {
+        if (status === 402) {
+          setError((payload.message as string) || 'Insufficient credits.')
           invalidateUserCreditsClientCache()
-          const { ok, data: cr } = await getUserCreditsClient()
-          if (ok) setCredits(cr as { credits: number; isPremium: boolean })
-          setAnalyzing(false)
+          const { ok: crOk, data: cr } = await getUserCreditsClient()
+          if (crOk) setCredits(cr as { credits: number; isPremium: boolean })
           return
         }
-        if (res.status === 404 && data.redirectTo) {
-          window.location.replace(data.redirectTo)
+        if (status === 404 && typeof payload.redirectTo === 'string') {
+          window.location.replace(payload.redirectTo as string)
           return
         }
-        throw new Error(data.message || data.error || 'Analysis failed')
+        throw new Error(
+          (payload.message as string) || (payload.error as string) || 'Analysis failed',
+        )
       }
 
-      if (data.reviewId) {
-        setResult({ reviewSubmitted: true, message: data.message, videoPitchId: data.videoPitchId })
-        setWarnings(data.warnings || [])
-      } else {
-        setResult({ ...data.analysis, videoPitchId: data.videoPitchId })
-        setWarnings(data.warnings || [])
+      if (payload.parseError) {
+        throw new Error('Invalid response from server. Try again or check the dev console.')
       }
+
+      if (payload.reviewId) {
+        setResult({
+          reviewSubmitted: true,
+          message: payload.message,
+          videoPitchId: payload.videoPitchId,
+        })
+        setWarnings((payload.warnings as string[]) || [])
+      } else {
+        const analysis = payload.analysis as Record<string, unknown> | undefined
+        setResult({ ...analysis, videoPitchId: payload.videoPitchId })
+        setWarnings((payload.warnings as string[]) || [])
+      }
+
+      // #region agent log
+      fetch('http://127.0.0.1:7471/ingest/0f685c44-f6c8-4b99-b23e-84e0cc9d4f08', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '3018ec' },
+        body: JSON.stringify({
+          sessionId: '3018ec',
+          location: 'unified-pitch-tab.tsx:handleAnalyze:afterSetResult',
+          message: 'setResult scheduled',
+          data: { reviewFlow: !!payload.reviewId },
+          timestamp: Date.now(),
+          hypothesisId: 'B',
+        }),
+      }).catch(() => {})
+      // #endregion
 
       invalidateUserCreditsClientCache()
-      const { ok, data: cr } = await getUserCreditsClient()
-      if (ok) setCredits(cr as { credits: number; isPremium: boolean })
+      const { ok: crOk, data: cr } = await getUserCreditsClient()
+      if (crOk) setCredits(cr as { credits: number; isPremium: boolean })
 
-      setTimeout(() => {
+      requestAnimationFrame(() => {
         document.getElementById('analysis-results')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-      }, 100)
+      })
     } catch (e: unknown) {
+      // #region agent log
+      fetch('http://127.0.0.1:7471/ingest/0f685c44-f6c8-4b99-b23e-84e0cc9d4f08', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '3018ec' },
+        body: JSON.stringify({
+          sessionId: '3018ec',
+          location: 'unified-pitch-tab.tsx:handleAnalyze:catch',
+          message: String(e instanceof Error ? e.message : e),
+          data: {},
+          timestamp: Date.now(),
+          hypothesisId: 'F',
+        }),
+      }).catch(() => {})
+      // #endregion
       setError(e instanceof Error ? e.message : 'Something went wrong.')
     } finally {
       setAnalyzing(false)
+      setUploadFinished(false)
+      setUploadPct(0)
+      setServerSyntheticPct(0)
     }
   }
+
+  const safeRubric =
+    result && !result.reviewSubmitted && isSafeRubricForDashboard(result.rubricAnalysis)
+      ? result.rubricAnalysis
+      : null
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">
@@ -267,6 +466,16 @@ export function UnifiedPitchTab() {
         </div>
       )}
 
+      {analyzing && (
+        <div className="space-y-2 rounded-lg border border-primary/20 bg-primary/5 p-4">
+          <p className="text-sm font-medium text-foreground">{progressLabel}</p>
+          <Progress value={progressBarValue} className="h-3" />
+          <p className="text-xs text-muted-foreground">
+            Upload share of the bar is exact; server work is a time-based estimate (runs can take 30s–several minutes).
+          </p>
+        </div>
+      )}
+
       <div className="flex justify-center">
         <Button size="lg" onClick={handleAnalyze} disabled={analyzing || !canSubmit} className="gap-2">
           {analyzing ? (
@@ -291,9 +500,9 @@ export function UnifiedPitchTab() {
 
       {result && !result.reviewSubmitted && (
         <div id="analysis-results" className="space-y-6">
-          {result.rubricAnalysis ? (
+          {safeRubric ? (
             <AnalysisDashboard
-              result={result.rubricAnalysis}
+              result={safeRubric}
               finalScore={result.finalScore ?? result.overallScore}
             />
           ) : (
@@ -315,7 +524,7 @@ export function UnifiedPitchTab() {
             </Card>
           )}
 
-          {!result.rubricAnalysis && (
+          {!safeRubric && (
             <Card>
               <CardContent className="space-y-6 pt-6">
                 <div className="grid gap-4 md:grid-cols-2">

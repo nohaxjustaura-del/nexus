@@ -15,7 +15,7 @@
  *   Phase 2 (parallel, needs Phase 1 — all three are independent):
  *     scoreByCriteria()       — DeepSeek, temp 0.1
  *     getAdversarialScore()   — 2× DeepSeek, temp 0.3 (bull + bear in parallel)
- *     classifyTier()          — GPT-4o, temp 0.2 (independent, no score inputs)
+ *     classifyTier()          — OpenRouter scoring model (default DeepSeek), temp 0.2
  *
  *   Phase 3 (needs Phase 2):
  *     generateCategoryDescriptions() — DeepSeek
@@ -135,6 +135,74 @@ function normalizeCategoryScores(
 
 const FALLBACK_CATEGORY_SCORES: FinalScoringResult["categoryScores"] = {
   market: 50, team: 50, traction: 50, product: 50, businessModel: 50, vision: 50, crossSection: 50,
+}
+
+/**
+ * Last-resort result when the pipeline throws (e.g. unexpected API failure).
+ * Keeps API routes and UI from 500'ing; individual LLM passes already use softer fallbacks.
+ */
+function buildDegradedScoringResult(errorHint: string, startTime: number): FinalScoringResult {
+  const categoryScores = FALLBACK_CATEGORY_SCORES
+  const globalVerdict =
+    "Automated scoring hit a service error (for example LLM quota or billing). " +
+    "Your submission is saved; strengths and deck/video feedback above still apply. Retry later or check API credits."
+  const categoryDescriptions = buildFallbackDescriptions(categoryScores, null, globalVerdict)
+  const finalScore = 50
+  const rubricCompatible: FinalScoringResult["rubricCompatible"] = {
+    categories: {
+      market: {
+        score: categoryDescriptions.market.score,
+        bullets: categoryDescriptions.market.bullets,
+        summary: categoryDescriptions.market.summary,
+      },
+      moat: {
+        score: categoryDescriptions.moat.score,
+        bullets: categoryDescriptions.moat.bullets,
+        summary: categoryDescriptions.moat.summary,
+      },
+      founderFit: {
+        score: categoryDescriptions.founderFit.score,
+        bullets: categoryDescriptions.founderFit.bullets,
+        summary: categoryDescriptions.founderFit.summary,
+      },
+      momentum: {
+        score: categoryDescriptions.momentum.score,
+        bullets: categoryDescriptions.momentum.bullets,
+        summary: categoryDescriptions.momentum.summary,
+      },
+      execution: null,
+    },
+    globalVerdict: `${categoryDescriptions.globalVerdict} (${errorHint.slice(0, 120)})`,
+  }
+
+  return {
+    finalScore,
+    scoreBreakdown: {
+      categoryDescContribution: null,
+      criterionContribution: 15,
+      adversarialContribution: 20,
+      tierContribution: 15,
+      vaguenessAdjustment: 0,
+      categoryDescAvg: null,
+      formulaUsed: "fallback",
+    },
+    tier: "DEVELOPING",
+    conviction: "MEDIUM",
+    categoryScores,
+    bullCase: "Bull case unavailable — AI scoring did not complete.",
+    bearCase: "Bear case unavailable — AI scoring did not complete.",
+    likelyDeathScenario: "Failure scenario unavailable — AI scoring did not complete.",
+    closestComps: ["Average YC W24 company", "Average YC W24 company"],
+    criterionDetails: [],
+    vaguenessFlags: [],
+    evidenceBonuses: [],
+    redFlags: [],
+    categoryDescriptions,
+    pipelineVersion: "2.0",
+    scoringDurationMs: Date.now() - startTime,
+    passesCompleted: ["degraded-error"],
+    rubricCompatible,
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -390,19 +458,20 @@ function buildCalibratedVerdict(
 
 /**
  * Runs the full multi-pass scoring pipeline.
+ * On catastrophic throw (unexpected failures), returns a degraded result so callers never need to 500.
  *
  * @param rawPitch           The raw pitch text as submitted by the founder
  * @param founderContext     Complete founder profile from the database
  * @param marketIntelligence Pre-fetched Exa/Tavily market research
  * @param pitchType          "VIDEO" | "DECK" | "IDEA" | "UNIFIED" | … — fact-extractor + description prompts (default "PITCH")
  */
-export async function runScoringPipeline(
+async function runScoringPipelineCore(
   rawPitch: string,
   founderContext: FounderContext,
   marketIntelligence: MarketIntelligenceData,
-  pitchType: string = "PITCH",
+  pitchType: string,
+  startTime: number,
 ): Promise<FinalScoringResult> {
-  const startTime = Date.now()
   const passesCompleted: string[] = []
 
   logger.log(`[SCORING-PIPELINE] Starting pipeline for "${founderContext.startupName ?? "unknown"}"`)
@@ -684,5 +753,28 @@ export async function runScoringPipeline(
     scoringDurationMs,
     passesCompleted,
     rubricCompatible,
+  }
+}
+
+export async function runScoringPipeline(
+  rawPitch: string,
+  founderContext: FounderContext,
+  marketIntelligence: MarketIntelligenceData,
+  pitchType: string = "PITCH",
+): Promise<FinalScoringResult> {
+  const startTime = Date.now()
+  try {
+    return await runScoringPipelineCore(
+      rawPitch,
+      founderContext,
+      marketIntelligence,
+      pitchType,
+      startTime,
+    )
+  } catch (error: unknown) {
+    const msg =
+      error instanceof Error ? error.message : typeof error === "string" ? error : "unknown error"
+    logger.error("[SCORING-PIPELINE] Catastrophic failure — degraded result:", msg)
+    return buildDegradedScoringResult(msg, startTime)
   }
 }

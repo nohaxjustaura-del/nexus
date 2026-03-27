@@ -4,7 +4,8 @@ import { getCurrentUser } from '@/lib/auth'
 import { logger } from '@/lib/logger'
 import OpenAI from 'openai'
 import { getLlmClient, getModelName } from '@/lib/openrouter'
-import { isAdminEmail, CREDIT_COSTS } from '@/lib/constants'
+import { CREDIT_COSTS } from '@/lib/constants'
+import { shouldEnforceAiCredits } from '@/lib/dev-ai-analysis-bypass'
 import { rateLimitMiddleware, RATE_LIMITS } from '@/lib/rate-limit'
 
 // Get AI client - supports both OpenRouter and OpenAI
@@ -48,7 +49,7 @@ export async function POST(request: NextRequest) {
     const { analysisId, idea, pitchDeckText, videoTranscript } = await request.json()
 
     // Check credits (admin bypass) - but don't deduct yet
-    if (!isAdminEmail(user.email)) {
+    if (shouldEnforceAiCredits(user.email)) {
       const userCredits = await db.userCredits.findUnique({
         where: { userId: user.id },
       })
@@ -130,7 +131,7 @@ export async function POST(request: NextRequest) {
     const feedback = completion.choices[0]?.message?.content || 'Unable to generate feedback at this time. Please try again.'
 
     // Deduct credits AFTER successful analysis (admin bypass)
-    if (!isAdminEmail(user.email)) {
+    if (shouldEnforceAiCredits(user.email)) {
       try {
         await db.userCredits.update({
           where: { userId: user.id },

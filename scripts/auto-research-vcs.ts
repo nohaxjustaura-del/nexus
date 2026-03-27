@@ -7,7 +7,7 @@
 
 import { db } from '../lib/db'
 import { isLikelyRealFirmName } from '../lib/firm-name-quality'
-import { openrouterGenerateJson, hasOpenRouterKey, getVcExtractionModel } from '../lib/openrouter'
+import { openrouterGenerateJson, hasOpenRouterKey } from '../lib/openrouter'
 import { normalizeResearchForDb } from '../lib/vc-research-normalize'
 import { gatherVCFirmRetrievalContext, getVcResearchPipelineEnvStatus } from '../lib/vc-research-retrieval'
 import {
@@ -114,7 +114,7 @@ ${THESIS_MANDATE_RULES}`
       system: systemFirst,
       user: `Fund name: "${firmName}"\n\nSource text:\n${ctx}`,
       temperature: 0.15,
-      model: getVcExtractionModel(),
+      useVcPipeline: true,
       retryOnParseError: true,
     })
     let normalized = normalizeThesisPayload(result)
@@ -133,9 +133,9 @@ ${THESIS_MANDATE_RULES}`
 STRICT RETRY: If the sources are mostly transaction news, output "thesis": null. Only output a string if you can describe the fund's ongoing strategy (not one company or one round).`,
         user: `Fund name: "${firmName}"\n\nSource text:\n${ctx}`,
         temperature: 0.1,
-        model: getVcExtractionModel(),
-        retryOnParseError: true,
-      })
+      useVcPipeline: true,
+      retryOnParseError: true,
+    })
       normalized = normalizeThesisPayload(retry)
       if (normalized.thesis) return normalized
       const r2 = typeof retry.thesis === 'string' ? sanitizeInvestmentThesis(retry.thesis.trim()) : undefined
@@ -187,7 +187,7 @@ Stages: "pre-seed", "seed", "Series A", "Series B", "Series C", "Growth"`,
 
 ${sliceContextForExtraction(rawContent)}`,
       temperature: 0.15,
-      model: getVcExtractionModel(),
+      useVcPipeline: true,
       retryOnParseError: true,
     })
     return {
@@ -212,7 +212,7 @@ ${sliceContextForExtraction(rawContent)}`,
 }
 
 /**
- * OpenRouter-only structured extraction from merged dual-Exa retrieval.
+ * Structured extraction from merged dual-Exa retrieval (VC pipeline: Ollama when configured, else OpenRouter).
  */
 async function extractWithAI(firmName: string, rawContent: string): Promise<Partial<VCResearchResult>> {
   try {
@@ -248,7 +248,7 @@ ${sliceContextForExtraction(rawContent)}
 
 Return JSON with: thesis (2–4 sentences: ongoing investment focus, or null if not inferable beyond one-off deals), bio (2-3 sentences: who they are, founding vintage or notable background if stated), checkSizeMin (thousands USD, e.g. 500 = $500K), checkSizeMax (thousands), stages, sectors, geography (country/region level), fundType, leadFollow, portfolio (company names only, max 25), valueAddTags, websiteUrl (official fund site if explicit), linkedinUrl (company/fund page if explicit), applicationUrl (pitch form or email contact page if explicit)`,
       temperature: 0.15,
-      model: getVcExtractionModel(),
+      useVcPipeline: true,
       retryOnParseError: true,
     })
 
@@ -262,9 +262,9 @@ ${THESIS_MANDATE_RULES}
 If you cannot produce a mandate summary, use "thesis": null.`,
         user: `Fund: "${firmName}"\n\nSources:\n${sliceContextForExtraction(rawContent)}`,
         temperature: 0.1,
-        model: getVcExtractionModel(),
-        retryOnParseError: true,
-      })
+      useVcPipeline: true,
+      retryOnParseError: true,
+    })
       thesisOut = sanitizeInvestmentThesis(
         typeof retry.thesis === 'string' ? retry.thesis.trim() : undefined,
         firmName,

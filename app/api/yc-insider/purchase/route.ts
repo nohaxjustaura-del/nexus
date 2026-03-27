@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { getCurrentUser } from '@/lib/auth'
-import { isAdminEmail } from '@/lib/constants'
+import { bypassesAiCredits } from '@/lib/dev-ai-analysis-bypass'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -47,9 +47,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Item already purchased' }, { status: 400 })
     }
 
-    // Admin and premium users get free access - just record the purchase without deducting credits
-    const isAdmin = isAdminEmail(user.email)
-    const isPremium = userCredits.isPremium || isAdmin
+    // Admin / unlimited-credits list / premium users get free access - just record the purchase without deducting credits
+    const noCharge = bypassesAiCredits(user.email)
+    const isPremium = userCredits.isPremium || noCharge
 
     if (isPremium) {
       // Just add to purchases without deducting credits
@@ -63,7 +63,7 @@ export async function POST(request: NextRequest) {
 
       return NextResponse.json({
         success: true,
-        remainingCredits: isAdmin ? Number.MAX_SAFE_INTEGER : userCredits.credits,
+        remainingCredits: noCharge ? Number.MAX_SAFE_INTEGER : userCredits.credits,
         itemId
       })
     }

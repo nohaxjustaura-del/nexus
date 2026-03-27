@@ -4,7 +4,7 @@
  * ===============================================================================
  *
  * Generates evidence-first briefing narratives for each ranked VC using
- * the configured LLM (Ollama: OLLAMA_MODEL, or OpenRouter default / OPENROUTER_VC_EXTRACTION_MODEL).
+ * VC pipeline routing: local Ollama when `OLLAMA_BASE_URL` is set, else OpenRouter (`OPENROUTER_VC_EXTRACTION_MODEL`).
  * Writing task, not reasoning; temperature 0.3.
  *
  * The LLM receives dimension labels and gate evidence strings as its only
@@ -217,7 +217,7 @@ function validateNarrative(raw: unknown, fallback: MatchNarrative): MatchNarrati
 /**
  * Generates an evidence-first MatchNarrative for a single ranked VC.
  *
- * Never throws; returns a deterministic TypeScript fallback if GPT-4o-mini
+ * Never throws; returns a deterministic TypeScript fallback if the LLM
  * fails or returns unparseable output.
  */
 export async function generateMatchNarrative(
@@ -233,6 +233,7 @@ export async function generateMatchNarrative(
       system: SYSTEM_PROMPT,
       user: buildUserPrompt(vc, likelihood, bundle, founder),
       temperature: 0.3,
+      useVcPipeline: true,
     })
 
     return validateNarrative(raw, fallback)

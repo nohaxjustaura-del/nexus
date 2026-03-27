@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { getCurrentUser } from '@/lib/auth'
-import { isAdminEmail } from '@/lib/constants'
+import { bypassesAiCredits } from '@/lib/dev-ai-analysis-bypass'
 import { logger } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'
@@ -35,7 +35,7 @@ export async function POST() {
       where: { userId: user.id },
       select: { isPremium: true },
     })
-    if (isAdminEmail(user.email) || eligibility?.isPremium) {
+    if (bypassesAiCredits(user.email) || eligibility?.isPremium) {
       const row = await db.userCredits.findUnique({ where: { userId: user.id } })
       return NextResponse.json({
         success: false,
@@ -172,7 +172,7 @@ export async function GET() {
     const now = new Date()
     const lastClaim = userCredits.lastDailyClaim
     const eligibleForDaily =
-      !isAdminEmail(user.email) && !userCredits.isPremium
+      !bypassesAiCredits(user.email) && !userCredits.isPremium
     const canClaim =
       eligibleForDaily && (!lastClaim || canClaimNow(lastClaim, now))
 
