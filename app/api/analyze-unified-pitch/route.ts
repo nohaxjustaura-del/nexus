@@ -63,6 +63,8 @@ export async function POST(request: NextRequest) {
 
     const qaRaw = (formData.get('qa') as string) || ''
     const qaAnswers = parseStructuredQaJson(qaRaw)
+    const narrativeRaw = typeof formData.get('narrative') === 'string' ? (formData.get('narrative') as string) : ''
+    const narrativeNorm = normalizePitchText(narrativeRaw)
     const deckInput = formData.get('deck')
     const videoInput = formData.get('video')
     const deckFile = isFile(deckInput) && deckInput.size > 0 ? deckInput : null
@@ -70,11 +72,12 @@ export async function POST(request: NextRequest) {
     const reviewType = ((formData.get('reviewType') as string) || 'ai') as 'ai' | 'reviewer'
     const reviewerId = (formData.get('reviewerId') as string) || null
 
-    if (!hasAnyStructuredAnswer(qaAnswers) && !deckFile && !videoFile) {
+    if (!hasAnyStructuredAnswer(qaAnswers) && !deckFile && !videoFile && !narrativeNorm) {
       return NextResponse.json(
         {
           error: 'Nothing to analyze',
-          message: 'Provide at least one of: structured Q&A answers, a pitch deck, or a video.',
+          message:
+            'Provide at least one of: structured Q&A answers, a pitch narrative (write-up), a pitch deck, or a video.',
         },
         { status: 400 },
       )
@@ -214,7 +217,22 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const qaBody = formatStructuredQaBody(qaAnswers)
+    if (narrativeNorm && !hasAnyStructuredAnswer(qaAnswers)) {
+      try {
+        const v = await validatePitchIdea(narrativeNorm)
+        if (!v.isValid) warnings.push(`Narrative validation: ${v.reason || 'did not pass content check'}`)
+      } catch {
+        warnings.push('Narrative validation error (non-fatal).')
+      }
+    }
+
+    const qaBodyBase = formatStructuredQaBody(qaAnswers)
+    const qaBody =
+      narrativeNorm && qaBodyBase
+        ? `${qaBodyBase}\n\nPITCH NARRATIVE:\n${narrativeNorm}`
+        : narrativeNorm && !qaBodyBase
+          ? `PITCH NARRATIVE:\n${narrativeNorm}`
+          : qaBodyBase
     const capped = capSectionsForCombinedPitch({
       qa: qaBody,
       deck: deckTextNormalized,
@@ -226,18 +244,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           error: 'No usable content',
-          message: 'All sources were empty or failed extraction. Fix uploads or add Q&A answers and try again.',
+          message:
+            'All sources were empty or failed extraction. Fix uploads, add Q&A or a pitch narrative, and try again.',
           warnings,
         },
         { status: 400 },
       )
     }
 
-    const reviewerPacketText = formatStructuredQaBlock(qaAnswers)
-      ? `${formatStructuredQaBlock(qaAnswers)}\n\n`
-      : ''
+    const qaBlock = formatStructuredQaBlock(qaAnswers)
+    const narrativeBlock = narrativeNorm ? `PITCH NARRATIVE:\n${narrativeNorm}` : ''
+    const reviewerPacketText = [qaBlock, narrativeBlock].filter(Boolean).join('\n\n')
+    const reviewerPrefix = reviewerPacketText ? `${reviewerPacketText}\n\n` : ''
     const storageNarrative =
-      reviewerPacketText +
+      reviewerPrefix +
       (deckTextNormalized ? `PITCH DECK (excerpt):\n${deckTextNormalized.slice(0, 12000)}\n\n` : '') +
       (videoTranscriptNormalized ? `VIDEO TRANSCRIPT (excerpt):\n${videoTranscriptNormalized.slice(0, 12000)}` : '')
 
@@ -276,6 +296,7 @@ export async function POST(request: NextRequest) {
             warnings,
             modalities: {
               qa: hasAnyStructuredAnswer(qaAnswers),
+              narrative: !!narrativeNorm,
               deck: !!deckFile && !!deckTextNormalized,
               video: !!videoFile && !!videoTranscriptNormalized,
             },
@@ -432,7 +453,8 @@ export async function POST(request: NextRequest) {
           pitchType: 'UNIFIED',
           warnings,
           modalities: {
-            qa: !!qaBody,
+            qa: !!qaBodyBase,
+            narrative: !!narrativeNorm,
             deck: !!deckTextNormalized,
             video: !!videoTranscriptNormalized,
           },

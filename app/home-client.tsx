@@ -153,9 +153,45 @@ export default function HomeClient({ verifiedInvestorCountLabel }: HomeClientPro
                 <h1 className="mt-3 font-heading text-[1.7rem] font-semibold leading-[1.16] tracking-tight text-foreground sm:text-4xl sm:leading-[1.12] md:text-[2.4rem] md:leading-[1.1]">
                   Rank who to talk to next using the pitch you already have.
                 </h1>
-                <p className="mt-5 max-w-xl text-[15px] leading-relaxed text-muted-foreground sm:text-base">
-                  One flow: scores, notes, and a ranked shortlist—without rebuilding your deck from scratch.
-                </p>
+                <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+                  <Button
+                    size="lg"
+                    onClick={() => {
+                      track('cta_clicked', { name: 'find_matches', page: 'home' })
+                      if (!mounted || !isVerifiedUser) {
+                        router.push('/signup')
+                      } else {
+                        router.push('/founder/dashboard')
+                      }
+                    }}
+                    className="h-11 w-full rounded-lg px-7 text-sm font-semibold shadow-sm sm:h-12 sm:w-auto sm:px-8 sm:text-base"
+                  >
+                    {mounted && isVerifiedUser ? (
+                      <>
+                        Open founder hub
+                        <LayoutDashboard className="ml-2 h-4 w-4" />
+                      </>
+                    ) : (
+                      <>
+                        Run a match pass
+                        <Rocket className="ml-2 h-4 w-4" />
+                      </>
+                    )}
+                  </Button>
+                  <Link
+                    href={
+                      mounted && isVerifiedUser
+                        ? '/founder/discover'
+                        : `/signup?next=${encodeURIComponent('/founder/discover')}`
+                    }
+                    className={cn(
+                      buttonVariants({ variant: 'outline', size: 'lg' }),
+                      'h-11 w-full rounded-lg border-border/50 bg-background/40 px-7 text-center text-sm font-semibold backdrop-blur-sm sm:h-12 sm:w-auto sm:px-8 sm:text-base hover:bg-muted/35',
+                    )}
+                  >
+                    Search the network
+                  </Link>
+                </div>
               </div>
 
               <aside className="rounded-2xl border border-border/40 bg-card/60 p-6 shadow-sm ring-1 ring-border/20 backdrop-blur-sm sm:p-7 lg:col-span-5 xl:col-span-5 xl:col-start-8">
@@ -200,45 +236,6 @@ export default function HomeClient({ verifiedInvestorCountLabel }: HomeClientPro
                 <span className="font-medium text-foreground">{verifiedInvestorCountLabel}+ verified</span> investor
                 profiles. Intros are double opt-in—your materials stay private until you decide to share.
               </p>
-              <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
-                <Button
-                  size="lg"
-                  onClick={() => {
-                    track('cta_clicked', { name: 'find_matches', page: 'home' })
-                    if (!mounted || !isVerifiedUser) {
-                      router.push('/signup')
-                    } else {
-                      router.push('/founder/dashboard')
-                    }
-                  }}
-                  className="h-11 w-full rounded-lg px-7 text-sm font-semibold shadow-sm sm:h-12 sm:w-auto sm:px-8 sm:text-base"
-                >
-                  {mounted && isVerifiedUser ? (
-                    <>
-                      Open founder hub
-                      <LayoutDashboard className="ml-2 h-4 w-4" />
-                    </>
-                  ) : (
-                    <>
-                      Run a match pass
-                      <Rocket className="ml-2 h-4 w-4" />
-                    </>
-                  )}
-                </Button>
-                <Link
-                  href={
-                    mounted && isVerifiedUser
-                      ? '/founder/discover'
-                      : `/signup?next=${encodeURIComponent('/founder/discover')}`
-                  }
-                  className={cn(
-                    buttonVariants({ variant: 'outline', size: 'lg' }),
-                    'h-11 w-full rounded-lg border-border/50 bg-background/40 px-7 text-center text-sm font-semibold backdrop-blur-sm sm:h-12 sm:w-auto sm:px-8 sm:text-base hover:bg-muted/35',
-                  )}
-                >
-                  Search the network
-                </Link>
-              </div>
             </div>
 
             <div className="mt-10 grid grid-cols-1 gap-4 sm:gap-5 lg:mt-12 lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,2fr)_auto_minmax(0,1fr)] lg:items-stretch lg:gap-x-2 lg:gap-y-0">

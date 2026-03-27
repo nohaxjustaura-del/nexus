@@ -6,6 +6,48 @@ import Link from "next/link"
 import { redirect } from "next/navigation"
 import DiscoverClient from "./discover-client"
 
+/** Searchable text for directory query (firm, partner, thesis, sectors, geo, etc.). */
+function investorMatchesDirectorySearch(
+  inv: {
+    firmName: string | null
+    name: string | null
+    thesis: string | null
+    sectors: string | null
+    stages: string | null
+    geoFocus?: unknown
+    valueAddTags: string | null
+    proofPoints: string | null
+    portfolio: string | null
+    notableInvestments: string | null
+    fundType: string | null
+    leadFollow: string | null
+    decisionSpeed: string | null
+  },
+  rawQuery: string,
+): boolean {
+  const q = rawQuery.toLowerCase().trim()
+  if (!q) return true
+  const parts: string[] = [
+    inv.firmName || '',
+    inv.name || '',
+    inv.thesis || '',
+    inv.sectors || '',
+    inv.stages || '',
+    inv.valueAddTags || '',
+    inv.proofPoints || '',
+    inv.portfolio || '',
+    inv.notableInvestments || '',
+    inv.fundType || '',
+    inv.leadFollow || '',
+    inv.decisionSpeed || '',
+  ]
+  const geo = parseJSON<string[]>(inv.geoFocus as string | null, [])
+  parts.push(geo.join(' '))
+  const hay = parts.join(' ').toLowerCase()
+  const tokens = q.split(/\s+/).filter((t) => t.length > 0)
+  return tokens.length === 0 ? true : tokens.every((t) => hay.includes(t))
+}
+
 export const dynamic = "force-dynamic"
 export const runtime = "nodejs"
 
@@ -197,7 +239,8 @@ export default async function DiscoverPage({
 
   // Apply filters if any
   const viewAll = searchParams.all === '1' || searchParams.all === 'true'
-  
+  const hasSearch = Boolean(searchParams.search?.trim())
+
   // PRIORITY: Sort investors to put Y Combinator at the top
   const sortedInvestors = [...investors].sort((a, b) => {
     const aIsYC = (a.firmName || '').toLowerCase().includes('y combinator')
@@ -209,9 +252,9 @@ export default async function DiscoverPage({
   
   let filteredInvestors = sortedInvestors
   const FREE_TAILORED_LIMIT = 5 // Show top 5 tailored matches for free
-  // Merge user defaults when not viewing all and param not provided
+  // Merge profile defaults for "For you" — but not while searching (search should not be narrowed by hidden prefs)
   const effectiveParams: any = { ...searchParams }
-  if (!viewAll) {
+  if (!viewAll && !hasSearch) {
     for (const [k, v] of Object.entries(prefDefaults)) {
       if (effectiveParams[k] == null || effectiveParams[k] === '') {
         effectiveParams[k] = v as any
@@ -219,14 +262,10 @@ export default async function DiscoverPage({
     }
   }
 
-  // Search filter - filter by firm name (applied first before other filters)
-  if (searchParams.search && searchParams.search.trim()) {
-    const searchQuery = searchParams.search.toLowerCase().trim()
-    filteredInvestors = filteredInvestors.filter(inv => {
-      const firmName = (inv.firmName || '').toLowerCase()
-      const name = (inv.name || '').toLowerCase()
-      return firmName.includes(searchQuery) || name.includes(searchQuery)
-    })
+  // Search: match across firm, partner, thesis, sectors, stages, geo, tags, portfolio, etc.
+  if (searchParams.search?.trim()) {
+    const q = searchParams.search.trim()
+    filteredInvestors = filteredInvestors.filter((inv) => investorMatchesDirectorySearch(inv, q))
   }
 
   // Fund type filter
@@ -380,7 +419,7 @@ export default async function DiscoverPage({
 
   // SAFETY: If filters are too aggressive and resulted in < 5 investors,
   // relax the sector filter (keep stage filter which is more important)
-  if (!viewAll && !searchParams.sector && filteredInvestors.length < 5) {
+  if (!viewAll && !hasSearch && !searchParams.sector && filteredInvestors.length < 5) {
     // Re-filter from sorted investors with only stage filter
     filteredInvestors = sortedInvestors
     
@@ -440,7 +479,7 @@ export default async function DiscoverPage({
   // Limit free tailored recommendations to top 5 quality matches if no AI analysis
   // Show good tailored matches based on profile preferences, not necessarily the absolute best
   let showLimitedTailored = false
-  if (!viewAll && !hasResumeAnalysis && filteredInvestors.length > FREE_TAILORED_LIMIT) {
+  if (!viewAll && !hasSearch && !hasResumeAnalysis && filteredInvestors.length > FREE_TAILORED_LIMIT) {
     // Take top 5 based on verification status
     filteredInvestors = filteredInvestors.slice(0, FREE_TAILORED_LIMIT)
     showLimitedTailored = true
