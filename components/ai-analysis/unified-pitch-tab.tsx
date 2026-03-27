@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { Sparkles, AlertCircle, Layers, User, Video, FileText, CheckCircle, Lightbulb } from 'lucide-react'
+import { Sparkles, AlertCircle, User, Video, FileText, CheckCircle, Lightbulb, Layers } from 'lucide-react'
 import SmartMatchResults from '@/components/smart-match-results'
 import AnalysisDashboard from '@/components/analysis/AnalysisDashboard'
 import { STRUCTURED_QA_KEYS, type StructuredQaAnswers } from '@/lib/unified-pitch/structured-qa'
@@ -20,6 +20,7 @@ const REVIEWER_CREDITS = CREDIT_COSTS.VIDEO_PITCH.REVIEWER
 
 export function UnifiedPitchTab() {
   const [answers, setAnswers] = useState<StructuredQaAnswers>({})
+  const [narrative, setNarrative] = useState('')
   const [deckFile, setDeckFile] = useState<File | null>(null)
   const [videoFile, setVideoFile] = useState<File | null>(null)
   const [analyzing, setAnalyzing] = useState(false)
@@ -49,12 +50,16 @@ export function UnifiedPitchTab() {
   }, [reviewType])
 
   const hasQa = STRUCTURED_QA_KEYS.some(({ key }) => !!(answers[key]?.trim()))
-  const canSubmit = hasQa || !!deckFile || !!videoFile
+  const hasNarrative = narrative.trim().length > 0
+  const canSubmit = hasQa || hasNarrative || !!deckFile || !!videoFile
   const creditCost = reviewType === 'reviewer' ? REVIEWER_CREDITS : UNIFIED_CREDITS
+
+  const fileInputClass =
+    'w-full max-w-full text-sm text-muted-foreground file:mr-3 file:inline-flex file:h-9 file:cursor-pointer file:items-center file:rounded-md file:border-0 file:bg-muted file:px-3 file:text-sm file:font-medium file:text-foreground'
 
   const handleAnalyze = async () => {
     if (!canSubmit) {
-      setError('Add at least one: Q&A answers, a pitch deck, or a video.')
+      setError('Add at least one: structured Q&A answers, a pitch narrative, a deck file, or a video.')
       return
     }
     if (!credits) {
@@ -74,6 +79,7 @@ export function UnifiedPitchTab() {
     try {
       const formData = new FormData()
       formData.append('qa', JSON.stringify(answers))
+      if (narrative.trim()) formData.append('narrative', narrative.trim())
       if (deckFile) formData.append('deck', deckFile)
       if (videoFile) formData.append('video', videoFile)
       formData.append('reviewType', reviewType)
@@ -125,128 +131,174 @@ export function UnifiedPitchTab() {
   }
 
   return (
-    <div className="mx-auto max-w-4xl space-y-6">
-      <Card className="border border-primary/25 bg-gradient-to-br from-primary/8 via-background to-violet-500/8">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Layers className="h-5 w-5 text-primary" />
-            One analysis — all your materials
-          </CardTitle>
-          <CardDescription>
-            Add structured answers, an optional deck, and/or a video. We combine everything you provide;{' '}
-            <span className="font-medium text-foreground">the more you share, the richer the score and investor matches</span>.{' '}
-            At least one source required.{' '}
-            <span className="font-medium text-foreground">{UNIFIED_CREDITS} credits</span> (AI) or{' '}
-            <span className="font-medium text-foreground">{REVIEWER_CREDITS}</span> with human review.
-          </CardDescription>
-        </CardHeader>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Structured Q&A</CardTitle>
-          <CardDescription>Optional but recommended — answer any questions that apply.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {STRUCTURED_QA_KEYS.map(({ key, label }) => (
-            <div key={key} className="space-y-1.5">
-              <Label htmlFor={key}>{label}</Label>
-              <Textarea
-                id={key}
-                rows={3}
-                value={answers[key] || ''}
-                onChange={(e) => setAnswers((a) => ({ ...a, [key]: e.target.value }))}
-                placeholder="Your answer…"
-                className="resize-y min-h-[72px]"
-              />
+    <div className="w-full space-y-8">
+      <Card className="overflow-hidden border-border/80 bg-card/80 shadow-sm ring-1 ring-border/40">
+        <CardHeader className="space-y-3 border-b border-border/80 bg-muted/20 pb-6 pt-6">
+          <div className="flex items-start gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-primary/25 bg-primary/10 text-primary">
+              <Layers className="h-5 w-5" aria-hidden />
             </div>
-          ))}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-lg">
-            <FileText className="h-4 w-4" />
-            Pitch deck (optional)
-          </CardTitle>
-          <CardDescription>PDF or PPTX</CardDescription>
+            <div className="min-w-0 space-y-2">
+              <CardTitle className="text-lg font-semibold tracking-tight">Full pitch review</CardTitle>
+              <CardDescription className="text-sm leading-relaxed">
+                Add structured answers and any supporting files or notes—at least one input is required.{' '}
+                <span className="text-foreground">
+                  {UNIFIED_CREDITS} credits (AI) · {REVIEWER_CREDITS} credits (human review)
+                </span>
+                .
+              </CardDescription>
+            </div>
+          </div>
         </CardHeader>
-        <CardContent>
-          <input
-            type="file"
-            accept=".pdf,.pptx,.ppt,application/pdf,application/vnd.openxmlformats-officedocument.presentationml.presentation"
-            onChange={(e) => setDeckFile(e.target.files?.[0] || null)}
-            className="text-sm"
-          />
-          {deckFile && <p className="mt-2 text-sm text-muted-foreground">{deckFile.name}</p>}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-lg">
-            <Video className="h-4 w-4" />
-            Video pitch (optional)
-          </CardTitle>
-          <CardDescription>MP4, MOV, or WebM</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <input
-            type="file"
-            accept="video/mp4,video/quicktime,video/webm,.mp4,.mov,.webm"
-            onChange={(e) => setVideoFile(e.target.files?.[0] || null)}
-            className="text-sm"
-          />
-          {videoFile && <p className="mt-2 text-sm text-muted-foreground">{videoFile.name}</p>}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-lg">
-            <User className="h-4 w-4" />
-            Review type
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-3 sm:flex-row sm:items-center">
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              type="radio"
-              name="reviewType"
-              checked={reviewType === 'ai'}
-              onChange={() => setReviewType('ai')}
-            />
-            AI analysis ({UNIFIED_CREDITS} credits)
-          </label>
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              type="radio"
-              name="reviewType"
-              checked={reviewType === 'reviewer'}
-              onChange={() => setReviewType('reviewer')}
-            />
-            Human reviewer ({REVIEWER_CREDITS} credits)
-          </label>
-        </CardContent>
-        {reviewType === 'reviewer' && (
-          <CardContent className="pt-0">
-            <Label htmlFor="reviewer">Reviewer</Label>
-            <select
-              id="reviewer"
-              className="mt-1 flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-              value={selectedReviewer || ''}
-              onChange={(e) => setSelectedReviewer(e.target.value || null)}
-            >
-              <option value="">Select…</option>
-              {reviewers.map((r) => (
-                <option key={r.id} value={r.id}>
-                  {r.name}
-                </option>
+        <CardContent className="space-y-10 pt-8">
+          <section className="space-y-5">
+            <div>
+              <h2 className="text-sm font-medium text-foreground">Structured Q&amp;A</h2>
+              <p className="mt-1 text-xs leading-normal text-muted-foreground">
+                Optional but recommended—answer the prompts that fit your stage.
+              </p>
+            </div>
+            <div className="space-y-5">
+              {STRUCTURED_QA_KEYS.map(({ key, label }) => (
+                <div key={key} className="space-y-2">
+                  <Label htmlFor={key} className="text-sm font-normal text-foreground">
+                    {label}
+                  </Label>
+                  <Textarea
+                    id={key}
+                    rows={3}
+                    value={answers[key] || ''}
+                    onChange={(e) => setAnswers((a) => ({ ...a, [key]: e.target.value }))}
+                    placeholder="Your answer…"
+                    className="min-h-[5.5rem] resize-y"
+                  />
+                </div>
               ))}
-            </select>
-          </CardContent>
-        )}
+            </div>
+          </section>
+
+          <div className="h-px bg-border" aria-hidden />
+
+          <section className="space-y-4">
+            <div>
+              <h2 className="text-sm font-medium text-foreground">Supporting materials</h2>
+              <p className="mt-1 text-xs leading-normal text-muted-foreground">
+                Deck, recording, and written context live in one place—add any combination; all are optional if your
+                Q&amp;A is enough.
+              </p>
+            </div>
+
+            <div className="overflow-hidden rounded-xl border border-border/80 bg-muted/10">
+              <div className="grid md:grid-cols-2 md:divide-x md:divide-border">
+                <div className="flex flex-col gap-3 border-b border-border p-5 md:border-b-0 md:p-6">
+                  <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+                    <FileText className="h-4 w-4 shrink-0 text-primary/80" aria-hidden />
+                    Deck file
+                  </div>
+                  <p className="text-xs text-muted-foreground">PDF or PPTX</p>
+                  <input
+                    type="file"
+                    accept=".pdf,.pptx,.ppt,application/pdf,application/vnd.openxmlformats-officedocument.presentationml.presentation"
+                    onChange={(e) => setDeckFile(e.target.files?.[0] || null)}
+                    className={fileInputClass}
+                  />
+                  {deckFile && (
+                    <p className="truncate text-xs text-muted-foreground" title={deckFile.name}>
+                      {deckFile.name}
+                    </p>
+                  )}
+                </div>
+
+                <div className="flex flex-col gap-3 p-5 md:p-6">
+                  <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+                    <Video className="h-4 w-4 shrink-0 text-primary/80" aria-hidden />
+                    Video file
+                  </div>
+                  <p className="text-xs text-muted-foreground">MP4, MOV, or WebM</p>
+                  <input
+                    type="file"
+                    accept="video/mp4,video/quicktime,video/webm,.mp4,.mov,.webm"
+                    onChange={(e) => setVideoFile(e.target.files?.[0] || null)}
+                    className={fileInputClass}
+                  />
+                  {videoFile && (
+                    <p className="truncate text-xs text-muted-foreground" title={videoFile.name}>
+                      {videoFile.name}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              <div className="border-t border-border bg-background/40 p-5 md:p-6">
+                <div className="space-y-2">
+                  <Label htmlFor="pitch-narrative" className="text-sm font-normal text-foreground">
+                    Written pitch <span className="font-normal text-muted-foreground">(optional)</span>
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    One-pager, memo, or elevator pitch—anything not already covered above.
+                  </p>
+                  <Textarea
+                    id="pitch-narrative"
+                    rows={5}
+                    value={narrative}
+                    onChange={(e) => setNarrative(e.target.value)}
+                    placeholder="Paste or type your pitch summary here…"
+                    className="min-h-[7.5rem] resize-y"
+                  />
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <div className="h-px bg-border" aria-hidden />
+
+          <section className="space-y-4">
+            <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+              <User className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
+              Review type
+            </div>
+            <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+              <label className="flex cursor-pointer items-center gap-2.5 text-sm">
+                <input
+                  type="radio"
+                  name="reviewType"
+                  className="h-4 w-4 shrink-0 accent-primary"
+                  checked={reviewType === 'ai'}
+                  onChange={() => setReviewType('ai')}
+                />
+                <span>AI analysis ({UNIFIED_CREDITS} credits)</span>
+              </label>
+              <label className="flex cursor-pointer items-center gap-2.5 text-sm">
+                <input
+                  type="radio"
+                  name="reviewType"
+                  className="h-4 w-4 shrink-0 accent-primary"
+                  checked={reviewType === 'reviewer'}
+                  onChange={() => setReviewType('reviewer')}
+                />
+                <span>Human reviewer ({REVIEWER_CREDITS} credits)</span>
+              </label>
+            </div>
+            {reviewType === 'reviewer' && (
+              <div className="space-y-2 pt-1">
+                <Label htmlFor="reviewer">Reviewer</Label>
+                <select
+                  id="reviewer"
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  value={selectedReviewer || ''}
+                  onChange={(e) => setSelectedReviewer(e.target.value || null)}
+                >
+                  <option value="">Select…</option>
+                  {reviewers.map((r) => (
+                    <option key={r.id} value={r.id}>
+                      {r.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+          </section>
+        </CardContent>
       </Card>
 
       {error && (
