@@ -1,14 +1,19 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, type Dispatch, type SetStateAction } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Progress } from '@/components/ui/progress'
+import Link from 'next/link'
 import { Sparkles, AlertCircle, Layers, User, Video, FileText } from 'lucide-react'
 import { PitchAnalysisReport } from '@/components/analysis/PitchAnalysisReport'
-import { STRUCTURED_QA_KEYS, type StructuredQaAnswers } from '@/lib/unified-pitch/structured-qa'
+import {
+  STRUCTURED_QA_KEYS,
+  hasAnyStructuredAnswer,
+  type StructuredQaAnswers,
+} from '@/lib/unified-pitch/structured-qa'
 import { CREDIT_COSTS } from '@/lib/constants'
 import {
   getUserCreditsClient,
@@ -17,6 +22,21 @@ import {
 
 const UNIFIED_CREDITS = CREDIT_COSTS.UNIFIED_PITCH
 const REVIEWER_CREDITS = CREDIT_COSTS.VIDEO_PITCH.REVIEWER
+
+type CreditsState = { credits: number; isPremium: boolean }
+
+type ReviewerOption = { id: string; name: string }
+
+/** AI path: rubric + optional ids. Human path: submission ack. */
+type UnifiedPitchResultState =
+  | { reviewSubmitted: true; message?: string; videoPitchId?: string }
+  | (Record<string, unknown> & { reviewSubmitted?: false; videoPitchId?: string })
+
+async function refreshCreditsCache(setCredits: Dispatch<SetStateAction<CreditsState | null>>) {
+  invalidateUserCreditsClientCache()
+  const { ok, data } = await getUserCreditsClient()
+  if (ok) setCredits(data as CreditsState)
+}
 
 function postFormDataWithUploadProgress(
   url: string,
@@ -70,18 +90,18 @@ export function UnifiedPitchTab() {
   const [uploadFinished, setUploadFinished] = useState(false)
   const [serverSyntheticPct, setServerSyntheticPct] = useState(0)
   const serverStartRef = useRef<number>(0)
-  const [result, setResult] = useState<any>(null)
+  const [result, setResult] = useState<UnifiedPitchResultState | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [warnings, setWarnings] = useState<string[]>([])
-  const [credits, setCredits] = useState<{ credits: number; isPremium: boolean } | null>(null)
+  const [credits, setCredits] = useState<CreditsState | null>(null)
   const [reviewType, setReviewType] = useState<'ai' | 'reviewer'>('ai')
   const [selectedReviewer, setSelectedReviewer] = useState<string | null>(null)
-  const [reviewers, setReviewers] = useState<any[]>([])
+  const [reviewers, setReviewers] = useState<ReviewerOption[]>([])
 
   useEffect(() => {
     getUserCreditsClient()
       .then(({ ok, data }) => {
-        if (ok) setCredits(data as { credits: number; isPremium: boolean })
+        if (ok) setCredits(data as CreditsState)
       })
       .catch(() => {})
   }, [])
@@ -109,11 +129,12 @@ export function UnifiedPitchTab() {
     return () => window.clearInterval(id)
   }, [analyzing, uploadFinished])
 
-  const hasQa = STRUCTURED_QA_KEYS.some(({ key }) => !!(answers[key]?.trim()))
-  const canSubmit = hasQa || !!deckFile || !!videoFile
+  const hasDeck = !!(deckFile && deckFile.size > 0)
+  const hasVideo = !!(videoFile && videoFile.size > 0)
+  const canSubmit = hasAnyStructuredAnswer(answers) || hasDeck || hasVideo
   const creditCost = reviewType === 'reviewer' ? REVIEWER_CREDITS : UNIFIED_CREDITS
 
-  const hasLargeUpload = !!(deckFile || videoFile)
+  const hasLargeUpload = hasDeck || hasVideo
   const progressBarValue = !analyzing
     ? 0
     : !uploadFinished
@@ -132,7 +153,9 @@ export function UnifiedPitchTab() {
 
   const handleAnalyze = async () => {
     if (!canSubmit) {
-      setError('Add at least one: Q&A answers, a pitch deck, or a video.')
+      setError(
+        'Add at least one non-empty answer in structured Q&A, or upload a deck or video file (empty files do not count).',
+      )
       return
     }
     if (!credits) {
@@ -167,7 +190,6 @@ export function UnifiedPitchTab() {
         () => setUploadFinished(true),
       )
 
-      setUploadFinished(true)
       setServerSyntheticPct(100)
 
       const payload = data as Record<string, unknown>
@@ -175,9 +197,7 @@ export function UnifiedPitchTab() {
       if (!ok) {
         if (status === 402) {
           setError((payload.message as string) || 'Insufficient credits.')
-          invalidateUserCreditsClientCache()
-          const { ok: crOk, data: cr } = await getUserCreditsClient()
-          if (crOk) setCredits(cr as { credits: number; isPremium: boolean })
+          await refreshCreditsCache(setCredits)
           return
         }
         if (status === 404 && typeof payload.redirectTo === 'string') {
@@ -196,19 +216,20 @@ export function UnifiedPitchTab() {
       if (payload.reviewId) {
         setResult({
           reviewSubmitted: true,
-          message: payload.message,
-          videoPitchId: payload.videoPitchId,
+          message: typeof payload.message === 'string' ? payload.message : undefined,
+          videoPitchId: typeof payload.videoPitchId === 'string' ? payload.videoPitchId : undefined,
         })
         setWarnings((payload.warnings as string[]) || [])
       } else {
-        const analysis = payload.analysis as Record<string, unknown> | undefined
-        setResult({ ...analysis, videoPitchId: payload.videoPitchId })
+        const analysis = (payload.analysis as Record<string, unknown> | undefined) ?? {}
+        setResult({
+          ...analysis,
+          videoPitchId: typeof payload.videoPitchId === 'string' ? payload.videoPitchId : undefined,
+        })
         setWarnings((payload.warnings as string[]) || [])
       }
 
-      invalidateUserCreditsClientCache()
-      const { ok: crOk, data: cr } = await getUserCreditsClient()
-      if (crOk) setCredits(cr as { credits: number; isPremium: boolean })
+      await refreshCreditsCache(setCredits)
 
       requestAnimationFrame(() => {
         document.getElementById('analysis-results')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
@@ -388,8 +409,8 @@ export function UnifiedPitchTab() {
         <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-900 dark:text-amber-100">
           <p className="font-medium">Warnings (analysis continued)</p>
           <ul className="mt-1 list-inside list-disc">
-            {warnings.map((w) => (
-              <li key={w}>{w}</li>
+            {warnings.map((w, i) => (
+              <li key={`${i}-${w.slice(0, 48)}`}>{w}</li>
             ))}
           </ul>
         </div>
@@ -429,91 +450,19 @@ export function UnifiedPitchTab() {
 
       {result && !result.reviewSubmitted && (
         <div id="analysis-results" className="space-y-6">
-          {safeRubric ? (
-            <AnalysisDashboard
-              result={safeRubric}
-              finalScore={result.finalScore ?? result.overallScore}
-            />
-          ) : (
-            <Card className="border-2 border-primary/20">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Sparkles className="h-5 w-5 text-primary" />
-                  Analysis results
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="rounded-lg border border-primary/20 bg-primary/5 p-4">
-                  <div className="text-sm text-muted-foreground">Overall score</div>
-                  <div className="text-3xl font-bold text-primary">
-                    {result.overallScore ?? result.finalScore ?? 0}/100
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+          <PitchAnalysisReport result={result} />
+          {typeof result.videoPitchId === 'string' && result.videoPitchId.length > 0 && (
+            <div className="space-y-3 border-t border-border pt-6">
+              <p className="text-center text-sm text-muted-foreground">
+                This run is saved to your account. Open the same breakdown anytime.
+              </p>
+              <Link href={`/founder/analyses/${result.videoPitchId}`} className="block">
+                <Button variant="outline" className="w-full">
+                  View full analysis
+                </Button>
+              </Link>
+            </div>
           )}
-
-          {!safeRubric && (
-            <Card>
-              <CardContent className="space-y-6 pt-6">
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div className="rounded-lg border border-green-200 bg-green-50/50 p-4 dark:bg-green-950/20">
-                    <h3 className="mb-3 flex items-center gap-2 font-semibold">
-                      <CheckCircle className="h-4 w-4 text-green-600" />
-                      Strengths
-                    </h3>
-                    <ul className="space-y-2 text-sm">
-                      {(result.strengths || []).map((s: string, i: number) => (
-                        <li key={i} className="flex gap-2">
-                          <span className="text-green-600">✓</span>
-                          {s}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                  <div className="rounded-lg border border-orange-200 bg-orange-50/50 p-4 dark:bg-orange-950/20">
-                    <h3 className="mb-3 flex items-center gap-2 font-semibold">
-                      <AlertCircle className="h-4 w-4 text-orange-600" />
-                      Improvements
-                    </h3>
-                    <ul className="space-y-2 text-sm">
-                      {(result.weaknesses || []).map((s: string, i: number) => (
-                        <li key={i}>• {s}</li>
-                      ))}
-                    </ul>
-                  </div>
-                </div>
-                {result.improvements?.length > 0 && (
-                  <div className="rounded-lg border border-blue-200 bg-blue-50/50 p-4 dark:bg-blue-950/20">
-                    <h3 className="mb-3 flex items-center gap-2 font-semibold">
-                      <Lightbulb className="h-4 w-4 text-blue-600" />
-                      Suggestions
-                    </h3>
-                    <ul className="space-y-2 text-sm">
-                      {result.improvements.map((s: string, i: number) => (
-                        <li key={i}>• {s}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          )}
-
-          {result.transcript && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Combined pitch (excerpt)</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <pre className="max-h-64 overflow-auto whitespace-pre-wrap rounded-md bg-muted/50 p-3 text-xs">
-                  {result.transcript}
-                </pre>
-              </CardContent>
-            </Card>
-          )}
-
-          <SmartMatchResults matches={result.matchedVCs || []} />
         </div>
       )}
     </div>

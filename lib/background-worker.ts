@@ -4,10 +4,10 @@
  * ===============================================================================
  *
  * Jobs:
- *  1. VC Thesis        (24h tick, monthly window) — dual Exa + OpenRouter; applies thesis only (see data/worker-vc-refresh-state.json)
+ *  1. VC Thesis        (24h tick, monthly window) — triple Exa + LLM (OpenRouter or Ollama); thesis only (see data/worker-vc-refresh-state.json)
  *  2. VC Profile       (24h tick, monthly window) — same retrieval; applies non-thesis fields only
  *  3. Exa Enrichment   (24h)  -  Pre-warm VCEnrichmentCache via Exa for top VCs
- *  4. Embeddings          (24h)  -  Regenerate Voyage AI embeddings + FAISS index
+ *  4. Embeddings          (24h default, WORKER_EMBEDDINGS_INTERVAL_MS)  -  Voyage embeddings + FAISS; per-investor sync on research writes when VOYAGE_API_KEY set
  *  5. Data Validation    (12h)  -  Check data quality, flag gaps, report stats
  *  6. VC directory sync  (6h)   -  Prisma → Supabase vc_directory for recently updated public rows (heals failed ingest upserts)
  *
@@ -21,7 +21,7 @@
  *  - WORKER_EXA_UNCACHED_TAKE, WORKER_EXA_STALE_TAKE, WORKER_EXA_ENRICH_DELAY_MS
  *  - WORKER_THESIS_REFRESH_INTERVAL_MS, WORKER_PROFILE_REFRESH_INTERVAL_MS (default ~30d each)
  *  - WORKER_VC_DIRECTORY_SYNC_INTERVAL_MS (default 6h)
- *  - WORKER_VALIDATION_EXA_SAMPLE (default 0) — if > 0, sample that many public VCs and score DB vs fresh Exa + LLM (e.g. Ollama qwen2.5:7b)
+ *  - WORKER_VALIDATION_EXA_SAMPLE (default 0) — if > 0, sample that many public VCs and score DB vs fresh Exa + LLM
  *  - WORKER_VALIDATION_EXA_DELAY_MS (default 2500) — pause between Exa validation samples
  *  - VC_VALIDATION_EXA_CONTEXT_CHARS (default 12000) — max chars of Exa text passed to the LLM
  *  - WORKER_VALIDATION_FULL_LOCAL_AUDIT=1 — scan ALL investors with lib/investor-quality-audit (logs summary + top error rows)
@@ -114,7 +114,12 @@ const DEFAULT_CONFIG: WorkerConfig = {
       name: 'Semantic Search Embeddings',
       type: 'embeddings',
       priority: 6,
-      interval: 24 * 60 * 60 * 1000,
+      interval: (() => {
+        const def = 24 * 60 * 60 * 1000
+        const fromEnv = parseInt(process.env.WORKER_EMBEDDINGS_INTERVAL_MS || '', 10)
+        const minMs = 5 * 60 * 1000
+        return Math.max(minMs, Number.isFinite(fromEnv) && fromEnv > 0 ? fromEnv : def)
+      })(),
       status: 'idle',
       errorCount: 0,
       maxErrors: 3,
@@ -163,14 +168,14 @@ export const WORKER_JOB_UI_META: Record<string, { summary: string; cadence: stri
   },
   'exa-enrichment-daily': {
     summary:
-      'Pre-warms VC enrichment cache via Exa live pulse for public discoverable investors so matching and profiles see fresher context.',
+      'Pre-warms VC enrichment cache via Exa live pulse for public investors so matching and profiles see fresher context.',
     cadence: 'Every 24 hours.',
   },
   'embeddings-rebuild': {
     summary:
       'Regenerates Voyage embeddings and rebuilds the FAISS index backing semantic investor search. Individual public investors also refresh on research writes when VOYAGE_API_KEY is set (see lib/vc-embedding-sync.ts).',
     cadence:
-      'Every 24 hours. Not run immediately on worker startup (timer only); use Admin “Run now” or npm run embeddings:rebuild for an on-demand rebuild.',
+      'Default every 24h; set WORKER_EMBEDDINGS_INTERVAL_MS (min 5m). Timer only on startup — use Admin “Run now” or npm run embeddings:rebuild for on-demand.',
   },
   'data-validation': {
     summary:
@@ -358,7 +363,6 @@ async function executeExaEnrichment(): Promise<void> {
     const uncachedVCs = await db.investor.findMany({
       where: {
         isPublic: true,
-        discoverable: true,
         enrichmentCache: { is: null },
       },
       select: { id: true, firmName: true, sectors: true },
@@ -607,7 +611,7 @@ async function executeDataValidation(): Promise<void> {
           parseInt(process.env.WORKER_VALIDATION_EXA_DELAY_MS || '2500', 10) || 2500,
         )
         const rows = await db.investor.findMany({
-          where: { isPublic: true, discoverable: true },
+          where: { isPublic: true },
           select: {
             firmName: true,
             thesis: true,

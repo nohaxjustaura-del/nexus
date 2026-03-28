@@ -4,7 +4,7 @@
  * ===============================================================================
  *
  * Generates evidence-first briefing narratives for each ranked VC using
- * VC pipeline routing: local Ollama when `OLLAMA_BASE_URL` is set, else OpenRouter (`OPENROUTER_VC_EXTRACTION_MODEL`).
+ * OpenRouter (`OPENROUTER_VC_EXTRACTION_MODEL`).
  * Writing task, not reasoning; temperature 0.3.
  *
  * The LLM receives dimension labels and gate evidence strings as its only

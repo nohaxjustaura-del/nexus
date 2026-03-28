@@ -25,7 +25,7 @@ const creditCostSub = "text-sm text-slate-700 dark:text-zinc-300"
 const creditCostBadge =
   "shrink-0 border border-zinc-300 bg-zinc-200 text-base font-medium text-zinc-900 shadow-none hover:bg-zinc-200 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100 dark:hover:bg-zinc-800 px-3 py-1"
 
-export default function PricingClient({ verifiedInvestorCountLabel }: { verifiedInvestorCountLabel: string }) {
+export default function PricingClient({ verifiedInvestorCountLabel, isAuthenticated = true }: { verifiedInvestorCountLabel: string; isAuthenticated?: boolean }) {
   const [credits, setCredits] = useState<{
     credits: number
     isPremium: boolean
@@ -36,6 +36,7 @@ export default function PricingClient({ verifiedInvestorCountLabel }: { verified
 
   useEffect(() => {
     setMounted(true)
+    if (!isAuthenticated) return
     fetch('/api/user/credits', { credentials: 'include' })
       .then(res => res.json())
       .then((raw) => {
@@ -43,9 +44,13 @@ export default function PricingClient({ verifiedInvestorCountLabel }: { verified
         setCredits({ credits: n.credits, isPremium: n.isPremium, unlimitedCredits: n.unlimitedCredits })
       })
       .catch(() => setCredits({ credits: 0, isPremium: false, unlimitedCredits: false }))
-  }, [])
+  }, [isAuthenticated])
 
   const handlePurchase = async (packageType: 'starter' | 'founder' | 'pro') => {
+    if (!isAuthenticated) {
+      window.location.href = '/signup?redirect=/pricing'
+      return
+    }
     setLoading(packageType)
     try {
       const response = await fetch('/api/create-checkout', {
@@ -71,6 +76,10 @@ export default function PricingClient({ verifiedInvestorCountLabel }: { verified
   }
 
   const handleSubscribe = async () => {
+    if (!isAuthenticated) {
+      window.location.href = '/signup?redirect=/pricing'
+      return
+    }
     setLoading('premium')
     try {
       const response = await fetch('/api/create-subscription', {
@@ -144,7 +153,7 @@ export default function PricingClient({ verifiedInvestorCountLabel }: { verified
                 </li>
                 <li className="flex items-center gap-2">
                   <CheckCircle className="h-4 w-4 text-primary shrink-0" />
-                  <span>Browse all {verifiedInvestorCountLabel} VCs for free</span>
+                  <span>Browse all {verifiedInvestorCountLabel} investors for free</span>
                 </li>
                 <li className="flex items-center gap-2">
                   <CheckCircle className="h-4 w-4 text-primary shrink-0" />
@@ -274,7 +283,7 @@ export default function PricingClient({ verifiedInvestorCountLabel }: { verified
                 </li>
                 <li className="flex items-center gap-2">
                   <CheckCircle className="h-4 w-4 text-primary shrink-0" />
-                  <span>Unlimited VC match unlocks</span>
+                  <span>Unlimited investor match unlocks</span>
                 </li>
                 <li className="flex items-center gap-2">
                   <CheckCircle className="h-4 w-4 text-primary shrink-0" />
@@ -325,8 +334,8 @@ export default function PricingClient({ verifiedInvestorCountLabel }: { verified
                 <div className="flex items-center gap-3 min-w-0">
                   <CheckCircle className="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400" />
                   <div className="min-w-0">
-                    <div className={creditCostTitle}>Browse All VCs</div>
-                    <div className={creditCostSub}>View full database</div>
+                    <div className={creditCostTitle}>Browse All Investors</div>
+                    <div className={creditCostSub}>Explore the full investor network</div>
                   </div>
                 </div>
                 <Badge className="shrink-0 border-0 bg-blue-600 px-3 py-1 text-base font-medium text-white shadow-none hover:bg-blue-600">
@@ -396,7 +405,7 @@ export default function PricingClient({ verifiedInvestorCountLabel }: { verified
                 <div className="flex items-center gap-3 min-w-0">
                   <UserCheck className="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400" />
                   <div className="min-w-0">
-                    <div className={creditCostTitle}>VC-Accepted Founder Review</div>
+                    <div className={creditCostTitle}>Investor-Accepted Founder Review</div>
                     <div className={creditCostSub}>Get feedback from funded founders</div>
                   </div>
                 </div>
@@ -418,7 +427,7 @@ export default function PricingClient({ verifiedInvestorCountLabel }: { verified
                 <div className="flex items-center gap-3 min-w-0">
                   <Bookmark className="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400" />
                   <div className="min-w-0">
-                    <div className={creditCostTitle}>Bookmark VCs</div>
+                    <div className={creditCostTitle}>Bookmark Investors</div>
                     <div className={creditCostSub}>Save investors to revisit later</div>
                   </div>
                 </div>

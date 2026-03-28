@@ -1,3 +1,5 @@
+import { looksLikeFundraisingHeadline } from './firm-name-normalize'
+
 const BAD_SUBSTRINGS = [
   '[exa ',
   'http://',
@@ -48,9 +50,12 @@ function normalizedWords(name: string): string[] {
 export function isLikelyRealFirmName(name: string): boolean {
   const t = (name || '').trim()
   if (!t) return false
+  if (looksLikeFundraisingHeadline(t)) return false
   if (/^[A-Z0-9]{2,5}$/.test(t)) return true
   if (t.length < 3 || t.length > 120) return false
   if (t.includes('|') || t.includes('[') || t.includes(']')) return false
+  // Markdown / RAG / search-junk rows mistaken for firm names
+  if (/^#+\s/.test(t) || t.includes('===') || /^>\s/.test(t)) return false
 
   const lower = t.toLowerCase()
   for (const bad of BAD_SUBSTRINGS) {

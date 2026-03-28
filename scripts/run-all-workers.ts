@@ -6,7 +6,7 @@
  *   1. scripts/worker-start.ts --loop — maintenance on existing investors (monthly thesis/profile windows, Exa pre-warm, embeddings on timer, validation, vc_directory sync)
  *   2. scripts/vc-supabase-ingest-worker.ts --discover — discovers new firm names via Exa, runs full VC research + ingest per candidate → Prisma Investor + Supabase vc_directory
  *
- * Do NOT also run npm run research-worker unless you want duplicate Exa/OpenRouter load.
+ * Do NOT also run npm run research-worker unless you want duplicate Exa/LLM load.
  *
  * Env (optional):
  *   WORKERS_DISCOVER_INTERVAL_MS   (default 30000 = 30s pause between discover passes; use 10000–60000 for ~10s–1m; min 10s enforced in ingest worker)
@@ -21,6 +21,7 @@
 
 import { spawn } from 'child_process'
 import 'dotenv/config'
+import { hasVcLlmConfigured } from '../lib/openrouter'
 
 const children: ReturnType<typeof spawn>[] = []
 
@@ -90,9 +91,11 @@ const intervalSec = (intervalMs / 1000).toFixed(intervalMs % 1000 === 0 ? 0 : 1)
 function logPipelineAndEnv() {
   const hasDb = !!process.env.DATABASE_URL?.trim()
   const hasExa = !!process.env.EXA_API_KEY?.trim()
-  const hasLlm =
-    !!process.env.OPENROUTER_API_KEY?.trim() ||
-    (!!process.env.OLLAMA_BASE_URL?.trim() && !!process.env.OLLAMA_MODEL?.trim())
+  const hasLlm = hasVcLlmConfigured()
+  const hasOr = !!process.env.OPENROUTER_API_KEY?.trim()
+  const hasOllama =
+    !!process.env.OLLAMA_BASE_URL?.trim() &&
+    !!(process.env.OLLAMA_VC_MODEL || process.env.OLLAMA_MODEL)?.trim()
   const hasSb =
     !!process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() && !!process.env.SUPABASE_SERVICE_ROLE_KEY?.trim()
 
@@ -108,8 +111,9 @@ function logPipelineAndEnv() {
   console.log(`  • DATABASE_URL: ${hasDb ? 'set' : 'MISSING — Prisma will fail'}`)
   console.log(`  • EXA_API_KEY: ${hasExa ? 'set' : 'MISSING — discover + per-firm research retrieval need this'}`)
   console.log(
-    `  • LLM (OPENROUTER_API_KEY or OLLAMA_BASE_URL + OLLAMA_MODEL): ${hasLlm ? 'set' : 'MISSING — ingest will not create/update investors'}`,
+    `  • Investor LLM: OpenRouter=${hasOr ? 'set' : '—'}  Ollama=${hasOllama ? 'set' : '—'}  (need one; VC_LLM_PROVIDER=ollama forces local)`,
   )
+  console.log(`  • LLM usable for research: ${hasLlm ? 'yes' : 'MISSING — ingest will not create/update investors'}`)
   console.log(`  • Supabase vc_directory: ${hasSb ? 'set' : 'incomplete — directory upserts may fail'}`)
   if (!hasExa || !hasLlm || !hasDb) {
     console.log('[workers] ⚠️  Fix missing env vars above or new firms will not be researched/saved.')

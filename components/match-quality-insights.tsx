@@ -69,7 +69,7 @@ export function MatchQualityInsights({ analyses, founderProfile, matches, verifi
     }
     
     if (latestMatches.length < 5) {
-      suggestions.push('Refine your sector and stage to match more VCs')
+      suggestions.push('Refine your sector and stage to match more investors')
     }
     
     return suggestions.slice(0, 4)

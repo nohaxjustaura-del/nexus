@@ -2,16 +2,14 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getCurrentUser } from '@/lib/auth'
 import { db } from '@/lib/db'
 import {
-  EMBEDDING_DIMENSIONS,
   generatePitchEmbedding,
+  investorsToRankableEmbeddings,
   rankVCsForPitch,
-  generateVCEmbedding,
   type RankedVC,
 } from '@/lib/embeddings'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
-import { parseJSON } from '@/lib/utils'
 import { bypassesAiCredits } from '@/lib/dev-ai-analysis-bypass'
 
 const SMART_MATCH_COST = 50
@@ -22,7 +20,7 @@ export async function POST(req: NextRequest) {
     if (!user?.email) {
       return NextResponse.json(
         { error: 'Unauthorized', message: 'Please sign in to use Smart Match' },
-        { status: 401 }
+        { status: 401 },
       )
     }
 
@@ -53,7 +51,7 @@ export async function POST(req: NextRequest) {
           required: SMART_MATCH_COST,
           available: userCredits.credits ?? 0,
         },
-        { status: 402 }
+        { status: 402 },
       )
     }
 
@@ -63,7 +61,7 @@ export async function POST(req: NextRequest) {
     if (!pitchData) {
       return NextResponse.json(
         { error: 'Missing pitch data', message: 'Please provide pitch data for matching' },
-        { status: 400 }
+        { status: 400 },
       )
     }
 
@@ -86,76 +84,36 @@ export async function POST(req: NextRequest) {
 
     const pitchEmbedding = await generatePitchEmbedding(pitchFeatures)
 
-    const investors = await db.investor.findMany({
-      where: {
-        verified: true,
-        isPublic: true,
-      },
-      select: {
-        id: true,
-        firmName: true,
-        fundType: true,
-        stages: true,
-        sectors: true,
-        geography: true,
-        geoFocus: true,
-        checkSizeMin: true,
-        checkSizeMax: true,
-        leadFollow: true,
-        thesis: true,
-        valueAddTags: true,
-        portfolio: true,
-        notableInvestments: true,
-        embedding: true,
-      },
-    })
-
-    const vcEmbeddings: Array<{
-      id: string
-      firmName: string
-      embedding: number[]
-      metadata: Record<string, unknown>
-    }> = []
-
-    for (const investor of investors) {
-      let embedding: number[]
-
-      if (investor.embedding) {
-        try {
-          const parsed = JSON.parse(investor.embedding as string)
-          if (Array.isArray(parsed) && parsed.length === EMBEDDING_DIMENSIONS) {
-            embedding = parsed
-          } else {
-            embedding = await generateVCEmbeddingForInvestor(investor)
-          }
-        } catch {
-          embedding = await generateVCEmbeddingForInvestor(investor)
-        }
-      } else {
-        embedding = await generateVCEmbeddingForInvestor(investor)
-      }
-
-      vcEmbeddings.push({
-        id: investor.id,
-        firmName: investor.firmName,
-        embedding,
-        metadata: {
-          stages: parseJSON<string[]>(investor.stages, []),
-          sectors: parseJSON<string[]>(investor.sectors, []),
-          geography: parseJSON<string[]>(investor.geography || investor.geoFocus, []),
-          checkSize:
-            investor.checkSizeMin && investor.checkSizeMax
-              ? `$${investor.checkSizeMin}K-$${investor.checkSizeMax}K`
-              : undefined,
-          fundType: investor.fundType,
-        },
-      })
-    }
-
     let rankedVCs: RankedVC[]
     try {
       rankedVCs = await rankVCsForPitch(pitchEmbedding, [], topK, true)
     } catch {
+      const investors = await db.investor.findMany({
+        where: { isPublic: true },
+        select: {
+          id: true,
+          firmName: true,
+          fundType: true,
+          stages: true,
+          sectors: true,
+          geography: true,
+          geoFocus: true,
+          checkSizeMin: true,
+          checkSizeMax: true,
+          embedding: true,
+        },
+      })
+      const vcEmbeddings = investorsToRankableEmbeddings(investors, pitchEmbedding.length)
+      if (vcEmbeddings.length === 0) {
+        return NextResponse.json(
+          {
+            error: 'Smart Match unavailable',
+            message:
+              'FAISS vector search failed and no stored VC embeddings match the current model. Check FAISS_SERVICE_URL or run npm run generate-vc-embeddings.',
+          },
+          { status: 503 },
+        )
+      }
       rankedVCs = await rankVCsForPitch(pitchEmbedding, vcEmbeddings, topK, false)
     }
 
@@ -182,44 +140,7 @@ export async function POST(req: NextRequest) {
         message: error.message || 'An unexpected error occurred',
         details: process.env.NODE_ENV === 'development' ? error.stack : undefined,
       },
-      { status: 500 }
+      { status: 500 },
     )
   }
-}
-
-async function generateVCEmbeddingForInvestor(investor: {
-  firmName: string
-  fundType: string
-  stages: string
-  sectors: string
-  geography: string
-  geoFocus: string
-  checkSizeMin: number
-  checkSizeMax: number
-  leadFollow: string
-  thesis: string | null
-  valueAddTags: string
-  portfolio: string | null
-  notableInvestments: string | null
-}): Promise<number[]> {
-  const vcProfile = {
-    firmName: investor.firmName,
-    fundType: investor.fundType,
-    stages: parseJSON<string[]>(investor.stages, []),
-    sectors: parseJSON<string[]>(investor.sectors, []),
-    geography: parseJSON<string[]>(investor.geography || investor.geoFocus, []),
-    checkSizeMin: investor.checkSizeMin,
-    checkSizeMax: investor.checkSizeMax,
-    leadFollow: investor.leadFollow,
-    thesis: investor.thesis ?? undefined,
-    valueAddTags: parseJSON<string[]>(investor.valueAddTags, []),
-    portfolio: parseJSON<unknown[]>(investor.portfolio ?? '[]', [])
-      .map((p: unknown) =>
-        typeof p === 'string' ? p : (p as { name?: string }).name || (p as { company?: string }).company
-      )
-      .filter((s): s is string => typeof s === 'string' && s.length > 0),
-    notableInvestments: parseJSON<string[]>(investor.notableInvestments ?? '[]', []),
-  }
-
-  return generateVCEmbedding(vcProfile)
 }

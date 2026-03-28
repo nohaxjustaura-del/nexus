@@ -620,6 +620,19 @@ Be specific and actionable.`
         logger.error('[ANALYZE-PITCH-IDEA] Scoring Pipeline failed (non-critical):', scoringError?.message)
       }
 
+      if (scoringResult) {
+        Object.assign(analysis, {
+          rubricAnalysis: rubricAnalysis ?? null,
+          finalScore: scoringResult.finalScore,
+          overallScore: scoringResult.finalScore,
+          scoreBreakdown: scoringResult.scoreBreakdown,
+          categoryScores: scoringResult.categoryScores,
+          pipelineVersion: scoringResult.pipelineVersion,
+        })
+      } else if (rubricAnalysis) {
+        analysis.rubricAnalysis = rubricAnalysis
+      }
+
       // Save pitch idea analysis to database for training data
       let pitchIdeaRecord: any = null
       try {

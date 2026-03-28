@@ -74,6 +74,7 @@ async function main() {
       stages: true,
       sectors: true,
       geography: true,
+      geoFocus: true,
       fundType: true,
       portfolio: true,
       websiteUrl: true,
@@ -146,7 +147,7 @@ async function main() {
       console.error('\n--exa requires EXA_API_KEY')
       process.exitCode = 1
     } else if (!hasVcLlmConfigured()) {
-      console.error('\n--exa requires OLLAMA_BASE_URL+OLLAMA_MODEL or OPENROUTER_API_KEY')
+      console.error('\n--exa requires OPENROUTER_API_KEY')
       process.exitCode = 1
     } else {
       let candidates = sorted

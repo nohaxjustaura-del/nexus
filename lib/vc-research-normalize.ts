@@ -85,6 +85,13 @@ export function normalizeResearchForDb(
   const portfolio = coerceStringArray(r.portfolio as unknown) ?? r.portfolio
   const valueAddTags = coerceStringArray(r.valueAddTags as unknown) ?? r.valueAddTags
 
+  const fundSize =
+    typeof r.fundSize === 'string' && r.fundSize.trim() ? r.fundSize.trim().slice(0, 500) : undefined
+  const decisionSpeed =
+    typeof r.decisionSpeed === 'string' && r.decisionSpeed.trim()
+      ? r.decisionSpeed.trim().slice(0, 500)
+      : undefined
+
   return {
     firmName: r.firmName,
     verified: r.verified ?? true,
@@ -108,6 +115,8 @@ export function normalizeResearchForDb(
     leadFollow: r.leadFollow,
     portfolio,
     valueAddTags,
+    fundSize,
+    decisionSpeed,
     websiteUrl: coerceUrl(r.websiteUrl as unknown),
     linkedinUrl: coerceUrl(r.linkedinUrl as unknown),
     applicationUrl: coerceUrl(r.applicationUrl as unknown),

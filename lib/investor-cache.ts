@@ -33,7 +33,6 @@ export async function getCachedInvestors(): Promise<Investor[]> {
   const investors = await db.investor.findMany({
     where: {
       isPublic: true,
-      discoverable: true,
     },
     // 🚀 OPTIMIZED: Select only needed fields to reduce memory
     select: {

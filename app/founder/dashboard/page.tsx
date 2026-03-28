@@ -135,7 +135,7 @@ export default function FounderDashboard() {
           <div className="mb-6 flex flex-col gap-3 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-2 text-sm text-amber-100">
               <Shield className="h-4 w-4 shrink-0 text-amber-400" aria-hidden />
-              <span>Admin mode: open the admin hub for approvals and VC tools.</span>
+              <span>Admin mode: open the admin hub for approvals and investor tools.</span>
             </div>
             <Link
               href="/admin/dashboard"

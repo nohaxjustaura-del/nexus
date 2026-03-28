@@ -91,7 +91,7 @@ export async function POST(request: Request) {
       case 'exa-enrichment': {
         const take = params?.limit ?? 10
         const investors = await db.investor.findMany({
-          where: { isPublic: true, discoverable: true },
+          where: { isPublic: true },
           select: { id: true, firmName: true, sectors: true },
           take,
           orderBy: { updatedAt: 'desc' },

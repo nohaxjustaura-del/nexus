@@ -1,5 +1,5 @@
 /**
- * Discover VC / investment-firm names: two parallel Exa searches per round (diverse queries),
+ * Discover capital-provider names (VC, angel, accelerator, CVC, FO, grants, etc.): two parallel Exa searches per round,
  * then heuristic fund-name extraction. No Tavily, no OpenRouter.
  */
 
@@ -87,6 +87,12 @@ const BLUEPRINTS = [
   'crossover fund venture {sector} {year} {region}',
   'venture capital {angle} {sector} {region}',
   'emerging manager VC {angle} {year} {sector}',
+  'nonprofit foundation grant startup funding {sector} {year} {region}',
+  'government innovation fund startup {sector} {region} {year}',
+  'venture debt fund {sector} {year} {region} lending',
+  'angel network {sector} {region} {year} investments syndicate',
+  'startup incubator program {sector} {year} {region} equity',
+  'revenue based financing RBF {sector} {year} {region}',
 ]
 
 function shuffleInPlace<T>(arr: T[]): void {
@@ -248,7 +254,7 @@ function nameAllowedByYearWindow(corpus: string, name: string): boolean {
 function extractFundNamesHeuristic(corpus: string): string[] {
   const found = new Set<string>()
   const suffix =
-    /\b([A-Z][A-Za-z0-9&]*(?:\s+[A-Z][A-Za-z0-9&]*){0,6})\s+(Capital|Ventures|Venture Partners|Partners|VC|Fund|Holdings|Investments|Management|Equity|Labs|Advisors|Group|Associates)\b/g
+    /\b([A-Z][A-Za-z0-9&]*(?:\s+[A-Z][A-Za-z0-9&]*){0,6})\s+(Capital|Ventures|Venture Partners|Partners|VC|Fund|Holdings|Investments|Management|Equity|Labs|Advisors|Group|Associates|Accelerator|Foundation|Institute|Syndicate|Network)\b/g
   let m: RegExpExecArray | null
   const s = corpus.replace(/\r/g, '\n')
   while ((m = suffix.exec(s)) !== null) {
@@ -258,7 +264,8 @@ function extractFundNamesHeuristic(corpus: string): string[] {
   for (const line of s.split('\n')) {
     const bullet = sanitizeExtractedName(line.replace(/^\s*[-*•\d.)]+\s*/, '').trim())
     if (bullet.length < 6 || bullet.length > 100) continue
-    if (!/\b(Capital|Ventures|Partners|VC|Fund)\b/i.test(bullet)) continue
+    if (!/\b(Capital|Ventures|Partners|VC|Fund|Accelerator|Foundation|Syndicate|Network|Institute)\b/i.test(bullet))
+      continue
     if (isPlausibleFundName(bullet) && nameAllowedByYearWindow(s, bullet)) found.add(bullet)
   }
   return [...found]
@@ -283,17 +290,23 @@ export function isDiscoverySearchConfigured(): boolean {
 
 export type ExaScrapeResult = { urls: string[]; textBlock: string }
 
+function discoveryExaMaxChars(): number {
+  const raw = parseInt(process.env.VC_DISCOVERY_EXA_MAX_CHARS || '2400', 10)
+  return Math.min(8000, Math.max(800, Number.isFinite(raw) ? raw : 2400))
+}
+
 /** Exa: neural/autocomplete search + text snippets (scrape). */
 export async function exaScrapeQuery(query: string, numResults: number): Promise<ExaScrapeResult> {
   const key = process.env.EXA_API_KEY?.trim()
   if (!key) return { urls: [], textBlock: '' }
+  const maxC = discoveryExaMaxChars()
   try {
     const exa = new Exa(key)
     const res = await exa.search(query, {
       type: 'auto',
       numResults,
       startPublishedDate: VC_DISCOVERY_CONTENT_SINCE,
-      contents: { text: { maxCharacters: 1800 } },
+      contents: { text: { maxCharacters: maxC } },
     })
     const results = res.results ?? []
     const urls = results.map((r) => r.url).filter((u) => typeof u === 'string' && /^https?:\/\//i.test(u))
@@ -301,7 +314,7 @@ export async function exaScrapeQuery(query: string, numResults: number): Promise
       .map((r, i) => {
         const title = r.title ?? 'Untitled'
         const body = (typeof r.text === 'string' ? r.text : '') || ''
-        return `[exa ${i + 1}: ${title}]\n${r.url}\n${body.slice(0, 1800)}`
+        return `[exa ${i + 1}: ${title}]\n${r.url}\n${body.slice(0, maxC)}`
       })
       .join('\n\n')
     return { urls, textBlock }
@@ -320,6 +333,8 @@ const EXA_SECOND_PASS_SUFFIXES = [
   'VC firm lead investor seed Series A recent funding',
   'emerging manager first fund final close limited partners',
   'growth equity venture deal flow institutional capital',
+  'accelerator cohort angel syndicate family office deployment',
+  'grant program nonprofit foundation startup funding announced',
 ]
 
 function complementaryDiscoveryQuery(primary: string): string {

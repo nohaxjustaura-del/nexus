@@ -382,6 +382,10 @@ export async function POST(request: NextRequest) {
     // 🆕 Save pitch deck analysis to database (like video pitch)
     const analysisData = {
       overallScore: scoringResult?.finalScore ?? 0,
+      finalScore: scoringResult?.finalScore ?? 0,
+      rubricAnalysis: scoringResult?.rubricCompatible ?? null,
+      scoreBreakdown: scoringResult?.scoreBreakdown ?? null,
+      categoryScores: scoringResult?.categoryScores ?? null,
       strengths: features.strengths,
       weaknesses: features.weaknesses,
       improvements: features.improvements,

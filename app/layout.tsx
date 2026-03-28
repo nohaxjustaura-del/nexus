@@ -13,6 +13,7 @@ import { getSiteUrl } from "@/lib/site-url"
 import { BRAND_DEFAULT_TITLE, BRAND_NAME, BRAND_TITLE_TEMPLATE } from "@/lib/brand"
 import { AppToaster } from "@/components/ui/app-toaster"
 import { formatVerifiedInvestorCount, getVerifiedInvestorCount } from "@/lib/investor-public-stats"
+import { generateOrganizationSchema, generateWebsiteSchema } from "@/lib/seo"
 
 const siteUrl = getSiteUrl()
 
@@ -34,8 +35,8 @@ const outfit = Outfit({
 export async function generateMetadata(): Promise<Metadata> {
   const verifiedCount = await getVerifiedInvestorCount()
   const label = formatVerifiedInvestorCount(verifiedCount)
-  const description = `NEXUS produces ranked investor shortlists from your pitch summary, deck, or recording. ${label}+ verified profiles scored on stage, sector, thesis, and fit, with clear rationale.`
-  const ogDescription = `${label}+ verified investors and programs, ranked by stage, sector, thesis, and alignment with how you build.`
+  const description = `NEXUS is a fundraising match engine that produces ranked investor shortlists from your pitch. ${label}+ verified VCs, angels, accelerators, and corporate venture arms scored on stage, sector, thesis, and fit.`
+  const ogDescription = `${label}+ verified investors — VCs, angels, accelerators, corporate venture — ranked by stage, sector, thesis, and alignment with your startup.`
 
   return {
     metadataBase: new URL(siteUrl),
@@ -45,13 +46,16 @@ export async function generateMetadata(): Promise<Metadata> {
     },
     description,
     keywords: [
-      "venture capital",
+      "fundraising match engine",
       "investor matching",
       "founder fundraising",
       "startup funding",
       "pitch deck analysis",
-      "VC shortlist",
+      "VC matching",
       "angel investors",
+      "accelerator matching",
+      "corporate venture",
+      "investor discovery",
     ],
     authors: [{ name: BRAND_NAME, url: siteUrl }],
     creator: BRAND_NAME,
@@ -73,7 +77,7 @@ export async function generateMetadata(): Promise<Metadata> {
       card: "summary_large_image",
       title: BRAND_DEFAULT_TITLE,
       description:
-        "Ranked introductions to verified investors from your pitch materials, aligned on mandate, stage, and sector.",
+        "Ranked investor shortlists from your pitch materials — VCs, angels, accelerators, and corporate venture, matched by stage, sector, and thesis fit.",
     },
     robots: {
       index: true,
@@ -108,6 +112,16 @@ type RootLayoutProps = Readonly<{
 export default function RootLayout({ children }: RootLayoutProps) {
   return (
     <html lang="en" className={cn("dark scroll-smooth", dmSans.variable, outfit.variable)}>
+      <head>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(generateOrganizationSchema()) }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(generateWebsiteSchema()) }}
+        />
+      </head>
       <body className={cn("flex min-h-screen flex-col bg-background font-sans antialiased")} suppressHydrationWarning>
         <SessionKeeper />
         <AuthSessionProvider>
@@ -131,7 +145,7 @@ export default function RootLayout({ children }: RootLayoutProps) {
                 <div className="max-w-sm shrink-0">
                   <NexusWordmark heightClass="h-28 sm:h-32" className="max-w-[40rem] sm:max-w-[52rem]" />
                   <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
-                    Founder–investor matching and pitch tools. Built for clarity, not clutter.
+                    Fundraising match engine: VCs, angels, accelerators, and corporate venture. Built for clarity, not clutter.
                   </p>
                 </div>
 
@@ -145,11 +159,11 @@ export default function RootLayout({ children }: RootLayoutProps) {
                       <Link href="/about" className="text-muted-foreground transition-colors hover:text-foreground">
                         About
                       </Link>
+                      <Link href="/company" className="text-muted-foreground transition-colors hover:text-foreground">
+                        Company
+                      </Link>
                       <Link href="/contact" className="text-muted-foreground transition-colors hover:text-foreground">
                         Contact
-                      </Link>
-                      <Link href="/blog" className="text-muted-foreground transition-colors hover:text-foreground">
-                        Blog
                       </Link>
                     </nav>
                   </div>

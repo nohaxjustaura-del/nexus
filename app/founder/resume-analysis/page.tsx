@@ -39,7 +39,7 @@ export default function ResumeAnalysisDisabledPage() {
           <div className="p-4 rounded-lg bg-orange-50 border border-orange-200">
             <p className="text-muted-foreground">
               We've found that resumes don't effectively capture what makes founders and their startups compelling to investors. 
-              Instead, we now offer two better ways to get feedback and VC matches:
+              Instead, we now offer two better ways to get feedback and investor matches:
             </p>
           </div>
 

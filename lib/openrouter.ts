@@ -2,52 +2,21 @@ import OpenAI from "openai"
 import { getSiteUrl } from '@/lib/site-url'
 
 /**
- * Routing overview (by **call site**, not by “first N requests”):
+ * LLM routing:
  *
- * - **VC pipeline** (`useVcPipeline: true`): **every** tagged call uses `getOllamaClient() ?? getOpenRouterClient()`.
- *   - If `OLLAMA_BASE_URL` is set → **all** VC ingest / Exa JSON / match narratives / etc. go to **Ollama** (even with OpenRouter configured).
- *   - If Ollama is **not** configured but `OPENROUTER_API_KEY` is set → those calls use **OpenRouter only** (same code path, no Ollama).
- * - **Pitch scoring** (`forceOpenRouter: true`): uses **OpenRouter** when the key is set (~6 LLM passes: fact, criterion, adversarial×2, tier, category copy).
- *   - If `OPENROUTER_API_KEY` is **missing**, `forceOpenRouter` is a no-op and the client falls through to `getLlmClient()` (often Ollama-only dev setups).
- * - **Other analysis** (universal rubric, pitch idea, `openrouterGenerateJson` with neither flag): **`getLlmClient()`** → OpenRouter first when configured, else Ollama.
- *
- * `LLM_PREFER_OLLAMA=1` makes `getLlmClient()` prefer Ollama when both providers exist; it does not change VC pipeline (Ollama already wins there when configured).
+ * - **VC / investor research JSON** (`useVcPipeline: true` in `openrouterGenerateJson`): OpenRouter **or**
+ *   local **Ollama** (OpenAI-compatible `/v1/chat/completions`). Pick with `VC_LLM_PROVIDER` or auto:
+ *   OpenRouter if `OPENROUTER_API_KEY` is set, else Ollama when `OLLAMA_BASE_URL` + `OLLAMA_MODEL` (or `OLLAMA_VC_MODEL`) are set.
+ * - **Pitch scoring** (`forceOpenRouter: true`): OpenRouter only.
+ * - **Other analysis**: OpenRouter when the key is set.
  */
-function llmPreferOllama(): boolean {
-  const v = process.env.LLM_PREFER_OLLAMA?.trim().toLowerCase()
-  return v === "1" || v === "true" || v === "yes"
-}
 
 /**
- * Local Ollama (OpenAI-compatible API).
- * Example: OLLAMA_BASE_URL=http://127.0.0.1:11434/v1  and  OLLAMA_MODEL=llama3.2
- */
-export function getOllamaClient(): OpenAI | null {
-  const raw = process.env.OLLAMA_BASE_URL?.trim()
-  if (!raw) return null
-  try {
-    let base = raw.replace(/\/$/, '')
-    if (!/\/v1$/i.test(base)) {
-      base = `${base}/v1`
-    }
-    return new OpenAI({
-      baseURL: base,
-      apiKey: process.env.OLLAMA_API_KEY?.trim() || 'ollama',
-    })
-  } catch (error) {
-    console.error('[Ollama] Failed to initialize client:', error)
-    return null
-  }
-}
-
-/**
- * Get OpenRouter client - a unified API for accessing multiple LLM providers
- * Uses OpenAI-compatible SDK with OpenRouter base URL
+ * Get OpenRouter client - a unified API for accessing multiple LLM providers.
+ * Uses OpenAI-compatible SDK with OpenRouter base URL.
  */
 export function getOpenRouterClient(): OpenAI | null {
   try {
-    // ONLY use OpenRouter if OPENROUTER_API_KEY is explicitly set
-    // Don't fall back to OPENAI_API_KEY here - that's handled in getAIClient
     const apiKey = process.env.OPENROUTER_API_KEY?.trim()
     if (!apiKey) {
       return null
@@ -67,124 +36,118 @@ export function getOpenRouterClient(): OpenAI | null {
   }
 }
 
-/**
- * Preferred LLM for **non–VC-pipeline** calls: OpenRouter when `OPENROUTER_API_KEY` is set, else Ollama.
- * Override with `LLM_PREFER_OLLAMA=1` to use local Ollama first when both are configured.
- */
+/** Primary LLM client. All paths use OpenRouter. */
 export function getLlmClient(): OpenAI | null {
-  const ollama = getOllamaClient()
-  const openRouter = getOpenRouterClient()
-  if (llmPreferOllama() && ollama) return ollama
-  if (openRouter) return openRouter
-  return ollama
-}
-
-/** True when requests are routed to the local Ollama client (not OpenRouter). */
-export function isUsingOllama(): boolean {
-  const ollama = getOllamaClient()
-  const openRouter = getOpenRouterClient()
-  if (llmPreferOllama()) return !!ollama
-  return !openRouter && !!ollama
+  return getOpenRouterClient()
 }
 
 /**
- * Ollama-only: `keep_alive` on the chat payload so the model stays loaded between requests.
- * Default `-1` = keep in memory until the Ollama process stops (Ollama API).
- * Set `OLLAMA_KEEP_ALIVE=0` or `false` to omit (Ollama default unload).
- * Or a duration string: `5m`, `1h`.
- */
-export function getOllamaKeepAliveParams(): { keep_alive?: string | number } {
-  if (!process.env.OLLAMA_BASE_URL?.trim()) return {}
-  const raw = process.env.OLLAMA_KEEP_ALIVE?.trim()
-  if (raw === '0' || raw === 'false') return {}
-  let keepAlive: string | number = -1
-  if (raw && raw !== '-1') {
-    if (/^-?\d+$/.test(raw)) keepAlive = parseInt(raw, 10)
-    else keepAlive = raw
-  }
-  return { keep_alive: keepAlive }
-}
-
-/**
- * Get the model name for OpenRouter
- * Prioritizes cost-effective models (gpt-4o-mini, Gemini free tier when keys are set)
+ * Get the model name for OpenRouter.
+ * Prioritizes cost-effective models.
  */
 export function getModelName(model: string = 'gpt-4o'): string {
-  if (isUsingOllama()) {
-    return process.env.OLLAMA_MODEL?.trim() || 'llama3.2'
-  }
-  // If using OpenRouter, prioritize FREE models
   if (process.env.OPENROUTER_API_KEY) {
     if (model === 'gpt-4o') {
       return 'openai/gpt-4o-mini'
     }
-    
-    // Prioritize Gemini free tier if GEMINI_API_KEY is set
+
     if (process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY) {
       if (model === 'gemini' || model.includes('gemini')) {
         return 'google/gemini-2.0-flash-thinking-exp:free'
       }
     }
-    
+
     if (!model.includes('/')) {
       return 'openai/gpt-4o-mini'
     }
     return model
   }
-  
-  // If using OpenAI directly, return model as-is
+
   return model
 }
 
+/** True if OpenRouter API key is present (other features: scoring, analysis, etc.). */
+export function hasOpenRouterKey(): boolean {
+  return !!process.env.OPENROUTER_API_KEY?.trim()
+}
+
+/** Ollama configured for VC JSON extraction (research workers, validation, etc.). */
+export function isOllamaVcConfigured(): boolean {
+  const base = process.env.OLLAMA_BASE_URL?.trim()
+  const model = (process.env.OLLAMA_VC_MODEL || process.env.OLLAMA_MODEL)?.trim()
+  return !!base && !!model
+}
+
 /**
- * True if VC-style JSON extraction can run (OpenRouter credits or local Ollama).
+ * VC pipeline can run with OpenRouter **or** Ollama. Use for research workers / investor extraction.
  */
 export function hasVcLlmConfigured(): boolean {
-  return !!(process.env.OLLAMA_BASE_URL?.trim() || process.env.OPENROUTER_API_KEY?.trim())
+  return hasOpenRouterKey() || isOllamaVcConfigured()
 }
 
 /**
- * Check if OpenRouter is configured
- * @deprecated Prefer hasVcLlmConfigured — name kept for compatibility; true for Ollama OR OpenRouter.
+ * Which backend handles `useVcPipeline` JSON calls.
+ * - `VC_LLM_PROVIDER=openrouter` | `ollama` forces that backend (must be configured).
+ * - Otherwise: OpenRouter if key set, else Ollama.
  */
-export function hasOpenRouterKey(): boolean {
-  return hasVcLlmConfigured()
+export function getVcLlmBackend(): 'openrouter' | 'ollama' {
+  const p = process.env.VC_LLM_PROVIDER?.trim().toLowerCase()
+  if (p === 'openrouter') return 'openrouter'
+  if (p === 'ollama') return 'ollama'
+  if (hasOpenRouterKey()) return 'openrouter'
+  return 'ollama'
 }
 
-/** Model for VC JSON extraction (OpenRouter id e.g. meta-llama/llama-3.3-70b-instruct, or Ollama tag e.g. llama3.2). */
+/** Root like `http://127.0.0.1:11434` — accepts env with or without trailing `/v1`. */
+export function normalizeOllamaOpenAiBaseUrl(raw: string): string {
+  let b = raw.trim().replace(/\/+$/, '')
+  if (b.endsWith('/v1')) return b
+  return `${b}/v1`
+}
+
+/** OpenAI SDK client pointed at Ollama (`OLLAMA_BASE_URL` may include or omit `/v1`). */
+export function getOllamaOpenAiClient(): OpenAI | null {
+  const raw = process.env.OLLAMA_BASE_URL?.trim()
+  if (!raw) return null
+  return new OpenAI({
+    apiKey: 'ollama',
+    baseURL: normalizeOllamaOpenAiBaseUrl(raw),
+  })
+}
+
+/** Model for VC extraction on Ollama; prefer a strong instruct model for JSON fidelity. */
+export function getOllamaVcModel(): string {
+  return (
+    process.env.OLLAMA_VC_MODEL?.trim() ||
+    process.env.OLLAMA_MODEL?.trim() ||
+    'qwen2.5:14b-instruct'
+  )
+}
+
+/** Model for VC JSON extraction via OpenRouter. */
 export function getVcExtractionModel(): string {
-  if (isUsingOllama()) {
-    return process.env.OLLAMA_MODEL?.trim() || 'llama3.2'
-  }
   const m = process.env.OPENROUTER_VC_EXTRACTION_MODEL?.trim()
   if (m) return m
   return 'meta-llama/llama-3.3-70b-instruct'
 }
 
-/**
- * VC ingest / Exa extraction / match narratives: **Ollama first** if `OLLAMA_BASE_URL` is set, else OpenRouter only.
- */
+/** VC pipeline LLM client (OpenRouter or Ollama). */
 export function getVcPipelineLlmClient(): OpenAI | null {
-  return getOllamaClient() ?? getOpenRouterClient()
+  if (getVcLlmBackend() === 'ollama') return getOllamaOpenAiClient()
+  return getOpenRouterClient()
 }
 
-export function isVcPipelineUsingOllama(): boolean {
-  return !!getOllamaClient()
-}
-
-/** Model id for VC pipeline calls: local tag when Ollama is available, else OpenRouter VC model. */
+/** Model id for VC pipeline calls (OpenRouter slug or Ollama tag). */
 export function getVcPipelineModel(): string {
-  if (getOllamaClient()) {
-    return process.env.OLLAMA_MODEL?.trim() || 'llama3.2'
-  }
+  if (getVcLlmBackend() === 'ollama') return getOllamaVcModel()
   const m = process.env.OPENROUTER_VC_EXTRACTION_MODEL?.trim()
   if (m) return m
   return 'meta-llama/llama-3.3-70b-instruct'
 }
 
 /**
- * When `OPENROUTER_API_KEY` is set, scoring passes use this model (ignores `LLM_PREFER_OLLAMA`).
- * Falls back to `OPENROUTER_VC_EXTRACTION_MODEL`, then DeepSeek Chat on OpenRouter.
+ * Model for scoring passes. Falls back through
+ * OPENROUTER_SCORING_MODEL -> OPENROUTER_VC_EXTRACTION_MODEL -> deepseek/deepseek-chat.
  */
 export function getScoringOpenRouterModel(): string {
   const scoring = process.env.OPENROUTER_SCORING_MODEL?.trim()
@@ -194,31 +157,19 @@ export function getScoringOpenRouterModel(): string {
   return 'deepseek/deepseek-chat'
 }
 
-/**
- * Optional override id for match narratives when routing via OpenRouter only (no Ollama).
- * Live narratives use `useVcPipeline: true` → {@link getVcPipelineModel} unless this env is read by a future callsite.
- */
+/** Model for match narrative generation. */
 export function getMatchingNarrativeOpenRouterModel(): string {
   const m = process.env.OPENROUTER_MATCHING_MODEL?.trim()
   if (m) return m
   return getScoringOpenRouterModel()
 }
 
-/**
- * LLM client for multi-pass pitch scoring: OpenRouter whenever the key is set (even if `LLM_PREFER_OLLAMA=1`),
- * otherwise the same preference as `getLlmClient()`.
- */
+/** LLM client for multi-pass pitch scoring. */
 export function getScoringLlmClient(): OpenAI | null {
-  const or = getOpenRouterClient()
-  if (or) return or
-  return getLlmClient()
+  return getOpenRouterClient()
 }
 
-/**
- * Model id for tier classification and other scoring-adjacent OpenRouter calls.
- * When OpenRouter is configured, always uses {@link getScoringOpenRouterModel} (default DeepSeek).
- * Otherwise uses `getModelName()` (Ollama tag or direct OpenAI).
- */
+/** Model id for tier classification and scoring-adjacent calls. */
 export function getModelNameForScoring(model: string = 'gpt-4o'): string {
   if (getOpenRouterClient()) {
     return getScoringOpenRouterModel()
@@ -226,51 +177,49 @@ export function getModelNameForScoring(model: string = 'gpt-4o'): string {
   return getModelName(model)
 }
 
-/**
- * Cap completion tokens. OpenRouter: default 2048 to reduce 402 risk.
- * Ollama (local): default 8192 — 2048 often truncates long JSON and breaks parsing mid-string.
- */
+/** Cap completion tokens. Default 4096 for OpenRouter. */
 export function getVcExtractionMaxTokens(): number {
   const raw = process.env.VC_EXTRACTION_MAX_TOKENS?.trim()
   const n = raw ? parseInt(raw, 10) : NaN
   if (Number.isFinite(n) && n >= 256 && n <= 16000) return n
-  if (isUsingOllama()) return 8192
-  return 2048
+  return 4096
 }
 
 const VC_EXTRACTION_FALLBACK_MODEL = 'openai/gpt-4o-mini'
 
-/**
- * Generate text using OpenRouter
- */
+function resolveMaxTokens(override?: number): number {
+  if (override != null) return override
+  const raw = process.env.VC_EXTRACTION_MAX_TOKENS?.trim()
+  const n = raw ? parseInt(raw, 10) : NaN
+  if (Number.isFinite(n) && n >= 256 && n <= 16000) return n
+  return 4096
+}
+
+/** Generate text using OpenRouter. */
 export async function openrouterGenerateText(
   prompt: string,
   options: {
     temperature?: number
     maxTokens?: number
     model?: string
-    /** VC / match copy paths: use Ollama when configured, even if OpenRouter is set. */
     useVcPipeline?: boolean
   } = {}
 ): Promise<string> {
-  const useVc = options.useVcPipeline === true
-  const client = useVc ? getVcPipelineLlmClient() : getLlmClient()
+  const client = getOpenRouterClient()
   if (!client) {
-    throw new Error('No LLM configured. Set OLLAMA_BASE_URL (local Ollama) or OPENROUTER_API_KEY.')
+    throw new Error('No LLM configured. Set OPENROUTER_API_KEY.')
   }
 
+  const useVc = options.useVcPipeline === true
   const model = options.model ?? (useVc ? getVcPipelineModel() : getVcExtractionModel())
-  const onOllama = useVc ? isVcPipelineUsingOllama() : isUsingOllama()
 
-  const tag = onOllama ? 'OLLAMA' : 'OPENROUTER'
-  console.log(`[${tag}] 🤖 Using model: ${model}`)
+  console.log(`[OPENROUTER] Using model: ${model}`)
 
   const response = await client.chat.completions.create({
     model,
     messages: [{ role: 'user', content: prompt }],
     temperature: options.temperature ?? 0.7,
-    max_tokens: resolveMaxTokensForRoute(onOllama, options.maxTokens),
-    ...(onOllama ? getOllamaKeepAliveParams() : {}),
+    max_tokens: resolveMaxTokens(options.maxTokens),
   } as any)
 
   return response.choices[0]?.message?.content || ''
@@ -284,7 +233,6 @@ function parseJsonFromModelContent(content: string, _model: string): unknown {
   let s = content.trim()
   if (s.charCodeAt(0) === 0xfeff) s = s.slice(1)
 
-  // Longest ``` ... ``` block (non-greedy inner would truncate nested JSON — use full fence match)
   const fenceOpen = s.match(/```(?:json)?\s*/)
   if (fenceOpen && fenceOpen.index !== undefined) {
     const start = fenceOpen.index + fenceOpen[0].length
@@ -307,12 +255,63 @@ function parseJsonFromModelContent(content: string, _model: string): unknown {
   return JSON.parse(s)
 }
 
-function resolveMaxTokensForRoute(effectiveOllama: boolean, override?: number): number {
-  if (override != null) return override
-  const raw = process.env.VC_EXTRACTION_MAX_TOKENS?.trim()
-  const n = raw ? parseInt(raw, 10) : NaN
-  if (Number.isFinite(n) && n >= 256 && n <= 16000) return n
-  return effectiveOllama ? 8192 : 2048
+const JSON_SYSTEM_SUFFIX =
+  '\n\nReturn ONLY valid JSON. No markdown, no code blocks, no explanations.' +
+  '\nInside JSON string values, never use unescaped ASCII double quotes (").' +
+  ' For quoted phrases use curly quotes (“like this”) or single quotes, or escape as \\".'
+
+function resolveJsonLlm(options: {
+  forceOpenRouter?: boolean
+  useVcPipeline?: boolean
+  model?: string
+}): { client: OpenAI; model: string; backend: 'openrouter' | 'ollama' } {
+  const isScoringPass = options.forceOpenRouter === true
+  const useVc = !isScoringPass && options.useVcPipeline === true
+
+  if (isScoringPass) {
+    const client = getOpenRouterClient()
+    if (!client) throw new Error('OpenRouter required for scoring. Set OPENROUTER_API_KEY.')
+    return {
+      client,
+      model: options.model ?? getScoringOpenRouterModel(),
+      backend: 'openrouter',
+    }
+  }
+
+  if (!useVc) {
+    const client = getOpenRouterClient()
+    if (!client) throw new Error('No LLM configured. Set OPENROUTER_API_KEY.')
+    return {
+      client,
+      model: options.model ?? getVcExtractionModel(),
+      backend: 'openrouter',
+    }
+  }
+
+  const forced = process.env.VC_LLM_PROVIDER?.trim().toLowerCase()
+  const wantOpenRouter =
+    forced === 'openrouter' || (forced !== 'ollama' && hasOpenRouterKey())
+
+  if (wantOpenRouter) {
+    const client = getOpenRouterClient()
+    if (client) {
+      const m =
+        options.model ??
+        (process.env.OPENROUTER_VC_EXTRACTION_MODEL?.trim() || 'meta-llama/llama-3.3-70b-instruct')
+      return { client, model: m, backend: 'openrouter' }
+    }
+    if (forced === 'openrouter') {
+      throw new Error('VC_LLM_PROVIDER=openrouter but OPENROUTER_API_KEY is missing.')
+    }
+  }
+
+  const oc = getOllamaOpenAiClient()
+  if (!oc || !isOllamaVcConfigured()) {
+    throw new Error(
+      'No LLM for investor research. Set OPENROUTER_API_KEY or OLLAMA_BASE_URL + OLLAMA_MODEL (or OLLAMA_VC_MODEL). For local-only: VC_LLM_PROVIDER=ollama.',
+    )
+  }
+  return { client: oc, model: options.model ?? getOllamaVcModel(), backend: 'ollama' }
 }
 
 export async function openrouterGenerateJson<T = any>(options: {
@@ -320,135 +319,97 @@ export async function openrouterGenerateJson<T = any>(options: {
   user: string
   temperature?: number
   model?: string
-  /** Override max output tokens (defaults from getVcExtractionMaxTokens()). */
   maxTokens?: number
-  /** If true (default), retry once with a small OpenRouter model when JSON parse fails */
   retryOnParseError?: boolean
-  /**
-   * Scoring pipeline only: use OpenRouter when `OPENROUTER_API_KEY` is set, even if `LLM_PREFER_OLLAMA=1`
-   * (avoids routing scoring to local Ollama / e.g. Qwen).
-   */
   forceOpenRouter?: boolean
-  /**
-   * VC ingest, Exa extraction, DB checks, match narratives: **Ollama first** when `OLLAMA_BASE_URL` is set,
-   * even if OpenRouter is configured. Ignored when `forceOpenRouter` is true.
-   */
   useVcPipeline?: boolean
 }): Promise<T> {
-  const openRouterClient = getOpenRouterClient()
-  /** Scoring passes set this: prefer OpenRouter when configured; else Ollama / getLlmClient() with scoring model ids. */
-  const isScoringPass = options.forceOpenRouter === true
-  const useVc = !isScoringPass && options.useVcPipeline === true
-
-  const client = isScoringPass
-    ? (openRouterClient ?? getScoringLlmClient())
-    : useVc
-      ? getVcPipelineLlmClient()
-      : getLlmClient()
-  if (!client) {
-    throw new Error('No LLM configured. Set OLLAMA_BASE_URL (local Ollama) or OPENROUTER_API_KEY.')
-  }
-
-  const effectiveUsingOllama = isScoringPass
-    ? !openRouterClient && isUsingOllama()
-    : useVc
-      ? isVcPipelineUsingOllama()
-      : isUsingOllama()
-
-  const primaryModel =
-    options.model ??
-    (isScoringPass
-      ? openRouterClient
-        ? getScoringOpenRouterModel()
-        : getModelNameForScoring()
-      : useVc
-        ? getVcPipelineModel()
-        : getVcExtractionModel())
+  const { client, model: primaryModel, backend } = resolveJsonLlm(options)
   const retryOnParseError = options.retryOnParseError !== false
-  const logTag = effectiveUsingOllama ? 'OLLAMA' : 'OPENROUTER'
 
-  const run = async (model: string): Promise<T> => {
-    console.log(`[${logTag}] 🤖 Using model: ${model}`)
+  const useOllamaJsonObject =
+    backend === 'ollama' &&
+    process.env.OLLAMA_JSON_OBJECT?.trim() !== '0' &&
+    process.env.OLLAMA_JSON_OBJECT?.toLowerCase() !== 'false'
 
-    const ollamaStrict =
-      effectiveUsingOllama && process.env.OLLAMA_JSON_STRICT !== 'false'
-    const temp =
-      options.temperature ??
-      (ollamaStrict ? 0.15 : 0.7)
+  const run = async (
+    model: string,
+    llmClient: OpenAI,
+    jsonObjectMode: boolean,
+  ): Promise<T> => {
+    const label = backend === 'ollama' ? 'OLLAMA' : 'OPENROUTER'
+    console.log(`[${label}] JSON extract — model: ${model}`)
 
-    let maxTok = resolveMaxTokensForRoute(effectiveUsingOllama, options.maxTokens)
+    const temp = options.temperature ?? 0.7
+    const maxTok = resolveMaxTokens(options.maxTokens)
 
-    for (let attempt = 0; attempt < 3; attempt++) {
-      const baseParams: Record<string, unknown> = {
-        model,
-        messages: [
-          {
-            role: 'system',
-            content:
-              options.system +
-              (ollamaStrict
-                ? '\n\nOutput a single JSON object only. No markdown, no code fences, no text before or after.'
-                : '\n\nReturn ONLY valid JSON. No markdown, no code blocks, no explanations.'),
-          },
-          {
-            role: 'user',
-            content:
-              options.user +
-              (ollamaStrict
-                ? '\n\nReply with one JSON object only.'
-                : '\n\nIMPORTANT: Respond with ONLY the JSON object. No markdown code fences.'),
-          },
-        ],
-        temperature: temp,
-        max_tokens: maxTok,
-      }
-      if (ollamaStrict) {
-        baseParams.response_format = { type: 'json_object' }
-      }
-      if (effectiveUsingOllama) {
-        Object.assign(baseParams, getOllamaKeepAliveParams())
-      }
-
-      const response = await client.chat.completions.create(baseParams as any)
-      const choice = response.choices[0]
-      const content = choice?.message?.content || '{}'
-      const finishReason = choice?.finish_reason as string | undefined
-
-      console.log(`[${logTag}] 📄 Response length: ${content.length}, starts: ${content.substring(0, 100)}`)
-
-      if (finishReason === 'length' && effectiveUsingOllama && attempt < 2) {
-        const next = Math.min(16000, Math.max(maxTok * 2, maxTok + 4096))
-        if (next > maxTok) {
-          console.warn(
-            `[${logTag}] ⚠️ Output truncated (finish_reason=length); retrying with max_tokens=${next}`,
-          )
-          maxTok = next
-          continue
-        }
-      }
-
-      try {
-        return parseJsonFromModelContent(content, model) as T
-      } catch (parseError: any) {
-        console.error(`[${logTag}] ❌ JSON parse error:`, parseError.message)
-        console.error(`[${logTag}] Raw content:`, content.substring(0, 500))
-        throw new Error(`Failed to parse JSON from ${model}: ${parseError.message}`)
-      }
+    const baseParams: Record<string, unknown> = {
+      model,
+      messages: [
+        {
+          role: 'system',
+          content: options.system + JSON_SYSTEM_SUFFIX,
+        },
+        {
+          role: 'user',
+          content:
+            options.user +
+            '\n\nIMPORTANT: Respond with ONLY the JSON object. No markdown code fences.',
+        },
+      ],
+      temperature: temp,
+      max_tokens: maxTok,
+      ...(jsonObjectMode ? { response_format: { type: 'json_object' as const } } : {}),
     }
-    throw new Error(`Unexpected: no JSON result from ${model}`)
+
+    const response = await llmClient.chat.completions.create(baseParams as any)
+    const choice = response.choices[0]
+    const content = choice?.message?.content || '{}'
+
+    console.log(`[${label}] Response length: ${content.length}, starts: ${content.substring(0, 100)}`)
+
+    try {
+      return parseJsonFromModelContent(content, model) as T
+    } catch (parseError: any) {
+      console.error(`[${label}] JSON parse error:`, parseError.message)
+      console.error(`[${label}] Raw content:`, content.substring(0, 500))
+      throw new Error(`Failed to parse JSON from ${model}: ${parseError.message}`)
+    }
   }
+
+  const openRouterJsonObject =
+    backend === 'openrouter' &&
+    process.env.OPENROUTER_JSON_OBJECT?.trim() !== '0' &&
+    process.env.OPENROUTER_JSON_OBJECT?.toLowerCase() !== 'false'
 
   try {
-    return await run(primaryModel)
+    return await run(
+      primaryModel,
+      client,
+      backend === 'ollama' ? useOllamaJsonObject : openRouterJsonObject,
+    )
   } catch (e: any) {
     const msg = String(e?.message || e)
+
+    if (backend === 'ollama' && useOllamaJsonObject) {
+      const canRetryLoose =
+        retryOnParseError &&
+        (/parse JSON|JSON|response_format|json_object/i.test(msg) || e?.status === 400)
+      if (canRetryLoose) {
+        console.warn('[OLLAMA] Retrying without JSON object mode. Set OLLAMA_JSON_OBJECT=0 to skip json_object.')
+        return await run(primaryModel, client, false)
+      }
+    }
+
+    if (backend !== 'openrouter') {
+      throw e
+    }
+
     const modelMissing =
       e?.status === 404 ||
       e?.error?.type === "not_found_error" ||
       /model ['"][^'"]+['"] not found|not_found_error/i.test(msg)
     const canFallback404 =
-      !effectiveUsingOllama &&
-      getOpenRouterClient() &&
       retryOnParseError &&
       primaryModel !== VC_EXTRACTION_FALLBACK_MODEL &&
       modelMissing
@@ -457,18 +418,15 @@ export async function openrouterGenerateJson<T = any>(options: {
         `[OPENROUTER] Model unavailable (${primaryModel}); retrying with ${VC_EXTRACTION_FALLBACK_MODEL}. ` +
           `Set OPENROUTER_VC_EXTRACTION_MODEL to a valid id from openrouter.ai/models.`,
       )
-      return await run(VC_EXTRACTION_FALLBACK_MODEL)
+      return await run(VC_EXTRACTION_FALLBACK_MODEL, client, openRouterJsonObject)
     }
-    const canFallbackOpenRouter =
-      !effectiveUsingOllama &&
-      getOpenRouterClient() &&
+    const canFallbackParse =
       retryOnParseError &&
       primaryModel !== VC_EXTRACTION_FALLBACK_MODEL
-    if (canFallbackOpenRouter && /parse JSON|JSON/i.test(msg)) {
+    if (canFallbackParse && /parse JSON|JSON/i.test(msg)) {
       console.warn(`[OPENROUTER] Retrying with fallback model: ${VC_EXTRACTION_FALLBACK_MODEL}`)
-      return await run(VC_EXTRACTION_FALLBACK_MODEL)
+      return await run(VC_EXTRACTION_FALLBACK_MODEL, client, openRouterJsonObject)
     }
     throw e
   }
 }
-

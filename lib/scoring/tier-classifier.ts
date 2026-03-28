@@ -22,7 +22,7 @@
  *   EARLY       (20-44):  floor=20, range=24
  *   PASS        (0-19):   floor=0,  range=19
  *
- * Model: OpenRouter — OPENROUTER_SCORING_MODEL (default deepseek/deepseek-chat); Ollama — OLLAMA_MODEL. Temperature 0.2
+ * Model: OpenRouter — OPENROUTER_SCORING_MODEL (default deepseek/deepseek-chat). Temperature 0.2
  *
  * The tier classifier is INDEPENDENT — it does not receive scores from
  * other pipeline passes. It reasons only from verified facts, the pitch
@@ -32,10 +32,8 @@
 import { getAIClient } from "../ai"
 import {
   getModelNameForScoring,
-  getOllamaKeepAliveParams,
   getOpenRouterClient,
   getScoringLlmClient,
-  isUsingOllama,
 } from "../openrouter"
 import { logger } from "../logger"
 import type { VerifiedFacts, ReferenceAnchor, Tier, TierResult } from "./types"
@@ -318,10 +316,7 @@ export async function classifyTier(
   try {
     const client = getScoringLlmClient() ?? getAIClient()
     const model = getModelNameForScoring("gpt-4o")
-    const scoringUsesOllama = !getOpenRouterClient() && isUsingOllama()
-    const useJsonObject =
-      (scoringUsesOllama && process.env.OLLAMA_JSON_STRICT !== "false") ||
-      !!getOpenRouterClient()
+    const useJsonObject = !!getOpenRouterClient()
 
     const completion = await client.chat.completions.create({
       model,
@@ -332,7 +327,6 @@ export async function classifyTier(
       temperature: 0.2,
       max_tokens: 1000,
       ...(useJsonObject ? { response_format: { type: "json_object" } } : {}),
-      ...(scoringUsesOllama ? getOllamaKeepAliveParams() : {}),
     } as any)
 
     const content = completion.choices[0]?.message?.content ?? "{}"

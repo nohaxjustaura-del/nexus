@@ -423,7 +423,7 @@ export default function PitchDeckAnalysisPage() {
                   </li>
                   <li className="flex items-start gap-2">
                     <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-                    <span>Top VC matches based on your pitch content</span>
+                    <span>Top investor matches based on your pitch content</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
@@ -614,7 +614,7 @@ export default function PitchDeckAnalysisPage() {
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div>
-                    <CardTitle>Top VC Matches</CardTitle>
+                    <CardTitle>Top investor matches</CardTitle>
                     <CardDescription>Based on your pitch deck content and investment thesis</CardDescription>
                   </div>
                   <Button 
@@ -622,7 +622,7 @@ export default function PitchDeckAnalysisPage() {
                     size="sm"
                     onClick={() => router.push('/founder/discover')}
                   >
-                    View All VCs
+                    View all investors
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </Button>
                 </div>
@@ -752,7 +752,7 @@ export default function PitchDeckAnalysisPage() {
                 onClick={() => router.push('/founder/discover')}
                 className="flex-1"
               >
-                Discover More VCs
+                Discover more investors
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             </div>

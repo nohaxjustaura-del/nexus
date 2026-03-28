@@ -8,7 +8,7 @@
 import { db } from '../lib/db'
 import { syncInvestorEmbeddingById } from '../lib/vc-embedding-sync'
 import { isLikelyRealFirmName } from '../lib/firm-name-quality'
-import { openrouterGenerateJson, hasOpenRouterKey } from '../lib/openrouter'
+import { openrouterGenerateJson, hasVcLlmConfigured } from '../lib/openrouter'
 import { normalizeResearchForDb } from '../lib/vc-research-normalize'
 import { gatherVCFirmRetrievalContext, getVcResearchPipelineEnvStatus } from '../lib/vc-research-retrieval'
 import {
@@ -39,6 +39,10 @@ export interface VCResearchResult {
   leadFollow?: string
   portfolio?: string[]
   valueAddTags?: string[]
+  /** Human-readable AUM / fund size / program economics when stated (e.g. "$120M Fund III") */
+  fundSize?: string
+  /** Typical decision or application cycle when stated (e.g. "2–4 weeks", "batch deadline Jan") */
+  decisionSpeed?: string
   websiteUrl?: string
   linkedinUrl?: string
   applicationUrl?: string
@@ -52,29 +56,22 @@ export type ResearchBatchMode = 'full' | 'thesis' | 'profile'
 /** Shared instructions so thesis ≠ deal PR pasted into the DB. */
 const THESIS_MANDATE_RULES = `
 
-Investment THESIS = the fund's ongoing mandate: stages, sectors, geographies, themes, and how they invest—not a single transaction.
+Investment THESIS = the capital provider's ongoing mandate: stages, sectors, geographies, themes, ticket shape, and how they deploy capital—not a single transaction.
 
 INVALID as thesis (use null instead):
 - Any line that is mainly one deal: "acquired a stake", "minority stake in [Company]", "invested in [Company]", "led the Series … round", "announced an investment", "closed a $… round"
 - Press-release style with "a leading [clinic/company/provider]…" tied to one name
 - Headlines or quotes about one portfolio company
 
-VALID: 2–5 sentences summarizing durable focus (e.g. early-stage B2B in Europe, climate hardware, etc.). If the text only supports deal news and not mandate, return null.`
+VALID: 3–6 sentences when the sources support it (otherwise shorter), summarizing durable focus for VCs, accelerators, angels, CVC, family offices, grants, or syndicates. Prefer facts tied to recent years when the excerpt mentions them. If the text only supports deal news and not mandate, return null.`
 
 const contextSliceLen = () =>
-  Math.min(28000, Math.max(8000, parseInt(process.env.VC_RESEARCH_CONTEXT_CHARS || '20000', 10) || 20000))
+  Math.min(32000, Math.max(8000, parseInt(process.env.VC_RESEARCH_CONTEXT_CHARS || '24000', 10) || 24000))
 
 /** Smaller slice for local LLMs — less noise, fewer truncated JSON outputs. */
 function sliceContextForExtraction(raw: string): string {
   const full = contextSliceLen()
-  if (!process.env.OLLAMA_BASE_URL?.trim()) {
-    return raw.substring(0, full)
-  }
-  const cap = Math.min(
-    full,
-    Math.max(6000, parseInt(process.env.VC_OLLAMA_CONTEXT_CHARS || '12000', 10) || 12000),
-  )
-  return raw.substring(0, cap)
+  return raw.substring(0, full)
 }
 
 /** Llama often returns article-shaped JSON; salvage a thesis string when possible. */
@@ -104,10 +101,10 @@ async function extractThesisOnly(
 ): Promise<Pick<VCResearchResult, 'thesis'>> {
   try {
     const ctx = sliceContextForExtraction(rawContent)
-    const systemFirst = `You extract the investment THESIS for ONE venture fund named in the user message.
+    const systemFirst = `You extract the investment THESIS for ONE capital provider (VC fund, accelerator, angel group, CVC, family office, grantmaker, syndicate, etc.) named in the user message.
 
 Your reply MUST be a single JSON object with exactly one key: "thesis".
-- "thesis" is either a string (2–5 sentences: stages, sectors, geography, themes) or null if the text does not describe that fund's durable investment focus.
+- "thesis" is either a string (3–6 sentences when evidence allows: stages, sectors, geography, themes, how they engage with founders) or null if the text does not describe a durable mandate.
 - Do NOT output article titles, dates, key_findings arrays, or any keys other than "thesis".
 ${THESIS_MANDATE_RULES}`
 
@@ -171,19 +168,25 @@ async function extractProfileFieldsOnly(
       leadFollow: string
       portfolio: string[]
       valueAddTags: string[]
+      fundSize: string | null
+      decisionSpeed: string | null
       websiteUrl: string | null
       linkedinUrl: string | null
       applicationUrl: string | null
     }>({
-      system: `Extract structured VC profile data from Exa retrieval — do NOT include thesis.
+      system: `Extract structured investor profile data from Exa retrieval — do NOT include thesis.
 
 Return ONE JSON object with EXACTLY these keys and no others:
-bio, checkSizeMin, checkSizeMax, stages, sectors, geography, fundType, leadFollow, portfolio, valueAddTags, websiteUrl, linkedinUrl, applicationUrl
+bio, checkSizeMin, checkSizeMax, stages, sectors, geography, fundType, leadFollow, portfolio, valueAddTags, fundSize, decisionSpeed, websiteUrl, linkedinUrl, applicationUrl
 Use null for unknown strings/numbers; use [] for empty arrays. Numbers are check sizes in thousands USD.
 
-Fund types: "Micro VC", "Venture Capital", "Accelerator", "CVC", "Angel Group", "Family Office", "Growth Equity"
+Accuracy: only use facts present in the excerpts; prefer the provider's official site, press, or repeated claims. When years or fund vintages appear, favor the most recent credible figure.
+
+Fund types: "Micro VC", "Venture Capital", "Accelerator", "Incubator", "CVC", "Angel Group", "Angel Syndicate", "Family Office", "Growth Equity", "Venture Debt", "Grant program", "Government / nonprofit fund", "University fund", "SPV / Rolling fund"
 Lead/follow: "lead", "follow", "either"
-Stages: "pre-seed", "seed", "Series A", "Series B", "Series C", "Growth"`,
+Stages: "pre-seed", "seed", "Series A", "Series B", "Series C", "Growth"
+fundSize: human-readable if stated (e.g. "$500M Fund IV", "rolling $10M/year")
+decisionSpeed: human-readable if stated (e.g. "2–3 weeks", "YC batch cycle")`,
       user: `Firm: "${firmName}". Extract all available data except investment thesis:
 
 ${sliceContextForExtraction(rawContent)}`,
@@ -202,6 +205,8 @@ ${sliceContextForExtraction(rawContent)}`,
       leadFollow: result.leadFollow || undefined,
       portfolio: result.portfolio?.length ? result.portfolio : undefined,
       valueAddTags: result.valueAddTags?.length ? result.valueAddTags : undefined,
+      fundSize: result.fundSize?.trim() || undefined,
+      decisionSpeed: result.decisionSpeed?.trim() || undefined,
       websiteUrl: result.websiteUrl || undefined,
       linkedinUrl: result.linkedinUrl || undefined,
       applicationUrl: result.applicationUrl || undefined,
@@ -229,25 +234,28 @@ async function extractWithAI(firmName: string, rawContent: string): Promise<Part
       leadFollow: string
       portfolio: string[]
       valueAddTags: string[]
+      fundSize: string | null
+      decisionSpeed: string | null
       websiteUrl: string | null
       linkedinUrl: string | null
       applicationUrl: string | null
     }>({
-      system: `You extract structured VC/investor data from Exa web retrieval (two query passes: fund profile and deals/fundraising). Rules:
-- Return accurate JSON only. Do not invent fund sizes, portfolios, or URLs not supported by the text.
-- Prefer facts repeated across sources; when sources conflict, prefer the fund's primary site / press / official bio.
+      system: `You extract structured data for ONE capital provider from Exa web retrieval (mandate, deal activity, accelerators/angels/CVC/grants). Rules:
+- Return accurate JSON only. Do not invent fund sizes, portfolios, URLs, or ticket sizes not supported by the excerpts.
+- Prefer facts repeated across sources; when sources conflict, prefer the provider's official site, filings, or primary press.
+- Weight recent years more heavily when excerpts mention vintages, closings, or cohort years.
 - If unknown, use null for strings/numbers and [] for arrays.
 ${THESIS_MANDATE_RULES}
 - For "thesis": use null if you only see deal headlines and cannot state durable mandate; never paste a single acquisition or stake announcement as thesis.
 
-Fund types: "Micro VC", "Venture Capital", "Accelerator", "CVC", "Angel Group", "Family Office", "Growth Equity"
+Fund types: "Micro VC", "Venture Capital", "Accelerator", "Incubator", "CVC", "Angel Group", "Angel Syndicate", "Family Office", "Growth Equity", "Venture Debt", "Grant program", "Government / nonprofit fund", "University fund", "SPV / Rolling fund"
 Lead/follow: "lead", "follow", "either"
 Stages: "pre-seed", "seed", "Series A", "Series B", "Series C", "Growth" only.`,
       user: `Extract all available data for "${firmName}" from this material:
 
 ${sliceContextForExtraction(rawContent)}
 
-Return JSON with: thesis (2–4 sentences: ongoing investment focus, or null if not inferable beyond one-off deals), bio (2-3 sentences: who they are, founding vintage or notable background if stated), checkSizeMin (thousands USD, e.g. 500 = $500K), checkSizeMax (thousands), stages, sectors, geography (country/region level), fundType, leadFollow, portfolio (company names only, max 25), valueAddTags, websiteUrl (official fund site if explicit), linkedinUrl (company/fund page if explicit), applicationUrl (pitch form or email contact page if explicit)`,
+Return JSON with: thesis (3–6 sentences when the text supports a real mandate; else null), bio (3–5 sentences: what they are, geography, structure e.g. GP vs program, differentiators only if sourced), checkSizeMin (thousands USD), checkSizeMax (thousands), stages, sectors, geography, fundType, leadFollow, portfolio (company names only, max 25), valueAddTags (concrete operator help: intros, GTM, technical, policy, etc.), fundSize (human-readable AUM / fund / program scale if stated), decisionSpeed (timeline or batch cycle if stated), websiteUrl, linkedinUrl, applicationUrl`,
       temperature: 0.15,
       useVcPipeline: true,
       retryOnParseError: true,
@@ -284,6 +292,8 @@ If you cannot produce a mandate summary, use "thesis": null.`,
       leadFollow: result.leadFollow || undefined,
       portfolio: result.portfolio?.length ? result.portfolio : undefined,
       valueAddTags: result.valueAddTags?.length ? result.valueAddTags : undefined,
+      fundSize: result.fundSize?.trim() || undefined,
+      decisionSpeed: result.decisionSpeed?.trim() || undefined,
       websiteUrl: result.websiteUrl || undefined,
       linkedinUrl: result.linkedinUrl || undefined,
       applicationUrl: result.applicationUrl || undefined,
@@ -305,9 +315,9 @@ async function researchVC(
   console.log(`\n🔍 ${label}: ${firmName}`)
 
   try {
-    if (!hasOpenRouterKey()) {
+    if (!hasVcLlmConfigured()) {
       console.error(
-        `   ⚠️ Set OPENROUTER_API_KEY or OLLAMA_BASE_URL (+ OLLAMA_MODEL) for VC extraction (Exa supplies text).`,
+        `   ⚠️ Set OPENROUTER_API_KEY or Ollama (OLLAMA_BASE_URL + OLLAMA_MODEL / OLLAMA_VC_MODEL) for extraction. Exa supplies text.`,
       )
       return null
     }
@@ -316,6 +326,7 @@ async function researchVC(
     if (!pipe.exa) {
       console.warn(`   ⚠️ EXA_API_KEY missing — VC research retrieval will fail.`)
     }
+    console.log(`   🤖 Extraction LLM: ${pipe.vcLlmBackend} (OpenRouter=${pipe.openrouter}, Ollama=${pipe.ollama})`)
 
     const snapshot = await gatherVCFirmRetrievalContext(firmName)
     if (!snapshot) {
@@ -324,7 +335,7 @@ async function researchVC(
     }
 
     console.log(
-      `   📚 Context: Exa ${snapshot.exaTotalResults} result(s), ${snapshot.exaPassesWithHits}/2 passes, ${snapshot.mergedContext.length} chars`,
+      `   📚 Context: Exa ${snapshot.exaTotalResults} result(s), ${snapshot.exaPassesWithHits}/3 passes, ${snapshot.mergedContext.length} chars`,
     )
 
     const base = {
@@ -460,6 +471,12 @@ export async function updateVCInDatabaseProfileOnly(research: VCResearchResult):
     if (research.applicationUrl && !existing.applicationUrl) {
       updateData.applicationUrl = research.applicationUrl
     }
+    if (research.fundSize?.trim() && !existing.fundSize?.trim()) {
+      updateData.fundSize = research.fundSize.trim().slice(0, 500)
+    }
+    if (research.decisionSpeed?.trim() && !existing.decisionSpeed?.trim()) {
+      updateData.decisionSpeed = research.decisionSpeed.trim().slice(0, 500)
+    }
     updateData.verified = true
     const fieldsUpdated = Object.keys(updateData).length - 1
     if (fieldsUpdated > 0) {
@@ -545,6 +562,12 @@ async function updateVCInDatabase(research: VCResearchResult): Promise<boolean> 
     }
     if (research.applicationUrl && !existing.applicationUrl) {
       updateData.applicationUrl = research.applicationUrl
+    }
+    if (research.fundSize?.trim() && !existing.fundSize?.trim()) {
+      updateData.fundSize = research.fundSize.trim().slice(0, 500)
+    }
+    if (research.decisionSpeed?.trim() && !existing.decisionSpeed?.trim()) {
+      updateData.decisionSpeed = research.decisionSpeed.trim().slice(0, 500)
     }
 
     // Always mark as verified and update timestamp

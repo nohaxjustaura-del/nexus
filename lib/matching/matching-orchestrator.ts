@@ -286,7 +286,6 @@ export async function runMatchingPipeline(
     stageFiltered = await db.investor.findMany({
       where: {
         isPublic: true,
-        discoverable: true,
         OR: stageConditions,
         NOT: checkSizeExclusions.length > 0 ? { OR: checkSizeExclusions } : undefined,
       },
@@ -294,12 +293,12 @@ export async function runMatchingPipeline(
     logger.log(`[ORCHESTRATOR] Step 3 — Hard filter: ${stageFiltered.length} VCs passed`)
   } catch (dbErr: any) {
     logger.error('[ORCHESTRATOR] Prisma hard-filter failed, falling back to visibility-only:', dbErr?.message)
-    stageFiltered = await db.investor.findMany({ where: { isPublic: true, discoverable: true } })
+    stageFiltered = await db.investor.findMany({ where: { isPublic: true } })
   }
 
   if (stageFiltered.length === 0) {
     logger.warn('[ORCHESTRATOR] No VCs passed hard filter — relaxing to visibility-only')
-    stageFiltered = await db.investor.findMany({ where: { isPublic: true, discoverable: true } })
+    stageFiltered = await db.investor.findMany({ where: { isPublic: true } })
   }
 
   const JUNK_VC_NAME = /^(https?:\/\/|www\.|unknown$|test |placeholder|our ai|unlocking ai)/i
@@ -330,19 +329,19 @@ export async function runMatchingPipeline(
   logger.log(
     `[ORCHESTRATOR] Step 5 — Embeddings: Voyage (pitch vector) → FAISS HTTP at ${(process.env.FAISS_SERVICE_URL || 'http://localhost:8001').replace(/\/$/, '')}/rank when available; else in-memory cosine on DB rows. Narratives: Ollama-first VC pipeline or OpenRouter.`,
   )
-  // Build a full Postgres lookup map (all public+discoverable VCs) for FAISS
+  // Build a full Postgres lookup map (all public VCs, same corpus as Discover) for FAISS
   // intersection. The stage hard-filter is too restrictive for FAISS matching:
   // FAISS semantic search already handles relevance, so we only need to confirm
   // the VC exists in our database — not that it passed the stage filter.
   let allPublicVCs: Investor[]
   try {
-    allPublicVCs = await db.investor.findMany({ where: { isPublic: true, discoverable: true } })
+    allPublicVCs = await db.investor.findMany({ where: { isPublic: true } })
   } catch {
     allPublicVCs = stageFiltered
   }
   const allVCsByName = new Map(allPublicVCs.map((vc) => [(vc.firmName ?? '').toLowerCase(), vc]))
   // Stage hard-filter narrows `mainstream` (~hundreds–low thousands). Step 5 semantic search should
-  // see every public+discoverable embedding (matches FAISS index / DB), not only stage-matched rows.
+  // see every public investor embedding (matches FAISS index / DB), not only stage-matched rows.
   const { mainstream: embeddingPool } = filterOutUniversityPrograms(allPublicVCs as VCProfile[])
 
   let candidatePool: VCProfile[] = []
@@ -375,13 +374,13 @@ export async function runMatchingPipeline(
     const embFilter = countInvestorEmbeddingFilters(embeddingPool, pitchEmbedding.length)
     const fallbackRows = investorsToRankableEmbeddings(embeddingPool, pitchEmbedding.length)
     console.log(
-      `[FAISS] embedding filters (public+discoverable excl. university programs, pitch_dim=${pitchEmbedding.length}): ` +
+      `[FAISS] embedding filters (public excl. university programs, pitch_dim=${pitchEmbedding.length}): ` +
         `input=${embFilter.input} rankable=${embFilter.rankable} ` +
         `missing=${embFilter.missingEmbedding} parse_err=${embFilter.parseError} wrong_dim=${embFilter.wrongDimension} ` +
         `(stage-filtered pool=${mainstream.length} for non-vector fallbacks)`,
     )
     console.log(
-      `[FAISS] DB lookup map: public+discoverable rows=${allPublicVCs.length} (firmName → Investor for neighbor intersection)`,
+      `[FAISS] DB lookup map: public rows=${allPublicVCs.length} (firmName → Investor for neighbor intersection)`,
     )
 
     async function rankAndIntersect(

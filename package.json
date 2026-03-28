@@ -16,6 +16,7 @@
     "db:vc-directory": "prisma db execute --file supabase/vc_directory.sql --schema prisma/schema.prisma",
     "db:seed": "tsx prisma/comprehensive-seed.ts",
     "db:seed:original": "tsx prisma/seed.ts",
+    "db:reset-test-analyses": "tsx scripts/reset-test-analyses.ts",
     "db:studio": "prisma studio",
     "db:generate": "prisma generate",
     "db:import-vcs-csv": "tsx scripts/import-csv-to-db.ts",
@@ -33,6 +34,7 @@
     "research-vcs": "tsx scripts/auto-research-vcs.ts",
     "research-worker": "tsx scripts/vc-research-worker.ts",
     "update-vc-accuracy": "tsx scripts/update-vc-accuracy.ts",
+    "db:audit-investors": "tsx scripts/audit-investor-directory.ts",
     "worker:start": "tsx scripts/worker-start.ts --loop",
     "worker:start:once": "tsx scripts/worker-start.ts",
     "worker:status": "tsx scripts/worker-status.ts",
@@ -50,7 +52,10 @@
     "faiss:install": "cd faiss-service && python -m pip install -r requirements.txt",
     "faiss:start": "cd faiss-service && python faiss_api.py",
     "faiss:build": "cd faiss-service && python build_index.py",
-    "check-faiss": "tsx scripts/check-faiss.ts"
+    "check-faiss": "tsx scripts/check-faiss.ts",
+    "check-embeddings": "tsx scripts/check-embeddings.ts",
+    "vc:fix-headline-names": "tsx scripts/fix-headline-firm-names.ts",
+    "faiss:sync-firm-names": "tsx scripts/sync-faiss-jsonl-firm-names.ts"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",

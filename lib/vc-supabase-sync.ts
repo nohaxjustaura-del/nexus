@@ -97,7 +97,7 @@ export type SyncRecentVcDirectoryResult = {
 }
 
 /**
- * Upserts recently updated public/discoverable investors into Supabase `vc_directory`.
+ * Upserts recently updated public investors into Supabase `vc_directory`.
  * Uses a lookback window so discover/ingest failures can be healed on the next tick without full-table scans.
  */
 export async function syncRecentPublicDiscoverableToVcDirectory(options?: {
@@ -125,7 +125,6 @@ export async function syncRecentPublicDiscoverableToVcDirectory(options?: {
   const rows = await db.investor.findMany({
     where: {
       isPublic: true,
-      discoverable: true,
       updatedAt: { gte: since },
     },
     orderBy: { updatedAt: 'desc' },

@@ -2,7 +2,7 @@
 export const BRAND_NAME = 'NEXUS'
 
 /** Short tagline (sentence case) for subtitles and descriptions. */
-export const BRAND_TAGLINE = 'Investor matching for founders'
+export const BRAND_TAGLINE = 'Fundraising match engine for founders'
 
 /** Default browser tab / Open Graph title. */
 export const BRAND_DEFAULT_TITLE = `${BRAND_NAME} · ${BRAND_TAGLINE}`

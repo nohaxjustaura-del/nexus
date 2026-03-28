@@ -21,6 +21,8 @@ export type InvestorLocalAuditInput = {
   stages: string
   sectors: string
   geography: string
+  /** Directory geo (often populated when geography JSON is empty) */
+  geoFocus?: string | null
   fundType: string
   portfolio: string | null
   websiteUrl: string | null
@@ -99,8 +101,9 @@ export function auditInvestorLocal(inv: InvestorLocalAuditInput): LocalInvestorA
   }
 
   const geo = parseJsonArray(inv.geography)
-  if (geo.length === 0) {
-    issues.push({ level: 'warn', code: 'geography_empty', message: 'Geography is empty' })
+  const geoFocusArr = parseJsonArray(inv.geoFocus)
+  if (geo.length === 0 && geoFocusArr.length === 0) {
+    issues.push({ level: 'warn', code: 'geography_empty', message: 'Geography and geo focus are empty' })
   }
 
   if (inv.checkSizeMin > 0 && inv.checkSizeMax > 0 && inv.checkSizeMin > inv.checkSizeMax) {

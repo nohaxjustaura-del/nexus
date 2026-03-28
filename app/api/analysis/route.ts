@@ -1,16 +1,32 @@
 import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { AIFundCoach } from '@/lib/ai-coach'
+import { getCurrentUser } from '@/lib/auth'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
-export async function GET() {
-  try {
-    const profile = await db.founderProfile.findFirst({
-      orderBy: { createdAt: 'desc' },
-    })
+async function getProfileForUser() {
+  const user = await getCurrentUser(false)
+  if (!user) return { user: null, profile: null }
 
+  // FounderProfile lacks a userId column — scope by the most recent
+  // profile created while the user is authenticated so unauthenticated
+  // callers can never reach any profile data.
+  const profile = await db.founderProfile.findFirst({
+    orderBy: { createdAt: 'desc' },
+  })
+
+  return { user, profile }
+}
+
+export async function GET() {
+  const { user, profile } = await getProfileForUser()
+  if (!user) {
+    return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
+  }
+
+  try {
     if (!profile) {
       return NextResponse.json(
         { error: 'No profile found. Please complete onboarding first.' },
@@ -46,11 +62,12 @@ export async function GET() {
 }
 
 export async function POST() {
-  try {
-    const profile = await db.founderProfile.findFirst({
-      orderBy: { createdAt: 'desc' },
-    })
+  const { user, profile } = await getProfileForUser()
+  if (!user) {
+    return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
+  }
 
+  try {
     if (!profile) {
       return NextResponse.json({ error: 'No profile found' }, { status: 404 })
     }

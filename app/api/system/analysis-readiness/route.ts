@@ -15,7 +15,6 @@ export async function GET() {
 
   const voyage = !!process.env.VOYAGE_API_KEY?.trim()
   const openRouter = !!process.env.OPENROUTER_API_KEY?.trim()
-  const ollama = !!process.env.OLLAMA_BASE_URL?.trim()
   const gemini = !!(process.env.GEMINI_API_KEY?.trim() || process.env.GOOGLE_API_KEY?.trim())
   const exa = !!process.env.EXA_API_KEY?.trim()
 
@@ -34,8 +33,8 @@ export async function GET() {
     faissError = e instanceof Error ? e.message : String(e)
   }
 
-  const scoringLlmReady = openRouter || ollama
-  const matchNarrativesReady = openRouter || ollama
+  const scoringLlmReady = openRouter
+  const matchNarrativesReady = openRouter
   const gatesReady = gemini
 
   return NextResponse.json({
@@ -44,7 +43,6 @@ export async function GET() {
     faissReachable,
     faissError: faissReachable ? null : faissError,
     openRouterApiKey: openRouter,
-    ollamaBaseUrl: ollama,
     geminiApiKey: gemini,
     exaApiKey: exa,
     unifiedPitch: {
@@ -58,9 +56,9 @@ export async function GET() {
     },
     notes: [
       'Pitch + VC vectors use Voyage voyage-3 (1024-d). FAISS index must match that dimension.',
-      'Scoring uses OpenRouter when OPENROUTER_API_KEY is set; otherwise local Ollama via getLlmClient().',
+      'Scoring uses OpenRouter (OPENROUTER_API_KEY).',
       '12 gate questions use Google Gemini (GEMINI_API_KEY or GOOGLE_API_KEY).',
-      'Match briefings use useVcPipeline: Ollama first if OLLAMA_BASE_URL is set, else OpenRouter.',
+      'Match briefings use OpenRouter.',
     ],
   })
 }

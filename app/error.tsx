@@ -31,7 +31,10 @@ export default function Error({
       </h1>
       
       <p className="text-lg text-muted-foreground max-w-md mx-auto mb-8">
-        We encountered an unexpected error. Don't worry, our team has been notified and we're working on it.
+        We encountered an unexpected error. If this keeps happening, please{' '}
+        <a href="/contact" className="text-primary underline underline-offset-4 hover:text-primary/80">
+          let us know
+        </a>.
       </p>
 
       {process.env.NODE_ENV === 'development' && (

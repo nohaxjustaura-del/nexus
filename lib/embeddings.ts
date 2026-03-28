@@ -621,7 +621,7 @@ export async function rankVCsForPitch(
     } catch (e: unknown) {
       const detail = e instanceof Error ? e.message : String(e)
       throw new Error(
-        `No VC embeddings for in-memory fallback and FAISS failed: ${detail}`,
+        `FAISS /rank failed (orchestrator may still use in-memory DB embeddings): ${detail}`,
       )
     }
   }

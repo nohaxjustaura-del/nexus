@@ -12,7 +12,7 @@ import { rateLimitMiddleware, RATE_LIMITS } from '@/lib/rate-limit'
 import { parseJSON } from '@/lib/utils'
 import { getComprehensiveFounderContext } from '@/lib/founder-context'
 import { saveFileToDisk, buildFounderSnapshot } from '@/lib/file-storage'
-import { getDeepMarketContext } from '@/lib/market-intelligence'
+import { getDeepMarketContextSafe } from '@/lib/market-intelligence'
 import {
   parseStructuredQaJson,
   hasAnyStructuredAnswer,
@@ -22,7 +22,10 @@ import {
 } from '@/lib/unified-pitch/structured-qa'
 import { normalizePitchText, capSectionsForCombinedPitch } from '@/lib/unified-pitch/text-utils'
 import { extractDeckTextFromFile, validateDeckFile } from '@/lib/unified-pitch/extract-deck-text'
-import { transcribeVideoFile, validateUnifiedVideoFile } from '@/lib/unified-pitch/transcribe-video-file'
+import {
+  transcribeVideoFromBuffer,
+  validateUnifiedVideoFile,
+} from '@/lib/unified-pitch/transcribe-video-file'
 import { mergePitchAnalysesForMatching } from '@/lib/unified-pitch/merge-pitch-analysis'
 import { buildUnifiedFounderContext } from '@/lib/unified-pitch/unified-founder-context'
 
@@ -77,7 +80,7 @@ export async function POST(request: NextRequest) {
         {
           error: 'Nothing to analyze',
           message:
-            'Provide at least one of: structured Q&A answers, a pitch narrative (write-up), a pitch deck, or a video.',
+            'Add at least one non-empty structured Q&A answer, a pitch narrative, or a non-empty deck or video file.',
         },
         { status: 400 },
       )
@@ -173,15 +176,17 @@ export async function POST(request: NextRequest) {
         try {
           const buf = await videoFile.arrayBuffer()
           const buffer = Buffer.from(buf)
-          savedVideoPath =
-            (await saveFileToDisk(buffer, 'videos', founder.id, videoFile.name, {
-              contentType: videoFile.type || 'video/mp4',
-            })) || ''
-        } catch (e: unknown) {
-          logger.warn('[UNIFIED-PITCH] video save failed', e)
-        }
-        try {
-          const tr = await transcribeVideoFile(videoFile)
+          const saveP = saveFileToDisk(buffer, 'videos', founder.id, videoFile.name, {
+            contentType: videoFile.type || 'video/mp4',
+          }).catch((e: unknown) => {
+            logger.warn('[UNIFIED-PITCH] video save failed', e)
+            return ''
+          })
+          const [pathFromSave, tr] = await Promise.all([
+            saveP,
+            transcribeVideoFromBuffer(buffer, videoFile.name, videoFile.type || 'video/mp4'),
+          ])
+          savedVideoPath = pathFromSave || ''
           videoTranscriptNormalized = normalizePitchText(tr)
           if (videoTranscriptNormalized.length >= 50) {
             try {
@@ -353,15 +358,25 @@ export async function POST(request: NextRequest) {
       qaAnswers,
     })
 
+    const domain = unifiedCtx.sectors?.[0] || 'technology'
+    const problem =
+      mergedAnalysis.problemStatement ||
+      mergedAnalysis.oneLineSummary ||
+      combinedRawPitch.slice(0, 300)
+
     let matchedVCs: any[] = []
     let matchPipelineResult: any = null
-    try {
-      matchPipelineResult = await runMatchingPipeline(
-        unifiedCtx,
-        mergedAnalysis,
-        combinedRawPitch,
-      )
-      matchedVCs = matchPipelineResult.rankedInvestors.map((r: any) => ({
+    const [matchRes, marketContext] = await Promise.all([
+      runMatchingPipeline(unifiedCtx, mergedAnalysis, combinedRawPitch).catch((e: unknown) => {
+        logger.error('[UNIFIED-PITCH] matching pipeline', e)
+        return null
+      }),
+      getDeepMarketContextSafe(domain, problem),
+    ])
+
+    if (matchRes) {
+      matchPipelineResult = matchRes
+      matchedVCs = matchRes.rankedInvestors.map((r: any) => ({
         ...r,
         investor: r.vc,
         score: r.combinedScore,
@@ -378,19 +393,10 @@ export async function POST(request: NextRequest) {
         detailedReasons: [],
         livePulse: null,
       }))
-    } catch (e) {
-      logger.error('[UNIFIED-PITCH] matching pipeline', e)
     }
-
-    const domain = unifiedCtx.sectors?.[0] || 'technology'
-    const problem =
-      mergedAnalysis.problemStatement ||
-      mergedAnalysis.oneLineSummary ||
-      combinedRawPitch.slice(0, 300)
 
     let scoringResult: Awaited<ReturnType<typeof runScoringPipeline>> | null = null
     try {
-      const marketContext = await getDeepMarketContext(domain, problem)
       scoringResult = await runScoringPipeline(combinedRawPitch, unifiedCtx, marketContext, 'UNIFIED')
       if (scoringResult.passesCompleted?.includes('degraded-error')) {
         warnings.push(
@@ -470,9 +476,12 @@ export async function POST(request: NextRequest) {
           teamAnalysis: pitchAnalysisDisplay.teamAnalysis,
           productFit: pitchAnalysisDisplay.productFit,
           overallScore: scoringResult?.finalScore ?? 0,
+          finalScore: scoringResult?.finalScore ?? 0,
           scoreBreakdown: scoringResult?.scoreBreakdown ?? null,
           categoryScores: scoringResult?.categoryScores ?? null,
           pipelineVersion: scoringResult?.pipelineVersion ?? null,
+          rubricAnalysis: scoringResult?.rubricCompatible ?? null,
+          transcript: combinedRawPitch.slice(0, 5000),
           matches: matchedVCs.slice(0, 20).map((m: any) => ({
             investorId: m.investor.id,
             investor: {

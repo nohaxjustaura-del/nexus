@@ -6,12 +6,11 @@ import { runMatchingPipeline } from '@/lib/matching/matching-orchestrator'
 import { validateVideoPitch } from '@/lib/content-validator'
 import { CREDIT_COSTS } from '@/lib/constants'
 import { shouldEnforceAiCredits } from '@/lib/dev-ai-analysis-bypass'
-import { generatePitchEmbedding, rankVCsForPitch } from '@/lib/embeddings'
 import { parseJSON } from '@/lib/utils'
 import { logger } from '@/lib/logger'
 import { rateLimitMiddleware, RATE_LIMITS } from '@/lib/rate-limit'
 import { saveFileToDisk, buildFounderSnapshot } from '@/lib/file-storage'
-import { getDeepMarketContext } from '@/lib/market-intelligence'
+import { getDeepMarketContextSafe } from '@/lib/market-intelligence'
 import { runScoringPipeline } from '@/lib/scoring/scoring-pipeline'
 import { getComprehensiveFounderContext } from '@/lib/founder-context'
 
@@ -215,102 +214,100 @@ export async function POST(request: NextRequest) {
     try {
       logger.log('[ANALYZE-VIDEO-PITCH] Starting video transcription...')
       logger.log('[ANALYZE-VIDEO-PITCH] File name:', file.name, 'Size:', file.size, 'Type:', file.type)
-      
-      // Convert file to buffer
+
       const arrayBuffer = await file.arrayBuffer()
       const buffer = Buffer.from(arrayBuffer)
       logger.log('[ANALYZE-VIDEO-PITCH] Buffer size:', buffer.length)
 
-      // Save video file to local disk for training data
-      try {
-        savedFilePath = await saveFileToDisk(buffer, 'videos', founder.id, file.name, {
-          contentType: file.type || 'video/mp4',
+      const savePromise = saveFileToDisk(buffer, 'videos', founder.id, file.name, {
+        contentType: file.type || 'video/mp4',
+      })
+        .then((path) => {
+          logger.log(`[ANALYZE-VIDEO-PITCH] File saved to: ${path}`)
+          return path
         })
-        logger.log(`[ANALYZE-VIDEO-PITCH] File saved to: ${savedFilePath}`)
-      } catch (saveErr: any) {
-        logger.error('[ANALYZE-VIDEO-PITCH] Failed to save file to disk (non-critical):', saveErr.message)
-      }
-      
-      // Try Deepgram first (if key available), then fall back to OpenAI Whisper
+        .catch((saveErr: unknown) => {
+          const msg = saveErr instanceof Error ? saveErr.message : String(saveErr)
+          logger.error('[ANALYZE-VIDEO-PITCH] Failed to save file to disk (non-critical):', msg)
+          return ''
+        })
+
       const deepgramKey = process.env.DEEPGRAM_API_KEY
       const openaiKey = process.env.OPENAI_API_KEY
-      
+
       logger.log('[ANALYZE-VIDEO-PITCH] API Keys check:', {
         hasDeepgram: !!deepgramKey,
         hasOpenAI: !!openaiKey,
-        deepgramKeyStart: deepgramKey?.substring(0, 10) || 'not set'
+        deepgramKeyStart: deepgramKey?.substring(0, 10) || 'not set',
       })
-      
-      if (deepgramKey) {
-        // Use Deepgram API (preferred - better free tier)
-        logger.log('[ANALYZE-VIDEO-PITCH] ✅ Using Deepgram for transcription...')
-        
-        const deepgramUrl = 'https://api.deepgram.com/v1/listen?model=nova-2&smart_format=true'
-        logger.log('[ANALYZE-VIDEO-PITCH] Calling Deepgram API...')
-        
-        const response = await fetch(deepgramUrl, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Token ${deepgramKey}`,
-            'Content-Type': file.type || 'video/mp4',
-          },
-          body: buffer,
-        })
-        
-        logger.log('[ANALYZE-VIDEO-PITCH] Deepgram response status:', response.status)
-        
-        if (!response.ok) {
-          const errorText = await response.text()
-          logger.error(`[ANALYZE-VIDEO-PITCH] ❌ Deepgram error: ${response.status}`, errorText)
-          throw new Error(`Deepgram transcription failed: ${response.status}. ${errorText.substring(0, 200)}`)
+
+      const transcribePromise = (async (): Promise<string> => {
+        if (deepgramKey) {
+          logger.log('[ANALYZE-VIDEO-PITCH] ✅ Using Deepgram for transcription...')
+          const deepgramUrl = 'https://api.deepgram.com/v1/listen?model=nova-2&smart_format=true'
+          const audioBody = buffer.buffer.slice(
+            buffer.byteOffset,
+            buffer.byteOffset + buffer.byteLength,
+          ) as ArrayBuffer
+          const response = await fetch(deepgramUrl, {
+            method: 'POST',
+            headers: {
+              Authorization: `Token ${deepgramKey}`,
+              'Content-Type': file.type || 'video/mp4',
+            },
+            body: audioBody,
+          })
+          logger.log('[ANALYZE-VIDEO-PITCH] Deepgram response status:', response.status)
+          if (!response.ok) {
+            const errorText = await response.text()
+            logger.error(`[ANALYZE-VIDEO-PITCH] ❌ Deepgram error: ${response.status}`, errorText)
+            throw new Error(`Deepgram transcription failed: ${response.status}. ${errorText.substring(0, 200)}`)
+          }
+          const result = (await response.json()) as {
+            results?: { channels?: { alternatives?: { transcript?: string }[] }[] }
+          }
+          const text = result.results?.channels?.[0]?.alternatives?.[0]?.transcript || ''
+          logger.log(
+            `[ANALYZE-VIDEO-PITCH] 📝 Deepgram raw transcript (${text.length} chars): "${text.substring(0, 500)}..."`,
+          )
+          if (!text || text.trim().length < 20) {
+            logger.error('[ANALYZE-VIDEO-PITCH] ❌ Transcript too short:', text.length, 'chars')
+            throw new Error('Video audio could not be transcribed. Please ensure your video has clear, audible speech.')
+          }
+          logger.log(`[ANALYZE-VIDEO-PITCH] ✅ Deepgram transcription successful: ${text.length} characters`)
+          return text
         }
-        
-        const result = await response.json() as any
-        logger.log('[ANALYZE-VIDEO-PITCH] Deepgram response structure:', JSON.stringify(result).substring(0, 500))
-        
-        transcriptText = result.results?.channels?.[0]?.alternatives?.[0]?.transcript || ''
-        
-        logger.log(`[ANALYZE-VIDEO-PITCH] 📝 Deepgram raw transcript (${transcriptText.length} chars): "${transcriptText.substring(0, 500)}..."`)
-        
-        if (!transcriptText || transcriptText.trim().length < 20) {
-          logger.error('[ANALYZE-VIDEO-PITCH] ❌ Transcript too short:', transcriptText.length, 'chars')
-          throw new Error('Video audio could not be transcribed. Please ensure your video has clear, audible speech.')
+        if (openaiKey) {
+          logger.log('[ANALYZE-VIDEO-PITCH] Using OpenAI Whisper for transcription...')
+          const OpenAI = require('openai').default
+          const openaiClient = new OpenAI({ apiKey: openaiKey })
+          const wBody = buffer.buffer.slice(
+            buffer.byteOffset,
+            buffer.byteOffset + buffer.byteLength,
+          ) as ArrayBuffer
+          const whisperFile = new File([wBody], file.name, { type: file.type })
+          const transcription = await openaiClient.audio.transcriptions.create({
+            file: whisperFile,
+            model: 'whisper-1',
+            language: 'en',
+            response_format: 'text',
+          })
+          const text = typeof transcription === 'string' ? transcription : transcription.text || ''
+          if (!text || text.trim().length < 50) {
+            throw new Error('Transcription too short or empty. Please ensure your video has clear audio.')
+          }
+          logger.log(`[ANALYZE-VIDEO-PITCH] OpenAI Whisper transcription successful: ${text.length} characters`)
+          return text
         }
-        
-        logger.log(`[ANALYZE-VIDEO-PITCH] ✅ Deepgram transcription successful: ${transcriptText.length} characters`)
-        
-      } else if (openaiKey) {
-        // Fallback to OpenAI Whisper
-        logger.log('[ANALYZE-VIDEO-PITCH] Using OpenAI Whisper for transcription...')
-        
-        const OpenAI = require("openai").default
-        const openaiClient = new OpenAI({
-          apiKey: openaiKey,
-        })
-        
-        const whisperFile = new File([buffer], file.name, { type: file.type })
-        
-        const transcription = await openaiClient.audio.transcriptions.create({
-          file: whisperFile,
-          model: 'whisper-1',
-          language: 'en',
-          response_format: 'text',
-        })
-        
-        transcriptText = typeof transcription === 'string' ? transcription : transcription.text || ''
-        
-        if (!transcriptText || transcriptText.trim().length < 50) {
-          throw new Error('Transcription too short or empty. Please ensure your video has clear audio.')
-        }
-        
-        logger.log(`[ANALYZE-VIDEO-PITCH] OpenAI Whisper transcription successful: ${transcriptText.length} characters`)
-        
-      } else {
-        throw new Error('No transcription service available. Please set DEEPGRAM_API_KEY or OPENAI_API_KEY in your .env.local file.')
-      }
-      
-      transcript = transcriptText.substring(0, 1000) // Summary for display
-      
+        throw new Error(
+          'No transcription service available. Please set DEEPGRAM_API_KEY or OPENAI_API_KEY in your .env.local file.',
+        )
+      })()
+
+      const [savedPath, transcribed] = await Promise.all([savePromise, transcribePromise])
+      savedFilePath = savedPath || ''
+      transcriptText = transcribed
+      transcript = transcriptText.substring(0, 1000)
     } catch (transcriptionError: any) {
       logger.error('[ANALYZE-VIDEO-PITCH] Transcription error:', transcriptionError)
       
@@ -408,23 +405,40 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    // VALIDATE CONTENT FIRST - before analysis
-    logger.log('[ANALYZE-VIDEO-PITCH] 🔍 Starting content validation...')
+    const shouldRunContentValidation =
+      !!transcriptText &&
+      transcriptText.length > 50 &&
+      !transcriptText.includes('[Video transcription would appear here')
+
+    logger.log('[ANALYZE-VIDEO-PITCH] 🔍 Content validation + founder context (parallel)...')
     logger.log('[ANALYZE-VIDEO-PITCH] Transcript length:', transcriptText.length, 'Preview:', transcriptText.substring(0, 200))
-    
-    if (transcriptText && transcriptText.length > 50 && !transcriptText.includes('[Video transcription would appear here')) {
+
+    const validationPromise = (async () => {
+      if (!shouldRunContentValidation) {
+        return { isValid: true, confidence: 100, reason: 'skipped' }
+      }
       try {
-        const validation = await validateVideoPitch(transcriptText)
-        
-        logger.log('[ANALYZE-VIDEO-PITCH] 📊 Validation result:', JSON.stringify(validation))
-        
-        // More lenient - only reject if confidence is very low (< 30)
-        if (!validation.isValid || validation.confidence < 30) {
-          logger.warn('[ANALYZE-VIDEO-PITCH] ❌ Validation FAILED:', validation)
-          return NextResponse.json({
+        return await validateVideoPitch(transcriptText)
+      } catch (validationError: unknown) {
+        logger.error('[ANALYZE-VIDEO-PITCH] Validation error:', validationError)
+        return { isValid: true, confidence: 100, reason: 'validation error, proceeding' }
+      }
+    })()
+
+    const [validation, founderContextLoaded] = await Promise.all([
+      validationPromise,
+      getComprehensiveFounderContext(founder.email),
+    ])
+
+    if (shouldRunContentValidation) {
+      logger.log('[ANALYZE-VIDEO-PITCH] 📊 Validation result:', JSON.stringify(validation))
+      if (!validation.isValid || validation.confidence < 30) {
+        logger.warn('[ANALYZE-VIDEO-PITCH] ❌ Validation FAILED:', validation)
+        return NextResponse.json(
+          {
             error: 'Invalid Content',
             message: validation.reason || 'The video does not appear to be a pitch video.',
-            whatWentWrong: 'Your video doesn\'t contain pitch-related content',
+            whatWentWrong: "Your video doesn't contain pitch-related content",
             whyItFailed: validation.reason || 'The transcript lacks startup/business pitch elements',
             howToFix: [
               'Ensure your video is actually a startup pitch, not random content',
@@ -435,38 +449,31 @@ export async function POST(request: NextRequest) {
             ],
             validationFailed: true,
             confidence: validation.confidence,
-            transcript: transcriptText.substring(0, 500), // Show first 500 chars for debugging
-          }, { 
+            transcript: transcriptText.substring(0, 500),
+          },
+          {
             status: 400,
             headers: { 'Content-Type': 'application/json' },
-          })
-        }
-        
-        logger.log(`[ANALYZE-VIDEO-PITCH] ✅ Content validated (confidence: ${validation.confidence}%)`)
-      } catch (validationError: any) {
-        logger.error('[ANALYZE-VIDEO-PITCH] Validation error:', validationError)
-        // If validation fails due to error, still proceed but log it
+          },
+        )
       }
+      logger.log(`[ANALYZE-VIDEO-PITCH] ✅ Content validated (confidence: ${validation.confidence}%)`)
     } else {
       logger.log('[ANALYZE-VIDEO-PITCH] ⏭️  Skipping validation (transcript too short or placeholder)')
     }
 
-    // AI Analysis (existing flow) - now uses ALL founder profile data
     let pitchAnalysis: any
-    let enhancedFounder: any = founder // Default to founder, will be enhanced below
+    let enhancedFounder: any = founder
     let founderContext: any = null
-    
+
     try {
-      // Get comprehensive founder context for analysis
-      founderContext = await getComprehensiveFounderContext(founder.email)
-      
-      // Enhance founder object with all context data
+      founderContext = founderContextLoaded
       enhancedFounder = {
         ...founder,
         ...founderContext,
         sectors: parseJSON<string[]>(founder.sectors || '[]', []),
       }
-      
+
       pitchAnalysis = await analyzeVideoPitch(transcriptText, enhancedFounder)
     } catch (aiError: any) {
       logger.error('[ANALYZE-VIDEO-PITCH] AI analysis error:', aiError)
@@ -554,34 +561,91 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    // Get all investors for matching
-    const investors = await db.investor.findMany({
-      where: { verified: true },
-    })
+    const baseCtx = founderContext || enhancedFounder
+    let videoStartupName: string | null = null
+    const namePatterns = [
+      /(?:CEO|CTO|founder|co-?founder)\s+(?:of|at)\s+([A-Z][A-Za-z0-9]+)/i,
+      /(?:we(?:'re| are)\s+(?:building|creating|launching))\s+([A-Z][A-Za-z0-9]+)/i,
+      /([A-Z][A-Za-z0-9]+)\s+is\s+(?:the|a|an)\s+(?:platform|app|tool|product|company|startup|service|solution)/i,
+    ]
+    for (const pat of namePatterns) {
+      const m = transcriptText.match(pat)
+      if (m && m[1] && m[1].length > 1 && m[1].toLowerCase() !== 'the') {
+        videoStartupName = m[1]
+        break
+      }
+    }
+    const videoSectors: string[] = pitchAnalysis?.sectorFit
+      ? Object.keys(pitchAnalysis.sectorFit).filter((k: string) => (pitchAnalysis.sectorFit as any)[k] > 40)
+      : []
+    const videoBio = transcriptText.substring(0, 400)
+    const transcriptLower = transcriptText.toLowerCase()
+    let videoStage = baseCtx.stage
+    if (
+      transcriptLower.includes('revenue') ||
+      transcriptLower.includes('paying customer') ||
+      transcriptLower.includes('mrr')
+    )
+      videoStage = 'revenue'
+    else if (
+      transcriptLower.includes('signed') ||
+      transcriptLower.includes('pilot') ||
+      transcriptLower.includes('beta')
+    )
+      videoStage = 'pre-seed'
+    else if (transcriptLower.includes('prototype') || transcriptLower.includes('mvp')) videoStage = 'pre-seed'
 
-    // Use Matching Pipeline v3
+    const videoEnhancedCtx = {
+      ...baseCtx,
+      startupName: videoStartupName || baseCtx.startupName,
+      bio: videoBio,
+      sectors: videoSectors.length > 0 ? videoSectors : baseCtx.sectors,
+      stage: videoStage,
+    }
+    const sectorsForDomain = videoEnhancedCtx.sectors || parseJSON<string[]>(founder.sectors || '[]', [])
+    const domain = sectorsForDomain[0] || pitchAnalysis?.sectorFit?.primarySector || 'technology'
+    const problem =
+      pitchAnalysis?.problemStatement || pitchAnalysis?.oneLineSummary || videoBio.substring(0, 300)
+
     let matchedVCs: any[] = []
     let matchPipelineResult: any = null
-    try {
-      logger.log('[ANALYZE-VIDEO-PITCH] Starting matching pipeline v3...')
-      logger.log(`[ANALYZE-VIDEO-PITCH] Transcript length: ${transcriptText.length} characters`)
+    let scoringResult: Awaited<ReturnType<typeof runScoringPipeline>> | null = null
 
-      matchPipelineResult = await runMatchingPipeline(
-        founderContext || enhancedFounder as unknown as import('@/lib/founder-context').ComprehensiveFounderContext,
-        pitchAnalysis,
-        transcriptText,
-      )
+    logger.log('[ANALYZE-VIDEO-PITCH] Matching pipeline v3 + market intel (parallel)...')
+    logger.log(`[ANALYZE-VIDEO-PITCH] Transcript length: ${transcriptText.length} characters`)
+    logger.log(
+      `[ANALYZE-VIDEO-PITCH] Scoring prep: "${videoEnhancedCtx.startupName}" (stage: ${videoEnhancedCtx.stage})`,
+    )
 
-      // Adapter: expose m.investor so all downstream response code works unchanged
-      matchedVCs = matchPipelineResult.rankedInvestors.map((r: any) => ({
+    const matchCtx =
+      founderContext || (enhancedFounder as unknown as import('@/lib/founder-context').ComprehensiveFounderContext)
+
+    const [matchRes, marketContext] = await Promise.all([
+      runMatchingPipeline(matchCtx, pitchAnalysis, transcriptText).catch((matchError: unknown) => {
+        const msg = matchError instanceof Error ? matchError.message : String(matchError)
+        logger.error('[ANALYZE-VIDEO-PITCH] Matching pipeline error:', msg)
+        if (matchError instanceof Error && matchError.stack) {
+          logger.error('[ANALYZE-VIDEO-PITCH] Error stack:', matchError.stack)
+        }
+        return null
+      }),
+      getDeepMarketContextSafe(domain, problem),
+    ])
+
+    if (matchRes) {
+      matchPipelineResult = matchRes
+      matchedVCs = matchRes.rankedInvestors.map((r: any) => ({
         ...r,
         investor: r.vc,
         score: r.combinedScore,
         intelligentScore: r.combinedScore,
         vectorSimilarity: 0,
-        confidence: r.investmentLikelihood.confidence === 'HIGH' ? 0.95
-          : r.investmentLikelihood.confidence === 'MEDIUM' ? 0.80
-          : 0.60,
+        confidence:
+          r.investmentLikelihood.confidence === 'HIGH'
+            ? 0.95
+            : r.investmentLikelihood.confidence === 'MEDIUM'
+              ? 0.8
+              : 0.6,
         reasons: [],
         suggestions: [],
         detailedReasons: [],
@@ -590,78 +654,17 @@ export async function POST(request: NextRequest) {
         scoreSymbol: undefined,
         scoreMeaning: undefined,
       }))
-
       logger.log(`[ANALYZE-VIDEO-PITCH] Matching pipeline v3 completed: ${matchedVCs.length} matches found`)
-
-    } catch (matchError: any) {
-      logger.error('[ANALYZE-VIDEO-PITCH] Matching pipeline error:', matchError)
-      logger.error('[ANALYZE-VIDEO-PITCH] Error stack:', matchError?.stack)
+    } else {
       matchedVCs = []
     }
 
-    // -----------------------------------------------------------------------
-    // MULTI-PASS SCORING PIPELINE (replaces Universal Analysis Engine)
-    // -----------------------------------------------------------------------
-    let scoringResult: Awaited<ReturnType<typeof runScoringPipeline>> | null = null
     try {
-      // Build a video-enhanced context: override DB profile fields with data
-      // extracted from the video transcript so the scoring pipeline analyzes
-      // the PITCHED startup, not the founder's onboarding profile.
-      const baseCtx = founderContext || enhancedFounder
-
-      // Extract startup name from transcript (patterns: "CEO of X", "building X", "X is")
-      let videoStartupName: string | null = null
-      const namePatterns = [
-        /(?:CEO|CTO|founder|co-?founder)\s+(?:of|at)\s+([A-Z][A-Za-z0-9]+)/i,
-        /(?:we(?:'re| are)\s+(?:building|creating|launching))\s+([A-Z][A-Za-z0-9]+)/i,
-        /([A-Z][A-Za-z0-9]+)\s+is\s+(?:the|a|an)\s+(?:platform|app|tool|product|company|startup|service|solution)/i,
-      ]
-      for (const pat of namePatterns) {
-        const m = transcriptText.match(pat)
-        if (m && m[1] && m[1].length > 1 && m[1].toLowerCase() !== 'the') {
-          videoStartupName = m[1]
-          break
-        }
-      }
-
-      // Extract sector from pitchAnalysis.sectorFit if available
-      const videoSectors: string[] = pitchAnalysis?.sectorFit
-        ? Object.keys(pitchAnalysis.sectorFit).filter((k: string) => (pitchAnalysis.sectorFit as any)[k] > 40)
-        : []
-
-      // Build a bio from transcript's first ~300 chars as context
-      const videoBio = transcriptText.substring(0, 400)
-
-      // Derive the stage from the video content: if the transcript mentions
-      // revenue/paying customers → "revenue"; signed clients → "pre-seed"; otherwise use DB
-      const transcriptLower = transcriptText.toLowerCase()
-      let videoStage = baseCtx.stage
-      if (transcriptLower.includes('revenue') || transcriptLower.includes('paying customer') || transcriptLower.includes('mrr'))
-        videoStage = 'revenue'
-      else if (transcriptLower.includes('signed') || transcriptLower.includes('pilot') || transcriptLower.includes('beta'))
-        videoStage = 'pre-seed'
-      else if (transcriptLower.includes('prototype') || transcriptLower.includes('mvp'))
-        videoStage = 'pre-seed'
-
-      const videoEnhancedCtx = {
-        ...baseCtx,
-        startupName: videoStartupName || baseCtx.startupName,
-        bio: videoBio,
-        sectors: videoSectors.length > 0 ? videoSectors : baseCtx.sectors,
-        stage: videoStage,
-      }
-
-      const sectors = videoEnhancedCtx.sectors || parseJSON<string[]>(founder.sectors || '[]', [])
-      const domain = sectors[0] || pitchAnalysis?.sectorFit?.primarySector || 'technology'
-      const problem = pitchAnalysis?.problemStatement || pitchAnalysis?.oneLineSummary || videoBio.substring(0, 300)
-
-      logger.log(`[ANALYZE-VIDEO-PITCH] Running Market Intelligence + Scoring Pipeline for "${videoEnhancedCtx.startupName}" (stage: ${videoEnhancedCtx.stage})...`)
-
-      const marketContext = await getDeepMarketContext(domain, problem)
-      scoringResult = await runScoringPipeline(transcriptText, videoEnhancedCtx, marketContext, "VIDEO")
+      scoringResult = await runScoringPipeline(transcriptText, videoEnhancedCtx, marketContext, 'VIDEO')
       logger.log(`[ANALYZE-VIDEO-PITCH] Scoring Pipeline completed; finalScore: ${scoringResult.finalScore}`)
-    } catch (scoringError: any) {
-      logger.error('[ANALYZE-VIDEO-PITCH] Scoring Pipeline failed (non-critical):', scoringError?.message)
+    } catch (scoringError: unknown) {
+      const msg = scoringError instanceof Error ? scoringError.message : String(scoringError)
+      logger.error('[ANALYZE-VIDEO-PITCH] Scoring Pipeline failed (non-critical):', msg)
     }
 
     // Save video pitch analysis

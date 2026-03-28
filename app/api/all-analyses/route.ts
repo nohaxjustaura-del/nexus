@@ -132,6 +132,7 @@ export async function GET() {
           confidence: 85,
           result: analysisResult,
           fileName: analysis.fileName,
+          url: analysis.fileUrl || undefined,
         }
       }),
       // Pitch idea analyses
@@ -157,7 +158,12 @@ export async function GET() {
           id: analysis.id,
           type: 'pitch-idea',
           createdAt: analysis.createdAt,
-          compatibilityScore: analysisResult?.founderFit || analysisResult?.ycFitScore || 0,
+          compatibilityScore:
+            analysisResult?.overallScore ||
+            analysisResult?.finalScore ||
+            analysisResult?.founderFit ||
+            analysisResult?.ycFitScore ||
+            0,
           confidence: 85,
           result: {
             ...analysisResult,

@@ -3,7 +3,13 @@ import { getCurrentUser } from "@/lib/auth"
 import { redirect } from "next/navigation"
 import { AdminDashboardClient } from "./admin-dashboard-client"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Users, Building2, Shield, FileCheck, Clock } from "lucide-react"
+import {
+  DashboardIconBuilding2,
+  DashboardIconClock,
+  DashboardIconFileCheck,
+  DashboardIconShield,
+  DashboardIconUsers,
+} from "./dashboard-stat-icons"
 import { isAdminEmail } from "@/lib/constants"
 import {
   enrichFounderVerifications,
@@ -98,7 +104,7 @@ export default async function AdminDashboardPage() {
           </div>
           {stats.total > 0 && (
             <div className="inline-flex w-fit items-center gap-2 rounded-full border border-destructive/35 bg-destructive/10 px-3 py-1.5 text-sm font-medium text-destructive">
-              <Clock className="h-4 w-4 shrink-0" aria-hidden />
+              <DashboardIconClock className="h-4 w-4 shrink-0" />
               {stats.total} pending
             </div>
           )}
@@ -109,7 +115,7 @@ export default async function AdminDashboardPage() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium">User Signups</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
+              <DashboardIconUsers className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{stats.userSignups}</div>
@@ -120,7 +126,7 @@ export default async function AdminDashboardPage() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium">Founder Verifications</CardTitle>
-              <FileCheck className="h-4 w-4 text-muted-foreground" />
+              <DashboardIconFileCheck className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{stats.founderVerifications}</div>
@@ -131,7 +137,7 @@ export default async function AdminDashboardPage() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium">VC Claims</CardTitle>
-              <Building2 className="h-4 w-4 text-muted-foreground" />
+              <DashboardIconBuilding2 className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{stats.vcClaims}</div>
@@ -142,7 +148,7 @@ export default async function AdminDashboardPage() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium">Unverified VCs</CardTitle>
-              <Shield className="h-4 w-4 text-muted-foreground" />
+              <DashboardIconShield className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{stats.unverifiedVCs}</div>

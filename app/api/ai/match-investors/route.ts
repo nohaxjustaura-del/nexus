@@ -53,8 +53,20 @@ export async function POST(request: NextRequest) {
     const founderProfile = JSON.parse(userProfile.founderProfile as string)
     const startupProfile = JSON.parse(userProfile.startupProfile as string)
 
-    // Fetch ALL investors from database for matching
+    const fetchCap = Math.min(
+      20_000,
+      Math.max(500, parseInt(process.env.MATCH_INVESTORS_FETCH_LIMIT || '6000', 10) || 6000),
+    )
+    const promptCap = Math.min(
+      fetchCap,
+      Math.max(80, parseInt(process.env.MATCH_INVESTORS_PROMPT_MAX || '240', 10) || 240),
+    )
+
+    // Public corpus (same as Discover); order puts stronger rows first when we trim for the LLM.
     const investors = await db.investor.findMany({
+      where: {
+        isPublic: true,
+      },
       select: {
         id: true,
         name: true,
@@ -77,7 +89,8 @@ export async function POST(request: NextRequest) {
         websiteUrl: true,
         applicationUrl: true,
       },
-      take: 500, // Limit to avoid token limits
+      orderBy: [{ verified: 'desc' }, { discoverable: 'desc' }, { updatedAt: 'desc' }],
+      take: fetchCap,
     })
 
     // Format investor database for AI
@@ -114,9 +127,9 @@ ${JSON.stringify(startupProfile, null, 2)}
 
 # INVESTOR DATABASE
 
-${JSON.stringify(investorDatabase.slice(0, 100), null, 2)}
+${JSON.stringify(investorDatabase.slice(0, promptCap), null, 2)}
 
-Please analyze this founder and startup, provide detailed feedback, and match them with the best investors from the database.
+Please analyze this founder and startup, provide detailed feedback, and match them with the best investors from the database. (Subset shows the top ${promptCap} public investors by verified / profile quality — full directory is larger.)
 `
 
     // Call AI service (OpenRouter or OpenAI)

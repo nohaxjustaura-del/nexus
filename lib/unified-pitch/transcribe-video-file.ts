@@ -1,5 +1,9 @@
 import { logger } from '@/lib/logger'
 
+function bufferToBodyArrayBuffer(buffer: Buffer): ArrayBuffer {
+  return buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength) as ArrayBuffer
+}
+
 export function validateUnifiedVideoFile(file: File): { valid: boolean; error?: string } {
   const maxSize = 500 * 1024 * 1024
   const allowedTypes = ['video/mp4', 'video/quicktime', 'video/webm', 'video/x-msvideo', 'video/mpeg']
@@ -12,12 +16,17 @@ export function validateUnifiedVideoFile(file: File): { valid: boolean; error?: 
   return { valid: true }
 }
 
-/** Deepgram then Whisper — mirrors analyze-video-pitch (no route import). */
-export async function transcribeVideoFile(file: File): Promise<string> {
-  const arrayBuffer = await file.arrayBuffer()
-  const buffer = Buffer.from(arrayBuffer)
+/**
+ * Transcribe from an in-memory buffer (avoids a second full file read when the caller already has the buffer).
+ */
+export async function transcribeVideoFromBuffer(
+  buffer: Buffer,
+  fileName: string,
+  mimeType: string,
+): Promise<string> {
   const deepgramKey = process.env.DEEPGRAM_API_KEY
   const openaiKey = process.env.OPENAI_API_KEY
+  const contentType = mimeType || 'video/mp4'
 
   if (deepgramKey) {
     const deepgramUrl = 'https://api.deepgram.com/v1/listen?model=nova-2&smart_format=true'
@@ -25,9 +34,9 @@ export async function transcribeVideoFile(file: File): Promise<string> {
       method: 'POST',
       headers: {
         Authorization: `Token ${deepgramKey}`,
-        'Content-Type': file.type || 'video/mp4',
+        'Content-Type': contentType,
       },
-      body: buffer,
+      body: bufferToBodyArrayBuffer(buffer),
     })
     if (!response.ok) {
       const errorText = await response.text()
@@ -47,7 +56,7 @@ export async function transcribeVideoFile(file: File): Promise<string> {
   if (openaiKey) {
     const { default: OpenAI } = await import('openai')
     const openaiClient = new OpenAI({ apiKey: openaiKey })
-    const whisperFile = new File([buffer], file.name, { type: file.type })
+    const whisperFile = new File([bufferToBodyArrayBuffer(buffer)], fileName, { type: contentType })
     const transcription = await openaiClient.audio.transcriptions.create({
       file: whisperFile,
       model: 'whisper-1',
@@ -63,4 +72,10 @@ export async function transcribeVideoFile(file: File): Promise<string> {
   }
 
   throw new Error('No transcription service available. Set DEEPGRAM_API_KEY or OPENAI_API_KEY.')
+}
+
+/** Deepgram then Whisper — mirrors analyze-video-pitch (no route import). */
+export async function transcribeVideoFile(file: File): Promise<string> {
+  const arrayBuffer = await file.arrayBuffer()
+  return transcribeVideoFromBuffer(Buffer.from(arrayBuffer), file.name, file.type || 'video/mp4')
 }

@@ -1,6 +1,5 @@
 /**
- * Cross-check a Prisma Investor row against fresh Exa retrieval + the configured LLM
- * (Ollama when `OLLAMA_BASE_URL` is set — preferred for VC checks even if OpenRouter is configured).
+ * Cross-check a Prisma Investor row against fresh Exa retrieval + the configured LLM (OpenRouter).
  *
  * Used by the data-validation worker when WORKER_VALIDATION_EXA_SAMPLE > 0.
  */
@@ -109,10 +108,10 @@ export async function verifyInvestorAgainstExa(
     issues: string[]
     summary?: string
   }>({
-    system: `You validate whether a DATABASE record for ONE venture capital firm is consistent with fresh web search excerpts (Exa).
+    system: `You validate whether a DATABASE record for ONE capital provider (VC, accelerator, angel group, CVC, family office, grantmaker, etc.) is consistent with fresh web search excerpts (Exa).
 
 Rules:
-- Only flag clear contradictions: wrong firm confused with a similarly named company, check sizes that contradict explicit figures in the excerpts, thesis clearly describing a different fund.
+- Only flag clear contradictions: wrong firm confused with a similarly named entity, check sizes that contradict explicit figures in the excerpts, thesis clearly describing a different organization.
 - Empty or generic DB fields are OK when excerpts are thin.
 - score: integer 0–100 (100 = strong agreement; 70+ = broadly consistent).
 - aligned: true only if score >= 70 AND there is no severe contradiction (e.g. wrong firm).

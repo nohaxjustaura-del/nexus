@@ -4,6 +4,20 @@ import { getCurrentUser } from "@/lib/auth"
 import { parseJSON } from "@/lib/utils"
 import Link from "next/link"
 import { redirect } from "next/navigation"
+
+/**
+ * Investor JSON columns are stored as strings but may arrive pre-parsed (e.g. JsonValue).
+ * Always return a real string[] so callers can use .some / .join safely.
+ */
+function parseJSONStringArray(value: unknown): string[] {
+  if (value == null) return []
+  if (Array.isArray(value)) return value.map((x) => String(x))
+  if (typeof value !== "string") return []
+  const raw = parseJSON<unknown>(value, [])
+  if (Array.isArray(raw)) return raw.map((x) => String(x))
+  if (typeof raw === "string" && raw.trim()) return [raw.trim()]
+  return []
+}
 import DiscoverClient from "./discover-client"
 
 function searchableSlice(v: unknown): string {
@@ -51,7 +65,7 @@ function investorMatchesDirectorySearch(
     inv.leadFollow || '',
     inv.decisionSpeed || '',
   ]
-  const geo = parseJSON<string[]>(inv.geoFocus as string | null, [])
+  const geo = parseJSONStringArray(inv.geoFocus as string | null)
   parts.push(geo.join(' '))
   const hay = parts.join(' ').toLowerCase()
   const tokens = q.split(/\s+/).filter((t) => t.length > 0)
@@ -146,7 +160,7 @@ export default async function DiscoverPage({
       
       let sectors: string[] = []
       try {
-        sectors = founder?.sectors ? parseJSON<string[]>(founder.sectors, []) : []
+        sectors = founder?.sectors ? parseJSONStringArray(founder.sectors) : []
       } catch (e) {
         sectors = []
       }
@@ -202,11 +216,16 @@ export default async function DiscoverPage({
     // Error handled silently to prevent page crashes
   }
 
-  // Get all investors from database (optimized: only fetch needed fields)
+  // Get all public investors from database (optimized: only fetch needed fields)
+  // Note: `discoverable` is a quality/metadata flag (see lib/investor-pristine-gate.ts); matching uses
+  // the same public corpus as this page. Sort still prefers discoverable for "For you" polish.
   // Wrap in try-catch to handle database errors gracefully
   let investors: any[]
   try {
     investors = await db.investor.findMany({
+      where: {
+        isPublic: true,
+      },
       select: {
         id: true,
         name: true,
@@ -236,6 +255,7 @@ export default async function DiscoverPage({
       },
       orderBy: [
         { verified: "desc" }, // Verified VCs first
+        { discoverable: "desc" }, // Pristine / match-eligible next
         { createdAt: "desc" }, // Then newest first
       ],
       // No take limit - show all investors
@@ -286,8 +306,10 @@ export default async function DiscoverPage({
   // Sector filter
   if (effectiveParams.sector) {
     filteredInvestors = filteredInvestors.filter(inv => {
-      const sectors = parseJSON<string[]>(inv.sectors, [])
-      return sectors.some(s => s.toLowerCase().includes(String(effectiveParams.sector).toLowerCase()))
+      const sectorList = parseJSONStringArray(inv.sectors)
+      return sectorList.some((s) =>
+        s.toLowerCase().includes(String(effectiveParams.sector).toLowerCase()),
+      )
     })
   }
 
@@ -313,7 +335,7 @@ export default async function DiscoverPage({
     const matchStages = stageMapping[founderStage] || stageMapping[String(effectiveParams.stage).toLowerCase()] || [String(effectiveParams.stage).toLowerCase()]
     
     filteredInvestors = filteredInvestors.filter(inv => {
-      const stages = parseJSON<string[]>(inv.stages, [])
+      const stages = parseJSONStringArray(inv.stages)
       if (stages.length === 0) return true // Include investors with no stage specified
       return stages.some(s => matchStages.some(ms => s.toLowerCase().includes(ms)))
     })
@@ -355,7 +377,7 @@ export default async function DiscoverPage({
   if (searchParams.geographicRestriction || (effectiveParams.geographicRestriction && viewAll)) {
     const geoRestriction = searchParams.geographicRestriction || effectiveParams.geographicRestriction
     filteredInvestors = filteredInvestors.filter(inv => {
-      const geoFocus = parseJSON<string[]>(inv.geoFocus, [])
+      const geoFocus = parseJSONStringArray(inv.geoFocus)
       if (geoFocus.length === 0) return true // Include investors with no geo specified
       if (geoRestriction === 'us-only') {
         return geoFocus.some(g => g.toLowerCase().includes('us') || g.toLowerCase().includes('united states') || g.toLowerCase().includes('north america') || g.toLowerCase().includes('global'))
@@ -451,7 +473,7 @@ export default async function DiscoverPage({
       const matchStages = stageMapping[founderStage] || stageMapping[String(effectiveParams.stage).toLowerCase()] || [String(effectiveParams.stage).toLowerCase()]
       
       filteredInvestors = filteredInvestors.filter(inv => {
-        const stages = parseJSON<string[]>(inv.stages, [])
+        const stages = parseJSONStringArray(inv.stages)
         if (stages.length === 0) return true
         return stages.some(s => matchStages.some(ms => s.toLowerCase().includes(ms)))
       })

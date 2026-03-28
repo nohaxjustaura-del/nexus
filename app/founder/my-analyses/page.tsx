@@ -23,6 +23,7 @@ import {
 } from "lucide-react"
 import Link from "next/link"
 import { PitchFeedbackComparison } from "@/components/pitch-feedback-comparison"
+import { getRubricSectionScoresFromResult } from "@/lib/analysis/is-safe-rubric-for-dashboard"
 
 /**
  * Rank-based presentation score so the #1 match always reads as a strong fit
@@ -227,7 +228,7 @@ export default function MyAnalysesPage() {
             My Analyses
           </h1>
           <p className="text-muted-foreground text-lg">
-            Past pitch runs, feedback, and VC matches in one place
+            Past pitch runs, feedback, and investor matches in one place
           </p>
         </div>
 
@@ -304,71 +305,20 @@ export default function MyAnalysesPage() {
         {analyses.length === 0 ? (
           <Card className="border border-border/80">
             <CardContent className="pt-12 pb-12 text-center">
-              <div className="flex items-center justify-center gap-3 mb-6">
-                <div className="p-4 rounded-lg bg-primary/10">
-                  <Presentation className="h-10 w-10 text-primary" />
-                </div>
-                <div className="p-4 rounded-lg bg-primary/10">
-                  <Video className="h-10 w-10 text-primary" />
-                </div>
-                <div className="p-4 rounded-lg bg-primary/10">
-                  <Lightbulb className="h-10 w-10 text-primary" />
-                </div>
+              <div className="p-4 rounded-lg bg-primary/10 w-fit mx-auto mb-6">
+                <Layers className="h-12 w-12 text-primary" />
               </div>
               <h3 className="text-2xl font-bold mb-3">No Analyses Yet</h3>
-              <p className="text-muted-foreground mb-8 max-w-md mx-auto">
-                Feedback and VC matches from your pitch materials
+              <p className="text-muted-foreground mb-8 max-w-lg mx-auto text-base leading-relaxed">
+                Feedback and investor matches from your pitch materials. Start a full pitch review with deck, video,
+                and written context in one flow.
               </p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 max-w-4xl mx-auto">
-                <Link href="/founder/pitch-deck">
-                  <Card className="hover:shadow-md transition-all border border-border/80 hover:border-primary/40 h-full">
-                    <CardContent className="pt-6 text-center">
-                      <div className="p-3 rounded-lg bg-primary/10 w-fit mx-auto mb-3">
-                        <Presentation className="h-6 w-6 text-primary" />
-                      </div>
-                      <h4 className="font-semibold mb-2">Pitch Deck</h4>
-                      <p className="text-xs text-muted-foreground mb-4">
-                        Upload your pitch deck for analysis and VC matching
-                      </p>
-                      <Button size="sm" className="w-full">
-                        Get Started
-                      </Button>
-                    </CardContent>
-                  </Card>
-                </Link>
-                <Link href="/founder/video-pitch">
-                  <Card className="hover:shadow-md transition-all border border-border/80 hover:border-primary/40 h-full">
-                    <CardContent className="pt-6 text-center">
-                      <div className="p-3 rounded-lg bg-primary/10 w-fit mx-auto mb-3">
-                        <Video className="h-6 w-6 text-primary" />
-                      </div>
-                      <h4 className="font-semibold mb-2">Video Pitch</h4>
-                      <p className="text-xs text-muted-foreground mb-4">
-                        Upload a video pitch for expert review and feedback
-                      </p>
-                      <Button size="sm" className="w-full">
-                        Get Started
-                      </Button>
-                    </CardContent>
-                  </Card>
-                </Link>
-                <Link href="/founder/ai-analysis">
-                  <Card className="hover:shadow-md transition-all border border-border/80 hover:border-primary/40 h-full">
-                    <CardContent className="pt-6 text-center">
-                      <div className="p-3 rounded-lg bg-primary/10 w-fit mx-auto mb-3">
-                        <Lightbulb className="h-6 w-6 text-primary" />
-                      </div>
-                      <h4 className="font-semibold mb-2">Pitch Idea</h4>
-                      <p className="text-xs text-muted-foreground mb-4">
-                        Structured feedback on your idea, aligned with how investors read decks
-                      </p>
-                      <Button size="sm" className="w-full">
-                        Get Started
-                      </Button>
-                    </CardContent>
-                  </Card>
-                </Link>
-              </div>
+              <Link href="/founder/ai-analysis">
+                <Button size="lg" className="min-w-[200px] bg-gradient-to-r from-primary to-blue-600 hover:from-primary/90 hover:to-blue-600/90">
+                  Get started
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              </Link>
             </CardContent>
           </Card>
         ) : filteredAndSortedAnalyses.length === 0 ? (
@@ -441,7 +391,7 @@ export default function MyAnalysesPage() {
                           <div className="text-4xl font-bold bg-gradient-to-r from-primary via-blue-600 to-purple-600 bg-clip-text text-transparent">
                             {Math.round(analysis.compatibilityScore)}
                           </div>
-                          <div className="text-xs font-medium text-muted-foreground">Compatibility</div>
+                          <div className="text-xs font-medium text-muted-foreground">Rubric / fit score</div>
                           {analysis.confidence && analysis.confidence > 0 && (
                             <div className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
                               <TrendingUp className="h-3 w-3" />
@@ -460,6 +410,24 @@ export default function MyAnalysesPage() {
                 <CardContent>
                   {analysis.result ? (
                     <>
+                      {(() => {
+                        const rubricScores = getRubricSectionScoresFromResult(analysis.result)
+                        if (!rubricScores) return null
+                        return (
+                          <div className="mb-4 flex flex-wrap gap-2">
+                            {rubricScores.map((s) => (
+                              <Badge
+                                key={s.key}
+                                variant="secondary"
+                                className="font-mono text-xs font-semibold tabular-nums"
+                              >
+                                {s.label}: {s.score}
+                              </Badge>
+                            ))}
+                          </div>
+                        )
+                      })()}
+
                       {/* Video / unified pitch file strip */}
                       {(analysis.type === 'video-pitch' || analysis.type === 'unified-pitch') && (
                         <div className="mb-4 p-4 rounded-lg border bg-muted/30">
@@ -492,7 +460,7 @@ export default function MyAnalysesPage() {
                         <div className="mb-4">
                           <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
                             <TrendingUp className="h-4 w-4 text-primary" />
-                            Top {topMatches.length} VC Matches
+                            Top {topMatches.length} investor matches
                           </h4>
                           <div className="space-y-2">
                             {topMatches.map((match: any, i: number) => {
@@ -573,37 +541,53 @@ export default function MyAnalysesPage() {
                       )}
 
                       {/* Actions */}
-                      <div className="flex gap-3 pt-4 border-t border-border">
-                        <Link 
+                      <div className="flex flex-col gap-3 pt-4 border-t border-border sm:flex-row sm:flex-wrap">
+                        <Link href={`/founder/analyses/${analysis.id}`} className="min-w-[140px] flex-1">
+                          <Button className="w-full bg-gradient-to-r from-primary to-blue-600 hover:from-primary/90 hover:to-blue-600/90 shadow-sm hover:shadow-md transition-all font-semibold">
+                            View full analysis
+                            <ArrowRight className="ml-2 h-4 w-4" />
+                          </Button>
+                        </Link>
+                        {(analysis.result?.matches?.length > 0 || analysis.result?.matchedVCs?.length > 0) && (
+                          <Link href={`/founder/matches?analysis=${analysis.id}`} className="min-w-[140px] flex-1">
+                            <Button variant="outline" className="w-full border-border hover:border-primary hover:bg-primary/5">
+                              <TrendingUp className="mr-2 h-4 w-4" />
+                              Investor matches
+                            </Button>
+                          </Link>
+                        )}
+                        <Link
                           href={
                             analysis.type === 'unified-pitch'
                               ? '/founder/ai-analysis'
                               : analysis.type === 'video-pitch'
                                 ? '/founder/video-pitch'
-                                : '/founder/pitch-deck'
-                          } 
-                          className="flex-1"
+                                : analysis.type === 'pitch-idea'
+                                  ? '/founder/ai-analysis'
+                                  : '/founder/pitch-deck'
+                          }
+                          className="min-w-[140px] flex-1"
                         >
                           <Button variant="outline" className="w-full border-border hover:border-primary hover:bg-primary/5 transition-all">
                             <Sparkles className="mr-2 h-4 w-4" />
                             {analysis.type === 'unified-pitch'
                               ? 'New unified pitch'
                               : analysis.type === 'video-pitch'
-                                ? 'New Video Pitch'
-                                : 'New Pitch Deck'}
+                                ? 'New video pitch'
+                                : analysis.type === 'pitch-idea'
+                                  ? 'New pitch idea'
+                                  : 'New pitch deck'}
                           </Button>
                         </Link>
-                        {(analysis.result?.matches?.length > 0 || analysis.result?.matchedVCs?.length > 0) ? (
-                          <Link href={`/founder/matches?analysis=${analysis.id}`} className="flex-1">
-                            <Button className="w-full bg-gradient-to-r from-primary to-blue-600 hover:from-primary/90 hover:to-blue-600/90 shadow-sm hover:shadow-md transition-all font-semibold">
-                              View Full Report
-                              <ArrowRight className="ml-2 h-4 w-4" />
-                            </Button>
-                          </Link>
-                        ) : analysis.type === 'pitch-deck' && analysis.url ? (
-                          <a href={analysis.url} target="_blank" rel="noopener noreferrer" className="flex-1">
-                            <Button className="w-full bg-gradient-to-r from-primary to-blue-600 hover:from-primary/90 hover:to-blue-600/90 shadow-sm hover:shadow-md transition-all font-semibold">
-                              View Pitch Deck
+                        {analysis.type === 'pitch-deck' && analysis.url ? (
+                          <a
+                            href={analysis.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="min-w-[140px] flex-1"
+                          >
+                            <Button variant="outline" className="w-full">
+                              Open deck file
                               <ExternalLink className="ml-2 h-4 w-4" />
                             </Button>
                           </a>

@@ -387,7 +387,7 @@ export async function aiNativeMatchVCs(
   //                 │             │ A seed-stage founder will NEVER see a
   //                 │             │ Series-C-only VC.
   //  ─────────────────────────────────────────────────────────────────────
-  //  HARD FILTER 2  │ Visibility  │ isPublic = true AND discoverable = true.
+  //  HARD FILTER 2  │ Visibility  │ isPublic = true (full public corpus, same as Discover).
   //                 │             │ Hidden / unlisted profiles are excluded.
   //  ─────────────────────────────────────────────────────────────────────
   //  HARD FILTER 3a │ Check Size  │ Exclude when the VC's MINIMUM check
@@ -426,7 +426,6 @@ export async function aiNativeMatchVCs(
       where: {
         // HARD FILTER 2 — Visibility
         isPublic: true,
-        discoverable: true,
         // HARD FILTER 1 — Stage
         OR: stageConditions,
         // HARD FILTER 3 — Check size (exclude bad fits)
@@ -436,7 +435,7 @@ export async function aiNativeMatchVCs(
       },
     })
     logger.log(`[AI-NATIVE] Phase 1 — Hard filters (Prisma WHERE): ${stageFiltered.length} VCs passed (stage=${founderStage}, fundingNeed=${fundingNeed}K)`)
-    logger.log(`[AI-NATIVE]   Filter breakdown: stage=${stageConditions.length} stage variants, visibility=public+discoverable, checkSize=${checkSizeExclusions.length > 0 ? 'active' : 'skipped (no fundingNeed)'}`)
+    logger.log(`[AI-NATIVE]   Filter breakdown: stage=${stageConditions.length} stage variants, visibility=public, checkSize=${checkSizeExclusions.length > 0 ? 'active' : 'skipped (no fundingNeed)'}`)
   } catch (dbErr: any) {
     logger.error('[AI-NATIVE] Prisma hard-filter query failed, falling back to passed-in investors:', dbErr?.message)
     stageFiltered = _investors
@@ -445,7 +444,7 @@ export async function aiNativeMatchVCs(
   if (stageFiltered.length === 0) {
     logger.warn('[AI-NATIVE] No VCs passed hard filters — falling back to visibility-only query')
     stageFiltered = await db.investor.findMany({
-      where: { isPublic: true, discoverable: true },
+      where: { isPublic: true },
     })
   }
 

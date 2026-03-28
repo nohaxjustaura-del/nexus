@@ -2,8 +2,7 @@
 /**
  * Spot-check Investor rows: fresh Exa retrieval + configured LLM judges consistency with DB.
  *
- * Prereqs: DATABASE_URL, EXA_API_KEY, and OLLAMA_BASE_URL+OLLAMA_MODEL (e.g. qwen2.5:7b)
- * or OPENROUTER_API_KEY. For local Ollama alongside OpenRouter: LLM_PREFER_OLLAMA=1
+ * Prereqs: DATABASE_URL, EXA_API_KEY, and OPENROUTER_API_KEY.
  *
  * Usage:
  *   npx tsx scripts/verify-vc-db-exa.ts --limit 5
@@ -65,7 +64,7 @@ async function main() {
   const delayMs = Math.max(500, parseInt(process.env.WORKER_VALIDATION_EXA_DELAY_MS || '2500', 10) || 2500)
 
   console.log(
-    `\nVerifying ${rows.length} row(s) with Exa + LLM (OLLAMA_MODEL=${process.env.OLLAMA_MODEL || '(default)'} preferOllama=${process.env.LLM_PREFER_OLLAMA || 'unset'})\n`,
+    `\nVerifying ${rows.length} row(s) with Exa + OpenRouter LLM\n`,
   )
 
   for (const row of rows) {

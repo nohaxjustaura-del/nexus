@@ -108,38 +108,40 @@ export default function OnboardingQuestionsPage() {
   }, [step, formData])
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 py-12 px-4">
-      <div className="max-w-3xl mx-auto">
+    <div className="relative min-h-screen bg-background py-12 px-4 text-foreground">
+      <div
+        className="pointer-events-none absolute inset-x-0 top-0 h-[min(28vh,16rem)] bg-[radial-gradient(ellipse_70%_55%_at_15%_-5%,hsl(var(--primary)/0.06),transparent_58%)]"
+        aria-hidden
+      />
+      <div className="relative z-10 mx-auto max-w-3xl">
         <div className="mb-8">
-          <h1 className="text-4xl font-bold text-slate-900 mb-2">
-            Tell us about your startup
-          </h1>
-          <p className="text-lg text-slate-600">
+          <h1 className="font-heading mb-2 text-3xl font-semibold tracking-tight sm:text-4xl">Tell us about your startup</h1>
+          <p className="text-base text-muted-foreground sm:text-lg">
             A few questions so we can line up VCs, accelerators, and programs that fit your stage and sector
           </p>
         </div>
 
         {/* Progress Bar */}
         <div className="mb-8">
-          <div className="flex justify-between mb-2">
-            <span className="text-sm font-medium text-slate-700">Step {step} of 5</span>
-            <span className="text-sm text-slate-500">{Math.round((step / 5) * 100)}% complete</span>
+          <div className="mb-2 flex justify-between">
+            <span className="text-sm font-medium text-foreground">Step {step} of 5</span>
+            <span className="text-sm text-muted-foreground">{Math.round((step / 5) * 100)}% complete</span>
           </div>
-          <div className="w-full bg-slate-200 rounded-full h-2">
-            <div 
-              className="bg-gradient-to-r from-blue-600 to-indigo-600 h-2 rounded-full transition-all duration-300"
+          <div className="h-2 w-full rounded-full bg-muted/50">
+            <div
+              className="h-2 rounded-full bg-primary transition-all duration-300"
               style={{ width: `${(step / 5) * 100}%` }}
             />
           </div>
         </div>
 
-        <Card className="p-8">
+        <Card className="border border-border/40 bg-card/80 p-8 shadow-sm ring-1 ring-border/15">
           {/* STEP 1: Founder Background */}
           {step === 1 && (
             <div className="space-y-6">
               <div>
-                <h2 className="text-2xl font-bold text-slate-900 mb-4">About You (The Founder)</h2>
-                <p className="text-slate-600 mb-6">Help us understand your background and experience</p>
+                <h2 className="font-heading mb-4 text-2xl font-semibold tracking-tight">About You (The Founder)</h2>
+                <p className="mb-6 text-muted-foreground">Help us understand your background and experience</p>
               </div>
 
               <div>
@@ -191,7 +193,7 @@ export default function OnboardingQuestionsPage() {
 
               <div>
                 <Label>Optional: Help us find diversity-focused programs (Select if applicable)</Label>
-                <p className="text-xs text-slate-500 mb-3">
+                <p className="mb-3 text-xs text-muted-foreground">
                   Some VCs and accelerators specifically support underrepresented founders. This info helps us match you with them.
                 </p>
                 <div className="grid grid-cols-2 gap-3">
@@ -214,8 +216,8 @@ export default function OnboardingQuestionsPage() {
           {step === 2 && (
             <div className="space-y-6">
               <div>
-                <h2 className="text-2xl font-bold text-slate-900 mb-4">Your Startup</h2>
-                <p className="text-slate-600 mb-6">Tell us about what you're building</p>
+                <h2 className="font-heading mb-4 text-2xl font-semibold tracking-tight">Your Startup</h2>
+                <p className="mb-6 text-muted-foreground">Tell us about what you're building</p>
               </div>
 
               <div>
@@ -236,7 +238,7 @@ export default function OnboardingQuestionsPage() {
                   onChange={(e) => updateField('oneLiner', e.target.value)}
                   placeholder="e.g., automated code review for open source maintainers"
                 />
-                <p className="text-xs text-slate-500 mt-1">Make it clear and specific</p>
+                <p className="mt-1 text-xs text-muted-foreground">Make it clear and specific</p>
               </div>
 
               <div>
@@ -277,8 +279,8 @@ export default function OnboardingQuestionsPage() {
           {step === 3 && (
             <div className="space-y-6">
               <div>
-                <h2 className="text-2xl font-bold text-slate-900 mb-4">Sector & Stage</h2>
-                <p className="text-slate-600 mb-6">Help us categorize your startup</p>
+                <h2 className="font-heading mb-4 text-2xl font-semibold tracking-tight">Sector & Stage</h2>
+                <p className="mb-6 text-muted-foreground">Help us categorize your startup</p>
               </div>
 
               <div>
@@ -339,8 +341,8 @@ export default function OnboardingQuestionsPage() {
           {step === 4 && (
             <div className="space-y-6">
               <div>
-                <h2 className="text-2xl font-bold text-slate-900 mb-4">Traction & Metrics</h2>
-                <p className="text-slate-600 mb-6">Show us what you've achieved so far</p>
+                <h2 className="font-heading mb-4 text-2xl font-semibold tracking-tight">Traction & Metrics</h2>
+                <p className="mb-6 text-muted-foreground">Show us what you've achieved so far</p>
               </div>
 
               <div>
@@ -390,8 +392,8 @@ export default function OnboardingQuestionsPage() {
           {step === 5 && (
             <div className="space-y-6">
               <div>
-                <h2 className="text-2xl font-bold text-slate-900 mb-4">Fundraising Goals</h2>
-                <p className="text-slate-600 mb-6">Tell us about your fundraising plans</p>
+                <h2 className="font-heading mb-4 text-2xl font-semibold tracking-tight">Fundraising Goals</h2>
+                <p className="mb-6 text-muted-foreground">Tell us about your fundraising plans</p>
               </div>
 
               <div>
@@ -462,7 +464,7 @@ export default function OnboardingQuestionsPage() {
           )}
 
           {/* Navigation Buttons */}
-          <div className="flex justify-between mt-8 pt-6 border-t">
+          <div className="mt-8 flex justify-between border-t border-border/40 pt-6">
             <Button
               variant="outline"
               onClick={() => setStep(Math.max(1, step - 1))}
@@ -472,19 +474,9 @@ export default function OnboardingQuestionsPage() {
             </Button>
 
             {step < 5 ? (
-              <Button
-                onClick={() => setStep(step + 1)}
-                className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
-              >
-                Next →
-              </Button>
+              <Button onClick={() => setStep(step + 1)}>Next →</Button>
             ) : (
-              <Button
-                onClick={handleSubmit}
-                className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700"
-              >
-                Complete & Get Matches 🎯
-              </Button>
+              <Button onClick={handleSubmit}>Complete &amp; get matches</Button>
             )}
           </div>
         </Card>

@@ -333,7 +333,7 @@ export function InvestorProfileModal({
                 </div>
 
                 {/* CTAs */}
-                <div className="flex gap-2 pt-2">
+                <div className="flex flex-wrap gap-2 pt-2">
                   <Button 
                     className="flex-1"
                     onClick={primaryCTA.action}
@@ -342,6 +342,16 @@ export function InvestorProfileModal({
                     {primaryCTA.label}
                   </Button>
                   
+                  {investor.applicationUrl && primaryCTA.label !== 'Open Intake Form' && primaryCTA.label !== 'Apply to Program' && (
+                    <Button 
+                      variant="outline"
+                      onClick={() => window.open(investor.applicationUrl, '_blank')}
+                    >
+                      <Send className="h-4 w-4 mr-2" />
+                      Tailor application
+                    </Button>
+                  )}
+
                   {investor.websiteUrl && (
                     <Button 
                       variant="outline"

@@ -52,11 +52,10 @@ export async function GET(request: NextRequest) {
 
     const format = request.nextUrl.searchParams.get('format') || 'csv'
 
-    // Get all investors (only public and discoverable ones)
+    // Get all public investors (same corpus as Discover / vector matching)
     const investors = await db.investor.findMany({
       where: {
         isPublic: true,
-        discoverable: true,
       },
       orderBy: {
         createdAt: 'desc',

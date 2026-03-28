@@ -21,6 +21,7 @@ import { db } from "@/lib/db"
 import { getCurrentUser } from "@/lib/auth"
 import { parseJSON } from "@/lib/utils"
 import { logger } from "@/lib/logger"
+import { loadFounderAnalysisById } from "@/lib/analysis/load-founder-analysis"
 
 export const dynamic = "force-dynamic"
 export const runtime = "nodejs"
@@ -76,11 +77,38 @@ export default async function MatchesPage({
         founder = null
       }
 
+      // Optional: open matches for a specific saved analysis (from My Analyses)
+      let resolvedFromParam = false
+      if (founder) {
+        const aid =
+          typeof searchParams.analysis === 'string' && searchParams.analysis.trim()
+            ? searchParams.analysis.trim()
+            : null
+        if (aid) {
+          const loaded = await loadFounderAnalysisById(founder.id, aid)
+          if (loaded) {
+            const r = loaded.result
+            const matchesArray =
+              Array.isArray(r.matches) && r.matches.length > 0
+                ? r.matches
+                : Array.isArray(r.matchedVCs)
+                  ? r.matchedVCs
+                  : []
+            if (matchesArray.length > 0) {
+              hasAnalysis = true
+              topMatches = matchesArray.slice(0, 20)
+              analysisType = 'video'
+              resolvedFromParam = true
+            }
+          }
+        }
+      }
+
       // Check for any analysis type (all are equal importance)
       // Priority: Most recent analysis regardless of type
       const allAnalyses: Array<{ type: string; createdAt: Date; data: any }> = []
       
-      if (founder) {
+      if (founder && !resolvedFromParam) {
         const resumeAnalyses = (founder as any).resumeAnalyses || []
         const videoPitches = (founder as any).videoPitches || []
 
@@ -213,10 +241,10 @@ export default async function MatchesPage({
                 <Lock className="h-10 w-10 text-primary" />
               </div>
               <CardTitle className="mb-3 text-3xl font-bold">
-                Unlock Your Personalized VC Matches
+                Unlock your personalized investor matches
               </CardTitle>
               <CardDescription className="mb-6 text-lg">
-                Run a pitch analysis first, then you get compatibility scores, match notes, and a ranked list.
+                Run a pitch analysis first, then get compatibility scores, match notes, and a ranked list of VCs, angels, accelerators, and more.
               </CardDescription>
               
               <div className="mx-auto mb-8 max-w-2xl space-y-4 text-left">
@@ -232,9 +260,9 @@ export default async function MatchesPage({
                 <div className="flex items-start gap-4 rounded-lg border border-border bg-card/80 p-4">
                   <Target className="mt-1 h-6 w-6 shrink-0 text-primary" />
                   <div>
-                    <h3 className="mb-1 font-semibold">Detailed Match Breakdown</h3>
+                    <h3 className="mb-1 font-semibold">Detailed match breakdown</h3>
                     <p className="text-sm text-muted-foreground">
-                      See exactly why each VC is a good fit with component scores, evidence, and improvement suggestions
+                      See exactly why each investor is a good fit with component scores, evidence, and improvement suggestions
                     </p>
                   </div>
                 </div>
@@ -258,7 +286,7 @@ export default async function MatchesPage({
                 </Link>
                 <Link href="/founder/discover">
                   <Button size="lg" variant="outline">
-                    Browse All VCs Instead
+                    Browse all investors
                   </Button>
                 </Link>
               </div>
@@ -309,7 +337,7 @@ export default async function MatchesPage({
               <AlertCircle className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
               <CardTitle className="mb-2">No Matches Found</CardTitle>
               <CardDescription className="mb-6">
-                We couldn't find any matches in your latest analysis. Try running a new analysis or browse all VCs.
+                No matches found in your latest analysis. Try running a new analysis or browse all investors.
               </CardDescription>
               <div className="flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
                 <Link href="/founder/ai-analysis">
@@ -319,7 +347,7 @@ export default async function MatchesPage({
                   </Button>
                 </Link>
                 <Link href="/founder/discover">
-                  <Button variant="outline">Browse All VCs</Button>
+                  <Button variant="outline">Browse all investors</Button>
                 </Link>
               </div>
             </CardContent>
@@ -393,9 +421,9 @@ export default async function MatchesPage({
 
         {/* Header */}
         <div className="mb-4">
-          <h1 className="mb-2 text-3xl font-bold">Your Top VC Matches</h1>
+          <h1 className="mb-2 text-3xl font-bold">Your top investor matches</h1>
           <p className="text-muted-foreground">
-            Compatibility scores with explanations tied to your materials
+            Ranked by fit with your pitch -- thesis alignment, stage, sector, and recent activity
           </p>
         </div>
 
@@ -572,19 +600,44 @@ export default async function MatchesPage({
           ))}
         </div>
 
-        {/* CTA */}
-        <Card className="mt-6 border-primary/50 bg-primary/5">
-          <CardContent className="flex items-center justify-between p-6">
-            <div>
-              <h3 className="mb-1 font-semibold">Want to see more matches?</h3>
-              <p className="text-sm text-muted-foreground">
-                Browse all VCs and filter by your exact criteria
-              </p>
-            </div>
-            <Link href="/founder/discover">
-              <Button size="lg">
-                Discover More VCs
-              </Button>
+        {/* Next Steps Panel */}
+        <Card className="mt-6 border-primary/30 bg-gradient-to-br from-primary/5 via-card to-card">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Lightbulb className="h-5 w-5 text-primary" />
+              Next steps
+            </CardTitle>
+            <CardDescription>
+              NEXUS does not stop at ranking -- act on your results.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="grid gap-3 sm:grid-cols-3">
+            <Link href="/founder/discover" className="block">
+              <div className="flex items-center gap-3 rounded-lg border border-border bg-card/80 p-4 transition-colors hover:border-primary/30 hover:bg-accent/30">
+                <Users className="h-5 w-5 shrink-0 text-primary" />
+                <div>
+                  <p className="text-sm font-semibold text-foreground">Browse all investors</p>
+                  <p className="text-xs text-muted-foreground">Filter by stage, sector, and type</p>
+                </div>
+              </div>
+            </Link>
+            <Link href="/founder/bookmarks" className="block">
+              <div className="flex items-center gap-3 rounded-lg border border-border bg-card/80 p-4 transition-colors hover:border-primary/30 hover:bg-accent/30">
+                <Heart className="h-5 w-5 shrink-0 text-primary" />
+                <div>
+                  <p className="text-sm font-semibold text-foreground">Save target list</p>
+                  <p className="text-xs text-muted-foreground">Bookmark investors to track</p>
+                </div>
+              </div>
+            </Link>
+            <Link href="/founder/ai-analysis" className="block">
+              <div className="flex items-center gap-3 rounded-lg border border-border bg-card/80 p-4 transition-colors hover:border-primary/30 hover:bg-accent/30">
+                <Sparkles className="h-5 w-5 shrink-0 text-primary" />
+                <div>
+                  <p className="text-sm font-semibold text-foreground">Improve and re-run</p>
+                  <p className="text-xs text-muted-foreground">Refine your pitch for better matches</p>
+                </div>
+              </div>
             </Link>
           </CardContent>
         </Card>

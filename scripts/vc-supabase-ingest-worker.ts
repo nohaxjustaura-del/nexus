@@ -23,10 +23,9 @@
  *   NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY (required for Supabase sync)
  *   SUPABASE_VC_TABLE (optional, default vc_directory)
  *   DATABASE_URL (Prisma)
- *   LLM: OPENROUTER_API_KEY or local OLLAMA_BASE_URL (+ OLLAMA_MODEL) for structured extraction after Exa
- *   OPENROUTER_VC_EXTRACTION_MODEL optional when using OpenRouter (default meta-llama/llama-3.3-70b-instruct)
+ *   LLM: OPENROUTER_API_KEY and/or Ollama (OLLAMA_BASE_URL + OLLAMA_MODEL / OLLAMA_VC_MODEL); VC_LLM_PROVIDER=ollama to force local
  *   VC_RESEARCH_CONTEXT_CHARS, VC_RESEARCH_EXA_NUM_RESULTS
- *   --discover requires EXA_API_KEY only: two parallel Exa searches per round (no Tavily, no OpenRouter in discovery)
+ *   --discover requires EXA_API_KEY only: two parallel Exa searches per round (lib/vc-discovery-from-web.ts; no Tavily/OpenRouter in discovery)
  *   Discover uses VC_DISCOVERY_CONTENT_SINCE (default 2026-01-01) for Exa startPublishedDate.
  */
 

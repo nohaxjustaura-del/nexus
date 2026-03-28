@@ -319,7 +319,7 @@ export default function CrashCoursePage() {
               </Link>
               <Link href="/founder/discover">
                 <Button size="lg" variant="outline">
-                  Browse All VCs
+                  Browse all investors
                 </Button>
               </Link>
             </div>

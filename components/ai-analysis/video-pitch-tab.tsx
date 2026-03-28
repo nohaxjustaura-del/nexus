@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label"
 import { Upload, Sparkles, TrendingUp, AlertCircle, CheckCircle, Lightbulb, Target, ExternalLink, Video, Play, Crown, User, Star, FileVideo } from "lucide-react"
 import Link from "next/link"
 import AnalysisDashboard from '@/components/analysis/AnalysisDashboard'
+import { resolveRubricForDashboard } from '@/lib/analysis/is-safe-rubric-for-dashboard'
 import { toast } from '@/components/ui/toast-simple'
 
 export function VideoPitchAnalysisTab() {
@@ -434,11 +435,13 @@ export function VideoPitchAnalysisTab() {
     </Card>
 
     {/* Results Display */}
-    {result && (
+    {result && (() => {
+      const resolvedRubric = resolveRubricForDashboard(result as Record<string, unknown>)
+      return (
       <div id="analysis-results" className="mx-auto max-w-6xl w-full space-y-6">
             {/* Rubric Analysis Dashboard */}
-            {result.rubricAnalysis ? (
-              <AnalysisDashboard result={result.rubricAnalysis} finalScore={result.finalScore ?? result.overallScore} />
+            {resolvedRubric ? (
+              <AnalysisDashboard result={resolvedRubric} finalScore={result.finalScore ?? result.overallScore} />
             ) : (
               <Card className="border-2 border-primary/20">
                 <CardHeader>
@@ -470,7 +473,7 @@ export function VideoPitchAnalysisTab() {
             )}
 
             {/* Detailed Feedback (only when rubric is not available) */}
-            {!result.rubricAnalysis && (
+            {!resolvedRubric && (
             <Card className="border-2 border-primary/20">
               <CardContent className="space-y-6 pt-6">
 
@@ -660,16 +663,23 @@ export function VideoPitchAnalysisTab() {
               </div>
             )}
 
-            {/* View Full Analysis Link */}
+            {/* Saved report — same screen as post-run, with section scores and matches */}
             <div className="pt-4 border-t">
-              <Link href={`/founder/my-analyses${result.videoPitchId ? `?video=${result.videoPitchId}` : ''}`}>
+              <Link
+                href={
+                  result.videoPitchId
+                    ? `/founder/analyses/${result.videoPitchId}`
+                    : '/founder/my-analyses'
+                }
+              >
                 <Button variant="outline" className="w-full">
-                  View Full Analysis & Save Results
+                  View full analysis
                 </Button>
               </Link>
             </div>
       </div>
-    )}
+      )
+    })()}
     </div>
   )
 }

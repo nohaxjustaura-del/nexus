@@ -1,7 +1,6 @@
 import { logger } from "./logger"
 import { getLlmClient, getModelName } from "./openrouter"
 
-// Get AI client — Ollama or OpenRouter first (same as VC workers), then direct OpenAI
 export function getAIClient() {
   const llm = getLlmClient()
   if (llm) return llm
@@ -9,7 +8,7 @@ export function getAIClient() {
   const openaiKey = process.env.OPENAI_API_KEY
   if (!openaiKey) {
     throw new Error(
-      'No AI API key configured. Set OLLAMA_BASE_URL (local), OPENROUTER_API_KEY, or OPENAI_API_KEY.',
+      'No AI API key configured. Set OPENROUTER_API_KEY or OPENAI_API_KEY.',
     )
   }
 

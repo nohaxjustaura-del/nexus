@@ -51,6 +51,39 @@ export interface DeepMarketContext {
   dossier: string
 }
 
+/** Used when Exa is unavailable or searches fail — keeps scoring pipeline usable. */
+export function fallbackDeepMarketContext(domain: string, problem: string): DeepMarketContext {
+  const dossier = [
+    `=== MARKET INTELLIGENCE DOSSIER: ${domain} ===`,
+    `Problem space: ${problem}`,
+    "",
+    "Live market search was unavailable; ground analysis in the pitch transcript and founder context.",
+  ].join("\n")
+  return {
+    saturation: [],
+    catalysts: [],
+    graveyard: [],
+    incumbents: [],
+    dossier,
+  }
+}
+
+/**
+ * Same as getDeepMarketContext but never throws — returns fallback dossier on error or missing API key.
+ */
+export async function getDeepMarketContextSafe(
+  domain: string,
+  problem: string,
+): Promise<DeepMarketContext> {
+  try {
+    return await getDeepMarketContext(domain, problem)
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err)
+    logger.warn("[MARKET-INTEL] Using fallback context:", msg)
+    return fallbackDeepMarketContext(domain, problem)
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------

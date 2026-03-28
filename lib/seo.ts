@@ -93,11 +93,6 @@ export function generateWebsiteSchema() {
     url: siteUrl,
     description:
       'Fundraising intelligence that connects founders with verified investors aligned on stage, sector, thesis, and narrative.',
-    potentialAction: {
-      '@type': 'SearchAction',
-      target: `${siteUrl}/search?q={search_term_string}`,
-      'query-input': 'required name=search_term_string',
-    },
   }
 }
 

@@ -62,12 +62,12 @@ export async function createInvestorFromResearch(research: VCResearchResult): Pr
       website: research.websiteUrl ?? null,
       linkedinUrl: research.linkedinUrl ?? null,
       applicationUrl: research.applicationUrl ?? null,
+      fundSize: research.fundSize?.trim().slice(0, 500) || null,
+      decisionSpeed: research.decisionSpeed?.trim().slice(0, 500) || null,
       isPublic: true,
       discoverable: true,
     },
   })
-
-  await syncInvestorEmbeddingById(inv.id)
 
   return { id: inv.id }
 }
@@ -106,6 +106,10 @@ export async function ingestFirmToPrisma(firmName: string): Promise<{
   const investor = await db.investor.findFirst({
     where: { firmName: { equals: research.firmName, mode: 'insensitive' } },
   })
+
+  if (investor?.isPublic) {
+    await syncInvestorEmbeddingById(investor.id)
+  }
 
   return { investor, research, isNew }
 }

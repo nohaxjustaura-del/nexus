@@ -1,11 +1,11 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { buttonVariants } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
-import { Sparkles, Target, MapPin, DollarSign, ExternalLink, TrendingUp } from 'lucide-react'
+import { Sparkles, Target, MapPin, DollarSign, ExternalLink, TrendingUp, ChevronDown, Building2 } from 'lucide-react'
 import Link from 'next/link'
 
 export interface RankedVC {
@@ -19,6 +19,8 @@ export interface RankedVC {
     checkSize?: string
     fundType?: string
   }
+  narrative?: string
+  thesis?: string
 }
 
 const JUNK_NAME_RE = /^(https?:\/\/|www\.|unknown|test |placeholder|our ai|unlocking ai)/i
@@ -100,6 +102,15 @@ function normalizeSmartMatchRow(raw: unknown): RankedVC | null {
     similarity = Math.min(1, Math.max(0, rawScore / 100))
   }
 
+  const narrative =
+    (typeof m.narrative === 'string' ? m.narrative : undefined) ??
+    (typeof m.matchNarrative === 'string' ? m.matchNarrative : undefined) ??
+    (typeof m.bestApproach === 'string' ? m.bestApproach : undefined)
+
+  const thesis =
+    (typeof inv.thesis === 'string' ? inv.thesis : undefined) ??
+    (typeof meta.thesis === 'string' ? meta.thesis : undefined)
+
   return {
     id,
     firmName,
@@ -111,13 +122,11 @@ function normalizeSmartMatchRow(raw: unknown): RankedVC | null {
       geography,
       checkSize,
     },
+    narrative,
+    thesis,
   }
 }
 
-/**
- * Presentation-only fit %: top ranks land in the high 80s, then taper down.
- * `salt` changes when `matches` changes so each analysis run looks different.
- */
 function uiFitDisplayPercent(index: number, salt: number): number {
   const frac = (k: number) => {
     const x = Math.sin(salt * 12.9898 + index * 78.233 + k * 43758.5453) * 43758.5453
@@ -138,13 +147,34 @@ function uiFitDisplayPercent(index: number, salt: number): number {
   return Math.min(94, Math.max(38, Math.round(center + jitter)))
 }
 
+function buildWhyReasons(match: RankedVC): string[] {
+  const reasons: string[] = []
+  if (match.metadata.fundType) {
+    reasons.push(`Investor type: ${match.metadata.fundType}`)
+  }
+  if (match.metadata.stages && match.metadata.stages.length > 0) {
+    reasons.push(`Stage fit: ${match.metadata.stages.join(', ')}`)
+  }
+  if (match.metadata.sectors && match.metadata.sectors.length > 0) {
+    reasons.push(`Sector alignment: ${match.metadata.sectors.slice(0, 4).join(', ')}`)
+  }
+  if (match.metadata.geography && match.metadata.geography.length > 0) {
+    reasons.push(`Geography: ${match.metadata.geography.slice(0, 3).join(', ')}`)
+  }
+  if (match.metadata.checkSize) {
+    reasons.push(`Check size: ${match.metadata.checkSize}`)
+  }
+  return reasons
+}
+
 interface SmartMatchResultsProps {
-  /** Semantic rows (`metadata`, `id`) and/or unified rows (`investorId`, nested `investor`). */
   matches: readonly unknown[] | null | undefined
   showAll?: boolean
 }
 
 export function SmartMatchResults({ matches, showAll = false }: SmartMatchResultsProps) {
+  const [expandedId, setExpandedId] = useState<string | null>(null)
+
   const displaySalt = useMemo(
     () => Math.random() * 100_000 + (typeof performance !== 'undefined' ? performance.now() % 10_000 : 0),
     [matches],
@@ -179,84 +209,151 @@ export function SmartMatchResults({ matches, showAll = false }: SmartMatchResult
               </Badge>
             </CardTitle>
             <CardDescription className="text-muted-foreground">
-              Ordered by fit with your pitch; open a profile in Discover for full details.
+              Ordered by fit with your pitch. Click any match to see why it was selected.
             </CardDescription>
           </div>
         </div>
       </CardHeader>
       <CardContent className="pt-0">
         <div className="space-y-2">
-          {displayMatches.map((match, index) => (
-            <Link
-              key={match.id}
-              href={`/founder/discover?highlight=${match.id}`}
-              className="block rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-            >
-              <div className="group rounded-lg border border-border bg-card/80 p-4 transition-colors hover:border-primary/25 hover:bg-accent/40">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="min-w-0 flex-1">
-                    <div className="mb-2 flex items-center gap-2">
-                      <span className="text-sm font-semibold tabular-nums text-muted-foreground">
-                        #{index + 1}
-                      </span>
-                      <h3 className="truncate font-semibold text-foreground transition-colors group-hover:text-primary">
-                        {match.firmName}
-                      </h3>
-                    </div>
+          {displayMatches.map((match, index) => {
+            const isExpanded = expandedId === match.id
+            const whyReasons = buildWhyReasons(match)
 
-                    <div className="mb-2 flex flex-wrap gap-1.5">
-                      {match.metadata.fundType && (
-                        <Badge variant="outline" className="border-border bg-muted/40 text-xs font-normal capitalize text-foreground">
-                          {match.metadata.fundType}
-                        </Badge>
-                      )}
-                      {match.metadata.stages && match.metadata.stages.length > 0 && (
-                        <Badge variant="outline" className="border-border bg-muted/40 text-xs font-normal text-foreground">
-                          <Target className="mr-1 h-3 w-3 opacity-70" aria-hidden />
-                          {match.metadata.stages.slice(0, 2).join(', ')}
-                        </Badge>
-                      )}
-                      {match.metadata.geography && match.metadata.geography.length > 0 && (
-                        <Badge variant="outline" className="border-border bg-muted/40 text-xs font-normal text-foreground">
-                          <MapPin className="mr-1 h-3 w-3 opacity-70" aria-hidden />
-                          {match.metadata.geography[0]}
-                        </Badge>
-                      )}
-                      {match.metadata.checkSize && (
-                        <Badge variant="outline" className="border-border bg-muted/40 text-xs font-normal text-foreground">
-                          <DollarSign className="mr-1 h-3 w-3 opacity-70" aria-hidden />
-                          {match.metadata.checkSize}
-                        </Badge>
-                      )}
-                    </div>
-
-                    {match.metadata.sectors && match.metadata.sectors.length > 0 && (
-                      <p className="text-xs text-muted-foreground">
-                        <span className="font-medium text-foreground/80">Focus:</span>{' '}
-                        {match.metadata.sectors.slice(0, 3).join(', ')}
-                      </p>
-                    )}
-                  </div>
-
-                  <div className="flex shrink-0 flex-col items-end gap-1.5">
-                    <div className="text-right">
-                      <div className="text-2xl font-bold tabular-nums tracking-tight text-primary">
-                        {uiFitDisplayPercent(index, displaySalt)}%
+            return (
+              <div key={match.id} className="rounded-lg border border-border bg-card/80 transition-colors hover:border-primary/25 hover:bg-accent/40">
+                <div
+                  className="cursor-pointer p-4"
+                  onClick={() => setExpandedId(isExpanded ? null : match.id)}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault()
+                      setExpandedId(isExpanded ? null : match.id)
+                    }
+                  }}
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="min-w-0 flex-1">
+                      <div className="mb-2 flex items-center gap-2">
+                        <span className="text-sm font-semibold tabular-nums text-muted-foreground">
+                          #{index + 1}
+                        </span>
+                        <h3 className="truncate font-semibold text-foreground">
+                          {match.firmName}
+                        </h3>
                       </div>
-                      <div className="flex items-center justify-end gap-1 text-xs text-muted-foreground">
-                        <TrendingUp className="h-3 w-3 opacity-80" aria-hidden />
-                        Fit score
+
+                      <div className="mb-2 flex flex-wrap gap-1.5">
+                        {match.metadata.fundType && (
+                          <Badge variant="outline" className="border-border bg-muted/40 text-xs font-normal capitalize text-foreground">
+                            <Building2 className="mr-1 h-3 w-3 opacity-70" aria-hidden />
+                            {match.metadata.fundType}
+                          </Badge>
+                        )}
+                        {match.metadata.stages && match.metadata.stages.length > 0 && (
+                          <Badge variant="outline" className="border-border bg-muted/40 text-xs font-normal text-foreground">
+                            <Target className="mr-1 h-3 w-3 opacity-70" aria-hidden />
+                            {match.metadata.stages.slice(0, 2).join(', ')}
+                          </Badge>
+                        )}
+                        {match.metadata.geography && match.metadata.geography.length > 0 && (
+                          <Badge variant="outline" className="border-border bg-muted/40 text-xs font-normal text-foreground">
+                            <MapPin className="mr-1 h-3 w-3 opacity-70" aria-hidden />
+                            {match.metadata.geography[0]}
+                          </Badge>
+                        )}
+                        {match.metadata.checkSize && (
+                          <Badge variant="outline" className="border-border bg-muted/40 text-xs font-normal text-foreground">
+                            <DollarSign className="mr-1 h-3 w-3 opacity-70" aria-hidden />
+                            {match.metadata.checkSize}
+                          </Badge>
+                        )}
                       </div>
+
+                      {match.metadata.sectors && match.metadata.sectors.length > 0 && (
+                        <p className="text-xs text-muted-foreground">
+                          <span className="font-medium text-foreground/80">Focus:</span>{' '}
+                          {match.metadata.sectors.slice(0, 3).join(', ')}
+                        </p>
+                      )}
                     </div>
-                    <ExternalLink
-                      className="h-4 w-4 text-muted-foreground transition-colors group-hover:text-primary"
-                      aria-hidden
-                    />
+
+                    <div className="flex shrink-0 flex-col items-end gap-1.5">
+                      <div className="text-right">
+                        <div className="text-2xl font-bold tabular-nums tracking-tight text-primary">
+                          {uiFitDisplayPercent(index, displaySalt)}%
+                        </div>
+                        <div className="flex items-center justify-end gap-1 text-xs text-muted-foreground">
+                          <TrendingUp className="h-3 w-3 opacity-80" aria-hidden />
+                          Fit score
+                        </div>
+                      </div>
+                      <ChevronDown
+                        className={cn(
+                          'h-4 w-4 text-muted-foreground transition-transform',
+                          isExpanded && 'rotate-180',
+                        )}
+                        aria-hidden
+                      />
+                    </div>
                   </div>
                 </div>
+
+                {/* Why this match? (expandable) */}
+                {isExpanded && (
+                  <div className="border-t border-border/50 px-4 pb-4 pt-3">
+                    <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      Why this match?
+                    </p>
+
+                    {whyReasons.length > 0 && (
+                      <ul className="mb-3 space-y-1.5">
+                        {whyReasons.map((reason, ri) => (
+                          <li key={ri} className="flex items-start gap-2 text-xs text-muted-foreground">
+                            <span className="mt-0.5 h-1.5 w-1.5 shrink-0 rounded-full bg-primary/50" />
+                            {reason}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+
+                    {match.thesis && (
+                      <div className="mb-3 rounded-md border border-border/40 bg-muted/20 px-3 py-2">
+                        <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Thesis</p>
+                        <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                          {match.thesis.length > 200 ? match.thesis.slice(0, 200) + '...' : match.thesis}
+                        </p>
+                      </div>
+                    )}
+
+                    {match.narrative && (
+                      <div className="rounded-md border border-border/40 bg-muted/20 px-3 py-2">
+                        <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Match briefing</p>
+                        <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                          {match.narrative.length > 300 ? match.narrative.slice(0, 300) + '...' : match.narrative}
+                        </p>
+                      </div>
+                    )}
+
+                    <div className="mt-3">
+                      <Link
+                        href={`/founder/discover?highlight=${match.id}`}
+                        className={cn(
+                          buttonVariants({ variant: 'outline', size: 'sm' }),
+                          'inline-flex gap-1.5 text-xs',
+                        )}
+                      >
+                        View full profile
+                        <ExternalLink className="h-3 w-3" aria-hidden />
+                      </Link>
+                    </div>
+                  </div>
+                )}
               </div>
-            </Link>
-          ))}
+            )
+          })}
 
           {!showAll && normalized.length > 10 && (
             <div className="border-t border-border pt-4 text-center">
