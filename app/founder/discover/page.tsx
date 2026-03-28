@@ -6,6 +6,16 @@ import Link from "next/link"
 import { redirect } from "next/navigation"
 import DiscoverClient from "./discover-client"
 
+function searchableSlice(v: unknown): string {
+  if (v == null) return ''
+  if (typeof v === 'string') return v
+  try {
+    return JSON.stringify(v)
+  } catch {
+    return String(v)
+  }
+}
+
 /** Searchable text for directory query (firm, partner, thesis, sectors, geo, etc.). */
 function investorMatchesDirectorySearch(
   inv: {
@@ -16,8 +26,8 @@ function investorMatchesDirectorySearch(
     stages: string | null
     geoFocus?: unknown
     valueAddTags: string | null
-    proofPoints: string | null
-    portfolio: string | null
+    proofPoints: unknown
+    portfolio: unknown
     notableInvestments: string | null
     fundType: string | null
     leadFollow: string | null
@@ -34,8 +44,8 @@ function investorMatchesDirectorySearch(
     inv.sectors || '',
     inv.stages || '',
     inv.valueAddTags || '',
-    inv.proofPoints || '',
-    inv.portfolio || '',
+    searchableSlice(inv.proofPoints),
+    searchableSlice(inv.portfolio),
     inv.notableInvestments || '',
     inv.fundType || '',
     inv.leadFollow || '',
