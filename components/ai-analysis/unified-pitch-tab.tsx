@@ -6,10 +6,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Progress } from '@/components/ui/progress'
-import { Sparkles, AlertCircle, Layers, User, Video, FileText, CheckCircle, Lightbulb } from 'lucide-react'
-import SmartMatchResults from '@/components/smart-match-results'
-import AnalysisDashboard from '@/components/analysis/AnalysisDashboard'
-import type { UniversalAnalysisResult } from '@/lib/universal-analysis-engine'
+import { Sparkles, AlertCircle, Layers, User, Video, FileText } from 'lucide-react'
+import { PitchAnalysisReport } from '@/components/analysis/PitchAnalysisReport'
 import { STRUCTURED_QA_KEYS, type StructuredQaAnswers } from '@/lib/unified-pitch/structured-qa'
 import { CREDIT_COSTS } from '@/lib/constants'
 import {
@@ -19,28 +17,6 @@ import {
 
 const UNIFIED_CREDITS = CREDIT_COSTS.UNIFIED_PITCH
 const REVIEWER_CREDITS = CREDIT_COSTS.VIDEO_PITCH.REVIEWER
-
-function isSafeRubricForDashboard(raw: unknown): raw is UniversalAnalysisResult {
-  if (raw == null || typeof raw !== 'object') return false
-  const o = raw as Record<string, unknown>
-  if (typeof o.globalVerdict !== 'string') return false
-  const cat = o.categories
-  if (cat == null || typeof cat !== 'object') return false
-  const c = cat as Record<string, unknown>
-  for (const k of ['market', 'moat', 'founderFit', 'momentum'] as const) {
-    const x = c[k]
-    if (x == null || typeof x !== 'object') return false
-    const row = x as Record<string, unknown>
-    if (typeof row.score !== 'number' || !Number.isFinite(row.score)) return false
-    if (!Array.isArray(row.bullets)) return false
-  }
-  const ex = c.execution
-  if (ex != null && typeof ex === 'object') {
-    const row = ex as Record<string, unknown>
-    if (typeof row.score !== 'number' || !Array.isArray(row.bullets)) return false
-  }
-  return true
-}
 
 function postFormDataWithUploadProgress(
   url: string,
@@ -119,25 +95,6 @@ export function UnifiedPitchTab() {
     }
   }, [reviewType])
 
-  // #region agent log
-  useEffect(() => {
-    return () => {
-      fetch('http://127.0.0.1:7471/ingest/0f685c44-f6c8-4b99-b23e-84e0cc9d4f08', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '3018ec' },
-        body: JSON.stringify({
-          sessionId: '3018ec',
-          location: 'unified-pitch-tab.tsx:unmount',
-          message: 'UnifiedPitchTab unmounted',
-          data: {},
-          timestamp: Date.now(),
-          hypothesisId: 'D',
-        }),
-      }).catch(() => {})
-    }
-  }, [])
-  // #endregion
-
   useEffect(() => {
     if (!analyzing || !uploadFinished) return
     serverStartRef.current = Date.now()
@@ -215,29 +172,6 @@ export function UnifiedPitchTab() {
 
       const payload = data as Record<string, unknown>
 
-      // #region agent log
-      fetch('http://127.0.0.1:7471/ingest/0f685c44-f6c8-4b99-b23e-84e0cc9d4f08', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '3018ec' },
-        body: JSON.stringify({
-          sessionId: '3018ec',
-          location: 'unified-pitch-tab.tsx:handleAnalyze:afterXhr',
-          message: 'Unified pitch XHR completed',
-          data: {
-            status,
-            ok,
-            hasAnalysis: payload && typeof payload === 'object' && 'analysis' in payload,
-            matchedLen: Array.isArray((payload.analysis as any)?.matchedVCs)
-              ? (payload.analysis as any).matchedVCs.length
-              : -1,
-            parseError: payload?.parseError === true,
-          },
-          timestamp: Date.now(),
-          hypothesisId: 'A,E',
-        }),
-      }).catch(() => {})
-      // #endregion
-
       if (!ok) {
         if (status === 402) {
           setError((payload.message as string) || 'Insufficient credits.')
@@ -272,21 +206,6 @@ export function UnifiedPitchTab() {
         setWarnings((payload.warnings as string[]) || [])
       }
 
-      // #region agent log
-      fetch('http://127.0.0.1:7471/ingest/0f685c44-f6c8-4b99-b23e-84e0cc9d4f08', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '3018ec' },
-        body: JSON.stringify({
-          sessionId: '3018ec',
-          location: 'unified-pitch-tab.tsx:handleAnalyze:afterSetResult',
-          message: 'setResult scheduled',
-          data: { reviewFlow: !!payload.reviewId },
-          timestamp: Date.now(),
-          hypothesisId: 'B',
-        }),
-      }).catch(() => {})
-      // #endregion
-
       invalidateUserCreditsClientCache()
       const { ok: crOk, data: cr } = await getUserCreditsClient()
       if (crOk) setCredits(cr as { credits: number; isPremium: boolean })
@@ -295,20 +214,6 @@ export function UnifiedPitchTab() {
         document.getElementById('analysis-results')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
       })
     } catch (e: unknown) {
-      // #region agent log
-      fetch('http://127.0.0.1:7471/ingest/0f685c44-f6c8-4b99-b23e-84e0cc9d4f08', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '3018ec' },
-        body: JSON.stringify({
-          sessionId: '3018ec',
-          location: 'unified-pitch-tab.tsx:handleAnalyze:catch',
-          message: String(e instanceof Error ? e.message : e),
-          data: {},
-          timestamp: Date.now(),
-          hypothesisId: 'F',
-        }),
-      }).catch(() => {})
-      // #endregion
       setError(e instanceof Error ? e.message : 'Something went wrong.')
     } finally {
       setAnalyzing(false)
@@ -317,11 +222,6 @@ export function UnifiedPitchTab() {
       setServerSyntheticPct(0)
     }
   }
-
-  const safeRubric =
-    result && !result.reviewSubmitted && isSafeRubricForDashboard(result.rubricAnalysis)
-      ? result.rubricAnalysis
-      : null
 
   const fileInputClass =
     'w-full max-w-full text-sm text-muted-foreground file:mr-3 file:inline-flex file:h-9 file:cursor-pointer file:items-center file:rounded-md file:border-0 file:bg-muted file:px-3 file:text-sm file:font-medium file:text-foreground'

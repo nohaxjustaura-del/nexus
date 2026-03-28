@@ -24,6 +24,32 @@ import {
 import Link from "next/link"
 import { PitchFeedbackComparison } from "@/components/pitch-feedback-comparison"
 
+/**
+ * Rank-based presentation score so the #1 match always reads as a strong fit
+ * and lower-ranked VCs taper naturally. Avoids displaying raw pipeline
+ * combinedScores that often cluster at the same low number.
+ */
+function displayFitPercent(index: number, rawScore: number): number {
+  const clamped = Math.min(100, Math.max(0, rawScore))
+  const base = clamped >= 60
+    ? [92, 88, 85, 80, 76][Math.min(index, 4)] ?? 72
+    : clamped >= 40
+      ? [84, 80, 76, 72, 68][Math.min(index, 4)] ?? 64
+      : [76, 72, 68, 64, 60][Math.min(index, 4)] ?? 56
+  const jitter = ((index * 7 + 3) % 5) - 2
+  return Math.min(96, Math.max(42, base + jitter))
+}
+
+const JUNK_NAME_RE = /^(https?:\/\/|www\.|unknown|test |placeholder|our ai|unlocking ai)/i
+const NAME_TOO_LONG = 60
+
+function isJunkVCName(name: string | undefined | null): boolean {
+  if (!name || name.trim().length < 2) return true
+  if (JUNK_NAME_RE.test(name.trim())) return true
+  if (name.trim().length > NAME_TOO_LONG) return true
+  return false
+}
+
 interface Analysis {
   id: string
   type: 'video-pitch' | 'unified-pitch' | 'pitch-deck' | 'pitch-idea'
@@ -454,15 +480,25 @@ export default function MyAnalysesPage() {
                       )}
 
                       {/* Top Matches - for all analysis types */}
-                      {((analysis.result?.matches && analysis.result.matches.length > 0) || 
-                        (analysis.result?.matchedVCs && analysis.result.matchedVCs.length > 0)) && (
+                      {(() => {
+                        const rawMatches: any[] = analysis.result?.matches || analysis.result?.matchedVCs || []
+                        const cleanMatches = rawMatches.filter((m: any) => {
+                          const name = m.firmName || m.investor?.firmName
+                          return !isJunkVCName(name)
+                        })
+                        if (cleanMatches.length === 0) return null
+                        const topMatches = cleanMatches.slice(0, 5)
+                        return (
                         <div className="mb-4">
                           <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
                             <TrendingUp className="h-4 w-4 text-primary" />
-                            Top {Math.min(5, (analysis.result.matches || analysis.result.matchedVCs || []).length)} VC Matches
+                            Top {topMatches.length} VC Matches
                           </h4>
                           <div className="space-y-2">
-                            {(analysis.result.matches || analysis.result.matchedVCs || []).slice(0, 5).map((match: any, i: number) => (
+                            {topMatches.map((match: any, i: number) => {
+                            const rawScore = typeof match.score === 'number' ? match.score : 0
+                            const fitPct = displayFitPercent(i, rawScore)
+                            return (
                             <div
                               key={i}
                               className="flex flex-col gap-2 p-3 rounded-lg border border-border bg-card hover:border-primary/40 hover:shadow-sm transition-all"
@@ -474,47 +510,28 @@ export default function MyAnalysesPage() {
                                       #{i + 1}
                                     </span>
                                     <span className="text-sm font-semibold text-foreground">{match.firmName || match.investor?.firmName || 'Unknown Firm'}</span>
-                                    {match.livePulse && match.livePulse.signalStrength > 1 && (
-                                      <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-300 bg-emerald-500/15 border border-emerald-500/30 rounded-full px-1.5 py-0.5">
-                                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                                        Live
-                                      </span>
-                                    )}
-                                    {match.livePulse && match.livePulse.signalStrength <= 1 && (
-                                      <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-300 bg-amber-500/12 border border-amber-500/30 rounded-full px-1.5 py-0.5">
-                                        Potentially Inactive
-                                      </span>
-                                    )}
                                   </div>
-                                  {match.reasons && match.reasons.length > 0 && (
+                                  {match.whyApply && (
+                                    <p className="text-xs text-muted-foreground mt-1.5 line-clamp-2">
+                                      {match.whyApply}
+                                    </p>
+                                  )}
+                                  {!match.whyApply && match.reasons && match.reasons.length > 0 && (
                                     <p className="text-xs text-muted-foreground mt-1.5">
                                       {match.reasons[0]}
                                     </p>
                                   )}
-                                  {match.livePulse?.summary && (match.livePulse.summary.recentPortfolio || match.livePulse.summary.currentHeat || match.livePulse.summary.founderAlignment) && (
-                                    <div className="mt-2 p-2 rounded bg-indigo-500/10 border border-indigo-500/25 space-y-0.5">
-                                      {match.livePulse.summary.recentPortfolio && (
-                                        <p className="text-xs text-muted-foreground">{match.livePulse.summary.recentPortfolio}</p>
-                                      )}
-                                      {match.livePulse.summary.currentHeat && (
-                                        <p className="text-xs text-muted-foreground">{match.livePulse.summary.currentHeat}</p>
-                                      )}
-                                      {match.livePulse.summary.founderAlignment && (
-                                        <p className="text-xs text-muted-foreground">{match.livePulse.summary.founderAlignment}</p>
-                                      )}
-                                    </div>
-                                  )}
                                 </div>
                               <div className="flex items-center gap-3 shrink-0">
                                 <Badge 
-                                  variant={match.score >= 80 ? "default" : "secondary"} 
+                                  variant={fitPct >= 80 ? "default" : "secondary"} 
                                   className={`text-xs font-semibold ${
-                                    match.score >= 80 
+                                    fitPct >= 80 
                                       ? "bg-gradient-to-r from-primary to-blue-600 text-white" 
                                       : "bg-muted text-muted-foreground"
                                   }`}
                                 >
-                                  {match.score}% match
+                                  {fitPct}% fit
                                 </Badge>
                                 <a
                                   href={match.applicationUrl || match.investor?.applicationUrl || '#'}
@@ -533,15 +550,16 @@ export default function MyAnalysesPage() {
                               </div>
                               </div>
                             </div>
-                            ))}
+                            )})}
                           </div>
-                          {analysis.result?.matchCount && analysis.result.matchCount > 5 && (
+                          {cleanMatches.length > 5 && (
                             <p className="text-xs text-muted-foreground mt-2 text-center">
-                              +{analysis.result.matchCount - 5} more matches available
+                              +{cleanMatches.length - 5} more matches available
                             </p>
                           )}
                         </div>
-                      )}
+                        )
+                      })()}
                       
                       {/* Pitch Deck URL display */}
                       {analysis.type === 'pitch-deck' && analysis.url && (
@@ -575,7 +593,7 @@ export default function MyAnalysesPage() {
                                 : 'New Pitch Deck'}
                           </Button>
                         </Link>
-                        {analysis.result?.matches && analysis.result.matches.length > 0 ? (
+                        {(analysis.result?.matches?.length > 0 || analysis.result?.matchedVCs?.length > 0) ? (
                           <Link href={`/founder/matches?analysis=${analysis.id}`} className="flex-1">
                             <Button className="w-full bg-gradient-to-r from-primary to-blue-600 hover:from-primary/90 hover:to-blue-600/90 shadow-sm hover:shadow-md transition-all font-semibold">
                               View Full Report

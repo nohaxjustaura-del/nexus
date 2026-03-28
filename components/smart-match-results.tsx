@@ -21,6 +21,16 @@ export interface RankedVC {
   }
 }
 
+const JUNK_NAME_RE = /^(https?:\/\/|www\.|unknown|test |placeholder|our ai|unlocking ai)/i
+const NAME_TOO_LONG = 60
+
+function isJunkVCName(name: string): boolean {
+  if (name.trim().length < 2) return true
+  if (JUNK_NAME_RE.test(name.trim())) return true
+  if (name.trim().length > NAME_TOO_LONG) return true
+  return false
+}
+
 function normalizeSmartMatchRow(raw: unknown): RankedVC | null {
   if (raw == null || typeof raw !== 'object') return null
   const m = raw as Record<string, unknown>
@@ -146,7 +156,7 @@ export function SmartMatchResults({ matches, showAll = false }: SmartMatchResult
 
   const normalized = matches
     .map((row) => normalizeSmartMatchRow(row))
-    .filter((row): row is RankedVC => row != null && row.id !== '')
+    .filter((row): row is RankedVC => row != null && row.id !== '' && !isJunkVCName(row.firmName))
 
   if (normalized.length === 0) {
     return null

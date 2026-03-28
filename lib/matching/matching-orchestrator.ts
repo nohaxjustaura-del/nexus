@@ -302,6 +302,13 @@ export async function runMatchingPipeline(
     stageFiltered = await db.investor.findMany({ where: { isPublic: true, discoverable: true } })
   }
 
+  const JUNK_VC_NAME = /^(https?:\/\/|www\.|unknown$|test |placeholder|our ai|unlocking ai)/i
+  stageFiltered = stageFiltered.filter((vc) => {
+    const n = (vc.firmName ?? '').trim()
+    return n.length >= 3 && n.length <= 80 && !JUNK_VC_NAME.test(n)
+  })
+  logger.log(`[ORCHESTRATOR] Step 3 — After name quality filter: ${stageFiltered.length} VCs`)
+
   // Split out university-exclusive programs so they never appear in the VC pool
   const { mainstream } = filterOutUniversityPrograms(stageFiltered as VCProfile[])
   logger.log(`[ORCHESTRATOR] Step 3 — After university filter: ${mainstream.length} mainstream VCs`)
@@ -320,6 +327,9 @@ export async function runMatchingPipeline(
   }
 
   // ── STEP 5 — FAISS vector search (top 20) ─────────────────────────────────
+  logger.log(
+    `[ORCHESTRATOR] Step 5 — Embeddings: Voyage (pitch vector) → FAISS HTTP at ${(process.env.FAISS_SERVICE_URL || 'http://localhost:8001').replace(/\/$/, '')}/rank when available; else in-memory cosine on DB rows. Narratives: Ollama-first VC pipeline or OpenRouter.`,
+  )
   // Build a full Postgres lookup map (all public+discoverable VCs) for FAISS
   // intersection. The stage hard-filter is too restrictive for FAISS matching:
   // FAISS semantic search already handles relevance, so we only need to confirm
@@ -331,6 +341,9 @@ export async function runMatchingPipeline(
     allPublicVCs = stageFiltered
   }
   const allVCsByName = new Map(allPublicVCs.map((vc) => [(vc.firmName ?? '').toLowerCase(), vc]))
+  // Stage hard-filter narrows `mainstream` (~hundreds–low thousands). Step 5 semantic search should
+  // see every public+discoverable embedding (matches FAISS index / DB), not only stage-matched rows.
+  const { mainstream: embeddingPool } = filterOutUniversityPrograms(allPublicVCs as VCProfile[])
 
   let candidatePool: VCProfile[] = []
 
@@ -359,12 +372,13 @@ export async function runMatchingPipeline(
   try {
     const pitchCtx = buildPitchContext(founder, pitchAnalysis, transcript, founderSignal.pitchKeywords)
     const pitchEmbedding = await generatePitchEmbedding(pitchCtx as any)
-    const embFilter = countInvestorEmbeddingFilters(mainstream, pitchEmbedding.length)
-    const fallbackRows = investorsToRankableEmbeddings(mainstream, pitchEmbedding.length)
+    const embFilter = countInvestorEmbeddingFilters(embeddingPool, pitchEmbedding.length)
+    const fallbackRows = investorsToRankableEmbeddings(embeddingPool, pitchEmbedding.length)
     console.log(
-      `[FAISS] embedding filters (mainstream VCs, pitch_dim=${pitchEmbedding.length}): ` +
+      `[FAISS] embedding filters (public+discoverable excl. university programs, pitch_dim=${pitchEmbedding.length}): ` +
         `input=${embFilter.input} rankable=${embFilter.rankable} ` +
-        `missing=${embFilter.missingEmbedding} parse_err=${embFilter.parseError} wrong_dim=${embFilter.wrongDimension}`,
+        `missing=${embFilter.missingEmbedding} parse_err=${embFilter.parseError} wrong_dim=${embFilter.wrongDimension} ` +
+        `(stage-filtered pool=${mainstream.length} for non-vector fallbacks)`,
     )
     console.log(
       `[FAISS] DB lookup map: public+discoverable rows=${allPublicVCs.length} (firmName → Investor for neighbor intersection)`,

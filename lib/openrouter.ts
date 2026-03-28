@@ -336,11 +336,12 @@ export async function openrouterGenerateJson<T = any>(options: {
   useVcPipeline?: boolean
 }): Promise<T> {
   const openRouterClient = getOpenRouterClient()
-  const forceOr = options.forceOpenRouter === true && !!openRouterClient
-  const useVc = !forceOr && options.useVcPipeline === true
+  /** Scoring passes set this: prefer OpenRouter when configured; else Ollama / getLlmClient() with scoring model ids. */
+  const isScoringPass = options.forceOpenRouter === true
+  const useVc = !isScoringPass && options.useVcPipeline === true
 
-  const client = forceOr
-    ? openRouterClient!
+  const client = isScoringPass
+    ? (openRouterClient ?? getScoringLlmClient())
     : useVc
       ? getVcPipelineLlmClient()
       : getLlmClient()
@@ -348,11 +349,21 @@ export async function openrouterGenerateJson<T = any>(options: {
     throw new Error('No LLM configured. Set OLLAMA_BASE_URL (local Ollama) or OPENROUTER_API_KEY.')
   }
 
-  const effectiveUsingOllama = forceOr ? false : useVc ? isVcPipelineUsingOllama() : isUsingOllama()
+  const effectiveUsingOllama = isScoringPass
+    ? !openRouterClient && isUsingOllama()
+    : useVc
+      ? isVcPipelineUsingOllama()
+      : isUsingOllama()
 
   const primaryModel =
     options.model ??
-    (forceOr ? getScoringOpenRouterModel() : useVc ? getVcPipelineModel() : getVcExtractionModel())
+    (isScoringPass
+      ? openRouterClient
+        ? getScoringOpenRouterModel()
+        : getModelNameForScoring()
+      : useVc
+        ? getVcPipelineModel()
+        : getVcExtractionModel())
   const retryOnParseError = options.retryOnParseError !== false
   const logTag = effectiveUsingOllama ? 'OLLAMA' : 'OPENROUTER'
 
