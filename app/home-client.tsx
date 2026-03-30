@@ -596,9 +596,6 @@ export default function HomeClient({ verifiedInvestorCountLabel }: HomeClientPro
             <h2 className="font-heading text-xl font-semibold tracking-tight text-foreground sm:text-2xl">
               Stop searching. Start matching.
             </h2>
-            <p className="mt-3 text-sm leading-relaxed text-muted-foreground sm:text-[15px]">
-              Upload your pitch and get a ranked shortlist of investors most likely to fund your startup. Free to start.
-            </p>
             <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
               <Button
                 size="lg"
