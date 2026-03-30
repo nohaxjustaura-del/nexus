@@ -13,6 +13,7 @@ import { saveFileToDisk, buildFounderSnapshot } from '@/lib/file-storage'
 import { getDeepMarketContextSafe } from '@/lib/market-intelligence'
 import { runScoringPipeline } from '@/lib/scoring/scoring-pipeline'
 import { getComprehensiveFounderContext } from '@/lib/founder-context'
+import { reviewerAssignableWhere } from '@/lib/reviewer-filters'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -345,11 +346,7 @@ export async function POST(request: NextRequest) {
       // If no reviewer selected, assign best available
       if (!assignedReviewerId) {
         const availableReviewer = await (db as any).reviewer.findFirst({
-          where: {
-            active: true,
-            verified: true,
-            vcAccepted: true,
-          },
+          where: reviewerAssignableWhere(),
           orderBy: [
             { averageRating: 'desc' },
             { totalReviews: 'asc' }, // Prefer reviewers with fewer reviews for load balancing

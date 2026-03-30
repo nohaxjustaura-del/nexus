@@ -1,55 +1,48 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { getCurrentUser } from '@/lib/auth'
+import { reviewerAssignableWhere } from '@/lib/reviewer-filters'
 
 export const dynamic = 'force-dynamic'
 
-export async function GET(request: NextRequest) {
+function parseExpertise(raw: string | null | undefined): unknown[] {
+  if (!raw || !raw.trim()) return []
   try {
-    // Get all active, verified reviewers
+    const v = JSON.parse(raw)
+    return Array.isArray(v) ? v : []
+  } catch {
+    return []
+  }
+}
+
+export async function GET(_request: NextRequest) {
+  try {
     const reviewers = await (db as any).reviewer.findMany({
-      where: {
-        active: true,
-        verified: true,
-        vcAccepted: true,
-      },
+      where: reviewerAssignableWhere(),
       select: {
         id: true,
         name: true,
         email: true,
         acceptedVC: true,
+        vcAccepted: true,
+        verified: true,
         acceptedYear: true,
         expertise: true,
         bio: true,
         averageRating: true,
         totalReviews: true,
       },
-      orderBy: [
-        { averageRating: 'desc' },
-        { totalReviews: 'desc' },
-      ],
+      orderBy: [{ averageRating: 'desc' }, { totalReviews: 'desc' }],
       take: 20,
     })
 
     return NextResponse.json({
-      reviewers: reviewers.map((r: any) => ({
+      reviewers: reviewers.map((r: { expertise?: string | null }) => ({
         ...r,
-        expertise: r.expertise ? JSON.parse(r.expertise) : [],
+        expertise: parseExpertise(r.expertise),
       })),
     })
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error fetching reviewers:', error)
-    return NextResponse.json(
-      { error: 'Failed to fetch reviewers', reviewers: [] },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Failed to fetch reviewers', reviewers: [] }, { status: 500 })
   }
 }
-
-
-
-
-
-
-
-

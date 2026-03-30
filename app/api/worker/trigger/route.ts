@@ -4,6 +4,7 @@ import { isAdminEmail } from '@/lib/constants'
 import { db } from '@/lib/db'
 import { logger } from '@/lib/logger'
 import { researchVCsBatch } from '@/scripts/auto-research-vcs'
+import { runApplyContactBatch } from '@/lib/vc-apply-contact-research'
 import { getLiveInvestorPulse } from '@/lib/exa-service'
 import { syncRecentPublicDiscoverableToVcDirectory } from '@/lib/vc-supabase-sync'
 import { isLikelyRealFirmName } from '@/lib/firm-name-quality'
@@ -18,6 +19,8 @@ type TriggerBody = {
     maxRows?: number
     lookbackHours?: number
     vcs?: string[]
+    /** vc-apply-contact-research: replace existing URLs when new values validate */
+    overwrite?: boolean
   }
 }
 
@@ -64,6 +67,25 @@ export async function POST(request: Request) {
           .map(r => r.firmName)
         await researchVCsBatch(firms, { delayBetweenSearches: 2500, maxConcurrent: 2, mode: 'thesis' })
         result = { mode: 'thesis', firms: firms.length }
+        break
+      }
+      case 'vc-apply-contact-research': {
+        const limit = Math.min(80, Math.max(1, params?.limit ?? 20))
+        const vcs = params?.vcs?.length ? params.vcs.filter(Boolean) : undefined
+        const overwrite = Boolean(params?.overwrite)
+        result = await runApplyContactBatch({
+          firmNames: vcs,
+          limit: vcs?.length ? Math.max(vcs.length, limit) : limit,
+          overwrite,
+          delayBetweenMs: Math.max(
+            800,
+            parseInt(process.env.WORKER_VC_RESEARCH_DELAY_MS || '2500', 10) || 2500,
+          ),
+          maxConcurrent: Math.min(
+            3,
+            Math.max(1, parseInt(process.env.WORKER_VC_RESEARCH_MAX_CONCURRENT || '2', 10) || 2),
+          ),
+        })
         break
       }
       case 'vc-profile-research': {
@@ -151,7 +173,7 @@ export async function POST(request: Request) {
       default:
         return NextResponse.json(
           {
-            error: `Unknown job type: ${jobType}. Valid: vc-research, vc-thesis-research, vc-profile-research, exa-enrichment, vc-directory-sync, data-validation, embeddings`,
+            error: `Unknown job type: ${jobType}. Valid: vc-research, vc-thesis-research, vc-profile-research, vc-apply-contact-research, exa-enrichment, vc-directory-sync, data-validation, embeddings`,
           },
           { status: 400 },
         )

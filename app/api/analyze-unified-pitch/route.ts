@@ -28,6 +28,7 @@ import {
 } from '@/lib/unified-pitch/transcribe-video-file'
 import { mergePitchAnalysesForMatching } from '@/lib/unified-pitch/merge-pitch-analysis'
 import { buildUnifiedFounderContext } from '@/lib/unified-pitch/unified-founder-context'
+import { reviewerAssignableWhere } from '@/lib/reviewer-filters'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -270,7 +271,7 @@ export async function POST(request: NextRequest) {
       let assignedReviewerId = reviewerId
       if (!assignedReviewerId) {
         const availableReviewer = await (db as any).reviewer.findFirst({
-          where: { active: true, verified: true, vcAccepted: true },
+          where: reviewerAssignableWhere(),
           orderBy: [{ averageRating: 'desc' }, { totalReviews: 'asc' }],
         })
         assignedReviewerId = availableReviewer?.id

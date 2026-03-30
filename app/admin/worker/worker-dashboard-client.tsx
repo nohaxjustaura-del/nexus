@@ -41,6 +41,8 @@ export function WorkerDashboardClient() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [triggering, setTriggering] = useState<string | null>(null)
+  const [applyContactLimit, setApplyContactLimit] = useState(15)
+  const [applyContactOverwrite, setApplyContactOverwrite] = useState(false)
 
   const refresh = useCallback(async () => {
     try {
@@ -60,13 +62,13 @@ export function WorkerDashboardClient() {
     void refresh()
   }, [refresh])
 
-  const trigger = async (jobType: string) => {
+  const triggerJob = async (jobType: string, params?: Record<string, unknown>) => {
     setTriggering(jobType)
     try {
       const res = await fetch('/api/worker/trigger', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ jobType }),
+        body: JSON.stringify(params ? { jobType, params } : { jobType }),
       })
       if (!res.ok) {
         const body = await res.json().catch(() => ({}))
@@ -187,7 +189,7 @@ export function WorkerDashboardClient() {
                   {triggerType ?
                     <button
                       type="button"
-                      onClick={() => void trigger(triggerType)}
+                      onClick={() => void triggerJob(triggerType)}
                       disabled={!canRun || triggering === triggerType}
                       className="shrink-0 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
                     >
@@ -200,20 +202,70 @@ export function WorkerDashboardClient() {
           })}
         </ul>
 
-        <div className="mt-10 rounded-lg border border-dashed bg-muted/30 p-6">
-          <h2 className="mb-2 text-base font-semibold">One-off seed research</h2>
-          <p className="mb-4 text-sm text-muted-foreground">
-            Runs full VC research (thesis + profile) on a fixed short list: Sequoia, a16z, Benchmark, Accel, YC. Separate
-            from monthly thesis/profile windows and from the discover ingest worker.
-          </p>
-          <button
-            type="button"
-            onClick={() => void trigger('vc-research')}
-            disabled={triggering === 'vc-research'}
-            className="rounded-md border bg-background px-4 py-2 text-sm font-medium hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {triggering === 'vc-research' ? 'Starting…' : 'Run seed VC research'}
-          </button>
+        <div className="mt-10 space-y-8">
+          <div className="rounded-lg border border-dashed bg-muted/30 p-6">
+            <h2 className="mb-2 text-base font-semibold">One-off seed research</h2>
+            <p className="mb-4 text-sm text-muted-foreground">
+              Runs full VC research (thesis + profile) on a fixed short list: Sequoia, a16z, Benchmark, Accel, YC. Separate
+              from monthly thesis/profile windows and from the discover ingest worker.
+            </p>
+            <button
+              type="button"
+              onClick={() => void triggerJob('vc-research')}
+              disabled={triggering === 'vc-research'}
+              className="rounded-md border bg-background px-4 py-2 text-sm font-medium hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {triggering === 'vc-research' ? 'Starting…' : 'Run seed VC research'}
+            </button>
+          </div>
+
+          <div className="rounded-lg border border-dashed bg-muted/30 p-6">
+            <h2 className="mb-2 text-base font-semibold">Apply / contact URL refresh</h2>
+            <p className="mb-4 text-sm text-muted-foreground">
+              Targeted Exa passes (apply, official contact, LinkedIn) plus LLM extraction to fill or fix{' '}
+              <code className="rounded bg-muted px-1 py-0.5 text-xs">applicationUrl</code>,{' '}
+              <code className="rounded bg-muted px-1 py-0.5 text-xs">websiteUrl</code>, and{' '}
+              <code className="rounded bg-muted px-1 py-0.5 text-xs">linkedinUrl</code>. Not on the maintenance timer — same
+              job as <code className="rounded bg-muted px-1 py-0.5 text-xs">npm run worker:apply-contact-urls</code>.
+              Supabase <code className="rounded bg-muted px-1 py-0.5 text-xs">vc_directory</code> updates on the next
+              directory sync job.
+            </p>
+            <div className="mb-4 flex flex-wrap items-end gap-4">
+              <label className="flex flex-col gap-1 text-sm">
+                <span className="text-muted-foreground">Batch limit (public rows needing URLs)</span>
+                <input
+                  type="number"
+                  min={1}
+                  max={80}
+                  value={applyContactLimit}
+                  onChange={e => setApplyContactLimit(Math.min(80, Math.max(1, parseInt(e.target.value, 10) || 15)))}
+                  className="w-24 rounded-md border bg-background px-2 py-1.5"
+                />
+              </label>
+              <label className="flex cursor-pointer items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={applyContactOverwrite}
+                  onChange={e => setApplyContactOverwrite(e.target.checked)}
+                  className="rounded border"
+                />
+                <span className="text-muted-foreground">Overwrite existing URLs (validated only)</span>
+              </label>
+            </div>
+            <button
+              type="button"
+              onClick={() =>
+                void triggerJob('vc-apply-contact-research', {
+                  limit: applyContactLimit,
+                  overwrite: applyContactOverwrite,
+                })
+              }
+              disabled={triggering === 'vc-apply-contact-research'}
+              className="rounded-md border bg-background px-4 py-2 text-sm font-medium hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {triggering === 'vc-apply-contact-research' ? 'Starting…' : 'Run apply/contact URL pass'}
+            </button>
+          </div>
         </div>
       </div>
     </div>

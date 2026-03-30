@@ -59,26 +59,6 @@ function emailFromHeader(): string {
     if (unwrapped) trimmed = unwrapped
   }
   const normalized = normalizeResendFromHeader(trimmed)
-  // #region agent log
-  fetch('http://127.0.0.1:7471/ingest/0f685c44-f6c8-4b99-b23e-84e0cc9d4f08', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '4b724e' },
-    body: JSON.stringify({
-      sessionId: '4b724e',
-      runId: 'post-fix-verify',
-      hypothesisId: 'H1-from-format',
-      location: 'lib/email.ts:emailFromHeader',
-      message: 'Resend from header after normalizeResendFromHeader',
-      data: {
-        hadEnv: true,
-        unwrappedHadAngleBrackets: trimmed.includes('<') && trimmed.includes('>'),
-        appliedBracketWrap: normalized !== trimmed,
-        normalizedHasAngleBrackets: normalized.includes('<') && normalized.includes('>'),
-      },
-      timestamp: Date.now(),
-    }),
-  }).catch(() => {})
-  // #endregion
   return normalized
 }
 

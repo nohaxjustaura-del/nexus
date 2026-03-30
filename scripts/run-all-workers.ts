@@ -6,6 +6,9 @@
  *   1. scripts/worker-start.ts --loop — maintenance on existing investors (monthly thesis/profile windows, Exa pre-warm, embeddings on timer, validation, vc_directory sync)
  *   2. scripts/vc-supabase-ingest-worker.ts --discover — discovers new firm names via Exa, runs full VC research + ingest per candidate → Prisma Investor + Supabase vc_directory
  *
+ * On demand (not spawned here): apply/contact URL worker — npm run worker:apply-contact-urls — or admin POST
+ * jobType "vc-apply-contact-research" (lib/vc-apply-contact-research.ts + /api/worker/trigger).
+ *
  * Do NOT also run npm run research-worker unless you want duplicate Exa/LLM load.
  *
  * Env (optional):
@@ -106,6 +109,9 @@ function logPipelineAndEnv() {
   )
   console.log(
     '  • bg — existing DB investors only: thesis/profile refresh windows, Exa cache warm, embeddings, validation, Prisma→Supabase catch-up',
+  )
+  console.log(
+    '  • apply/contact URLs — run separately: npm run worker:apply-contact-urls (or admin worker dashboard); targeted Exa+LLM for applicationUrl / websiteUrl / linkedinUrl',
   )
   console.log('[workers] Config check:')
   console.log(`  • DATABASE_URL: ${hasDb ? 'set' : 'MISSING — Prisma will fail'}`)

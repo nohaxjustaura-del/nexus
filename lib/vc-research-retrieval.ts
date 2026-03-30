@@ -69,7 +69,8 @@ export function getVcResearchStartPublishedDate(): string | undefined {
   return d.toISOString().slice(0, 10)
 }
 
-async function exaSearchPass(query: string, numResults: number): Promise<{
+/** Single Exa search for VC pipelines (exported for apply/contact-focused retrieval). */
+export async function exaSearchPass(query: string, numResults: number): Promise<{
   textBlock: string
   urls: string[]
   resultCount: number

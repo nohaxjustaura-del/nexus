@@ -238,6 +238,33 @@ async def get_vc_count():
     return {"count": len(vc_rows) if vc_rows else 0}
 
 
+def _ensure_tcp_port_available(host: str, port: int) -> None:
+    """Fail fast with a clear message if the port is already in use (e.g. Windows Errno 10048)."""
+    import socket
+
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    try:
+        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        s.bind((host, port))
+    except OSError as e:
+        print(
+            f"[ERROR] Port {port} is already in use ({e}). "
+            "Stop the other process (often another FAISS / uvicorn on 8001), or run on a different port, e.g.:\n"
+            f"  PowerShell:  $env:FAISS_SERVICE_PORT=8002; python faiss_api.py\n"
+            f"  Then set in .env.local: FAISS_SERVICE_URL=http://localhost:8002"
+        )
+        raise SystemExit(1) from e
+    finally:
+        s.close()
+
+
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8001)
+
+    _host = os.environ.get("FAISS_SERVICE_HOST", "0.0.0.0").strip() or "0.0.0.0"
+    _port = int(os.environ.get("FAISS_SERVICE_PORT", "8001"))
+
+    _ensure_tcp_port_available(_host, _port)
+
+    print(f"[FAISS] Listening on http://{_host}:{_port} (set FAISS_SERVICE_PORT to change)")
+    uvicorn.run(app, host=_host, port=_port)

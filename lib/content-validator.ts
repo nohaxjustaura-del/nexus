@@ -33,7 +33,7 @@ export async function validatePitchIdea(content: string): Promise<ValidationResu
     return {
       isValid: false,
       confidence: 0,
-      reason: 'Content is too short to be a pitch idea (minimum 50 characters required)',
+      reason: 'Content is too short (minimum 50 characters required)',
     }
   }
 

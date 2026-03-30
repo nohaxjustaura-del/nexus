@@ -19,6 +19,7 @@ function parseJSONStringArray(value: unknown): string[] {
   return []
 }
 import DiscoverClient from "./discover-client"
+import { investorCheckRangeThousands, investorHasUnknownCheckSize } from "@/lib/investor-check-range"
 
 function searchableSlice(v: unknown): string {
   if (v == null) return ''
@@ -236,6 +237,8 @@ export default async function DiscoverPage({
         sectors: true,
         checkMin: true,
         checkMax: true,
+        checkSizeMin: true,
+        checkSizeMax: true,
         geoFocus: true,
         valueAddTags: true,
         decisionSpeed: true,
@@ -349,14 +352,18 @@ export default async function DiscoverPage({
   const maxCheck = effectiveParams.max ? parseInt(effectiveParams.max) : null
 
   if (minCheck !== null || maxCheck !== null) {
-    filteredInvestors = filteredInvestors.filter(inv => {
+    filteredInvestors = filteredInvestors.filter((inv) => {
+      if (investorHasUnknownCheckSize(inv)) {
+        return true
+      }
+      const { minK: vcMin, maxK: vcMax } = investorCheckRangeThousands(inv)
       // If only min is set: VC's max must be >= user's min
       if (minCheck !== null && maxCheck === null) {
-        return inv.checkMax >= minCheck
+        return vcMax >= minCheck
       }
       // If only max is set: VC's min must be <= user's max
       if (minCheck === null && maxCheck !== null) {
-        return inv.checkMin <= maxCheck
+        return vcMin <= maxCheck
       }
       // If both are set: ranges must overlap
       if (minCheck !== null && maxCheck !== null) {
@@ -365,7 +372,7 @@ export default async function DiscoverPage({
           return false // Invalid filter, show nothing
         }
         // Overlap exists if: VC's max >= user's min AND VC's min <= user's max
-        return inv.checkMax >= minCheck && inv.checkMin <= maxCheck
+        return vcMax >= minCheck && vcMin <= maxCheck
       }
       return true
     })

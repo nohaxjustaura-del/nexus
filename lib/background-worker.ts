@@ -25,6 +25,10 @@
  *  - WORKER_VALIDATION_EXA_DELAY_MS (default 2500) — pause between Exa validation samples
  *  - VC_VALIDATION_EXA_CONTEXT_CHARS (default 12000) — max chars of Exa text passed to the LLM
  *  - WORKER_VALIDATION_FULL_LOCAL_AUDIT=1 — scan ALL investors with lib/investor-quality-audit (logs summary + top error rows)
+ *
+ * Apply / contact URL refresh (on demand — lib/vc-apply-contact-research.ts):
+ *  - npm run worker:apply-contact-urls -- --limit 20
+ *  - POST /api/worker/trigger JSON: { "jobType": "vc-apply-contact-research", "params": { "limit": 20 } }
  */
 
 import { db } from './db'

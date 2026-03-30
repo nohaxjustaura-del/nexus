@@ -1,9 +1,17 @@
 'use client'
 
+import { useState } from 'react'
 import Link from 'next/link'
+import { Layers, Lightbulb } from 'lucide-react'
 import { UnifiedPitchTab } from '@/components/ai-analysis/unified-pitch-tab'
+import { PitchIdeaAnalysisTab } from '@/components/ai-analysis/pitch-idea-tab'
+import { cn } from '@/lib/utils'
+
+type AnalysisMode = 'unified' | 'pitch-idea'
 
 export default function AIAnalysisPage() {
+  const [mode, setMode] = useState<AnalysisMode>('unified')
+
   return (
     <div className="relative min-h-screen bg-background">
       <div className="pointer-events-none fixed inset-0 -z-10 bg-page-mesh" aria-hidden />
@@ -22,16 +30,65 @@ export default function AIAnalysisPage() {
               </Link>
             </div>
             <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-              <span className="font-medium text-foreground">Full pitch review</span> uses one submission: structured
-              Q&A plus any deck, video, and written context you want to include. Everything is merged for scoring,
-              feedback, and investor matching.
+              {mode === 'unified' ? (
+                <>
+                  <span className="font-medium text-foreground">Unified pitch</span> uses one submission: structured
+                  Q&A plus any deck, video, and written context you want to include. Everything is merged for scoring,
+                  feedback, and investor matching.
+                </>
+              ) : (
+                <>
+                  <span className="font-medium text-foreground">Pitch idea</span> is for a concept-only pass:
+                  describe your idea in text, upload a short doc, or use voice. You get feedback and investor matches
+                  without a full deck or recording.
+                </>
+              )}
             </p>
             <p className="mt-2 text-xs text-muted-foreground">
               Content stays private and is removed automatically after 30–90 days.
             </p>
           </header>
 
-          <UnifiedPitchTab />
+          <div className="mx-auto mb-8 flex w-full max-w-xl justify-center px-1">
+            <div
+              role="tablist"
+              aria-label="Choose analysis type"
+              className="grid w-full grid-cols-2 gap-1 rounded-full border border-border/60 bg-muted/25 p-1 sm:p-1.5"
+            >
+              <button
+                type="button"
+                role="tab"
+                aria-selected={mode === 'unified'}
+                className={cn(
+                  'flex min-h-[3rem] items-center justify-center gap-2 rounded-full px-3 py-2.5 text-sm font-medium transition-colors sm:min-h-[3.25rem] sm:px-4 sm:text-[0.9375rem]',
+                  mode === 'unified'
+                    ? 'bg-background text-foreground shadow-sm ring-1 ring-border/70'
+                    : 'text-muted-foreground hover:text-foreground',
+                )}
+                onClick={() => setMode('unified')}
+              >
+                <Layers className="h-4 w-4 shrink-0 opacity-80" aria-hidden />
+                <span className="text-center leading-tight">Unified pitch</span>
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={mode === 'pitch-idea'}
+                className={cn(
+                  'flex min-h-[3rem] items-center justify-center gap-2 rounded-full px-3 py-2.5 text-sm font-medium transition-colors sm:min-h-[3.25rem] sm:px-4 sm:text-[0.9375rem]',
+                  mode === 'pitch-idea'
+                    ? 'bg-background text-foreground shadow-sm ring-1 ring-border/70'
+                    : 'text-muted-foreground hover:text-foreground',
+                )}
+                onClick={() => setMode('pitch-idea')}
+              >
+                <Lightbulb className="h-4 w-4 shrink-0 opacity-80" aria-hidden />
+                <span className="text-center leading-tight">Pitch idea</span>
+              </button>
+            </div>
+          </div>
+
+          {mode === 'unified' ? <UnifiedPitchTab /> : <PitchIdeaAnalysisTab />}
         </div>
       </div>
     </div>

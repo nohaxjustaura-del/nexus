@@ -1,4 +1,5 @@
 import { PrismaClient } from '@prisma/client'
+import { seedDefaultHumanReviewers } from '../lib/seed-default-human-reviewers'
 
 const prisma = new PrismaClient()
 
@@ -7322,6 +7323,9 @@ async function main() {
       },
     ],
   })
+
+  console.log('Creating default human reviewers (YC W26 / Luel)…')
+  await seedDefaultHumanReviewers(prisma)
 
   // Verify the count
   const actualCount = await prisma.investor.count()

@@ -19,6 +19,7 @@ import {
   getUserCreditsClient,
   invalidateUserCreditsClientCache,
 } from '@/lib/client/user-credits-client'
+import { cn } from '@/lib/utils'
 
 const UNIFIED_CREDITS = CREDIT_COSTS.UNIFIED_PITCH
 const REVIEWER_CREDITS = CREDIT_COSTS.VIDEO_PITCH.REVIEWER
@@ -97,6 +98,7 @@ export function UnifiedPitchTab() {
   const [reviewType, setReviewType] = useState<'ai' | 'reviewer'>('ai')
   const [selectedReviewer, setSelectedReviewer] = useState<string | null>(null)
   const [reviewers, setReviewers] = useState<ReviewerOption[]>([])
+  const [reviewersLoading, setReviewersLoading] = useState(false)
 
   useEffect(() => {
     getUserCreditsClient()
@@ -107,16 +109,20 @@ export function UnifiedPitchTab() {
   }, [])
 
   useEffect(() => {
-    if (reviewType === 'reviewer') {
-      fetch('/api/reviewers')
-        .then((r) => r.json())
-        .then((d) => setReviewers(d.reviewers || []))
-        .catch(() => {})
+    if (reviewType !== 'reviewer') {
+      setSelectedReviewer(null)
+      return
     }
+    setReviewersLoading(true)
+    fetch('/api/reviewers', { credentials: 'include' })
+      .then((r) => r.json())
+      .then((d) => setReviewers(Array.isArray(d.reviewers) ? d.reviewers : []))
+      .catch(() => setReviewers([]))
+      .finally(() => setReviewersLoading(false))
   }, [reviewType])
 
   useEffect(() => {
-    if (!analyzing || !uploadFinished) return
+    if (reviewType !== 'ai' || !analyzing || !uploadFinished) return
     serverStartRef.current = Date.now()
     setServerSyntheticPct(35)
     const id = window.setInterval(() => {
@@ -127,7 +133,7 @@ export function UnifiedPitchTab() {
       setServerSyntheticPct((prev) => Math.max(prev, Math.min(92, eased)))
     }, 800)
     return () => window.clearInterval(id)
-  }, [analyzing, uploadFinished])
+  }, [analyzing, uploadFinished, reviewType])
 
   const hasDeck = !!(deckFile && deckFile.size > 0)
   const hasVideo = !!(videoFile && videoFile.size > 0)
@@ -256,7 +262,7 @@ export function UnifiedPitchTab() {
               <Layers className="h-5 w-5" aria-hidden />
             </div>
             <div className="min-w-0 space-y-2">
-              <CardTitle className="text-lg font-semibold tracking-tight">Full pitch review</CardTitle>
+              <CardTitle className="text-lg font-semibold tracking-tight">Unified pitch</CardTitle>
               <CardDescription className="text-sm leading-relaxed">
                 Add structured answers and any supporting files—at least one input is required.{' '}
                 <span className="text-foreground">
@@ -354,44 +360,90 @@ export function UnifiedPitchTab() {
               <User className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
               Review type
             </div>
-            <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
-              <label className="flex cursor-pointer items-center gap-2.5 text-sm">
-                <input
-                  type="radio"
-                  name="reviewType"
-                  className="h-4 w-4 shrink-0 accent-primary"
-                  checked={reviewType === 'ai'}
-                  onChange={() => setReviewType('ai')}
-                />
-                <span>AI analysis ({UNIFIED_CREDITS} credits)</span>
-              </label>
-              <label className="flex cursor-pointer items-center gap-2.5 text-sm">
-                <input
-                  type="radio"
-                  name="reviewType"
-                  className="h-4 w-4 shrink-0 accent-primary"
-                  checked={reviewType === 'reviewer'}
-                  onChange={() => setReviewType('reviewer')}
-                />
-                <span>Human reviewer ({REVIEWER_CREDITS} credits)</span>
-              </label>
+            <div
+              role="radiogroup"
+              aria-label="Review type"
+              className="grid grid-cols-1 rounded-xl border border-border/80 bg-muted/10 md:grid-cols-2"
+            >
+              <button
+                type="button"
+                role="radio"
+                aria-checked={reviewType === 'ai'}
+                onClick={() => setReviewType('ai')}
+                className={cn(
+                  'relative flex min-h-[5.5rem] flex-col items-center justify-center gap-1.5 rounded-t-xl border-b border-border p-5 text-center transition-[background-color,box-shadow] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background md:min-h-0 md:rounded-l-xl md:border-b-0 md:border-r md:border-border md:p-6',
+                  reviewType === 'ai'
+                    ? 'z-[1] bg-primary/[0.08] shadow-[0_0_0_2px_hsl(var(--primary))]'
+                    : 'hover:bg-muted/35',
+                )}
+              >
+                <div className="flex items-center justify-center gap-2 text-sm font-medium text-foreground">
+                  <Sparkles className="h-4 w-4 shrink-0 text-primary/80" aria-hidden />
+                  AI analysis
+                </div>
+                <p className="max-w-[18rem] text-center text-xs leading-snug text-muted-foreground">
+                  {UNIFIED_CREDITS} credits · rubric, feedback, and investor matching
+                </p>
+              </button>
+              <button
+                type="button"
+                role="radio"
+                aria-checked={reviewType === 'reviewer'}
+                onClick={() => setReviewType('reviewer')}
+                className={cn(
+                  'relative flex min-h-[5.5rem] flex-col items-center justify-center gap-1.5 rounded-b-xl p-5 text-center transition-[background-color,box-shadow] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background md:min-h-0 md:rounded-r-xl md:p-6',
+                  reviewType === 'reviewer'
+                    ? 'z-[1] bg-primary/[0.08] shadow-[0_0_0_2px_hsl(var(--primary))]'
+                    : 'hover:bg-muted/35',
+                )}
+              >
+                <div className="flex items-center justify-center gap-2 text-sm font-medium text-foreground">
+                  <User className="h-4 w-4 shrink-0 text-primary/80" aria-hidden />
+                  Human reviewer
+                </div>
+                <p className="max-w-[18rem] text-center text-xs leading-snug text-muted-foreground">
+                  {REVIEWER_CREDITS} credits · expert review of your submission
+                </p>
+              </button>
             </div>
             {reviewType === 'reviewer' && (
               <div className="space-y-2 pt-1">
                 <Label htmlFor="reviewer">Reviewer</Label>
-                <select
-                  id="reviewer"
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                  value={selectedReviewer || ''}
-                  onChange={(e) => setSelectedReviewer(e.target.value || null)}
-                >
-                  <option value="">Select…</option>
-                  {reviewers.map((r) => (
-                    <option key={r.id} value={r.id}>
-                      {r.name}
-                    </option>
-                  ))}
-                </select>
+                {reviewersLoading ? (
+                  <p className="text-sm text-muted-foreground">Loading reviewers…</p>
+                ) : reviewers.length === 0 ? (
+                  <div className="rounded-lg border border-border/80 bg-muted/30 px-3 py-3 text-sm leading-relaxed text-muted-foreground">
+                    <p className="font-medium text-foreground">No reviewers are listed yet</p>
+                    <p className="mt-1.5 text-xs">
+                      Human review only shows people on your team who are onboarded as reviewers (active, verified, and
+                      marked VC-accepted in the database). If this is a fresh environment, use{' '}
+                      <span className="font-medium text-foreground">AI analysis</span> for now, or add{' '}
+                      <code className="rounded bg-muted px-1 py-0.5 text-[0.7rem] text-foreground">Reviewer</code> rows
+                      via Prisma. In local <code className="rounded bg-muted px-1 py-0.5 text-[0.7rem] text-foreground">npm run dev</code>, anyone with{' '}
+                      <code className="rounded bg-muted px-1 py-0.5 text-[0.7rem] text-foreground">active: true</code>{' '}
+                      appears in this list.
+                    </p>
+                  </div>
+                ) : (
+                  <>
+                    <select
+                      id="reviewer"
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                      value={selectedReviewer || ''}
+                      onChange={(e) => setSelectedReviewer(e.target.value || null)}
+                    >
+                      <option value="">Auto-assign next available</option>
+                      {reviewers.map((r) => (
+                        <option key={r.id} value={r.id}>
+                          {r.name}
+                        </option>
+                      ))}
+                    </select>
+                    <p className="text-xs text-muted-foreground">
+                      Leave &quot;Auto-assign&quot; to pick the best available reviewer, or choose a specific person.
+                    </p>
+                  </>
+                )}
               </div>
             )}
           </section>
@@ -416,7 +468,7 @@ export function UnifiedPitchTab() {
         </div>
       )}
 
-      {analyzing && (
+      {analyzing && reviewType === 'ai' && (
         <div className="space-y-2 rounded-lg border border-primary/20 bg-primary/5 p-4">
           <p className="text-sm font-medium text-foreground">{progressLabel}</p>
           <Progress value={progressBarValue} className="h-3" />
@@ -426,10 +478,26 @@ export function UnifiedPitchTab() {
         </div>
       )}
 
+      {analyzing && reviewType === 'reviewer' && (
+        <div className="rounded-lg border border-primary/20 bg-primary/5 p-4">
+          <p className="text-sm font-medium text-foreground">
+            {!uploadFinished && hasLargeUpload
+              ? `Uploading files… ${uploadPct}%`
+              : !uploadFinished
+                ? 'Sending request…'
+                : 'Submitting for human review…'}
+          </p>
+        </div>
+      )}
+
       <div className="flex justify-center">
         <Button size="lg" onClick={handleAnalyze} disabled={analyzing || !canSubmit} className="gap-2">
           {analyzing ? (
-            'Analyzing…'
+            reviewType === 'reviewer' ? (
+              'Submitting…'
+            ) : (
+              'Analyzing…'
+            )
           ) : (
             <>
               <Sparkles className="h-4 w-4" />

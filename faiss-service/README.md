@@ -26,7 +26,14 @@ Or with uvicorn:
 uvicorn faiss_api:app --host 0.0.0.0 --port 8001 --reload
 ```
 
-The service will run on `http://localhost:8001`
+The service defaults to `http://localhost:8001`. If you see **“10048 … address … normally permitted”** (Windows) or “address already in use”, another process is bound to that port—stop the other `faiss_api` / uvicorn, or run with a custom port:
+
+```bash
+# PowerShell
+$env:FAISS_SERVICE_PORT=8002; python faiss_api.py
+```
+
+Then set `FAISS_SERVICE_URL=http://localhost:8002` in `.env.local` (Next.js).
 
 ## API Endpoints
 

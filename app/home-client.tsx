@@ -31,7 +31,7 @@ import { track as trackEvent } from '@/lib/analytics'
 import { useAuthSession } from '@/components/auth-session-provider'
 import AnalysisDashboard from '@/components/analysis/AnalysisDashboard'
 import type { UniversalAnalysisResult } from '@/lib/universal-analysis-engine'
-import { BRAND_NAME } from '@/lib/brand'
+import { BRAND_NAME, BRAND_HERO_EYEBROW } from '@/lib/brand'
 
 const HOME_DEMO_RUBRIC: UniversalAnalysisResult = {
   categories: {
@@ -164,7 +164,7 @@ export default function HomeClient({ verifiedInvestorCountLabel }: HomeClientPro
             <div className="grid items-start gap-12 lg:grid-cols-12 lg:gap-10 xl:gap-14">
               <div className="lg:col-span-7 xl:col-span-6">
                 <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
-                  Fundraising match engine
+                  {BRAND_HERO_EYEBROW}
                 </p>
                 <h1 className="mt-3 font-heading text-[1.7rem] font-semibold leading-[1.16] tracking-tight text-foreground sm:text-4xl sm:leading-[1.12] md:text-[2.4rem] md:leading-[1.1]">
                   Find the investors most likely to fund your startup
