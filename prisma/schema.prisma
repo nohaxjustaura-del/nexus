@@ -463,12 +463,17 @@ model YCInsiderFounderRequest {
   userEmail   String
   founderKey  String // william | inigo
   requestType String // ask | book
+  topic       String?  @db.VarChar(300)
+  timezone    String?  @db.VarChar(120)
   message     String   @db.Text
+  /// Admin pipeline: new | in_progress | scheduled | done | declined
+  status      String   @default("new") @db.VarChar(32)
 
   createdAt DateTime @default(now())
 
   @@index([createdAt])
   @@index([userId])
+  @@index([status])
 }
 
 model VerificationCode {

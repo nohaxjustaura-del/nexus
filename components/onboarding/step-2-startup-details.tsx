@@ -66,17 +66,23 @@ export function Step2StartupDetails({
 
         <div className="space-y-2">
           <Label>Current Stage *</Label>
-          <div id="stage-select" className="flex flex-wrap gap-2">
+          <div id="stage-select" className="flex flex-wrap gap-2" role="radiogroup" aria-label="Current Stage">
             {STAGES.map((stage) => (
-              <Badge
+              <button
                 key={stage}
-                variant={formData.stage === stage ? 'default' : 'outline'}
-                className="cursor-pointer"
+                type="button"
+                role="radio"
+                aria-checked={formData.stage === stage}
                 onClick={() => setFormData({ ...formData, stage })}
               >
-                {formData.stage === stage && <CheckCircle className="mr-1 h-3 w-3" />}
-                {stage}
-              </Badge>
+                <Badge
+                  variant={formData.stage === stage ? 'default' : 'outline'}
+                  className="cursor-pointer"
+                >
+                  {formData.stage === stage && <CheckCircle className="mr-1 h-3 w-3" aria-hidden="true" />}
+                  {stage}
+                </Badge>
+              </button>
             ))}
           </div>
           {errors.stage && <p className="text-xs text-red-600">{errors.stage}</p>}
@@ -84,17 +90,22 @@ export function Step2StartupDetails({
 
         <div className="space-y-2">
           <Label>Sectors * (Select 1-3)</Label>
-          <div id="sectors-select" className="flex flex-wrap gap-2">
+          <div id="sectors-select" className="flex flex-wrap gap-2" role="group" aria-label="Sectors">
             {SECTORS.map((sector) => (
-              <Badge
+              <button
                 key={sector}
-                variant={formData.sectors.includes(sector) ? 'default' : 'outline'}
-                className="cursor-pointer"
+                type="button"
+                aria-pressed={formData.sectors.includes(sector)}
                 onClick={() => toggleArrayItem('sectors', sector)}
               >
-                {formData.sectors.includes(sector) && <CheckCircle className="mr-1 h-3 w-3" />}
-                {sector}
-              </Badge>
+                <Badge
+                  variant={formData.sectors.includes(sector) ? 'default' : 'outline'}
+                  className="cursor-pointer"
+                >
+                  {formData.sectors.includes(sector) && <CheckCircle className="mr-1 h-3 w-3" aria-hidden="true" />}
+                  {sector}
+                </Badge>
+              </button>
             ))}
           </div>
           {errors.sectors && <p className="text-xs text-red-600">{errors.sectors}</p>}

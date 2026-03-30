@@ -100,19 +100,12 @@
   }
 }
 
-.container-hero {
-  @apply max-w-[1400px] mx-auto px-4;
-}
 .container-body {
   @apply max-w-[1400px] mx-auto px-4;
 }
 
 /* Consistent app width + rhythm (reduces “chopped” layouts) */
 @layer components {
-  .page-shell {
-    @apply mx-auto w-full max-w-7xl px-4 pb-16 pt-10 sm:px-6 md:pb-20 md:pt-12 lg:px-8;
-  }
-
   .section-divider {
     @apply relative my-20 md:my-28;
   }

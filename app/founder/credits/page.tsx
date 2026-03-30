@@ -118,7 +118,7 @@ export default function CreditsPage() {
       <div className="container mx-auto max-w-7xl px-4 py-8">
         {/* Header */}
         <div className="mb-8">
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-4">
             <div>
               <h1 className="text-4xl font-bold text-foreground mb-2">Credit Usage & Insights</h1>
               <p className="text-lg text-muted-foreground">Track how you're using your credits</p>
@@ -172,10 +172,10 @@ export default function CreditsPage() {
           <Card className="border-2">
             <CardContent className="p-6">
               <div className="flex items-center justify-between mb-2">
-                <div className="p-2 rounded-lg bg-blue-100">
-                  <Sparkles className="h-5 w-5 text-blue-600" />
+                <div className="p-2 rounded-lg bg-primary/10">
+                  <Sparkles className="h-5 w-5 text-primary" />
                 </div>
-                <TrendingUp className="h-5 w-5 text-green-600" />
+                <TrendingUp className="h-5 w-5 text-emerald-500" />
               </div>
               <div className="text-3xl font-bold text-foreground">{totalAnalyses}</div>
               <p className="text-sm text-muted-foreground">Total Analyses</p>
@@ -185,10 +185,10 @@ export default function CreditsPage() {
           <Card className="border-2">
             <CardContent className="p-6">
               <div className="flex items-center justify-between mb-2">
-                <div className="p-2 rounded-lg bg-purple-100">
-                  <Coins className="h-5 w-5 text-purple-600" />
+                <div className="p-2 rounded-lg bg-accent">
+                  <Coins className="h-5 w-5 text-accent-foreground" />
                 </div>
-                <TrendingDown className="h-5 w-5 text-red-600" />
+                <TrendingDown className="h-5 w-5 text-destructive" />
               </div>
               <div className="text-3xl font-bold text-foreground">{totalSpent}</div>
               <p className="text-sm text-muted-foreground">Credits Spent</p>
@@ -198,8 +198,8 @@ export default function CreditsPage() {
           <Card className="border-2">
             <CardContent className="p-6">
               <div className="flex items-center justify-between mb-2">
-                <div className="p-2 rounded-lg bg-green-100">
-                  <TrendingUp className="h-5 w-5 text-green-600" />
+                <div className="p-2 rounded-lg bg-primary/10">
+                  <TrendingUp className="h-5 w-5 text-primary" />
                 </div>
               </div>
               <div className="text-3xl font-bold text-foreground">{averageCost}</div>
@@ -217,7 +217,7 @@ export default function CreditsPage() {
           <CardContent>
             {usage.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
-                <Sparkles className="mx-auto h-12 w-12 mb-4 text-slate-300" />
+                <Sparkles className="mx-auto h-12 w-12 mb-4 text-muted-foreground/40" />
                 <p>No usage data yet. Start analyzing to see your credit usage!</p>
               </div>
             ) : (
@@ -248,14 +248,14 @@ export default function CreditsPage() {
                         </div>
                         <Badge variant="outline">{percentage}%</Badge>
                       </div>
-                      <div className="w-full h-2 bg-slate-200 rounded-full overflow-hidden">
+                      <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
                         <div
                           className="h-full bg-gradient-to-r from-primary to-blue-600 transition-all"
                           style={{ width: `${percentage}%` }}
                         />
                       </div>
                       {item.lastUsed && (
-                        <p className="text-xs text-slate-500 mt-2 flex items-center gap-1">
+                        <p className="text-xs text-muted-foreground mt-2 flex items-center gap-1">
                           <Calendar className="h-3 w-3" />
                           Last used: {new Date(item.lastUsed).toLocaleDateString()}
                         </p>
@@ -307,7 +307,7 @@ export default function CreditsPage() {
                             {activity.type === 'video-pitch' && 'Video Pitch Analysis'}
                             {activity.type === 'pitch-idea' && 'Pitch Idea Analysis'}
                           </p>
-                          <p className="text-xs text-slate-500">
+                          <p className="text-xs text-muted-foreground">
                             {new Date(activity.createdAt).toLocaleDateString()}
                           </p>
                         </div>
@@ -327,22 +327,22 @@ export default function CreditsPage() {
         <Card className="mt-8 border-2 border-primary/25 bg-primary/10">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Lightbulb className="h-5 w-5 text-blue-600" />
+              <Lightbulb className="h-5 w-5 text-primary" />
               Credit Saving Tips
             </CardTitle>
           </CardHeader>
           <CardContent>
             <ul className="space-y-2 text-sm text-foreground/85">
               <li className="flex items-start gap-2">
-                <ArrowRight className="h-4 w-4 text-blue-600 mt-0.5 shrink-0" />
+                <ArrowRight className="h-4 w-4 text-primary mt-0.5 shrink-0" />
                 <span>Pitch Idea Analysis (15 credits) is the most cost-effective way to get feedback</span>
               </li>
               <li className="flex items-start gap-2">
-                <ArrowRight className="h-4 w-4 text-blue-600 mt-0.5 shrink-0" />
+                <ArrowRight className="h-4 w-4 text-primary mt-0.5 shrink-0" />
                 <span>Complete your profile to get better matches and reduce need for multiple analyses</span>
               </li>
               <li className="flex items-start gap-2">
-                <ArrowRight className="h-4 w-4 text-blue-600 mt-0.5 shrink-0" />
+                <ArrowRight className="h-4 w-4 text-primary mt-0.5 shrink-0" />
                 <span>Premium members get unlimited analyses - upgrade to save credits long-term</span>
               </li>
             </ul>

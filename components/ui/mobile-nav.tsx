@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import Link from 'next/link'
 import { Menu, X } from 'lucide-react'
 import { Button } from './button'
@@ -21,10 +21,48 @@ interface MobileNavProps {
 
 export function MobileNav({ links }: MobileNavProps) {
   const [isOpen, setIsOpen] = useState(false)
+  const triggerRef = useRef<HTMLButtonElement>(null)
+  const navRef = useRef<HTMLElement>(null)
+
+  const handleKeyDown = useCallback((e: KeyboardEvent) => {
+    if (e.key === 'Escape') {
+      setIsOpen(false)
+      triggerRef.current?.focus()
+      return
+    }
+    if (e.key === 'Tab' && navRef.current) {
+      const focusable = navRef.current.querySelectorAll<HTMLElement>(
+        'a[href], button:not([disabled])'
+      )
+      if (focusable.length === 0) return
+      const first = focusable[0]
+      const last = focusable[focusable.length - 1]
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault()
+        last.focus()
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault()
+        first.focus()
+      }
+    }
+  }, [])
+
+  useEffect(() => {
+    if (isOpen) {
+      document.addEventListener('keydown', handleKeyDown)
+      requestAnimationFrame(() => {
+        navRef.current?.querySelector<HTMLElement>('a')?.focus()
+      })
+    } else {
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [isOpen, handleKeyDown])
 
   return (
     <div className="lg:hidden">
       <Button
+        ref={triggerRef}
         variant="ghost"
         size="sm"
         onClick={() => setIsOpen(!isOpen)}
@@ -43,6 +81,7 @@ export function MobileNav({ links }: MobileNavProps) {
             aria-hidden="true"
           />
           <nav
+            ref={navRef}
             className={cn(
               'fixed left-0 right-0 top-28 z-50 max-h-[calc(100vh-7rem)] overflow-y-auto border-b border-border/50 bg-card/98 shadow-lg animate-slide-down sm:top-[7.5rem] sm:max-h-[calc(100vh-7.5rem)] lg:top-40 lg:max-h-[calc(100vh-10rem)]'
             )}

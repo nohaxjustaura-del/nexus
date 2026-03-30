@@ -164,6 +164,22 @@ export function getMatchingNarrativeOpenRouterModel(): string {
   return getScoringOpenRouterModel()
 }
 
+/**
+ * Model for pitch analysis (strengths/weaknesses/market fit).
+ * Separate from scoring/extraction because analysis benefits from
+ * stronger reasoning capabilities.
+ *
+ * Falls back through:
+ *   OPENROUTER_ANALYSIS_MODEL -> OPENROUTER_SCORING_MODEL -> meta-llama/llama-3.3-70b-instruct
+ */
+export function getAnalysisOpenRouterModel(): string {
+  const analysis = process.env.OPENROUTER_ANALYSIS_MODEL?.trim()
+  if (analysis) return analysis
+  const scoring = process.env.OPENROUTER_SCORING_MODEL?.trim()
+  if (scoring) return scoring
+  return 'meta-llama/llama-3.3-70b-instruct'
+}
+
 /** LLM client for multi-pass pitch scoring. */
 export function getScoringLlmClient(): OpenAI | null {
   return getOpenRouterClient()
@@ -186,6 +202,8 @@ export function getVcExtractionMaxTokens(): number {
 }
 
 const VC_EXTRACTION_FALLBACK_MODEL = 'openai/gpt-4o-mini'
+
+const LLM_REQUEST_TIMEOUT_MS = 90_000
 
 function resolveMaxTokens(override?: number): number {
   if (override != null) return override
@@ -213,16 +231,22 @@ export async function openrouterGenerateText(
   const useVc = options.useVcPipeline === true
   const model = options.model ?? (useVc ? getVcPipelineModel() : getVcExtractionModel())
 
-  console.log(`[OPENROUTER] Using model: ${model}`)
+  if (process.env.DEBUG) console.log(`[OPENROUTER] Using model: ${model}`)
 
-  const response = await client.chat.completions.create({
-    model,
-    messages: [{ role: 'user', content: prompt }],
-    temperature: options.temperature ?? 0.7,
-    max_tokens: resolveMaxTokens(options.maxTokens),
-  } as any)
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), LLM_REQUEST_TIMEOUT_MS)
+  try {
+    const response = await client.chat.completions.create({
+      model,
+      messages: [{ role: 'user', content: prompt }],
+      temperature: options.temperature ?? 0.7,
+      max_tokens: resolveMaxTokens(options.maxTokens),
+    } as any, { signal: controller.signal })
 
-  return response.choices[0]?.message?.content || ''
+    return response.choices[0]?.message?.content || ''
+  } finally {
+    clearTimeout(timeout)
+  }
 }
 
 /**
@@ -338,7 +362,7 @@ export async function openrouterGenerateJson<T = any>(options: {
     jsonObjectMode: boolean,
   ): Promise<T> => {
     const label = backend === 'ollama' ? 'OLLAMA' : 'OPENROUTER'
-    console.log(`[${label}] JSON extract — model: ${model}`)
+    if (process.env.DEBUG) console.log(`[${label}] JSON extract — model: ${model}`)
 
     const temp = options.temperature ?? 0.7
     const maxTok = resolveMaxTokens(options.maxTokens)
@@ -362,11 +386,18 @@ export async function openrouterGenerateJson<T = any>(options: {
       ...(jsonObjectMode ? { response_format: { type: 'json_object' as const } } : {}),
     }
 
-    const response = await llmClient.chat.completions.create(baseParams as any)
-    const choice = response.choices[0]
-    const content = choice?.message?.content || '{}'
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), LLM_REQUEST_TIMEOUT_MS)
+    let content: string
+    try {
+      const response = await llmClient.chat.completions.create(baseParams as any, { signal: controller.signal })
+      const choice = response.choices[0]
+      content = choice?.message?.content || '{}'
+    } finally {
+      clearTimeout(timeout)
+    }
 
-    console.log(`[${label}] Response length: ${content.length}, starts: ${content.substring(0, 100)}`)
+    if (process.env.DEBUG) console.log(`[${label}] Response length: ${content.length}, starts: ${content.substring(0, 100)}`)
 
     try {
       return parseJsonFromModelContent(content, model) as T

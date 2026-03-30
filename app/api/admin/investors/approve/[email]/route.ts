@@ -1,9 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { revalidateVerifiedInvestorCountCache } from '@/lib/investor-public-stats'
+import { getCurrentUser } from '@/lib/auth'
+import { isAdminEmail } from '@/lib/constants'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
+
+async function requireAdmin() {
+  const user = await getCurrentUser(false)
+  if (!user || !isAdminEmail(user.email)) return null
+  return user
+}
 
 async function approve(emailParam: string) {
   const email = decodeURIComponent(emailParam || '').toLowerCase().trim()
@@ -26,6 +34,10 @@ export async function PATCH(
   { params }: { params: { email: string } }
 ) {
   try {
+    const admin = await requireAdmin()
+    if (!admin) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
     return await approve(params.email)
   } catch (e: any) {
     console.error('Approve investor error:', e)
@@ -38,6 +50,10 @@ export async function GET(
   req: NextRequest,
   ctx: { params: { email: string } }
 ) {
+  const admin = await requireAdmin()
+  if (!admin) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  }
   const res = await approve(ctx.params.email)
   try {
     const data = await res.clone().json()

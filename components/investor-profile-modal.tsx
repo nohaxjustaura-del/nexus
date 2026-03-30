@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { X, ExternalLink, Heart, Copy, Send, Eye, Target, MapPin, Clock, CheckCircle } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -37,26 +37,57 @@ export function InvestorProfileModal({
 }: InvestorProfileModalProps) {
   const [mounted, setMounted] = useState(false)
   const [isBookmarked, setIsBookmarked] = useState(isBookmarkedProp)
+  const dialogRef = useRef<HTMLDivElement>(null)
+  const previousFocusRef = useRef<HTMLElement | null>(null)
 
   useEffect(() => {
     setMounted(true)
   }, [])
 
-  // Sync with parent prop
   useEffect(() => {
     setIsBookmarked(isBookmarkedProp)
   }, [isBookmarkedProp])
 
+  const handleKeyDown = useCallback((e: KeyboardEvent) => {
+    if (e.key === 'Escape') {
+      onClose()
+      return
+    }
+    if (e.key === 'Tab' && dialogRef.current) {
+      const focusable = dialogRef.current.querySelectorAll<HTMLElement>(
+        'a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])'
+      )
+      if (focusable.length === 0) return
+      const first = focusable[0]
+      const last = focusable[focusable.length - 1]
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault()
+        last.focus()
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault()
+        first.focus()
+      }
+    }
+  }, [onClose])
+
   useEffect(() => {
     if (isOpen) {
+      previousFocusRef.current = document.activeElement as HTMLElement
       document.body.style.overflow = 'hidden'
+      document.addEventListener('keydown', handleKeyDown)
+      requestAnimationFrame(() => {
+        dialogRef.current?.querySelector<HTMLElement>('button')?.focus()
+      })
     } else {
       document.body.style.overflow = 'unset'
+      document.removeEventListener('keydown', handleKeyDown)
+      previousFocusRef.current?.focus()
     }
     return () => {
       document.body.style.overflow = 'unset'
+      document.removeEventListener('keydown', handleKeyDown)
     }
-  }, [isOpen])
+  }, [isOpen, handleKeyDown])
 
   if (!mounted || !isOpen || !investor) return null
 
@@ -156,8 +187,12 @@ export function InvestorProfileModal({
     <div 
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
       onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="investor-modal-title"
     >
       <div 
+        ref={dialogRef}
         className="relative w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-xl border border-border/50 bg-card shadow-lg"
         onClick={(e) => e.stopPropagation()}
       >
@@ -165,7 +200,7 @@ export function InvestorProfileModal({
         <div className="sticky top-0 z-10 border-b border-border/80 bg-card/95 px-6 py-4 backdrop-blur-md">
           <div className="flex items-start justify-between gap-4">
             <div className="flex-1 min-w-0">
-              <h2 className="text-2xl font-bold text-foreground mb-2">
+              <h2 id="investor-modal-title" className="text-2xl font-bold text-foreground mb-2">
                 {investor.firmName}
               </h2>
               <div className="flex flex-wrap items-center gap-2">

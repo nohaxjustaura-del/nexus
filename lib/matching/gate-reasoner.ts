@@ -125,21 +125,27 @@ Q10: Is there a direct competitor to this founder (${founder.primarySector} + ${
 Q11: Is there an adjacent company in their portfolio suggesting they want more exposure to ${founder.primarySector}?
 Q12: Does their portfolio show a clear gap that this founder would fill?
 
+For each answer, also provide a confidence score from 0-100 indicating how strongly the evidence supports your answer:
+- 90-100: Strong, direct evidence (e.g., specific portfolio company named in snippet)
+- 60-89: Moderate evidence (e.g., thesis statement mentions adjacent sector)
+- 30-59: Weak or indirect evidence
+- 0-29: Very little evidence, mostly uncertain
+
 Return ONLY valid JSON. No preamble. No explanation outside the JSON.
 {
   "answers": {
-    "Q1":  { "answer": "YES|NO|UNCLEAR", "evidence": "..." },
-    "Q2":  { "answer": "YES|NO|UNCLEAR", "evidence": "..." },
-    "Q3":  { "answer": "YES|NO|UNCLEAR", "evidence": "..." },
-    "Q4":  { "answer": "YES|NO|UNCLEAR", "evidence": "..." },
-    "Q5":  { "answer": "YES|NO|UNCLEAR", "evidence": "..." },
-    "Q6":  { "answer": "YES|NO|UNCLEAR", "evidence": "..." },
-    "Q7":  { "answer": "YES|NO|UNCLEAR", "evidence": "..." },
-    "Q8":  { "answer": "YES|NO|UNCLEAR", "evidence": "..." },
-    "Q9":  { "answer": "YES|NO|UNCLEAR", "evidence": "..." },
-    "Q10": { "answer": "YES|NO|UNCLEAR", "evidence": "..." },
-    "Q11": { "answer": "YES|NO|UNCLEAR", "evidence": "..." },
-    "Q12": { "answer": "YES|NO|UNCLEAR", "evidence": "..." }
+    "Q1":  { "answer": "YES|NO|UNCLEAR", "confidence": 0-100, "evidence": "..." },
+    "Q2":  { "answer": "YES|NO|UNCLEAR", "confidence": 0-100, "evidence": "..." },
+    "Q3":  { "answer": "YES|NO|UNCLEAR", "confidence": 0-100, "evidence": "..." },
+    "Q4":  { "answer": "YES|NO|UNCLEAR", "confidence": 0-100, "evidence": "..." },
+    "Q5":  { "answer": "YES|NO|UNCLEAR", "confidence": 0-100, "evidence": "..." },
+    "Q6":  { "answer": "YES|NO|UNCLEAR", "confidence": 0-100, "evidence": "..." },
+    "Q7":  { "answer": "YES|NO|UNCLEAR", "confidence": 0-100, "evidence": "..." },
+    "Q8":  { "answer": "YES|NO|UNCLEAR", "confidence": 0-100, "evidence": "..." },
+    "Q9":  { "answer": "YES|NO|UNCLEAR", "confidence": 0-100, "evidence": "..." },
+    "Q10": { "answer": "YES|NO|UNCLEAR", "confidence": 0-100, "evidence": "..." },
+    "Q11": { "answer": "YES|NO|UNCLEAR", "confidence": 0-100, "evidence": "..." },
+    "Q12": { "answer": "YES|NO|UNCLEAR", "confidence": 0-100, "evidence": "..." }
   }
 }`
 }
@@ -162,12 +168,14 @@ function coerceAnswer(raw: unknown): GateAnswer {
 function extractGateResult(raw: unknown, questionKey: string): GateResult {
   if (raw && typeof raw === 'object') {
     const obj = raw as Record<string, unknown>
+    const conf = Number(obj.confidence)
     return {
       answer: coerceAnswer(obj.answer),
       evidence:
         typeof obj.evidence === 'string' && obj.evidence.trim()
           ? obj.evidence.trim()
           : `No evidence provided for ${questionKey}`,
+      confidence: Number.isFinite(conf) ? Math.max(0, Math.min(100, Math.round(conf))) : undefined,
     }
   }
   return { answer: 'UNCLEAR', evidence: `Malformed answer object for ${questionKey}` }

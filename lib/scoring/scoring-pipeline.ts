@@ -12,8 +12,11 @@
  *     extractVerifiedFacts()  — DeepSeek, temp 0.1
  *     auditVagueness()        — sync regex, no LLM
  *
- *   Phase 2 (parallel, needs Phase 1 — all three are independent):
- *     scoreByCriteria()       — DeepSeek, temp 0.1
+ *   Phase 1.5 (parallel, needs Phase 1 facts + market data):
+ *     verifyClaims()          — DeepSeek, temp 0.1 (cross-references claims vs Exa data)
+ *
+ *   Phase 2 (parallel, needs Phase 1.5 — all three are independent):
+ *     scoreByCriteria()       — DeepSeek, temp 0.1 (5 batched sub-calls in parallel)
  *     getAdversarialScore()   — 2× DeepSeek, temp 0.3 (bull + bear in parallel)
  *     classifyTier()          — OpenRouter scoring model (default DeepSeek), temp 0.2
  *
@@ -38,6 +41,7 @@ import { logger } from "../logger"
 import { openrouterGenerateJson } from "../openrouter"
 import { extractVerifiedFacts } from "./fact-extractor"
 import { auditVagueness } from "./vagueness-auditor"
+import { verifyClaims, type ClaimVerificationResult } from "./claim-verifier"
 import { scoreByCriteria, CATEGORY_MAX } from "./criterion-scorer"
 import { getAdversarialScore } from "./adversarial-scorer"
 import { classifyTier } from "./tier-classifier"
@@ -496,8 +500,23 @@ async function runScoringPipelineCore(
   // fact-extractor always returns emptyFacts() on failure — never throws
   const facts: VerifiedFacts = factsResult
 
-  // Build pitch summary once — used by adversarial scorer and tier classifier (both Phase 2)
+  // -------------------------------------------------------------------------
+  // Phase 1.5 — claim verification (cross-references facts against Exa data)
+  // -------------------------------------------------------------------------
+
+  let claimVerification: ClaimVerificationResult | null = null
+  try {
+    claimVerification = await verifyClaims(facts, marketIntelligence, rawPitch)
+    passesCompleted.push("claim-verification")
+  } catch (error: any) {
+    logger.error("[SCORING-PIPELINE]", "claim verification failed (non-critical):", error?.message ?? error)
+  }
+
+  // Build pitch summary with claim verification context
   const pitchSummary = buildPitchSummary(facts, founderContext, marketIntelligence)
+  const enrichedPitchSummary = claimVerification?.summaryForScoring
+    ? `${pitchSummary}\n\nCLAIM VERIFICATION:\n${claimVerification.summaryForScoring}`
+    : pitchSummary
 
   // -------------------------------------------------------------------------
   // Phase 2 — criterion + adversarial + tier classification (all independent, parallel)
@@ -505,8 +524,8 @@ async function runScoringPipelineCore(
 
   const [criterionSettled, adversarialSettled, tierSettled] = await Promise.allSettled([
     scoreByCriteria(facts, marketIntelligence, stage),
-    getAdversarialScore(facts, pitchSummary, stage),
-    classifyTier(facts, pitchSummary, stage),
+    getAdversarialScore(facts, enrichedPitchSummary, stage),
+    classifyTier(facts, enrichedPitchSummary, stage),
   ])
 
   const criterionResult: CriterionScoreResult | null =
@@ -665,50 +684,52 @@ async function runScoringPipelineCore(
 
   const scoringDurationMs = Date.now() - startTime
 
-  // ── DEBUG: final score fusion + descriptions ──────────────────────────────
-  const formulaUsed = categoryDescAvg !== null ? 'full' : 'fallback'
-  console.log(`\n${"═".repeat(72)}`)
-  console.log(`  SCORING PIPELINE — FINAL FUSION (formula: ${formulaUsed})`)
-  console.log(`${"═".repeat(72)}`)
-  console.log(`\n  INPUTS:`)
-  if (categoryDescAvg !== null) {
-    console.log(`    Category desc avg (Exa):      ${categoryDescAvg}                  → ×0.25 = ${Math.round(categoryDescAvg * 0.25)}`)
+  // ── DEBUG: final score fusion + descriptions (gated by DEBUG env) ────────
+  if (process.env.DEBUG) {
+    const formulaUsed = categoryDescAvg !== null ? 'full' : 'fallback'
+    const cWeight = categoryDescAvg !== null ? 0.20 : 0.30
+    const aWeight = categoryDescAvg !== null ? 0.30 : 0.40
+    const tWeight = categoryDescAvg !== null ? 0.25 : 0.30
+    console.log(`\n${"═".repeat(72)}`)
+    console.log(`  SCORING PIPELINE — FINAL FUSION (formula: ${formulaUsed})`)
+    console.log(`${"═".repeat(72)}`)
+    console.log(`\n  INPUTS:`)
+    if (categoryDescAvg !== null) {
+      console.log(`    Category desc avg (Exa):      ${categoryDescAvg}                  → ×0.25 = ${Math.round(categoryDescAvg * 0.25)}`)
+    }
+    console.log(`    Criterion score (normalized): ${criterionNormalized ?? "FAILED → substituted"} → ×${cWeight} = ${Math.round(cFinal * cWeight)}`)
+    console.log(`    Adversarial blended:          ${adversarialBlended  ?? "FAILED → substituted"} → ×${aWeight} = ${Math.round(aFinal * aWeight)}`)
+    console.log(`    Tier calibrated:              ${tierCalibrated      ?? "FAILED → substituted"} → ×${tWeight} = ${Math.round(tFinal * tWeight)}`)
+    console.log(`    Vagueness adjustment:         ${vaguenessAudit.netAdjustment}               → capped: ${vaguenessAdjustment}`)
+    console.log(`\n  STAGE: ${stage}  |  PITCH TYPE: ${pitchType}`)
+    console.log(`  CATEGORY SCORES (0-100, from criterion pass):`)
+    console.log(`    Market:         ${categoryScores.market}`)
+    console.log(`    Team:           ${categoryScores.team}`)
+    console.log(`    Traction:       ${categoryScores.traction}`)
+    console.log(`    Product:        ${categoryScores.product}`)
+    console.log(`    Business Model: ${categoryScores.businessModel}`)
+    console.log(`    Vision:         ${categoryScores.vision}`)
+    console.log(`    Cross-Section:  ${categoryScores.crossSection}`)
+    console.log(`\n  TIER: ${tier}  |  CONVICTION: ${conviction}`)
+    console.log(`  CLOSEST COMPS: ${closestComps.join(" vs ")}`)
+    console.log(`\n  VAGUENESS FLAGS (${vaguenessAudit.penaltiesFound.length}):`)
+    vaguenessAudit.penaltiesFound.forEach(p => console.log(`    ✗ "${p.matchedText}" → ${p.penalty} pts  (${p.reason})`))
+    console.log(`  EVIDENCE BONUSES (${vaguenessAudit.bonusesFound.length}):`)
+    vaguenessAudit.bonusesFound.forEach(b => console.log(`    ✓ "${b.pattern}" → +${b.bonus} pts  (${b.reason})`))
+    console.log(`\n  ★ FINAL SCORE: ${finalScore}/100`)
+    console.log(`  GLOBAL VERDICT: ${categoryDescriptions.globalVerdict}`)
+    console.log(`\n  CATEGORY DESCRIPTIONS (Phase 3):`)
+    console.log(`    MARKET HEAT      (score ${categoryDescriptions.market.score}): "${categoryDescriptions.market.summary}"`)
+    categoryDescriptions.market.bullets.forEach(b => console.log(`      • ${b}`))
+    console.log(`    MOAT INTEGRITY   (score ${categoryDescriptions.moat.score}): "${categoryDescriptions.moat.summary}"`)
+    categoryDescriptions.moat.bullets.forEach(b => console.log(`      • ${b}`))
+    console.log(`    FOUNDER-MKT FIT  (score ${categoryDescriptions.founderFit.score}): "${categoryDescriptions.founderFit.summary}"`)
+    categoryDescriptions.founderFit.bullets.forEach(b => console.log(`      • ${b}`))
+    console.log(`    STRATEGIC MOMEN  (score ${categoryDescriptions.momentum.score}): "${categoryDescriptions.momentum.summary}"`)
+    categoryDescriptions.momentum.bullets.forEach(b => console.log(`      • ${b}`))
+    console.log(`  Duration: ${scoringDurationMs}ms  |  Passes: [${passesCompleted.join(", ")}]`)
+    console.log(`${"═".repeat(72)}\n`)
   }
-  const cWeight = categoryDescAvg !== null ? 0.20 : 0.30
-  const aWeight = categoryDescAvg !== null ? 0.30 : 0.40
-  const tWeight = categoryDescAvg !== null ? 0.25 : 0.30
-  console.log(`    Criterion score (normalized): ${criterionNormalized ?? "FAILED → substituted"} → ×${cWeight} = ${Math.round(cFinal * cWeight)}`)
-  console.log(`    Adversarial blended:          ${adversarialBlended  ?? "FAILED → substituted"} → ×${aWeight} = ${Math.round(aFinal * aWeight)}`)
-  console.log(`    Tier calibrated:              ${tierCalibrated      ?? "FAILED → substituted"} → ×${tWeight} = ${Math.round(tFinal * tWeight)}`)
-  console.log(`    Vagueness adjustment:         ${vaguenessAudit.netAdjustment}               → capped: ${vaguenessAdjustment}`)
-  console.log(`\n  STAGE: ${stage}  |  PITCH TYPE: ${pitchType}`)
-  console.log(`  CATEGORY SCORES (0-100, from criterion pass):`)
-  console.log(`    Market:         ${categoryScores.market}`)
-  console.log(`    Team:           ${categoryScores.team}`)
-  console.log(`    Traction:       ${categoryScores.traction}`)
-  console.log(`    Product:        ${categoryScores.product}`)
-  console.log(`    Business Model: ${categoryScores.businessModel}`)
-  console.log(`    Vision:         ${categoryScores.vision}`)
-  console.log(`    Cross-Section:  ${categoryScores.crossSection}`)
-  console.log(`\n  TIER: ${tier}  |  CONVICTION: ${conviction}`)
-  console.log(`  CLOSEST COMPS: ${closestComps.join(" vs ")}`)
-  console.log(`\n  VAGUENESS FLAGS (${vaguenessAudit.penaltiesFound.length}):`)
-  vaguenessAudit.penaltiesFound.forEach(p => console.log(`    ✗ "${p.matchedText}" → ${p.penalty} pts  (${p.reason})`))
-  console.log(`  EVIDENCE BONUSES (${vaguenessAudit.bonusesFound.length}):`)
-  vaguenessAudit.bonusesFound.forEach(b => console.log(`    ✓ "${b.pattern}" → +${b.bonus} pts  (${b.reason})`))
-  console.log(`\n  ★ FINAL SCORE: ${finalScore}/100`)
-  console.log(`  GLOBAL VERDICT: ${categoryDescriptions.globalVerdict}`)
-  console.log(`\n  CATEGORY DESCRIPTIONS (Phase 3):`)
-  console.log(`    MARKET HEAT      (score ${categoryDescriptions.market.score}): "${categoryDescriptions.market.summary}"`)
-  categoryDescriptions.market.bullets.forEach(b => console.log(`      • ${b}`))
-  console.log(`    MOAT INTEGRITY   (score ${categoryDescriptions.moat.score}): "${categoryDescriptions.moat.summary}"`)
-  categoryDescriptions.moat.bullets.forEach(b => console.log(`      • ${b}`))
-  console.log(`    FOUNDER-MKT FIT  (score ${categoryDescriptions.founderFit.score}): "${categoryDescriptions.founderFit.summary}"`)
-  categoryDescriptions.founderFit.bullets.forEach(b => console.log(`      • ${b}`))
-  console.log(`    STRATEGIC MOMEN  (score ${categoryDescriptions.momentum.score}): "${categoryDescriptions.momentum.summary}"`)
-  categoryDescriptions.momentum.bullets.forEach(b => console.log(`      • ${b}`))
-  console.log(`  Duration: ${scoringDurationMs}ms  |  Passes: [${passesCompleted.join(", ")}]`)
-  console.log(`${"═".repeat(72)}\n`)
   // ── END DEBUG ─────────────────────────────────────────────────────────────
 
   logger.log(

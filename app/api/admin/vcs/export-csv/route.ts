@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { getCurrentUser } from '@/lib/auth'
+import { isAdminEmail } from '@/lib/constants'
 import { parseJSON } from '@/lib/utils'
 
 export const dynamic = 'force-dynamic'
@@ -44,12 +45,10 @@ function formatField(value: any): string {
 
 export async function GET(request: NextRequest) {
   try {
-    // Check authentication (optional - remove if you want public access)
-    const user = await getCurrentUser()
-    // Uncomment below if you want to restrict to admin only
-    // if (!user || user.email !== 'adventa.counseling@gmail.com') {
-    //   return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    // }
+    const user = await getCurrentUser(false)
+    if (!user || !isAdminEmail(user.email)) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
 
     // Fetch all investors
     const investors = await db.investor.findMany({

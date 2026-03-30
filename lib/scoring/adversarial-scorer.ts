@@ -106,7 +106,18 @@ function formatFactsForAdversarial(facts: VerifiedFacts): string {
 const BULL_SYSTEM =
   "You are a partner at a top-tier VC firm who just saw a deal you want to WIN. " +
   "You are competitive, optimistic, and looking for reasons to write this check. " +
-  "Your job is to make the strongest possible investment case."
+  "Your job is to make the strongest possible investment case.\n\n" +
+
+  "CALIBRATION — your bullScore should reflect realistic conviction:\n" +
+  "  90-100: You would fight the partnership to lead this round. Clear path to $1B+. " +
+  "Reserved for exceptional founder + massive market + early traction + timing advantage.\n" +
+  "  70-89: Strong deal you'd champion. Multiple clear strengths, manageable risks.\n" +
+  "  50-69: Interesting — worth a second meeting. Some good signals but needs more evidence.\n" +
+  "  30-49: Has one compelling element but too many unknowns to get excited.\n" +
+  "  0-29: You struggle to find a compelling investment thesis from the evidence.\n\n" +
+
+  "Think through your reasoning FIRST, then score. Identify the single strongest " +
+  "signal and build the case outward from there."
 
 function buildBullUserPrompt(facts: VerifiedFacts, pitchSummary: string): string {
   return `${formatFactsForAdversarial(facts)}
@@ -119,13 +130,14 @@ Even if facts are sparse, find the best plausible story.
 
 Return a JSON object with exactly these fields:
 {
+  "reasoning": "<3-5 sentences: Walk through the key signals step by step. What is the founder's unfair advantage? What market dynamics favor them? What traction signals, even if early, suggest momentum? Build the investment thesis from evidence before scoring.>",
   "fundReturnerCase": "<the specific scenario where this returns the fund — be concrete about the path to $1B+>",
   "keyInsights": ["<insight 1>", "<insight 2>", "<insight 3>"],
   "bullScore": <0-100: how excited are you to champion this deal internally?>,
   "winProbability": <0-100: chance this becomes a $100M+ company>
 }
 
-Exactly 3 keyInsights. No other fields. Return valid JSON only.`
+IMPORTANT: Write your "reasoning" FIRST before assigning scores. Let the evidence build the case, then score accordingly. Exactly 3 keyInsights. No other fields. Return valid JSON only.`
 }
 
 function safeNumber(val: unknown, fallback: number): number {
@@ -231,6 +243,7 @@ A NULL or false field means the founder did NOT state it — treat absence of ev
 
 Return a JSON object with exactly these fields:
 {
+  "reasoning": "<3-5 sentences: Walk through the risks step by step. What are the STAGE-APPROPRIATE gaps vs genuinely dangerous signals? Distinguish between 'hasn't gotten there yet' (normal) and 'fundamental problem' (red flag). Consider: Is the market real? Can this team execute? Is the timing right? Does any single risk dominate?>",
   "likelyDeathScenario": "<the single most probable failure mode in 18 months — be specific>",
   "incumbentThreat": "<which large company kills this and the exact mechanism — name the company>",
   "founderRiskFlags": ["<risk 1>", "<risk 2>", ...],
@@ -238,7 +251,7 @@ Return a JSON object with exactly these fields:
   "gaveUpTooEarlyRisk": <true if this is the kind of idea VCs later regret passing on, else false>
 }
 
-No other fields. Return valid JSON only.`
+IMPORTANT: Write your "reasoning" FIRST. Think through stage-appropriate expectations before assigning bearScore. A pre-seed startup without revenue is NORMAL, not a risk. No other fields. Return valid JSON only.`
 }
 
 function normalizeBearResult(raw: any): BearResult {

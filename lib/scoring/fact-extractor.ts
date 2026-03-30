@@ -23,7 +23,21 @@ import type { FounderContext, VerifiedFacts } from "./types"
 const SYSTEM_PROMPT =
   "You are a fact-checker, not an analyst. Extract only what is explicitly stated. " +
   "If a claim is not backed by a specific name, number, or quote, mark it as not stated. " +
-  "Never infer. Never give benefit of the doubt. Return valid JSON only."
+  "Never infer. Never give benefit of the doubt. Return valid JSON only.\n\n" +
+
+  "CALIBRATION EXAMPLES:\n" +
+  "  - 'We have 2 paying clients' → traction.stated=true, exactQuote='We have 2 paying clients', hasRevenue=true\n" +
+  "  - 'We are growing fast' → traction.stated=false (no specific metric), exactQuote=null, hasGrowthRate=false\n" +
+  "  - 'Our proprietary AI' → product.techExplained=false (no technical detail), redFlags=['proprietary AI']\n" +
+  "  - 'We use transformer-based NLP to extract structured data from unstructured legal docs' → product.techExplained=true\n" +
+  "  - 'I previously founded and sold a SaaS company' → team.priorExitsQuote='previously founded and sold a SaaS company'\n" +
+  "  - 'Experienced team' → team.stated=false (no names or credentials), redFlags=['experienced team']\n" +
+  "  - '$4.2B TAM in the legal tech market' → market.sizeStated=true, exactFigure='$4.2B TAM'\n" +
+  "  - 'Large market opportunity' → market.sizeStated=false, redFlags=['large market opportunity']\n\n" +
+
+  "IMPORTANT: Read the ENTIRE pitch text and founder profile. Extract facts from ALL sections, " +
+  "not just the opening. Late-mentioned metrics (traction at the end, team bios in the middle) " +
+  "are just as valid as early ones."
 
 const JSON_SCHEMA = `{
   "traction": {
@@ -200,41 +214,41 @@ export async function extractVerifiedFacts(
 
     const facts = normalizeRaw(raw)
 
-    // ── DEBUG: extracted facts ─────────────────────────────────────────────
-    console.log(`\n${"═".repeat(72)}`)
-    console.log(`  FACT EXTRACTOR — VERIFIED FACTS`)
-    console.log(`${"═".repeat(72)}`)
-    console.log(`  TRACTION`)
-    console.log(`    stated:        ${facts.traction.stated}`)
-    console.log(`    exactQuote:    ${facts.traction.exactQuote ?? "(none)"}`)
-    console.log(`    hasRevenue:    ${facts.traction.hasRevenue}`)
-    console.log(`    hasUsers:      ${facts.traction.hasUsers}`)
-    console.log(`    hasGrowthRate: ${facts.traction.hasGrowthRate}`)
-    console.log(`  TEAM`)
-    console.log(`    stated:              ${facts.team.stated}`)
-    console.log(`    domainExperience:    ${facts.team.domainExperienceQuote ?? "(none)"}`)
-    console.log(`    priorExits:          ${facts.team.priorExitsQuote ?? "(none)"}`)
-    console.log(`    technicalDepth:      ${facts.team.technicalDepthQuote ?? "(none)"}`)
-    console.log(`  MARKET`)
-    console.log(`    sizeStated:          ${facts.market.sizeStated}`)
-    console.log(`    exactFigure:         ${facts.market.exactFigure ?? "(none)"}`)
-    console.log(`    competitors named:   [${facts.market.competitorsNamed.join(", ") || "none"}]`)
-    console.log(`    goliaths:            [${facts.market.goliathsIdentified.join(", ") || "none"}]`)
-    console.log(`  PRODUCT`)
-    console.log(`    differentiatorStated: ${facts.product.differentiatorStated}`)
-    console.log(`    techExplained:        ${facts.product.techExplained}`)
-    console.log(`    wedgeCustomerNamed:   ${facts.product.wedgeCustomerNamed}`)
-    console.log(`  BUSINESS MODEL`)
-    console.log(`    revenueModelClear:    ${facts.businessModel.revenueModelClear}`)
-    console.log(`    unitEconomicsStated:  ${facts.businessModel.unitEconomicsStated}`)
-    console.log(`    pricingMentioned:     ${facts.businessModel.pricingMentioned}`)
-    if (facts.redFlags.length > 0) {
-      console.log(`  RED FLAGS (${facts.redFlags.length}): ${facts.redFlags.join(" | ")}`)
-    } else {
-      console.log(`  RED FLAGS: none`)
+    if (process.env.DEBUG) {
+      console.log(`\n${"═".repeat(72)}`)
+      console.log(`  FACT EXTRACTOR — VERIFIED FACTS`)
+      console.log(`${"═".repeat(72)}`)
+      console.log(`  TRACTION`)
+      console.log(`    stated:        ${facts.traction.stated}`)
+      console.log(`    exactQuote:    ${facts.traction.exactQuote ?? "(none)"}`)
+      console.log(`    hasRevenue:    ${facts.traction.hasRevenue}`)
+      console.log(`    hasUsers:      ${facts.traction.hasUsers}`)
+      console.log(`    hasGrowthRate: ${facts.traction.hasGrowthRate}`)
+      console.log(`  TEAM`)
+      console.log(`    stated:              ${facts.team.stated}`)
+      console.log(`    domainExperience:    ${facts.team.domainExperienceQuote ?? "(none)"}`)
+      console.log(`    priorExits:          ${facts.team.priorExitsQuote ?? "(none)"}`)
+      console.log(`    technicalDepth:      ${facts.team.technicalDepthQuote ?? "(none)"}`)
+      console.log(`  MARKET`)
+      console.log(`    sizeStated:          ${facts.market.sizeStated}`)
+      console.log(`    exactFigure:         ${facts.market.exactFigure ?? "(none)"}`)
+      console.log(`    competitors named:   [${facts.market.competitorsNamed.join(", ") || "none"}]`)
+      console.log(`    goliaths:            [${facts.market.goliathsIdentified.join(", ") || "none"}]`)
+      console.log(`  PRODUCT`)
+      console.log(`    differentiatorStated: ${facts.product.differentiatorStated}`)
+      console.log(`    techExplained:        ${facts.product.techExplained}`)
+      console.log(`    wedgeCustomerNamed:   ${facts.product.wedgeCustomerNamed}`)
+      console.log(`  BUSINESS MODEL`)
+      console.log(`    revenueModelClear:    ${facts.businessModel.revenueModelClear}`)
+      console.log(`    unitEconomicsStated:  ${facts.businessModel.unitEconomicsStated}`)
+      console.log(`    pricingMentioned:     ${facts.businessModel.pricingMentioned}`)
+      if (facts.redFlags.length > 0) {
+        console.log(`  RED FLAGS (${facts.redFlags.length}): ${facts.redFlags.join(" | ")}`)
+      } else {
+        console.log(`  RED FLAGS: none`)
+      }
+      console.log(`${"═".repeat(72)}\n`)
     }
-    console.log(`${"═".repeat(72)}\n`)
-    // ── END DEBUG ──────────────────────────────────────────────────────────
 
     logger.log(
       `[FACT-EXTRACTOR] Complete — ` +

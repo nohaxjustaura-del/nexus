@@ -14,7 +14,7 @@
  * - "Berkeley SkyDeck just accelerated 2 fintech startups from Cal students last batch.
  *    Your SMB finance tool + Berkeley affiliation = perfect fit."
  * 
- * Uses Gemini 2.5 Flash for deep contextual analysis
+ * Uses OpenRouter (VC pipeline model) for deep contextual analysis
  */
 
 import { logger } from './logger'

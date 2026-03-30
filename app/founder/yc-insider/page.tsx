@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -222,9 +223,13 @@ export default function YCInsiderPage() {
               <div className="grid md:grid-cols-2 gap-6">
                 {/* William */}
                 <div className="flex items-start gap-3">
-                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center text-white font-bold flex-shrink-0 ring-2 ring-zinc-700">
-                    WN
-                  </div>
+                  <Image
+                    src="/yc-insider/william-namgyal.png"
+                    alt="William Namgyal"
+                    width={48}
+                    height={48}
+                    className="h-12 w-12 rounded-full object-cover flex-shrink-0 ring-2 ring-zinc-700"
+                  />
                   <div className="flex-1 min-w-0">
                     <div className="flex flex-wrap items-center gap-2 mb-1">
                       <h4 className="font-semibold text-zinc-50">William Namgyal</h4>
@@ -285,9 +290,13 @@ export default function YCInsiderPage() {
 
                 {/* Inigo */}
                 <div className="flex items-start gap-3">
-                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-emerald-500 to-cyan-600 flex items-center justify-center text-white font-bold flex-shrink-0 ring-2 ring-zinc-700">
-                    IL
-                  </div>
+                  <Image
+                    src="/yc-insider/inigo-lenderking.png"
+                    alt="Inigo Lenderking"
+                    width={48}
+                    height={48}
+                    className="h-12 w-12 rounded-full object-cover flex-shrink-0 ring-2 ring-zinc-700"
+                  />
                   <div className="flex-1 min-w-0">
                     <div className="flex flex-wrap items-center gap-2 mb-1">
                       <h4 className="font-semibold text-zinc-50">Inigo Lenderking</h4>

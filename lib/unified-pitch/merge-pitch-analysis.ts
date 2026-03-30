@@ -12,6 +12,17 @@ type DeckFeatures = {
 }
 
 function qaToPartial(answers: StructuredQaAnswers): Partial<PitchAnalysisResult> {
+  const tractionMetrics: PitchAnalysisResult['tractionMetrics'] = {}
+  if (answers.traction) {
+    const t = answers.traction.toLowerCase()
+    const revenueMatch = t.match(/\$[\d,]+[KMB]?/i)
+    if (revenueMatch) tractionMetrics.revenue = revenueMatch[0]
+    const userMatch = t.match(/([\d,]+)\s*(users?|customers?|clients?)/i)
+    if (userMatch) tractionMetrics.users = userMatch[1]
+    const growthMatch = t.match(/(\d+%?\s*(?:month|MoM|week|WoW|growth))/i)
+    if (growthMatch) tractionMetrics.growth = growthMatch[1]
+  }
+
   return {
     problemStatement: answers.problem,
     targetCustomer: answers.targetCustomer,
@@ -22,6 +33,7 @@ function qaToPartial(answers: StructuredQaAnswers): Partial<PitchAnalysisResult>
     productFit: answers.defensibility
       ? { differentiators: [answers.defensibility] }
       : undefined,
+    tractionMetrics: Object.keys(tractionMetrics).length > 0 ? tractionMetrics : undefined,
   }
 }
 

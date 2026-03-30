@@ -281,10 +281,83 @@ ${safe(pitch.keywords)}`)
 }
 
 /**
+ * Enriched embedding text that includes AI analysis outputs for better
+ * niche-fit VC matching. Falls back to standard embedding text for any
+ * missing analysis fields.
+ */
+export interface AnalysisEnrichment {
+  strengths?: string[]
+  uniqueness?: string
+  marketFit?: string
+  subSectorTags?: string[]
+  riskFactors?: string[]
+  tier?: string
+  conviction?: string
+  bullCase?: string
+  moatType?: string
+}
+
+export function buildEnrichedPitchEmbeddingText(
+  pitch: PitchFeatures,
+  analysis: AnalysisEnrichment,
+): string {
+  const base = buildPitchEmbeddingText(pitch)
+
+  const safe = (value: any, defaultValue = ''): string => {
+    if (value === null || value === undefined || value === '') return defaultValue
+    if (Array.isArray(value)) return value.join(', ')
+    return String(value)
+  }
+
+  const enrichmentSections: string[] = []
+
+  if (analysis.subSectorTags?.length) {
+    enrichmentSections.push(`NICHE POSITIONING
+Sub-sector tags: ${analysis.subSectorTags.join(', ')}`)
+  }
+
+  if (analysis.uniqueness || analysis.moatType) {
+    enrichmentSections.push(`COMPETITIVE ADVANTAGE
+Moat type: ${safe(analysis.moatType, 'Not classified')}
+Unique positioning: ${safe(analysis.uniqueness, 'Not identified')}`)
+  }
+
+  if (analysis.strengths?.length) {
+    enrichmentSections.push(`KEY STRENGTHS (AI-identified)
+${analysis.strengths.slice(0, 3).join('\n')}`)
+  }
+
+  if (analysis.marketFit) {
+    enrichmentSections.push(`MARKET FIT ASSESSMENT
+${analysis.marketFit}`)
+  }
+
+  if (analysis.bullCase) {
+    enrichmentSections.push(`INVESTMENT THESIS
+${analysis.bullCase}`)
+  }
+
+  if (analysis.tier || analysis.conviction) {
+    enrichmentSections.push(`QUALITY SIGNAL
+Tier: ${safe(analysis.tier, 'Not classified')}
+Conviction: ${safe(analysis.conviction, 'Not assessed')}`)
+  }
+
+  if (enrichmentSections.length === 0) return base
+
+  return `${base}\n\n${enrichmentSections.join('\n\n')}`
+}
+
+/**
  * Generate embedding vector for a pitch using Voyage AI
  */
-export async function generatePitchEmbedding(pitch: PitchFeatures): Promise<number[]> {
-  const embeddingText = buildPitchEmbeddingText(pitch)
+export async function generatePitchEmbedding(
+  pitch: PitchFeatures,
+  analysis?: AnalysisEnrichment,
+): Promise<number[]> {
+  const embeddingText = analysis
+    ? buildEnrichedPitchEmbeddingText(pitch, analysis)
+    : buildPitchEmbeddingText(pitch)
   return callEmbedAPI(embeddingText)
 }
 

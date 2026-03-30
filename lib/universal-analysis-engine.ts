@@ -9,7 +9,9 @@
  * runUniversalAnalysis().  This file is retained for reference and any third-party
  * integrations that have not yet migrated.
  *
- * TODO: Remove this file after confirming no remaining callers (post dashboard sprint).
+ * NOTE: The types CategoryScore and UniversalAnalysisResult are still imported by
+ * home-client.tsx, AnalysisDashboard.tsx, and is-safe-rubric-for-dashboard.ts.
+ * Migrate these types before removing this file.
  *
  * -------------------------------------------------------------------------------
  * ORIGINAL DESCRIPTION

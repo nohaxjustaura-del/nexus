@@ -1,6 +1,7 @@
 import { Resend } from 'resend'
 import { BRAND_NAME } from '@/lib/brand'
 import { getSiteUrl } from '@/lib/site-url'
+import { ADMIN_EMAILS_ORDERED } from '@/lib/constants'
 import { sendCursorDebugIngest } from '@/lib/cursor-debug-ingest'
 
 export {
@@ -452,6 +453,144 @@ ${plain}
     return { success: true, data }
   } catch (error) {
     console.error('Email send error (user approval):', error)
+    return { success: false, error }
+  }
+}
+
+function escapeHtmlPlain(s: string): string {
+  return s
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+}
+
+export type YcInsiderFounderRequestAlertPayload = {
+  id: string
+  userEmail: string
+  founderKey: string
+  requestType: 'ask' | 'book'
+  topic: string | null
+  timezone: string | null
+  message: string
+}
+
+/** Notifies configured admins when a premium user submits Ask / Book on YC Insider. */
+export async function sendYcInsiderFounderRequestAdminAlert(payload: YcInsiderFounderRequestAlertPayload) {
+  const recipients = [...ADMIN_EMAILS_ORDERED]
+  if (recipients.length === 0) {
+    console.warn('[email] YC Insider founder request: no ADMIN_EMAIL configured; skipping admin alert.')
+    return { success: false, error: 'no_admin_recipients' as const }
+  }
+
+  const base = getSiteUrl()
+  const adminUrl = `${base}/admin/yc-insider-requests`
+  const typeLabel = payload.requestType === 'book' ? 'Book (meeting)' : 'Ask (question)'
+  const founderLabel = payload.founderKey === 'william' ? 'William Namgyal' : 'Inigo Lenderking'
+  const topicLine = payload.topic?.trim() ? `Topic: ${payload.topic.trim()}` : 'Topic: (none)'
+  const tzLine =
+    payload.timezone?.trim() ? `Timezone: ${payload.timezone.trim()}` : 'Timezone: (not provided)'
+
+  const subject = `[${BRAND_NAME}] YC Insider ${typeLabel} — ${founderLabel}`
+  const plain = `New YC Insider founder request
+
+Type: ${typeLabel}
+Founder: ${founderLabel}
+User: ${payload.userEmail}
+${topicLine}
+${tzLine}
+Request ID: ${payload.id}
+Admin: ${adminUrl}
+
+Message:
+${payload.message}
+`
+
+  const html = `<pre style="font-family:system-ui,sans-serif;white-space:pre-wrap;font-size:14px;line-height:1.5">${escapeHtmlPlain(
+    plain
+  )}</pre><p><a href="${escapeHtmlPlain(adminUrl)}">Open admin queue</a></p>`
+
+  if (!resendApiKey()) {
+    console.log(`
+📧 YC Insider founder request (Development Mode)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+To: ${recipients.join(', ')}
+Subject: ${subject}
+
+${plain}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+`)
+    return { success: true }
+  }
+
+  const resend = getResendClient()
+  if (!resend) return { success: true }
+
+  try {
+    const { data, error } = await resend.emails.send({
+      from: emailFromHeader(),
+      to: recipients.length === 1 ? recipients[0]! : recipients,
+      subject,
+      text: plain,
+      html,
+    })
+    if (error) return { success: false, error }
+    return { success: true, data }
+  } catch (error) {
+    console.error('Email send error (YC Insider founder request):', error)
+    return { success: false, error }
+  }
+}
+
+export async function sendYcInsiderFounderRequestUserConfirmation(
+  toEmail: string,
+  requestType: 'ask' | 'book',
+  founderDisplayName: string
+) {
+  const subj =
+    requestType === 'book'
+      ? `We received your meeting request — ${BRAND_NAME}`
+      : `We received your question — ${BRAND_NAME}`
+  const plain =
+    requestType === 'book'
+      ? `Hi,
+
+Thanks for requesting time with ${founderDisplayName}. We received your details and will follow up by email to coordinate.
+
+— ${BRAND_NAME}`
+      : `Hi,
+
+Thanks for your question for ${founderDisplayName}. We received it and will follow up by email.
+
+— ${BRAND_NAME}`
+
+  if (!resendApiKey()) {
+    console.log(`
+📧 YC Insider user confirmation (Development Mode)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+To: ${toEmail}
+Subject: ${subj}
+
+${plain}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+`)
+    return { success: true }
+  }
+
+  const resend = getResendClient()
+  if (!resend) return { success: true }
+
+  try {
+    const { data, error } = await resend.emails.send({
+      from: emailFromHeader(),
+      to: toEmail,
+      subject: subj,
+      text: plain,
+      html: `<p>${plain.replace(/\n/g, '<br>')}</p>`,
+    })
+    if (error) return { success: false, error }
+    return { success: true, data }
+  } catch (error) {
+    console.error('Email send error (YC Insider user confirmation):', error)
     return { success: false, error }
   }
 }

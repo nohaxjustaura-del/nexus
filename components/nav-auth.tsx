@@ -65,7 +65,7 @@ export const NavAuth = memo(function NavAuth() {
           </>
         )}
 
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-2 sm:gap-2.5">
           {verified ? (
             <>
               <NotificationBell />

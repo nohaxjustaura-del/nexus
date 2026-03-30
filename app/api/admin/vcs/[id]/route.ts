@@ -1,16 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { revalidateVerifiedInvestorCountCache } from '@/lib/investor-public-stats'
+import { getCurrentUser } from '@/lib/auth'
+import { isAdminEmail } from '@/lib/constants'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
-// DELETE /api/admin/vcs/[id] → hard-delete investor and cascading relations
 export async function DELETE(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
+    const user = await getCurrentUser(false)
+    if (!user || !isAdminEmail(user.email)) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
+
     const investorId = params.id
     if (!investorId) {
       return NextResponse.json({ error: 'Missing investor id' }, { status: 400 })

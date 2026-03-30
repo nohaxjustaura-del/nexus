@@ -336,11 +336,31 @@ export function buildCriteria(stage: string): Criterion[] {
 // ---------------------------------------------------------------------------
 
 const SYSTEM_PROMPT =
-  "You are a rigorous investment analyst. You will be given structured facts already extracted " +
+  "You are a rigorous investment analyst at a top-tier VC. You will be given structured facts already extracted " +
   "from a startup pitch plus Exa market research. Evaluate each criterion by answering YES, PARTIAL, " +
-  "or NO based ONLY on the evidence provided. Do not infer. Do not give benefit of the doubt. " +
-  "Give exactly one sentence of justification per criterion, citing the specific field or quote " +
-  "that supports your answer. Do NOT produce any final score or total. Return valid JSON only."
+  "or NO based ONLY on the evidence provided. Do not infer. Do not give benefit of the doubt.\n\n" +
+
+  "CALIBRATION ANCHORS — use these to calibrate your YES/PARTIAL/NO thresholds:\n" +
+  "  - Traction at pre-seed: A founder with 2 paying pilot customers and $500/month = YES on traction_1. " +
+  "A founder who says 'growing fast' with no numbers = NO.\n" +
+  "  - Traction at seed: $10K MRR with 15% MoM growth = YES. $500 MRR = PARTIAL. 'Some users' = NO.\n" +
+  "  - Team: A CS student at a recognized university building a tech product = YES on team_2 (technical depth). " +
+  "A 'passionate entrepreneur' with no named credentials = NO on team_1.\n" +
+  "  - Market: Naming 3+ specific competitors by name = YES on market_3. 'Some players in the space' = PARTIAL. " +
+  "'No real competition' when Exa found funded rivals = NO.\n" +
+  "  - Product: 'Cuts video production time by 60% through automated B-roll selection' = YES on product_1. " +
+  "'Better than existing tools' = PARTIAL. 'Revolutionary platform' = NO.\n\n" +
+
+  "COMMON MISTAKES TO AVOID:\n" +
+  "  - Do NOT give YES to 'growing fast' or 'rapid growth' without a specific growth RATE and TIMEFRAME.\n" +
+  "  - Do NOT give YES to 'large market' without a specific dollar figure (TAM/SAM).\n" +
+  "  - Do NOT give NO to early-stage founders for lacking metrics only expected at later stages.\n" +
+  "  - Do NOT conflate 'not mentioned' with 'not true' — score based on what IS stated.\n" +
+  "  - Do NOT give the same answer to all criteria — differentiate based on actual evidence.\n\n" +
+
+  "For each criterion, reason through the evidence in your 'reasoning' field BEFORE committing to an answer. " +
+  "Cite the specific field, quote, or data point that supports your answer in the justification. " +
+  "Do NOT produce any final score or total. Return valid JSON only."
 
 function formatFactsAsText(facts: VerifiedFacts): string {
   const lines: string[] = ["FOUNDER-STATED FACTS:"]
@@ -376,14 +396,7 @@ function formatFactsAsText(facts: VerifiedFacts): string {
   return lines.join("\n")
 }
 
-function buildUserPrompt(criteria: Criterion[], facts: VerifiedFacts, market: MarketIntelligenceData, stage: string): string {
-  const criteriaBlock = criteria.map(c =>
-    `[${c.id}] ${c.question}\n` +
-    `  Points — YES: ${c.points.YES}, PARTIAL: ${c.points.PARTIAL}, NO: ${c.points.NO}\n` +
-    `  Evaluation hint: ${c.evaluationHint}`
-  ).join("\n\n")
-
-  const stageContext = `STAGE CONTEXT: This founder is at the "${stage}" stage.
+const STAGE_CONTEXT_BLOCK = (stage: string) => `STAGE CONTEXT: This founder is at the "${stage}" stage.
 Evaluate all criteria relative to what is reasonable and impressive FOR THIS STAGE. A pre-seed founder with 15K social followers and domain expertise is demonstrating strong traction signals for their stage. A seed founder with $50K MRR is demonstrating strong traction for their stage. Do not penalize early-stage founders for not having metrics that are only expected at later stages.
 
 STAGE CALIBRATION GUIDE:
@@ -393,7 +406,140 @@ STAGE CALIBRATION GUIDE:
 - series-a: Strong = $100K+ MRR + proven retention
 - revenue / growth: Strong = significant MRR + clear unit economics`
 
-  return `${stageContext}
+const CRITERIA_JSON_SHAPE = `Return a JSON object with this exact shape:
+{
+  "answers": [
+    {
+      "id": "<criterion_id>",
+      "reasoning": "<2-3 sentences: what specific evidence exists, what is missing, and why that leads to your answer>",
+      "answer": "YES|PARTIAL|NO",
+      "justification": "<one sentence summary citing the specific fact or quote>"
+    },
+    ...
+  ]
+}
+
+IMPORTANT: The "reasoning" field must come BEFORE "answer". Think through the evidence before committing to YES/PARTIAL/NO. Do not anchor on a gut reaction — let the evidence guide you.`
+
+interface BatchConfig {
+  name: string
+  criteriaIds: Set<string>
+  contextEmphasis: (facts: VerifiedFacts, market: MarketIntelligenceData) => string
+}
+
+const CRITERION_BATCHES: BatchConfig[] = [
+  {
+    name: "MARKET",
+    criteriaIds: new Set(["market_1", "market_2", "market_3", "market_4"]),
+    contextEmphasis: (facts, market) =>
+      `FOCUS AREA: Market opportunity, competitive landscape, and timing.\n\n` +
+      `KEY MARKET FACTS:\n` +
+      `  Market size stated: ${facts.market.sizeStated} (figure: ${facts.market.exactFigure ?? "none"})\n` +
+      `  Competitors named: [${facts.market.competitorsNamed.join(", ") || "none"}]\n` +
+      `  Goliaths identified: [${facts.market.goliathsIdentified.join(", ") || "none"}]\n\n` +
+      `EXA MARKET RESEARCH (primary context for this batch — read carefully):\n` +
+      `${market.dossier || "(no market intelligence available)"}`,
+  },
+  {
+    name: "TEAM",
+    criteriaIds: new Set(["team_1", "team_2", "team_3", "team_4"]),
+    contextEmphasis: (facts, _market) =>
+      `FOCUS AREA: Founder credentials, domain expertise, and team composition.\n\n` +
+      `KEY TEAM FACTS:\n` +
+      `  Team stated: ${facts.team.stated}\n` +
+      `  Domain experience: ${facts.team.domainExperienceQuote ?? "(none)"}\n` +
+      `  Prior exits: ${facts.team.priorExitsQuote ?? "(none)"}\n` +
+      `  Technical depth: ${facts.team.technicalDepthQuote ?? "(none)"}\n` +
+      `  Differentiator stated: ${facts.product.differentiatorStated}\n` +
+      `  Wedge customer named: ${facts.product.wedgeCustomerNamed}`,
+  },
+  {
+    name: "TRACTION",
+    criteriaIds: new Set(["traction_1", "traction_2", "traction_3", "traction_4"]),
+    contextEmphasis: (facts, _market) =>
+      `FOCUS AREA: Evidence of real market pull, specific metrics, and stage-appropriate progress.\n\n` +
+      `KEY TRACTION FACTS:\n` +
+      `  Traction stated: ${facts.traction.stated}\n` +
+      `  Exact quote: ${facts.traction.exactQuote ?? "(none)"}\n` +
+      `  Has revenue: ${facts.traction.hasRevenue}\n` +
+      `  Has users: ${facts.traction.hasUsers}\n` +
+      `  Has growth rate: ${facts.traction.hasGrowthRate}\n` +
+      `  Revenue model clear: ${facts.businessModel.revenueModelClear}\n` +
+      `  Pricing mentioned: ${facts.businessModel.pricingMentioned}`,
+  },
+  {
+    name: "PRODUCT",
+    criteriaIds: new Set(["product_1", "product_2", "product_3", "product_4"]),
+    contextEmphasis: (facts, market) =>
+      `FOCUS AREA: Product differentiation, technical defensibility, and competitive moat.\n\n` +
+      `KEY PRODUCT FACTS:\n` +
+      `  Differentiator stated: ${facts.product.differentiatorStated}\n` +
+      `  Tech explained: ${facts.product.techExplained}\n` +
+      `  Wedge customer named: ${facts.product.wedgeCustomerNamed}\n` +
+      `  Red flags: ${facts.redFlags.length > 0 ? facts.redFlags.join(", ") : "none"}\n\n` +
+      `COMPETITIVE LANDSCAPE (from Exa — use to assess moat):\n` +
+      `${(market.dossier || "").substring(0, 2000) || "(no market intelligence available)"}`,
+  },
+  {
+    name: "BUSINESS_MODEL_VISION_CROSS",
+    criteriaIds: new Set(["biz_1", "biz_2", "biz_3", "vision_1", "vision_2", "cross_1", "cross_2", "cross_3", "cross_4", "penalty_1", "penalty_2"]),
+    contextEmphasis: (facts, _market) =>
+      `FOCUS AREA: Business model clarity, vision scope, overall investment readiness, and pitch quality.\n\n` +
+      `KEY BUSINESS MODEL FACTS:\n` +
+      `  Revenue model clear: ${facts.businessModel.revenueModelClear}\n` +
+      `  Unit economics stated: ${facts.businessModel.unitEconomicsStated}\n` +
+      `  Pricing mentioned: ${facts.businessModel.pricingMentioned}\n\n` +
+      `OVERALL SIGNAL SUMMARY:\n` +
+      `  Traction: ${facts.traction.stated ? "Yes" : "No"} | Revenue: ${facts.traction.hasRevenue ? "Yes" : "No"}\n` +
+      `  Team depth: ${facts.team.stated ? "Yes" : "No"} | Domain: ${facts.team.domainExperienceQuote ? "Yes" : "No"}\n` +
+      `  Product diff: ${facts.product.differentiatorStated ? "Yes" : "No"} | Tech explained: ${facts.product.techExplained ? "Yes" : "No"}\n` +
+      `  Red flags (${facts.redFlags.length}): ${facts.redFlags.length > 0 ? facts.redFlags.join(", ") : "none"}`,
+  },
+]
+
+function buildBatchUserPrompt(
+  batch: BatchConfig,
+  criteria: Criterion[],
+  facts: VerifiedFacts,
+  market: MarketIntelligenceData,
+  stage: string,
+): string {
+  const batchCriteria = criteria.filter(c => batch.criteriaIds.has(c.id))
+  const criteriaBlock = batchCriteria.map(c =>
+    `[${c.id}] ${c.question}\n` +
+    `  Points — YES: ${c.points.YES}, PARTIAL: ${c.points.PARTIAL}, NO: ${c.points.NO}\n` +
+    `  Evaluation hint: ${c.evaluationHint}`
+  ).join("\n\n")
+
+  return `${STAGE_CONTEXT_BLOCK(stage)}
+
+---
+
+${batch.contextEmphasis(facts, market)}
+
+---
+
+${formatFactsAsText(facts)}
+
+---
+
+Evaluate each of the following ${batchCriteria.length} criteria in the ${batch.name} category.
+For each criterion, FIRST reason through the evidence step-by-step, THEN commit to an answer.
+Do NOT produce a total score or any numeric summary.
+
+${criteriaBlock}
+
+${CRITERIA_JSON_SHAPE}`
+}
+
+function buildUserPrompt(criteria: Criterion[], facts: VerifiedFacts, market: MarketIntelligenceData, stage: string): string {
+  const criteriaBlock = criteria.map(c =>
+    `[${c.id}] ${c.question}\n` +
+    `  Points — YES: ${c.points.YES}, PARTIAL: ${c.points.PARTIAL}, NO: ${c.points.NO}\n` +
+    `  Evaluation hint: ${c.evaluationHint}`
+  ).join("\n\n")
+
+  return `${STAGE_CONTEXT_BLOCK(stage)}
 
 ---
 
@@ -405,18 +551,12 @@ ${market.dossier || "(no market intelligence available)"}
 ---
 
 Evaluate each of the following ${criteria.length} criteria.
-For each criterion, answer YES, PARTIAL, or NO, and give exactly one sentence of justification.
+For each criterion, FIRST reason through the evidence step-by-step, THEN commit to an answer.
 Do NOT produce a total score or any numeric summary.
 
 ${criteriaBlock}
 
-Return a JSON object with this exact shape:
-{
-  "answers": [
-    { "id": "<criterion_id>", "answer": "YES|PARTIAL|NO", "justification": "<one sentence>" },
-    ...
-  ]
-}`
+${CRITERIA_JSON_SHAPE}`
 }
 
 // ---------------------------------------------------------------------------
@@ -522,34 +662,63 @@ function fallbackScoreResult(): CriterionScoreResult {
 // ---------------------------------------------------------------------------
 
 /**
+ * Run a single batch of criteria evaluation against the LLM.
+ */
+async function scoreBatch(
+  batch: BatchConfig,
+  criteria: Criterion[],
+  facts: VerifiedFacts,
+  market: MarketIntelligenceData,
+  stage: string,
+): Promise<Map<string, { answer: CriterionAnswer; justification: string }>> {
+  const raw = await openrouterGenerateJson<any>({
+    system: SYSTEM_PROMPT,
+    user: buildBatchUserPrompt(batch, criteria, facts, market, stage),
+    temperature: 0.1,
+    forceOpenRouter: true,
+  })
+  return parseLLMAnswers(raw)
+}
+
+/**
  * Step 2 of the scoring pipeline.
  *
- * Builds stage-aware criteria, feeds VerifiedFacts and Exa market research to
- * DeepSeek, receives YES/PARTIAL/NO per criterion, then computes all numeric
- * scores in TypeScript.
+ * Splits evaluation into 5 focused batches (Market, Team, Traction, Product,
+ * Business+Vision+Cross) run in parallel. Each batch gets a domain-specific
+ * context emphasis for better per-criterion accuracy.
  */
 export async function scoreByCriteria(
   facts: VerifiedFacts,
   marketIntelligence: MarketIntelligenceData,
   stage: string,
 ): Promise<CriterionScoreResult> {
-  logger.log(`[CRITERION-SCORER] Starting criterion evaluation (stage: ${stage})`)
+  logger.log(`[CRITERION-SCORER] Starting batched criterion evaluation (stage: ${stage}, batches: ${CRITERION_BATCHES.length})`)
 
   const criteria = buildCriteria(stage)
 
   let llmAnswers: Map<string, { answer: CriterionAnswer; justification: string }>
 
   try {
-    const raw = await openrouterGenerateJson<any>({
-      system: SYSTEM_PROMPT,
-      user: buildUserPrompt(criteria, facts, marketIntelligence, stage),
-      temperature: 0.1,
-      forceOpenRouter: true,
-    })
+    const batchResults = await Promise.all(
+      CRITERION_BATCHES.map(batch =>
+        scoreBatch(batch, criteria, facts, marketIntelligence, stage)
+          .catch(err => {
+            logger.error(`[CRITERION-SCORER] Batch ${batch.name} failed:`, err?.message ?? err)
+            return new Map<string, { answer: CriterionAnswer; justification: string }>()
+          })
+      )
+    )
 
-    llmAnswers = parseLLMAnswers(raw)
+    llmAnswers = new Map<string, { answer: CriterionAnswer; justification: string }>()
+    for (const batchMap of batchResults) {
+      for (const [id, val] of batchMap) {
+        llmAnswers.set(id, val)
+      }
+    }
+
+    logger.log(`[CRITERION-SCORER] All batches complete — ${llmAnswers.size}/${criteria.length} criteria answered`)
   } catch (error: any) {
-    logger.error("[CRITERION-SCORER]", "LLM call failed — using fallback:", error?.message ?? error)
+    logger.error("[CRITERION-SCORER]", "Batched LLM call failed — using fallback:", error?.message ?? error)
     return fallbackScoreResult()
   }
 
@@ -590,20 +759,22 @@ export async function scoreByCriteria(
     groupedLines.push(`       → ${r.justification}`)
   }
 
-  console.log(`\n${"═".repeat(72)}`)
-  console.log(`  CRITERION SCORER — FULL Q&A`)
-  console.log(`${"═".repeat(72)}${groupedLines.join("\n")}`)
-  console.log(`\n  ── CATEGORY TOTALS ──`)
-  console.log(`  Market:         ${scores.scoreByCategory.market}/${CATEGORY_MAX.market}`)
-  console.log(`  Team:           ${scores.scoreByCategory.team}/${CATEGORY_MAX.team}`)
-  console.log(`  Traction:       ${scores.scoreByCategory.traction}/${CATEGORY_MAX.traction} (capped)`)
-  console.log(`  Product:        ${scores.scoreByCategory.product}/${CATEGORY_MAX.product}`)
-  console.log(`  Business Model: ${scores.scoreByCategory.business_model}/${CATEGORY_MAX.business_model}`)
-  console.log(`  Vision:         ${scores.scoreByCategory.vision}/${CATEGORY_MAX.vision}`)
-  console.log(`  Cross-Section:  ${scores.scoreByCategory.cross_section}/${CATEGORY_MAX.cross_section}`)
-  console.log(`  Penalties:      ${scores.scoreByCategory.penalties}`)
-  console.log(`  RAW SCORE:      ${scores.rawScore} / ${scores.maxPossible}  (normalized: ${Math.round((scores.rawScore / scores.maxPossible) * 100)}/100)`)
-  console.log(`${"═".repeat(72)}\n`)
+  if (process.env.DEBUG) {
+    console.log(`\n${"═".repeat(72)}`)
+    console.log(`  CRITERION SCORER — FULL Q&A`)
+    console.log(`${"═".repeat(72)}${groupedLines.join("\n")}`)
+    console.log(`\n  ── CATEGORY TOTALS ──`)
+    console.log(`  Market:         ${scores.scoreByCategory.market}/${CATEGORY_MAX.market}`)
+    console.log(`  Team:           ${scores.scoreByCategory.team}/${CATEGORY_MAX.team}`)
+    console.log(`  Traction:       ${scores.scoreByCategory.traction}/${CATEGORY_MAX.traction} (capped)`)
+    console.log(`  Product:        ${scores.scoreByCategory.product}/${CATEGORY_MAX.product}`)
+    console.log(`  Business Model: ${scores.scoreByCategory.business_model}/${CATEGORY_MAX.business_model}`)
+    console.log(`  Vision:         ${scores.scoreByCategory.vision}/${CATEGORY_MAX.vision}`)
+    console.log(`  Cross-Section:  ${scores.scoreByCategory.cross_section}/${CATEGORY_MAX.cross_section}`)
+    console.log(`  Penalties:      ${scores.scoreByCategory.penalties}`)
+    console.log(`  RAW SCORE:      ${scores.rawScore} / ${scores.maxPossible}  (normalized: ${Math.round((scores.rawScore / scores.maxPossible) * 100)}/100)`)
+    console.log(`${"═".repeat(72)}\n`)
+  }
   // ── END DEBUG ─────────────────────────────────────────────────────────────
 
   logger.log(

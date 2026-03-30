@@ -95,6 +95,14 @@ const config = {
           "0%": { backgroundPosition: "-1000px 0" },
           "100%": { backgroundPosition: "1000px 0" },
         },
+        "chevron-bounce": {
+          "0%, 100%": { transform: "translateY(0)", opacity: "0.55" },
+          "50%": { transform: "translateY(4px)", opacity: "1" },
+        },
+        "trend-nudge": {
+          "0%, 100%": { transform: "translate(0, 0)", opacity: "0.88" },
+          "50%": { transform: "translate(2px, -2px)", opacity: "1" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -103,6 +111,8 @@ const config = {
         "slide-down": "slideInDown 0.5s ease-out",
         "fade-in": "fadeIn 0.6s ease-out",
         "shimmer": "shimmer 2s infinite",
+        "chevron-bounce": "chevron-bounce 1.6s ease-in-out infinite",
+        "trend-nudge": "trend-nudge 1.6s ease-in-out infinite",
       },
       fontFamily: {
         sans: ["var(--font-sans)", "system-ui", "sans-serif"],

@@ -54,21 +54,27 @@ export function Step3Preferences({
         {/* Investor Type Preference */}
         <div className="space-y-2">
           <Label>Preferred Investor Type</Label>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Preferred Investor Type">
             {[
               { key: 'accelerator', label: 'Accelerator' },
               { key: 'institutional', label: 'Venture Fund' },
               { key: 'either', label: 'Either' },
             ].map(opt => (
-              <Badge
+              <button
                 key={opt.key}
-                variant={formData.fundTypePreference === (opt.key as any) ? 'default' : 'outline'}
-                className="cursor-pointer"
+                type="button"
+                role="radio"
+                aria-checked={formData.fundTypePreference === opt.key}
                 onClick={() => setFormData({ ...formData, fundTypePreference: opt.key as any })}
               >
-                {formData.fundTypePreference === opt.key && <CheckCircle className="mr-1 h-3 w-3" />}
-                {opt.label}
-              </Badge>
+                <Badge
+                  variant={formData.fundTypePreference === (opt.key as any) ? 'default' : 'outline'}
+                  className="cursor-pointer"
+                >
+                  {formData.fundTypePreference === opt.key && <CheckCircle className="mr-1 h-3 w-3" aria-hidden="true" />}
+                  {opt.label}
+                </Badge>
+              </button>
             ))}
           </div>
         </div>
@@ -76,20 +82,26 @@ export function Step3Preferences({
         {/* Geography Preference */}
         <div className="space-y-2">
           <Label>Investor Geography Preference</Label>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Investor Geography Preference">
             {[
               { key: 'us-only', label: 'US‑based Investors' },
               { key: 'remote-ok', label: 'Global / Remote OK' },
             ].map(opt => (
-              <Badge
+              <button
                 key={opt.key}
-                variant={formData.geoPreference === (opt.key as any) ? 'default' : 'outline'}
-                className="cursor-pointer"
+                type="button"
+                role="radio"
+                aria-checked={formData.geoPreference === opt.key}
                 onClick={() => setFormData({ ...formData, geoPreference: opt.key as any })}
               >
-                {formData.geoPreference === opt.key && <CheckCircle className="mr-1 h-3 w-3" />}
-                {opt.label}
-              </Badge>
+                <Badge
+                  variant={formData.geoPreference === (opt.key as any) ? 'default' : 'outline'}
+                  className="cursor-pointer"
+                >
+                  {formData.geoPreference === opt.key && <CheckCircle className="mr-1 h-3 w-3" aria-hidden="true" />}
+                  {opt.label}
+                </Badge>
+              </button>
             ))}
           </div>
         </div>
@@ -130,55 +142,71 @@ export function Step3Preferences({
         {/* Lead Preference */}
         <div className="space-y-2">
           <Label>Lead investor preference</Label>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Lead investor preference">
             {[
               { key: 'usually', label: 'Must Lead' },
               { key: 'sometimes', label: 'Lead or Follow' },
               { key: 'never', label: 'Follow‑Only' },
             ].map(opt => (
-              <Badge
+              <button
                 key={opt.key}
-                variant={formData.leadPreference === (opt.key as any) ? 'default' : 'outline'}
-                className="cursor-pointer"
+                type="button"
+                role="radio"
+                aria-checked={formData.leadPreference === opt.key}
                 onClick={() => setFormData({ ...formData, leadPreference: opt.key as any })}
               >
-                {formData.leadPreference === opt.key && <CheckCircle className="mr-1 h-3 w-3" />}
-                {opt.label}
-              </Badge>
+                <Badge
+                  variant={formData.leadPreference === (opt.key as any) ? 'default' : 'outline'}
+                  className="cursor-pointer"
+                >
+                  {formData.leadPreference === opt.key && <CheckCircle className="mr-1 h-3 w-3" aria-hidden="true" />}
+                  {opt.label}
+                </Badge>
+              </button>
             ))}
           </div>
         </div>
 
         <div className="space-y-2">
           <Label>What kind of help do you need? (Select all that apply)</Label>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2" role="group" aria-label="Value add needs">
             {VALUE_ADD_NEEDS.map((need) => (
-              <Badge
+              <button
                 key={need}
-                variant={formData.valueAddNeeds.includes(need) ? 'default' : 'outline'}
-                className="cursor-pointer"
+                type="button"
+                aria-pressed={formData.valueAddNeeds.includes(need)}
                 onClick={() => toggleArrayItem('valueAddNeeds', need)}
               >
-                {formData.valueAddNeeds.includes(need) && <CheckCircle className="mr-1 h-3 w-3" />}
-                {need}
-              </Badge>
+                <Badge
+                  variant={formData.valueAddNeeds.includes(need) ? 'default' : 'outline'}
+                  className="cursor-pointer"
+                >
+                  {formData.valueAddNeeds.includes(need) && <CheckCircle className="mr-1 h-3 w-3" aria-hidden="true" />}
+                  {need}
+                </Badge>
+              </button>
             ))}
           </div>
         </div>
 
         <div className="space-y-2">
           <Label>What values matter to you?</Label>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2" role="group" aria-label="Values">
             {ETHICS_TAGS.map((tag) => (
-              <Badge
+              <button
                 key={tag}
-                variant={formData.ethicsTags.includes(tag) ? 'default' : 'outline'}
-                className="cursor-pointer"
+                type="button"
+                aria-pressed={formData.ethicsTags.includes(tag)}
                 onClick={() => toggleArrayItem('ethicsTags', tag)}
               >
-                {formData.ethicsTags.includes(tag) && <CheckCircle className="mr-1 h-3 w-3" />}
-                {tag}
-              </Badge>
+                <Badge
+                  variant={formData.ethicsTags.includes(tag) ? 'default' : 'outline'}
+                  className="cursor-pointer"
+                >
+                  {formData.ethicsTags.includes(tag) && <CheckCircle className="mr-1 h-3 w-3" aria-hidden="true" />}
+                  {tag}
+                </Badge>
+              </button>
             ))}
           </div>
         </div>

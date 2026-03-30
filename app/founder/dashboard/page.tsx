@@ -176,7 +176,7 @@ export default function FounderDashboard() {
 
         {stats && (
           <>
-            <div className="mb-6 grid grid-cols-3 gap-3">
+            <div className="mb-6 grid grid-cols-1 sm:grid-cols-3 gap-3">
               <Card className="border-border/80">
                 <CardContent className="p-4 text-center sm:p-5">
                   <div className="text-xl font-bold tabular-nums sm:text-2xl">{stats.analysesCount}</div>

@@ -12,6 +12,7 @@ import {
   Upload,
   FileText,
   Lightbulb,
+  Video,
   ChevronDown,
   BarChart3,
   Send,
@@ -287,7 +288,7 @@ export default function HomeClient({ verifiedInvestorCountLabel }: HomeClientPro
                   {[
                     { name: 'pitch_deck.pdf', Icon: FileText },
                     { name: 'structured_answers.json', Icon: Lightbulb },
-                    { name: 'idea_description.txt', Icon: Lightbulb },
+                    { name: 'pitch_video.mp4', Icon: Video },
                   ].map(({ name, Icon }) => (
                     <li key={name} className="flex items-center gap-3 px-3 py-2.5 sm:py-3">
                       <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-muted/40 text-muted-foreground">
@@ -307,7 +308,7 @@ export default function HomeClient({ verifiedInvestorCountLabel }: HomeClientPro
               <div className="flex flex-col items-center py-2 sm:py-3" aria-hidden>
                 <span className="h-5 w-px shrink-0 bg-gradient-to-b from-border/50 via-border/35 to-transparent" />
                 <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-border/35 bg-muted/25 text-muted-foreground/55 shadow-sm">
-                  <ChevronDown className="h-5 w-5" strokeWidth={2.25} />
+                  <ChevronDown className="h-5 w-5 animate-chevron-bounce" strokeWidth={2.25} />
                 </span>
                 <span className="h-5 w-px shrink-0 bg-gradient-to-b from-transparent via-border/35 to-border/50" />
               </div>
@@ -340,7 +341,7 @@ export default function HomeClient({ verifiedInvestorCountLabel }: HomeClientPro
               <div className="flex flex-col items-center py-2 sm:py-3" aria-hidden>
                 <span className="h-5 w-px shrink-0 bg-gradient-to-b from-border/50 via-border/35 to-transparent" />
                 <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-border/35 bg-muted/25 text-muted-foreground/55 shadow-sm">
-                  <ChevronDown className="h-5 w-5" strokeWidth={2.25} />
+                  <ChevronDown className="h-5 w-5 animate-chevron-bounce" strokeWidth={2.25} />
                 </span>
                 <span className="h-5 w-px shrink-0 bg-gradient-to-b from-transparent via-border/35 to-border/50" />
               </div>

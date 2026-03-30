@@ -3,18 +3,14 @@ import { getCurrentUser } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { isAdminEmail } from '@/lib/constants'
 import { db } from '@/lib/db'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { MessageSquare, Calendar } from 'lucide-react'
+import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  YcInsiderRequestsAdminList,
+  type YcInsiderRequestRow,
+} from '@/components/yc-insider-requests-admin-list'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
-
-function founderLabel(key: string) {
-  if (key === 'william') return 'William Namgyal'
-  if (key === 'inigo') return 'Inigo Lenderking'
-  return key
-}
 
 export default async function YcInsiderRequestsAdminPage() {
   const user = await getCurrentUser(false)
@@ -22,10 +18,30 @@ export default async function YcInsiderRequestsAdminPage() {
     redirect('/')
   }
 
-  const rows = await db.yCInsiderFounderRequest.findMany({
-    orderBy: { createdAt: 'desc' },
-    take: 200,
-  })
+  let rows: YcInsiderRequestRow[] = []
+  let loadError: string | null = null
+
+  try {
+    const dbRows = await db.yCInsiderFounderRequest.findMany({
+      orderBy: { createdAt: 'desc' },
+      take: 200,
+    })
+    rows = dbRows.map((r) => ({
+      id: r.id,
+      userEmail: r.userEmail,
+      founderKey: r.founderKey,
+      requestType: r.requestType,
+      topic: r.topic,
+      timezone: r.timezone,
+      message: r.message,
+      status: r.status || 'new',
+      createdAt: r.createdAt.toISOString(),
+    }))
+  } catch (e) {
+    console.error('YC Insider admin queue load error:', e)
+    loadError =
+      'Could not load requests. If you recently deployed schema changes, run database migrations (Prisma) so the YCInsiderFounderRequest table matches the app.'
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -44,11 +60,20 @@ export default async function YcInsiderRequestsAdminPage() {
             <Link href="/founder/yc-insider" className="text-primary hover:underline">
               /founder/yc-insider
             </Link>
-            .
+            . New entries email admins (when <code className="rounded bg-muted px-1">RESEND_API_KEY</code> and{' '}
+            <code className="rounded bg-muted px-1">ADMIN_EMAIL</code> are set). Update pipeline status here after you
+            follow up.
           </p>
         </div>
 
-        {rows.length === 0 ? (
+        {loadError ? (
+          <Card className="border-destructive/40">
+            <CardHeader>
+              <CardTitle className="text-destructive">Queue unavailable</CardTitle>
+              <CardDescription>{loadError}</CardDescription>
+            </CardHeader>
+          </Card>
+        ) : rows.length === 0 ? (
           <Card>
             <CardHeader>
               <CardTitle>No requests yet</CardTitle>
@@ -56,39 +81,7 @@ export default async function YcInsiderRequestsAdminPage() {
             </CardHeader>
           </Card>
         ) : (
-          <ul className="space-y-4">
-            {rows.map((r) => (
-              <li key={r.id}>
-                <Card>
-                  <CardHeader className="pb-2">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <Badge variant="outline" className="font-normal">
-                        {founderLabel(r.founderKey)}
-                      </Badge>
-                      {r.requestType === 'book' ? (
-                        <Badge className="gap-1 bg-violet-600 text-white hover:bg-violet-600">
-                          <Calendar className="h-3 w-3" aria-hidden />
-                          Book
-                        </Badge>
-                      ) : (
-                        <Badge className="gap-1 bg-sky-600 text-white hover:bg-sky-600">
-                          <MessageSquare className="h-3 w-3" aria-hidden />
-                          Ask
-                        </Badge>
-                      )}
-                      <span className="text-xs text-muted-foreground">
-                        {new Date(r.createdAt).toLocaleString()}
-                      </span>
-                    </div>
-                    <CardTitle className="text-base font-medium">{r.userEmail}</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="whitespace-pre-wrap text-sm text-muted-foreground">{r.message}</p>
-                  </CardContent>
-                </Card>
-              </li>
-            ))}
-          </ul>
+          <YcInsiderRequestsAdminList rows={rows} />
         )}
       </div>
     </div>

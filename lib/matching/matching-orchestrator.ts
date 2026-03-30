@@ -35,7 +35,7 @@ import type { Investor } from '@prisma/client'
 import { matchUniversityPrograms, filterOutUniversityPrograms } from './university-matcher'
 import { fetchVCExaBundle, createExaClient } from './exa-enrichment'
 import { reasonGates } from './gate-reasoner'
-import { computeInvestmentLikelihood } from './investment-likelihood'
+import { computeInvestmentLikelihood, type PitchStrengthSignal } from './investment-likelihood'
 import { generateMatchNarrative } from './narrative-generator'
 import { rankAndCut } from './ranker'
 import type {
@@ -177,6 +177,19 @@ Return JSON: {"keywords": ["keyword1", "keyword2"]}`,
 // Step 5 helper — build pitch context for FAISS embedding
 // ---------------------------------------------------------------------------
 
+/** Scoring signals passed into the matching pipeline for enriched embeddings and adjusted ranking. */
+export interface ScoringSignals {
+  tier?: string
+  conviction?: string
+  bullCase?: string
+  categoryScores?: Record<string, number>
+  strengths?: string[]
+  uniqueness?: string
+  marketFit?: string
+  subSectorTags?: string[]
+  riskFactors?: string[]
+}
+
 function buildPitchContext(
   founder: ComprehensiveFounderContext,
   pitchAnalysis: PitchAnalysisResult | null,
@@ -209,15 +222,12 @@ function buildPitchContext(
       growthSignal: founder.growthRate ?? String(pitchAnalysis?.tractionMetrics?.growth ?? ''),
     },
     keyTechnologies: [],
-    // BUG FIX (v2 used valueAddNeeds here, causing poor moat representation):
-    // Now uses actual differentiators from pitch analysis
     competitiveMoat: [
       pitchAnalysis?.productFit?.differentiators?.[0] ??
       pitchAnalysis?.uniqueness ??
       '(Not specified)',
     ],
     keywords: [...founder.sectors, founder.stage, founder.location, ...pitchKeywords],
-    // Extended fields read via (pitch as any) inside buildPitchEmbeddingText
     founderBackground: {
       education: founder.education ?? '',
       university: founder.universityAffiliation ?? '',
@@ -232,6 +242,20 @@ function buildPitchContext(
   }
 }
 
+function buildAnalysisEnrichment(scoring?: ScoringSignals): import('@/lib/embeddings').AnalysisEnrichment | undefined {
+  if (!scoring) return undefined
+  return {
+    strengths: scoring.strengths,
+    uniqueness: scoring.uniqueness,
+    marketFit: scoring.marketFit,
+    subSectorTags: scoring.subSectorTags,
+    riskFactors: scoring.riskFactors,
+    tier: scoring.tier,
+    conviction: scoring.conviction,
+    bullCase: scoring.bullCase,
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Main export
 // ---------------------------------------------------------------------------
@@ -240,6 +264,7 @@ export async function runMatchingPipeline(
   founder: ComprehensiveFounderContext,
   pitchAnalysis: PitchAnalysisResult | null,
   transcript: string | null,
+  scoringSignals?: ScoringSignals,
 ): Promise<MatchingPipelineResult> {
   const startTime = Date.now()
 
@@ -370,18 +395,31 @@ export async function runMatchingPipeline(
 
   try {
     const pitchCtx = buildPitchContext(founder, pitchAnalysis, transcript, founderSignal.pitchKeywords)
-    const pitchEmbedding = await generatePitchEmbedding(pitchCtx as any)
+    const enrichment = buildAnalysisEnrichment(scoringSignals)
+    const pitchEmbedding = await generatePitchEmbedding(pitchCtx as any, enrichment)
+
+    // Tier-adjusted FAISS retrieval: high-quality pitches get a wider net to find niche fits
+    const tierTopK =
+      scoringSignals?.tier === 'EXCEPTIONAL' ? 60 :
+      scoringSignals?.tier === 'STRONG' ? 55 :
+      50
+    if (tierTopK !== 50) {
+      logger.log(`[ORCHESTRATOR] Step 5 — tier-adjusted FAISS top_k: ${tierTopK} (tier: ${scoringSignals?.tier})`)
+    }
+
     const embFilter = countInvestorEmbeddingFilters(embeddingPool, pitchEmbedding.length)
     const fallbackRows = investorsToRankableEmbeddings(embeddingPool, pitchEmbedding.length)
-    console.log(
-      `[FAISS] embedding filters (public excl. university programs, pitch_dim=${pitchEmbedding.length}): ` +
-        `input=${embFilter.input} rankable=${embFilter.rankable} ` +
-        `missing=${embFilter.missingEmbedding} parse_err=${embFilter.parseError} wrong_dim=${embFilter.wrongDimension} ` +
-        `(stage-filtered pool=${mainstream.length} for non-vector fallbacks)`,
-    )
-    console.log(
-      `[FAISS] DB lookup map: public rows=${allPublicVCs.length} (firmName → Investor for neighbor intersection)`,
-    )
+    if (process.env.DEBUG) {
+      console.log(
+        `[FAISS] embedding filters (public excl. university programs, pitch_dim=${pitchEmbedding.length}): ` +
+          `input=${embFilter.input} rankable=${embFilter.rankable} ` +
+          `missing=${embFilter.missingEmbedding} parse_err=${embFilter.parseError} wrong_dim=${embFilter.wrongDimension} ` +
+          `(stage-filtered pool=${mainstream.length} for non-vector fallbacks)`,
+      )
+      console.log(
+        `[FAISS] DB lookup map: public rows=${allPublicVCs.length} (firmName → Investor for neighbor intersection)`,
+      )
+    }
 
     async function rankAndIntersect(
       mode: 'faiss' | 'memory',
@@ -389,14 +427,16 @@ export async function runMatchingPipeline(
       try {
         const ranked =
           mode === 'faiss'
-            ? await rankVCsForPitch(pitchEmbedding, [], 50, true)
-            : await rankVCsForPitch(pitchEmbedding, fallbackRows, 50, false)
+            ? await rankVCsForPitch(pitchEmbedding, [], tierTopK, true)
+            : await rankVCsForPitch(pitchEmbedding, fallbackRows, tierTopK, false)
         const { matched, dbNameHits, noDbRow } = intersectRankedWithDb(ranked)
-        console.log(
-          `[FAISS] Step5 ${mode === 'faiss' ? 'FAISS' : 'memory'} funnel: ` +
-            `neighbors=${ranked.length} db_firmName_hits=${dbNameHits} no_pg_row=${noDbRow} ` +
-            `pool_cap20=${matched.length}`,
-        )
+        if (process.env.DEBUG) {
+          console.log(
+            `[FAISS] Step5 ${mode === 'faiss' ? 'FAISS' : 'memory'} funnel: ` +
+              `neighbors=${ranked.length} db_firmName_hits=${dbNameHits} no_pg_row=${noDbRow} ` +
+              `pool_cap20=${matched.length}`,
+          )
+        }
         logger.log(
           `[ORCHESTRATOR] Step 5 — ${mode === 'faiss' ? 'FAISS' : 'in-memory'}: ` +
             `${ranked.length} → ${matched.length} after DB name filter`,
@@ -418,9 +458,11 @@ export async function runMatchingPipeline(
 
     let picked = await rankAndIntersect('faiss')
     if (!picked && fallbackRows.length >= 5) {
-      console.log(
-        `[FAISS] Step5 fallback: FAISS path yielded <5 pool VCs → in-memory cosine (${fallbackRows.length} rankable rows)`,
-      )
+      if (process.env.DEBUG) {
+        console.log(
+          `[FAISS] Step5 fallback: FAISS path yielded <5 pool VCs → in-memory cosine (${fallbackRows.length} rankable rows)`,
+        )
+      }
       logger.log(
         `[ORCHESTRATOR] Step 5 — Falling back to in-memory cosine rank ` +
           `(${fallbackRows.length} VCs with ${pitchEmbedding.length}-dim embeddings in DB)`,
@@ -483,7 +525,14 @@ export async function runMatchingPipeline(
     activeGeminiCalls++
     try {
       const gateAnswers = await reasonGates(vc, bundle, founderSignal)
-      const likelihood = computeInvestmentLikelihood(gateAnswers)
+      const pitchStrength: PitchStrengthSignal | undefined = scoringSignals
+        ? {
+            tier: scoringSignals.tier,
+            conviction: scoringSignals.conviction,
+            marketScore: scoringSignals.categoryScores?.market,
+          }
+        : undefined
+      const likelihood = computeInvestmentLikelihood(gateAnswers, pitchStrength)
       results.set(vc.id, { bundle, likelihood })
       logger.log(
         `[ORCHESTRATOR] Step 6 — ${vc.firmName}: ${likelihood.label} (conf=${likelihood.confidence})`,

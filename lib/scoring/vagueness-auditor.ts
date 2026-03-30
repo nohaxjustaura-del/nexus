@@ -14,7 +14,7 @@
  * 10× the penalty — the problem is the claim, not its frequency.
  *
  * netAdjustment = totalBonus - totalPenalty  (can be negative)
- * The pipeline applies:  finalScore += netAdjustment * 0.10
+ * The pipeline applies:  finalScore += netAdjustment * 0.15
  *
  * vaguenessRating thresholds (based on totalPenalty only):
  *   CLEAN    < 10

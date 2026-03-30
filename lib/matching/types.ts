@@ -71,6 +71,11 @@ export interface GateResult {
   /** One sentence citing a specific snippet tag (e.g. [R1], [T2]) or
    *  explaining what evidence is missing. Never fabricated. */
   evidence: string
+  /** 0-100 confidence score for nuanced scoring. When provided, the
+   *  investment likelihood computer blends this with the binary answer.
+   *  Optional for backward compatibility — gates without this field
+   *  use the standard label-to-score mapping. */
+  confidence?: number
 }
 
 export interface GateAnswers {

@@ -11,7 +11,7 @@ import { parseJSON } from '@/lib/utils'
 import { getComprehensiveFounderContext, buildAIPromptContext } from '@/lib/founder-context'
 import { analyzeAgainstYCTrends, getCurrentYCTrends } from '@/lib/yc-trends'
 import { generateBatchMatchRationale } from '@/lib/ai-match-rationale'
-import { hasOpenRouterKey, openrouterGenerateJson } from '@/lib/openrouter'
+import { hasOpenRouterKey, openrouterGenerateJson, getAnalysisOpenRouterModel } from '@/lib/openrouter'
 import { getPersonalizedVCRecommendations } from '@/lib/predictive-matching'
 import { buildFounderSnapshot } from '@/lib/file-storage'
 import { getDeepMarketContext } from '@/lib/market-intelligence'
@@ -297,30 +297,62 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // 🚀 OPTIMIZED: Concise prompt for faster responses; scores come from runScoringPipeline()
-    const analysisPrompt = `Expert VC analyst. Analyze this pitch:
+    const ycTrendLine = ycTrendsAnalysis?.insights?.[0]
+      ? `\nRELEVANT YC TREND: ${ycTrendsAnalysis.insights[0].title}${ycTrendsAnalysis.insights[0].description ? ` — ${ycTrendsAnalysis.insights[0].description}` : ''}\n`
+      : ''
 
-${contextPrompt ? `FOUNDER: ${contextPrompt.substring(0, 500)}\n\n` : ''}${ycTrendsAnalysis?.insights[0] ? `TREND: ${ycTrendsAnalysis.insights[0].title}\n\n` : ''}PITCH: "${idea.substring(0, 2000)}"
+    const analysisPrompt = `You are conducting a deep analysis of a startup pitch. Think carefully before responding.
 
-JSON format:
+=== FOUNDER PROFILE ===
+${contextPrompt || '(No founder profile data available)'}
+
+=== PITCH CONTENT ===
+${idea.substring(0, 8000)}
+${ycTrendLine}
+=== ANALYSIS FRAMEWORK ===
+
+STEP 1 — REASONING (internal): Before generating your response, consider:
+- What specific sub-sector or niche does this startup operate in? (e.g., not just "fintech" but "embedded payroll for gig economy platforms")
+- What is the founder's unique insight or unfair advantage?
+- What non-obvious market adjacencies or emerging categories does this touch?
+- What would a domain-expert investor in this exact niche care about most?
+- What specific competitors (including indirect ones) exist in this space?
+
+STEP 2 — Generate your analysis with these requirements:
+
+STRENGTHS: Identify 3-5 genuine strengths. Each must cite a specific element from the pitch or founder profile. Distinguish between strong signals (backed by evidence) and moderate signals (plausible but unverified). Prioritize niche-specific advantages over generic positives.
+
+IMPROVEMENTS: Identify 3-5 areas for improvement. Be specific about WHAT is weak and WHY it matters for fundraising. Reference what investors in this specific sub-sector typically expect.
+
+SUGGESTIONS: Provide 3-5 actionable next steps. Each should be achievable within 30-60 days and directly address a gap. Include specific tactics (not just "get more traction" — say HOW).
+
+MARKET FIT: Assess the startup's positioning within its specific market niche. Reference the competitive landscape, timing factors, and whether the problem is acute enough to drive buyer urgency.
+
+UNIQUENESS: Identify the specific competitive moat or wedge. Distinguish between real differentiation (proprietary data, network effects, regulatory advantage, deep domain expertise) and superficial differentiation ("we use AI").
+
+RISK FACTORS: Identify 2-4 risks specific to THIS startup (not generic startup risks). Include at least one risk related to the competitive landscape and one related to execution.
+
+SUB-SECTOR TAGS: Identify 2-4 specific niche tags that describe this startup's exact positioning (e.g., "vertical SaaS", "creator economy infrastructure", "climate-tech hardware", "AI-native dev tools").
+
+Return valid JSON:
 {
-  "strengths": ["3-5 strengths"],
-  "improvements": ["3-5 improvements"],
-  "suggestions": ["3-5 actionable steps"],
-  "marketFit": "brief assessment",
-  "uniqueness": "competitive advantage",
-  "riskFactors": ["2-3 risks"]
-}
-
-Be specific and actionable.`
+  "reasoning": "<2-3 sentences of your initial assessment — what makes this pitch interesting or concerning at first glance>",
+  "strengths": ["<specific strength with evidence>", ...],
+  "improvements": ["<specific gap with context>", ...],
+  "suggestions": ["<actionable step with timeline>", ...],
+  "marketFit": "<2-3 sentence assessment of market positioning and timing>",
+  "uniqueness": "<specific competitive advantage analysis>",
+  "riskFactors": ["<specific risk>", ...],
+  "subSectorTags": ["<niche tag>", ...]
+}`
 
     try {
       const aiAnalysis = await openrouterGenerateJson<any>({
         system:
-          'You are an expert VC analyst. Provide detailed, actionable feedback on startup pitch ideas. Always respond with valid JSON.',
+          'You are a Principal at a Tier-1 VC firm with deep expertise across sectors. You have evaluated thousands of pitches and can identify non-obvious patterns, niche market opportunities, and founder-market fit signals that generalist analysts miss. Provide specific, evidence-based feedback grounded in the actual pitch content — never generic advice. Always respond with valid JSON.',
         user: analysisPrompt,
         temperature: 0.3,
-        model: 'meta-llama/llama-3.3-70b-instruct', // Fast, high-quality model
+        model: getAnalysisOpenRouterModel(),
       })
 
       // Mirror previous behavior: store as JSON text for downstream logic
@@ -708,14 +740,14 @@ Be specific and actionable.`
         }
       )
     } catch (aiError: any) {
-      logger.error('[ANALYZE-PITCH-IDEA] Gemini AI error:', aiError)
-      const msg = aiError?.message || 'Gemini request failed'
+      logger.error('[ANALYZE-PITCH-IDEA] OpenRouter AI error:', aiError)
+      const msg = aiError?.message || 'AI analysis request failed'
       const status = String(msg).includes('429') ? 429 : 500
       return NextResponse.json(
         {
           error: 'AI Analysis Failed',
           message: msg,
-          provider: 'gemini',
+          provider: 'openrouter',
         },
         { status, headers: { 'Content-Type': 'application/json' } }
       )

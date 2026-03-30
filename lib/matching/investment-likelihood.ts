@@ -113,6 +113,31 @@ const LABEL_TO_SCORE: Record<InvestmentLabel, number> = {
   'HIGH':        95,
 }
 
+/**
+ * Blends binary label-derived scores with per-gate confidence values
+ * when available. This preserves the label system's structure while adding
+ * nuance from confidence scores. When all gates in a dimension have
+ * confidence values, they contribute 40% of the final dimension score.
+ */
+function blendWithConfidence(
+  labelScore: number,
+  gates: GateResult[],
+  invertNegative: boolean = false,
+): number {
+  const confidenceValues = gates
+    .map(g => g.confidence)
+    .filter((c): c is number => c !== undefined)
+  if (confidenceValues.length === 0) return labelScore
+
+  const avgConfidence = confidenceValues.reduce((a, b) => a + b, 0) / confidenceValues.length
+
+  const confidenceScore = invertNegative
+    ? 100 - avgConfidence
+    : avgConfidence
+
+  return Math.round(labelScore * 0.6 + confidenceScore * 0.4)
+}
+
 // ---------------------------------------------------------------------------
 // PART 4 — Confidence Computer
 // ---------------------------------------------------------------------------
@@ -136,6 +161,17 @@ function computeConfidence(g: GateAnswers): 'HIGH' | 'MEDIUM' | 'LOW' {
 // ---------------------------------------------------------------------------
 
 /**
+ * Optional pitch quality signal from the scoring pipeline.
+ * When provided, adjusts dimension weights to favor thesis alignment for
+ * high-conviction pitches (validated market fit makes thesis match more important).
+ */
+export interface PitchStrengthSignal {
+  tier?: string
+  conviction?: string
+  marketScore?: number
+}
+
+/**
  * Derives an InvestmentLikelihoodResult from gate answers using only
  * TypeScript arithmetic — no LLM, no network calls.
  *
@@ -143,9 +179,13 @@ function computeConfidence(g: GateAnswers): 'HIGH' | 'MEDIUM' | 'LOW' {
  *   1. Hard veto: competitor_in_portfolio  (Q10 = YES)
  *   2. Soft veto: vc_likely_inactive       (deploymentLikelihood = LOW)
  *   3. Weighted synthesis across all 4 dimensions
+ *
+ * When pitchStrength is provided, weights shift to emphasize thesis alignment
+ * for high-conviction pitches with strong market scores.
  */
 export function computeInvestmentLikelihood(
   g: GateAnswers,
+  pitchStrength?: PitchStrengthSignal,
 ): InvestmentLikelihoodResult {
   const labels: DimensionLabels = {
     thesisAlignment:      deriveThesisAlignment(g),
@@ -193,21 +233,31 @@ export function computeInvestmentLikelihood(
     }
   }
 
-  // ── Weighted synthesis ────────────────────────────────────────────────────
+  // ── Weighted synthesis with confidence blending ──────────────────────────
   const scores: DimensionScores = {
-    thesisAlignment:      LABEL_TO_SCORE[labels.thesisAlignment],
-    founderArchetype:     LABEL_TO_SCORE[labels.founderArchetype],
-    deploymentLikelihood: LABEL_TO_SCORE[labels.deploymentLikelihood],
-    portfolioGap:         LABEL_TO_SCORE[labels.portfolioGap],
+    thesisAlignment:      blendWithConfidence(LABEL_TO_SCORE[labels.thesisAlignment], [g.Q1, g.Q2, g.Q3]),
+    founderArchetype:     blendWithConfidence(LABEL_TO_SCORE[labels.founderArchetype], [g.Q4, g.Q5]),
+    deploymentLikelihood: blendWithConfidence(LABEL_TO_SCORE[labels.deploymentLikelihood], [g.Q7, g.Q8]),
+    portfolioGap:         blendWithConfidence(LABEL_TO_SCORE[labels.portfolioGap], [g.Q11, g.Q12]),
   }
 
-  // Weights: thesis fit is primary, archetype + deployment equally secondary,
-  // portfolio gap contributes least (often sparse Exa data).
+  // Adjust weights based on pitch quality signal: validated high-conviction pitches
+  // shift weight toward thesis alignment (the pitch's market fit is confirmed, so
+  // finding VCs whose thesis matches that validated market matters more).
+  const highConviction = pitchStrength?.conviction === 'HIGH'
+  const strongMarket = (pitchStrength?.marketScore ?? 0) >= 70
+  const boostThesis = highConviction && strongMarket
+
+  const wThesis     = boostThesis ? 0.45 : 0.35
+  const wArchetype  = boostThesis ? 0.20 : 0.25
+  const wDeployment = boostThesis ? 0.20 : 0.25
+  const wPortfolio  = boostThesis ? 0.15 : 0.15
+
   const raw =
-    scores.thesisAlignment      * 0.35 +
-    scores.founderArchetype      * 0.25 +
-    scores.deploymentLikelihood  * 0.25 +
-    scores.portfolioGap          * 0.15
+    scores.thesisAlignment      * wThesis +
+    scores.founderArchetype      * wArchetype +
+    scores.deploymentLikelihood  * wDeployment +
+    scores.portfolioGap          * wPortfolio
 
   const label: InvestmentLabel =
     raw >= 80 ? 'HIGH' :

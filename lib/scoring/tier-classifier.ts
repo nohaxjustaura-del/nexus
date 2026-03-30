@@ -150,14 +150,31 @@ const SYSTEM_PROMPT =
   "You are a Principal at a Tier-1 VC doing a final calibration check. " +
   "You have seen thousands of pitches. Your job is to prevent grade inflation " +
   "and grade deflation by anchoring scores to real outcomes.\n\n" +
+
   "You are making an INDEPENDENT assessment. You have not seen any " +
   "other scores for this pitch. Ignore any prior scoring context. " +
   "Compare this pitch ONLY against the reference anchors provided, " +
   "based purely on the evidence in the verified facts and pitch summary.\n\n" +
+
   "CRITICAL: Compare against anchors at the SAME STAGE as this startup. " +
   "A pre-seed pitch should be compared to pre-seed anchors first. " +
   "Only compare to later-stage anchors if the pitch significantly " +
-  "exceeds pre-seed expectations."
+  "exceeds pre-seed expectations.\n\n" +
+
+  "ANTI-INFLATION RULES:\n" +
+  "  - EXCEPTIONAL (85-100) requires MULTIPLE strong signals: proven traction + " +
+  "clear technical moat + large validated market + experienced team. Fewer than 1 in 20 startups qualify.\n" +
+  "  - STRONG (70-84) requires at least ONE standout factor (exceptional traction for stage, " +
+  "deep domain expertise, or clear unfair advantage) PLUS no critical gaps.\n" +
+  "  - Most startups with decent ideas but limited traction are DEVELOPING (45-69).\n" +
+  "  - A pitch with vague claims and no backing data should NEVER exceed DEVELOPING.\n\n" +
+
+  "ANTI-DEFLATION RULES:\n" +
+  "  - Do not penalize pre-seed startups for lacking revenue, large teams, or formal unit economics.\n" +
+  "  - A strong founder with clear domain insight and a working prototype at pre-seed can be STRONG.\n" +
+  "  - Personal experience as the target customer IS a valid domain expertise signal.\n\n" +
+
+  "Think through your reasoning step by step in the 'reasoning' field before committing to a tier."
 
 function buildAnchorsBlock(): string {
   return REFERENCE_ANCHORS.map(a =>
@@ -253,6 +270,7 @@ ${tiersList}
 
 Return a JSON object with exactly these fields:
 {
+  "reasoning": "<3-5 sentences: Before classifying, reason through the comparison. Which stage-appropriate anchors are most relevant? What specific verified facts make this startup similar to or different from those anchors? What is the single strongest signal, and what is the biggest gap? Let this analysis determine your tier and percentile.>",
   "closestAnchor1": "<exact name from calibration list>",
   "closestAnchor2": "<exact name from calibration list>",
   "anchorRationale": "<specific explanation — 2-4 sentences citing facts>",
@@ -260,7 +278,7 @@ Return a JSON object with exactly these fields:
   "tierPercentile": <1-100>
 }
 
-No other fields. Return valid JSON only.`
+IMPORTANT: Write your "reasoning" FIRST. Think through the comparison before committing to a tier. No other fields. Return valid JSON only.`
 }
 
 // ---------------------------------------------------------------------------
@@ -325,7 +343,7 @@ export async function classifyTier(
         { role: "user",   content: buildUserPrompt(facts, pitchSummary, stage) },
       ],
       temperature: 0.2,
-      max_tokens: 1000,
+      max_tokens: 2000,
       ...(useJsonObject ? { response_format: { type: "json_object" } } : {}),
     } as any)
 
