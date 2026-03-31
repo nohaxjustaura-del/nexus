@@ -19,7 +19,7 @@ import {
   EyeOff,
   AlertTriangle,
 } from "lucide-react"
-import { parseJSON } from "@/lib/utils"
+import { parseStringArray } from "@/lib/utils"
 import { toast } from '@/components/ui/toast-simple'
 
 type VcLinkIssue = { field: 'websiteUrl' | 'linkedinUrl' | 'applicationUrl'; message: string }
@@ -81,8 +81,8 @@ export function AdminVcsClient({
   const loadData = async () => {
     try {
       const [investorsRes, claimsRes] = await Promise.all([
-        fetch('/api/admin/vcs'),
-        fetch('/api/admin/vc-claims'),
+        fetch('/api/admin/vcs', { credentials: 'same-origin' }),
+        fetch('/api/admin/vc-claims', { credentials: 'same-origin' }),
       ])
 
       if (!investorsRes.ok || !claimsRes.ok) {
@@ -488,10 +488,10 @@ export function AdminVcsClient({
                         <Badge variant="secondary">
                           ${investor.checkMin}K - ${investor.checkMax}K
                         </Badge>
-                        {parseJSON<string[]>(investor.stages, []).map((stage) => (
+                        {parseStringArray(investor.stages).map((stage) => (
                           <Badge key={stage} variant="secondary">{stage}</Badge>
                         ))}
-                        {parseJSON<string[]>(investor.sectors, []).slice(0, 3).map((sector) => (
+                        {parseStringArray(investor.sectors).slice(0, 3).map((sector) => (
                           <Badge key={sector} variant="outline">{sector}</Badge>
                         ))}
                       </div>

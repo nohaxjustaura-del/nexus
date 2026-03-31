@@ -34,7 +34,7 @@ function getAdminPageTitle(pathname: string | null | undefined): string {
     'training-data': 'Training data',
     worker: 'Worker',
     waitlist: 'Waitlist',
-    'yc-insider-requests': 'YC Insider requests',
+    'yc-insider-requests': 'Partner founder requests',
   }
 
   if (section === 'founders' && segments.length >= 3) {

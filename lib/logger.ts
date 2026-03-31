@@ -9,6 +9,14 @@ const verboseDevLogs =
     process.env.LOG_LEVEL === 'debug' ||
     process.env.LOG_LEVEL === 'verbose')
 
+/** OpenRouter / FAISS / Exa (matching & JSON LLM) — on in development; opt-in in prod via INTEGRATION_LOGS=1; off with SILENCE_INTEGRATION_LOGS=1 */
+const integrationLogsOn =
+  process.env.SILENCE_INTEGRATION_LOGS !== '1' &&
+  process.env.SILENCE_INTEGRATION_LOGS !== 'true' &&
+  (isDev ||
+    process.env.INTEGRATION_LOGS === '1' ||
+    process.env.INTEGRATION_LOGS === 'true')
+
 // Color codes for terminal output (Node.js only)
 const isNode = typeof process !== 'undefined' && process.versions && process.versions.node
 
@@ -82,6 +90,11 @@ export const logger = {
   // Debug - only when DEBUG=true
   debug: (...args: any[]) => {
     if (DEBUG) console.log(...formatLog('🐛 DEBUG', colors.magenta, ...args))
+  },
+
+  /** FAISS, Exa, OpenRouter / Ollama JSON — visible in dev without VERBOSE_DEV_LOGS */
+  integration: (...args: any[]) => {
+    if (integrationLogsOn) console.log(...formatLog('🔌 INT', colors.cyan, ...args))
   },
   
   // AI performance tracking

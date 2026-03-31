@@ -38,7 +38,7 @@ export default async function YcInsiderRequestsAdminPage() {
       createdAt: r.createdAt.toISOString(),
     }))
   } catch (e) {
-    console.error('YC Insider admin queue load error:', e)
+    console.error('Partner founder requests admin queue load error:', e)
     loadError =
       'Could not load requests. If you recently deployed schema changes, run database migrations (Prisma) so the YCInsiderFounderRequest table matches the app.'
   }
@@ -53,16 +53,15 @@ export default async function YcInsiderRequestsAdminPage() {
             </Link>
           </p>
           <h1 className="mt-2 font-heading text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
-            YC Insider founder requests
+            Partner founder requests
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Ask and Book submissions from premium users on{' '}
-            <Link href="/founder/yc-insider" className="text-primary hover:underline">
-              /founder/yc-insider
+            Historical Ask and Book submissions from the retired partner flow (previously{' '}
+            <code className="rounded bg-muted px-1">/founder/yc-insider</code>, now{' '}
+            <Link href="/founder/resources" className="text-primary hover:underline">
+              /founder/resources
             </Link>
-            . New entries email admins (when <code className="rounded bg-muted px-1">RESEND_API_KEY</code> and{' '}
-            <code className="rounded bg-muted px-1">ADMIN_EMAIL</code> are set). Update pipeline status here after you
-            follow up.
+            ). Update pipeline status here when you follow up.
           </p>
         </div>
 
@@ -77,7 +76,7 @@ export default async function YcInsiderRequestsAdminPage() {
           <Card>
             <CardHeader>
               <CardTitle>No requests yet</CardTitle>
-              <CardDescription>Submissions will appear here when premium users use Ask or Book.</CardDescription>
+              <CardDescription>No rows in the database yet.</CardDescription>
             </CardHeader>
           </Card>
         ) : (

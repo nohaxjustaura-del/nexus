@@ -17,7 +17,7 @@ const tools = [
   },
   {
     href: '/admin/yc-insider-requests',
-    title: 'YC Insider requests',
+    title: 'Partner founder requests',
     description: 'Ask / Book submissions from premium users',
     icon: MessageSquare,
   },

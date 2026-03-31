@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Heart, Crown, Send } from "lucide-react"
+import { Heart, Library, Send } from "lucide-react"
 import Link from "next/link"
 import InvestorProfileModal from '@/components/investor-profile-modal'
 import { parseJSON } from '@/lib/utils'
@@ -182,12 +182,12 @@ export function VCCardClient({
 
           {isYC && (
             <Link
-              href="/founder/yc-insider"
+              href="/founder/resources"
               onClick={(e) => e.stopPropagation()}
               className="mt-auto flex items-center gap-1.5 rounded-md border border-border px-2 py-1.5 text-xs text-foreground hover:bg-muted/50"
             >
-              <Crown className="h-3.5 w-3.5 text-muted-foreground" />
-              YC Insider
+              <Library className="h-3.5 w-3.5 text-muted-foreground" />
+              Resources
             </Link>
           )}
         </CardContent>

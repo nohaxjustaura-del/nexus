@@ -175,7 +175,7 @@ export default function CreditsPage() {
                 <div className="p-2 rounded-lg bg-primary/10">
                   <Sparkles className="h-5 w-5 text-primary" />
                 </div>
-                <TrendingUp className="h-5 w-5 text-emerald-500" />
+                <TrendingUp className="h-5 w-5 text-blue-500 dark:text-blue-400" />
               </div>
               <div className="text-3xl font-bold text-foreground">{totalAnalyses}</div>
               <p className="text-sm text-muted-foreground">Total Analyses</p>

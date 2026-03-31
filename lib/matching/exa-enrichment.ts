@@ -18,6 +18,7 @@
  */
 
 import Exa from 'exa-js'
+import { logger } from '@/lib/logger'
 import type { EnrichedExaSnippet, FounderMatchSignal, VCExaBundle, VCProfile } from './types'
 
 // ---------------------------------------------------------------------------
@@ -207,6 +208,7 @@ export async function fetchVCExaBundle(
   founder: FounderMatchSignal,
   exaClient: ExaClient,
 ): Promise<VCExaBundle> {
+  const t0 = Date.now()
   const { q1, q2, q3 } = buildVCQueries(vc, founder)
 
   const sixMonthsAgo = monthsAgoISO(6)
@@ -247,6 +249,15 @@ export async function fetchVCExaBundle(
   ])
 
   const totalSnippets = r1.length + r2.length + r3.length
+  const ms = Date.now() - t0
+  logger.integration('[EXA] bundle ok', {
+    firm: vc.firmName,
+    ms,
+    thesis: r1.length,
+    stated: r2.length,
+    founder_specific: r3.length,
+    total: totalSnippets,
+  })
 
   return {
     vcId: vc.id,

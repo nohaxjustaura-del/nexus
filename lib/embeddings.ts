@@ -11,6 +11,7 @@
 
 import './load-env'
 import { parseJSON } from '@/lib/utils'
+import { logger } from '@/lib/logger'
 
 const EMBEDDING_MODEL = 'voyage-3'
 const EMBEDDING_DIMENSIONS = 1024
@@ -610,7 +611,8 @@ export async function rankVCsWithFAISS(
     throw new Error('FAISS skipped: index/pitch embedding dimensions do not match (see faiss-service logs)')
   }
 
-  const faissServiceUrl = process.env.FAISS_SERVICE_URL || 'http://localhost:8001'
+  const faissServiceUrl = (process.env.FAISS_SERVICE_URL || 'http://localhost:8001').replace(/\/$/, '')
+  logger.integration('[FAISS] POST /rank', { url: `${faissServiceUrl}/rank`, top_k: topK, pitch_dim: pitchEmbedding.length })
 
   try {
     const response = await fetch(`${faissServiceUrl}/rank`, {
@@ -642,7 +644,7 @@ export async function rankVCsWithFAISS(
         }
         if (!faissDimensionMismatchLogged) {
           faissDimensionMismatchLogged = true
-          console.warn(
+          logger.warn(
             faissRetryOnDimensionMismatch()
               ? '[FAISS] Index embedding size does not match the current pitch model. Regenerate the index; ' +
                   'retrying every request (FAISS_RETRY_ON_DIMENSION_MISMATCH). Do not use in production.'
@@ -658,8 +660,9 @@ export async function rankVCsWithFAISS(
 
     const results = await response.json()
 
-    console.log(
-      `[FAISS] client /rank ok: pitch_dim=${pitchEmbedding.length} requested_top_k=${topK} neighbors_returned=${Array.isArray(results) ? results.length : 0}`,
+    logger.integration(
+      `[FAISS] /rank ok: neighbors_returned=${Array.isArray(results) ? results.length : 0}`,
+      { pitch_dim: pitchEmbedding.length, requested_top_k: topK },
     )
 
     // Convert FAISS API response to RankedVC format
@@ -672,9 +675,9 @@ export async function rankVCsWithFAISS(
   } catch (error: any) {
     if (!faissSkipDueToDimensionMismatch) {
       if (error.message?.includes('dimension mismatch') || error.message?.includes('400')) {
-        console.warn('[FAISS] Request failed; falling back to in-memory ranking:', error.message)
+        logger.warn('[FAISS] Request failed; falling back to in-memory ranking:', error.message)
       } else {
-        console.warn('[FAISS] Service unavailable, falling back to in-memory ranking:', error.message)
+        logger.warn('[FAISS] Service unavailable, falling back to in-memory ranking:', error.message)
       }
     }
     throw error // Re-throw so caller can fall back
@@ -716,8 +719,9 @@ export async function rankVCsForPitch(
   scored.sort((a, b) => b.similarity - a.similarity)
 
   const top = scored.slice(0, topK)
-  console.log(
-    `[FAISS] in-memory cosine: scored ${vcEmbeddings.length} VC embeddings → returning top_${topK}=${top.length}`,
+  logger.integration(
+    `[FAISS] in-memory cosine: scored ${vcEmbeddings.length} VC rows → top_${topK}=${top.length}`,
+    { pitch_dim: pitchEmbedding.length },
   )
   return top
 }

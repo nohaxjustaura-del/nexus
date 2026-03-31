@@ -6,6 +6,7 @@ import {
   sendYcInsiderFounderRequestAdminAlert,
   sendYcInsiderFounderRequestUserConfirmation,
 } from '@/lib/email'
+import { logger } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -118,17 +119,17 @@ export async function POST(request: NextRequest) {
         message: created.message,
       })
     } catch (e) {
-      console.error('YC Insider admin alert email failed:', e)
+      logger.error('[YC-INSIDER-FOUNDER-REQUEST] Admin alert email failed', e)
     }
     try {
       await sendYcInsiderFounderRequestUserConfirmation(user.email, rt, founderDisplayName(founderKey))
     } catch (e) {
-      console.error('YC Insider user confirmation email failed:', e)
+      logger.error('[YC-INSIDER-FOUNDER-REQUEST] User confirmation email failed', e)
     }
 
     return NextResponse.json({ success: true })
   } catch (error) {
-    console.error('YC Insider founder request error:', error)
+    logger.error('[YC-INSIDER-FOUNDER-REQUEST]', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

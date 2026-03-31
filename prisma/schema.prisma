@@ -455,7 +455,7 @@ model User {
   @@index([email])
 }
 
-/// Premium-only requests from /founder/yc-insider (Ask / Book with founders).
+/// Historical partner-founder Ask/Book requests (legacy flow; public partner bios live on /founder/resources).
 model YCInsiderFounderRequest {
   id          String   @id @default(cuid())
   userId      String

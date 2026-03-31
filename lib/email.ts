@@ -454,11 +454,11 @@ export type YcInsiderFounderRequestAlertPayload = {
   message: string
 }
 
-/** Notifies configured admins when a premium user submits Ask / Book on YC Insider. */
+/** Notifies configured admins when a premium user submits Ask / Book on partner resources. */
 export async function sendYcInsiderFounderRequestAdminAlert(payload: YcInsiderFounderRequestAlertPayload) {
   const recipients = [...ADMIN_EMAILS_ORDERED]
   if (recipients.length === 0) {
-    console.warn('[email] YC Insider founder request: no ADMIN_EMAIL configured; skipping admin alert.')
+    console.warn('[email] Partner founder request: no ADMIN_EMAIL configured; skipping admin alert.')
     return { success: false, error: 'no_admin_recipients' as const }
   }
 
@@ -470,8 +470,8 @@ export async function sendYcInsiderFounderRequestAdminAlert(payload: YcInsiderFo
   const tzLine =
     payload.timezone?.trim() ? `Timezone: ${payload.timezone.trim()}` : 'Timezone: (not provided)'
 
-  const subject = `[${BRAND_NAME}] YC Insider ${typeLabel} — ${founderLabel}`
-  const plain = `New YC Insider founder request
+  const subject = `[${BRAND_NAME}] Partner founder ${typeLabel} — ${founderLabel}`
+  const plain = `New partner founder request
 
 Type: ${typeLabel}
 Founder: ${founderLabel}
@@ -491,7 +491,7 @@ ${payload.message}
 
   if (!resendApiKey()) {
     console.log(`
-📧 YC Insider founder request (Development Mode)
+📧 Partner founder request (Development Mode)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 To: ${recipients.join(', ')}
 Subject: ${subject}
@@ -516,7 +516,7 @@ ${plain}
     if (error) return { success: false, error }
     return { success: true, data }
   } catch (error) {
-    console.error('Email send error (YC Insider founder request):', error)
+    console.error('Email send error (partner founder request):', error)
     return { success: false, error }
   }
 }
@@ -545,7 +545,7 @@ Thanks for your question for ${founderDisplayName}. We received it and will foll
 
   if (!resendApiKey()) {
     console.log(`
-📧 YC Insider user confirmation (Development Mode)
+📧 Partner founder user confirmation (Development Mode)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 To: ${toEmail}
 Subject: ${subj}
@@ -570,9 +570,7 @@ ${plain}
     if (error) return { success: false, error }
     return { success: true, data }
   } catch (error) {
-    console.error('Email send error (YC Insider user confirmation):', error)
+    console.error('Email send error (partner founder user confirmation):', error)
     return { success: false, error }
   }
 }
-
-

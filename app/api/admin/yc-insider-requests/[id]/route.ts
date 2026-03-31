@@ -52,7 +52,7 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
 
     return NextResponse.json({ success: true, status })
   } catch (error) {
-    console.error('Admin YC Insider request PATCH error:', error)
+    console.error('Admin partner founder request PATCH error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

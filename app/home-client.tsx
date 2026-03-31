@@ -26,6 +26,8 @@ import {
   Target,
   TrendingUp,
   BadgeCheck,
+  Handshake,
+  Users,
 } from 'lucide-react'
 import { track as trackEvent } from '@/lib/analytics'
 import { useAuthSession } from '@/components/auth-session-provider'
@@ -33,49 +35,7 @@ import AnalysisDashboard from '@/components/analysis/AnalysisDashboard'
 import type { UniversalAnalysisResult } from '@/lib/universal-analysis-engine'
 import { BRAND_NAME, BRAND_HERO_EYEBROW } from '@/lib/brand'
 
-const HOME_DEMO_RUBRIC: UniversalAnalysisResult = {
-  categories: {
-    market: {
-      score: 45,
-      bullets: [
-        'Category momentum is visible but still early versus comparable raises.',
-        'Tighten the story with named pilots or design partners where possible.',
-      ],
-    },
-    moat: {
-      score: 30,
-      bullets: [
-        'Differentiation is stated; durable advantages need clearer proof.',
-        'Competitive context is acknowledged but defensibility reads thin at this stage.',
-      ],
-    },
-    founderFit: {
-      score: 70,
-      bullets: [
-        'Founder narrative maps credibly to the problem space.',
-        'Background signals support the wedge you are pursuing.',
-      ],
-    },
-    momentum: {
-      score: 50,
-      bullets: [
-        'Traction arc is developing; concrete milestones would strengthen the case.',
-        'Go-to-market motion is plausible but not yet fully de-risked.',
-      ],
-    },
-    execution: {
-      score: 75,
-      bullets: [
-        'Problem and solution read clearly; communication is strong.',
-        'Personal wedge plus early traction supports the story.',
-        'Market proof points land without overclaiming.',
-      ],
-    },
-  },
-  globalVerdict: '',
-}
-
-function HomeDemoAnalysisDashboard() {
+function HomeDemoAnalysisDashboard({ result }: { result: UniversalAnalysisResult }) {
   const [ready, setReady] = useState(false)
   useEffect(() => {
     setReady(true)
@@ -105,20 +65,14 @@ function HomeDemoAnalysisDashboard() {
   }
   return (
     <AnalysisDashboard
-      result={HOME_DEMO_RUBRIC}
+      result={result}
       tilesOnly
       compact
-      defaultOpenKey={null}
+      defaultOpenKey="market"
       showLiveVerified={false}
     />
   )
 }
-
-const SAMPLE_MATCHES = [
-  { rank: 1, name: 'Horizon Ventures', type: 'VC', fit: 94, stage: 'Pre-Seed / Seed', sector: 'PropTech, Climate' },
-  { rank: 2, name: 'Apex Angel Group', type: 'Angel Network', fit: 89, stage: 'Pre-Seed', sector: 'Real Estate Tech' },
-  { rank: 3, name: 'BuildTech Accelerator', type: 'Accelerator', fit: 85, stage: 'Pre-Seed', sector: 'Construction, PropTech' },
-]
 
 const track = (event: string, props?: Record<string, unknown>) => {
   try {
@@ -130,9 +84,10 @@ const track = (event: string, props?: Record<string, unknown>) => {
 
 export type HomeClientProps = {
   verifiedInvestorCountLabel: string
+  homeDemoRubric: UniversalAnalysisResult
 }
 
-export default function HomeClient({ verifiedInvestorCountLabel }: HomeClientProps) {
+export default function HomeClient({ verifiedInvestorCountLabel, homeDemoRubric }: HomeClientProps) {
   const router = useRouter()
   const { loading: authLoading, authenticated, verified } = useAuthSession()
   const [mounted, setMounted] = useState(false)
@@ -202,7 +157,7 @@ export default function HomeClient({ verifiedInvestorCountLabel }: HomeClientPro
                       </>
                     ) : (
                       <>
-                        Run a match pass
+                        Try it with your pitch
                         <Rocket className="ml-2 h-4 w-4" />
                       </>
                     )}
@@ -323,7 +278,9 @@ export default function HomeClient({ verifiedInvestorCountLabel }: HomeClientPro
                       {BRAND_NAME} scores your pitch across key categories and ranks best-fit investors with short notes per row.
                     </p>
                   </div>
-                  <span className="shrink-0 rounded-full border border-border/50 bg-muted/25 px-2.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">Sample</span>
+                  <span className="shrink-0 rounded-full border border-border/50 bg-muted/25 px-2.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                    Advanced pipeline
+                  </span>
                 </div>
                 <div className="relative flex min-h-[240px] flex-1 flex-col rounded-xl border border-border/40 bg-background/90 p-3 sm:min-h-[260px] sm:p-3.5">
                   <div className="mb-2 flex shrink-0 items-center gap-2 border-b border-border/35 pb-2">
@@ -333,7 +290,7 @@ export default function HomeClient({ verifiedInvestorCountLabel }: HomeClientPro
                     <span className="ml-auto font-mono text-[10px] text-muted-foreground">{BRAND_NAME}</span>
                   </div>
                   <div className="min-h-0 min-w-0 flex-1">
-                    <HomeDemoAnalysisDashboard />
+                    <HomeDemoAnalysisDashboard result={homeDemoRubric} />
                   </div>
                 </div>
               </div>
@@ -500,73 +457,44 @@ export default function HomeClient({ verifiedInvestorCountLabel }: HomeClientPro
           </div>
         </section>
 
-        {/* ── SAMPLE OUTPUT / DEMO PREVIEW ── */}
-        <section className="border-b border-border/30 px-4 py-14 sm:px-6 sm:py-16 md:py-20" aria-labelledby="home-demo-heading">
+        {/* ── LEARN FROM THE BEST (mentors & partners) ── */}
+        <section className="border-b border-border/30 px-4 py-14 sm:px-6 sm:py-16 md:py-20" aria-labelledby="home-mentors-heading">
           <div className="mx-auto max-w-5xl lg:px-2">
-            <h2 id="home-demo-heading" className="text-center font-heading text-xl font-semibold tracking-tight text-foreground sm:text-2xl">
-              See sample output
+            <h2 id="home-mentors-heading" className="text-center font-heading text-xl font-semibold tracking-tight text-foreground sm:text-2xl">
+              Learn from the best
             </h2>
             <p className="mx-auto mt-3 max-w-2xl text-center text-sm leading-relaxed text-muted-foreground sm:text-[15px]">
-              Here is what a founder sees after submitting their pitch. Scores, ranked matches, and generated outreach -- all from one submission.
+              {BRAND_NAME} is built with real partnerships across the venture ecosystem. You will find prestigious mentors on the platform—founders and operators who have been through Y Combinator, scaled at breakout companies, or spent years inside top-tier VC firms—so you are not guessing what great looks like.
             </p>
 
-            <div className="mt-10 grid gap-6 lg:grid-cols-2">
-              {/* Sample matches */}
-              <div className="rounded-2xl border border-border/40 bg-card/80 p-5 shadow-sm ring-1 ring-border/15 sm:p-6">
-                <div className="flex items-center justify-between">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Top matched investors</p>
-                  <span className="rounded-full border border-border/50 bg-muted/25 px-2.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">Sample</span>
-                </div>
-                <div className="mt-4 space-y-3">
-                  {SAMPLE_MATCHES.map((m) => (
-                    <div key={m.rank} className="flex items-center gap-3 rounded-lg border border-border/40 bg-background/80 px-3 py-2.5">
-                      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/12 text-xs font-bold text-primary">
-                        {m.rank}
-                      </span>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium text-foreground">{m.name}</p>
-                        <p className="text-[11px] text-muted-foreground">{m.type} · {m.stage} · {m.sector}</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-sm font-bold text-emerald-600 dark:text-emerald-400">{m.fit}%</p>
-                        <p className="text-[10px] text-muted-foreground">fit</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                <p className="mt-3 text-center text-[11px] text-muted-foreground">
-                  Each match includes thesis alignment, stage fit, sector relevance, and recent activity signals.
-                </p>
-              </div>
-
-              {/* Sample outreach */}
-              <div className="rounded-2xl border border-border/40 bg-card/80 p-5 shadow-sm ring-1 ring-border/15 sm:p-6">
-                <div className="flex items-center justify-between">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Generated outreach</p>
-                  <span className="rounded-full border border-border/50 bg-muted/25 px-2.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">Sample</span>
-                </div>
-                <div className="mt-4 rounded-lg border border-border/40 bg-background/80 p-4">
-                  <p className="text-xs font-medium text-muted-foreground">Subject: PropTech platform -- pre-seed, 3 LOIs</p>
-                  <div className="mt-3 space-y-2 text-xs leading-relaxed text-muted-foreground">
-                    <p>Hi [Partner Name],</p>
-                    <p>
-                      I am building [Company] -- a platform that helps commercial property managers reduce energy costs by 30% using real-time sensor data and predictive maintenance.
-                    </p>
-                    <p>
-                      We have 3 signed LOIs from mid-market property managers and are raising a $1.2M pre-seed round. Your thesis around climate-adjacent real estate technology and your recent investment in [Portfolio Co] suggest strong alignment.
-                    </p>
-                    <p>Would love 20 minutes to share our traction and roadmap.</p>
-                    <p className="text-foreground/70">Best, [Founder Name]</p>
+            <div className="mt-10 grid gap-4 sm:grid-cols-3">
+              {[
+                {
+                  icon: Handshake,
+                  title: 'Partner-backed',
+                  desc: 'We work with aligned programs and advisors so guidance reflects how fundraising actually works today—not recycled templates.',
+                },
+                {
+                  icon: Users,
+                  title: 'Prestigious mentors',
+                  desc: 'Learn from people who have raised serious capital, joined elite accelerators, and partnered with major funds. Their playbooks beat generic advice.',
+                },
+                {
+                  icon: BadgeCheck,
+                  title: 'YC & top-VC perspective',
+                  desc: 'Many mentors bring experience from YC paths and leading venture firms. You get signal on narrative, diligence, and what partners really respond to.',
+                },
+              ].map(({ icon: Icon, title, desc }) => (
+                <div key={title} className="flex flex-col gap-3 rounded-2xl border border-border/40 bg-card/80 p-5 shadow-sm ring-1 ring-border/15 sm:p-6">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                    <Icon className="h-5 w-5" strokeWidth={1.75} />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-foreground">{title}</p>
+                    <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{desc}</p>
                   </div>
                 </div>
-                <div className="mt-4 flex flex-wrap gap-2">
-                  {['Thesis-aligned', 'Stage-appropriate', 'Portfolio-referenced', 'Metric-backed'].map((tag) => (
-                    <span key={tag} className="rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-[10px] font-medium text-emerald-700 dark:text-emerald-400">
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-              </div>
+              ))}
             </div>
 
             <div className="mt-8 text-center">
@@ -609,7 +537,7 @@ export default function HomeClient({ verifiedInvestorCountLabel }: HomeClientPro
                 }}
                 className="h-11 w-full rounded-lg px-8 text-sm font-semibold shadow-sm sm:h-12 sm:w-auto sm:px-10 sm:text-base"
               >
-                Run a match pass
+                Try it with your pitch
                 <Rocket className="ml-2 h-4 w-4" />
               </Button>
             </div>

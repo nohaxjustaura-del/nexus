@@ -21,3 +21,36 @@ export function parseJSON<T>(value: string | null | undefined, fallback: T): T {
   }
 }
 
+/**
+ * Parse Investor `stages` / `sectors` / similar: may be JSON array, JSON string, CSV, or plain text.
+ * Never throws; always returns a string[] safe for `.map()`.
+ */
+export function parseStringArray(value: string | null | undefined, fallback: string[] = []): string[] {
+  if (value == null) return fallback
+  const s = String(value).trim()
+  if (!s) return fallback
+  try {
+    const parsed = JSON.parse(s) as unknown
+    if (Array.isArray(parsed)) {
+      return parsed
+        .filter((x) => x != null && String(x).trim() !== '')
+        .map((x) => String(x).trim())
+    }
+    if (typeof parsed === 'string' && parsed.trim()) {
+      return [parsed.trim()]
+    }
+    if (parsed != null && typeof parsed === 'object') {
+      return fallback
+    }
+  } catch {
+    // not JSON — treat as raw
+  }
+  if (s.includes(',')) {
+    return s
+      .split(',')
+      .map((p) => p.trim())
+      .filter(Boolean)
+  }
+  return [s]
+}
+

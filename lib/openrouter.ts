@@ -1,5 +1,6 @@
 import OpenAI from "openai"
 import { getSiteUrl } from '@/lib/site-url'
+import { logger } from '@/lib/logger'
 
 /**
  * LLM routing:
@@ -235,15 +236,31 @@ export async function openrouterGenerateText(
 
   const controller = new AbortController()
   const timeout = setTimeout(() => controller.abort(), LLM_REQUEST_TIMEOUT_MS)
+  const maxTok = resolveMaxTokens(options.maxTokens)
+  const t0 = Date.now()
+  logger.integration('[OPENROUTER] chat.completions (text) start', { model, max_tokens: maxTok })
   try {
     const response = await client.chat.completions.create({
       model,
       messages: [{ role: 'user', content: prompt }],
       temperature: options.temperature ?? 0.7,
-      max_tokens: resolveMaxTokens(options.maxTokens),
+      max_tokens: maxTok,
     } as any, { signal: controller.signal })
 
-    return response.choices[0]?.message?.content || ''
+    const out = response.choices[0]?.message?.content || ''
+    logger.integration('[OPENROUTER] chat.completions (text) ok', {
+      model,
+      ms: Date.now() - t0,
+      chars: out.length,
+    })
+    return out
+  } catch (e: any) {
+    logger.integration('[OPENROUTER] chat.completions (text) error', {
+      model,
+      ms: Date.now() - t0,
+      message: e?.message ?? String(e),
+    })
+    throw e
   } finally {
     clearTimeout(timeout)
   }
@@ -366,6 +383,13 @@ export async function openrouterGenerateJson<T = any>(options: {
 
     const temp = options.temperature ?? 0.7
     const maxTok = resolveMaxTokens(options.maxTokens)
+    const t0 = Date.now()
+    logger.integration(`[${label}] chat.completions (JSON) start`, {
+      model,
+      max_tokens: maxTok,
+      temperature: temp,
+      json_object: jsonObjectMode,
+    })
 
     const baseParams: Record<string, unknown> = {
       model,
@@ -393,6 +417,13 @@ export async function openrouterGenerateJson<T = any>(options: {
       const response = await llmClient.chat.completions.create(baseParams as any, { signal: controller.signal })
       const choice = response.choices[0]
       content = choice?.message?.content || '{}'
+    } catch (e: any) {
+      logger.integration(`[${label}] chat.completions (JSON) error`, {
+        model,
+        ms: Date.now() - t0,
+        message: e?.message ?? String(e),
+      })
+      throw e
     } finally {
       clearTimeout(timeout)
     }
@@ -400,8 +431,19 @@ export async function openrouterGenerateJson<T = any>(options: {
     if (process.env.DEBUG) console.log(`[${label}] Response length: ${content.length}, starts: ${content.substring(0, 100)}`)
 
     try {
-      return parseJsonFromModelContent(content, model) as T
+      const parsed = parseJsonFromModelContent(content, model) as T
+      logger.integration(`[${label}] chat.completions (JSON) ok`, {
+        model,
+        ms: Date.now() - t0,
+        contentChars: content.length,
+      })
+      return parsed
     } catch (parseError: any) {
+      logger.integration(`[${label}] JSON parse failed`, {
+        model,
+        ms: Date.now() - t0,
+        message: parseError?.message,
+      })
       console.error(`[${label}] JSON parse error:`, parseError.message)
       console.error(`[${label}] Raw content:`, content.substring(0, 500))
       throw new Error(`Failed to parse JSON from ${model}: ${parseError.message}`)

@@ -10,7 +10,7 @@
  * integrations that have not yet migrated.
  *
  * NOTE: The types CategoryScore and UniversalAnalysisResult are still imported by
- * home-client.tsx, AnalysisDashboard.tsx, and is-safe-rubric-for-dashboard.ts.
+ * home-demo-rubric.ts, AnalysisDashboard.tsx, and is-safe-rubric-for-dashboard.ts.
  * Migrate these types before removing this file.
  *
  * -------------------------------------------------------------------------------

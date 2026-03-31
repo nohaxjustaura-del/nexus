@@ -2,15 +2,24 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { getCurrentUser } from '@/lib/auth'
 import { bypassesAiCredits } from '@/lib/dev-ai-analysis-bypass'
+import { logger } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
+const PACK_MODULE_IDS = [
+  'application-deconstruction',
+  'pitch-deck-autopsy',
+  'interview-simulator',
+  'metrics-timeline',
+  'distribution-diary',
+  'demo-teardown',
+] as const
 
 export async function POST(request: NextRequest) {
   try {
     const user = await getCurrentUser()
-    
+
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
@@ -22,82 +31,80 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid request' }, { status: 400 })
     }
 
-    // Get user's current credits
-    let userCredits = await (db as any).userCredits.findUnique({
+    let userCredits = await db.userCredits.findUnique({
       where: { userId: user.id },
-      select: { credits: true, purchases: true, isPremium: true }
+      select: { credits: true, purchases: true, isPremium: true },
     })
 
-    // Create credits record if doesn't exist
     if (!userCredits) {
-      userCredits = await (db as any).userCredits.create({
+      userCredits = await db.userCredits.create({
         data: {
           userId: user.id,
           credits: 0,
           isPremium: false,
-          purchases: '[]'
-        }
+          purchases: '[]',
+        },
+        select: { credits: true, purchases: true, isPremium: true },
       })
     }
 
-    const currentPurchases = userCredits.purchases ? JSON.parse(userCredits.purchases as string) : []
+    let currentPurchases: string[] = []
+    try {
+      currentPurchases = userCredits.purchases ? JSON.parse(userCredits.purchases as string) : []
+    } catch {
+      currentPurchases = []
+    }
 
-    // Check if already purchased
-    if (currentPurchases.includes(itemId)) {
+    const noCharge = bypassesAiCredits(user.email)
+    const isPremium = Boolean(userCredits.isPremium) || noCharge
+
+    const idsToAdd =
+      itemId === 'complete-pack' ? [...PACK_MODULE_IDS, 'complete-pack'] : [itemId]
+
+    if (itemId === 'complete-pack') {
+      if (currentPurchases.includes('complete-pack')) {
+        return NextResponse.json({ error: 'Bundle already purchased' }, { status: 400 })
+      }
+    } else if (currentPurchases.includes(itemId)) {
       return NextResponse.json({ error: 'Item already purchased' }, { status: 400 })
     }
 
-    // Admin / unlimited-credits list / premium users get free access - just record the purchase without deducting credits
-    const noCharge = bypassesAiCredits(user.email)
-    const isPremium = userCredits.isPremium || noCharge
+    const mergePurchases = () => [...new Set([...currentPurchases, ...idsToAdd])]
 
     if (isPremium) {
-      // Just add to purchases without deducting credits
-      const newPurchases = [...currentPurchases, itemId]
-      await (db as any).userCredits.update({
+      await db.userCredits.update({
         where: { userId: user.id },
-        data: {
-          purchases: JSON.stringify(newPurchases)
-        }
+        data: { purchases: JSON.stringify(mergePurchases()) },
       })
 
       return NextResponse.json({
         success: true,
-        remainingCredits: noCharge ? Number.MAX_SAFE_INTEGER : userCredits.credits,
-        itemId
+        remainingCredits: noCharge ? Number.MAX_SAFE_INTEGER : userCredits.credits ?? 0,
+        itemId,
       })
     }
 
-    const currentCredits = userCredits.credits || 0
-
-    // Check if user has enough credits
+    const currentCredits = userCredits.credits ?? 0
     if (currentCredits < cost) {
       return NextResponse.json({ error: 'Insufficient credits' }, { status: 400 })
     }
 
-    // Deduct credits and add to purchases
     const newCredits = currentCredits - cost
-    const newPurchases = [...currentPurchases, itemId]
-
-    await (db as any).userCredits.update({
+    await db.userCredits.update({
       where: { userId: user.id },
       data: {
         credits: newCredits,
-        purchases: JSON.stringify(newPurchases)
-      }
+        purchases: JSON.stringify(mergePurchases()),
+      },
     })
 
     return NextResponse.json({
       success: true,
       remainingCredits: newCredits,
-      itemId
+      itemId,
     })
   } catch (error) {
-    console.error('Purchase error:', error)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
+    logger.error('[YC-INSIDER-PURCHASE]', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
-

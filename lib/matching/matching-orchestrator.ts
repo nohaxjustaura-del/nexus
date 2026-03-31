@@ -351,8 +351,8 @@ export async function runMatchingPipeline(
   }
 
   // ── STEP 5 — FAISS vector search (top 20) ─────────────────────────────────
-  logger.log(
-    `[ORCHESTRATOR] Step 5 — Embeddings: Voyage (pitch vector) → FAISS HTTP at ${(process.env.FAISS_SERVICE_URL || 'http://localhost:8001').replace(/\/$/, '')}/rank when available; else in-memory cosine on DB rows. Narratives: Ollama-first VC pipeline or OpenRouter.`,
+  logger.integration(
+    `[ORCHESTRATOR] Step 5 — Voyage pitch embedding → FAISS ${(process.env.FAISS_SERVICE_URL || 'http://localhost:8001').replace(/\/$/, '')}/rank or in-memory cosine; narratives via VC LLM (OpenRouter/Ollama).`,
   )
   // Build a full Postgres lookup map (all public VCs, same corpus as Discover) for FAISS
   // intersection. The stage hard-filter is too restrictive for FAISS matching:
@@ -404,22 +404,16 @@ export async function runMatchingPipeline(
       scoringSignals?.tier === 'STRONG' ? 55 :
       50
     if (tierTopK !== 50) {
-      logger.log(`[ORCHESTRATOR] Step 5 — tier-adjusted FAISS top_k: ${tierTopK} (tier: ${scoringSignals?.tier})`)
+      logger.integration(`[ORCHESTRATOR] Step 5 — tier-adjusted FAISS top_k: ${tierTopK} (tier: ${scoringSignals?.tier})`)
     }
 
     const embFilter = countInvestorEmbeddingFilters(embeddingPool, pitchEmbedding.length)
     const fallbackRows = investorsToRankableEmbeddings(embeddingPool, pitchEmbedding.length)
-    if (process.env.DEBUG) {
-      console.log(
-        `[FAISS] embedding filters (public excl. university programs, pitch_dim=${pitchEmbedding.length}): ` +
-          `input=${embFilter.input} rankable=${embFilter.rankable} ` +
-          `missing=${embFilter.missingEmbedding} parse_err=${embFilter.parseError} wrong_dim=${embFilter.wrongDimension} ` +
-          `(stage-filtered pool=${mainstream.length} for non-vector fallbacks)`,
-      )
-      console.log(
-        `[FAISS] DB lookup map: public rows=${allPublicVCs.length} (firmName → Investor for neighbor intersection)`,
-      )
-    }
+    logger.integration(
+      `[FAISS] embedding pool: pitch_dim=${pitchEmbedding.length} rankable=${embFilter.rankable}/${embFilter.input} ` +
+        `(missing=${embFilter.missingEmbedding} parse_err=${embFilter.parseError} wrong_dim=${embFilter.wrongDimension}) ` +
+        `| DB public rows=${allPublicVCs.length} for name intersection | stage-filtered=${mainstream.length}`,
+    )
 
     async function rankAndIntersect(
       mode: 'faiss' | 'memory',
@@ -430,16 +424,9 @@ export async function runMatchingPipeline(
             ? await rankVCsForPitch(pitchEmbedding, [], tierTopK, true)
             : await rankVCsForPitch(pitchEmbedding, fallbackRows, tierTopK, false)
         const { matched, dbNameHits, noDbRow } = intersectRankedWithDb(ranked)
-        if (process.env.DEBUG) {
-          console.log(
-            `[FAISS] Step5 ${mode === 'faiss' ? 'FAISS' : 'memory'} funnel: ` +
-              `neighbors=${ranked.length} db_firmName_hits=${dbNameHits} no_pg_row=${noDbRow} ` +
-              `pool_cap20=${matched.length}`,
-          )
-        }
-        logger.log(
-          `[ORCHESTRATOR] Step 5 — ${mode === 'faiss' ? 'FAISS' : 'in-memory'}: ` +
-            `${ranked.length} → ${matched.length} after DB name filter`,
+        logger.integration(
+          `[FAISS] Step5 ${mode === 'faiss' ? 'HTTP' : 'memory'}: neighbors=${ranked.length} ` +
+            `db_hits=${dbNameHits} no_row=${noDbRow} → pool≤20=${matched.length}`,
         )
         return matched.length >= 5 ? matched : null
       } catch (e: any) {
@@ -458,14 +445,8 @@ export async function runMatchingPipeline(
 
     let picked = await rankAndIntersect('faiss')
     if (!picked && fallbackRows.length >= 5) {
-      if (process.env.DEBUG) {
-        console.log(
-          `[FAISS] Step5 fallback: FAISS path yielded <5 pool VCs → in-memory cosine (${fallbackRows.length} rankable rows)`,
-        )
-      }
-      logger.log(
-        `[ORCHESTRATOR] Step 5 — Falling back to in-memory cosine rank ` +
-          `(${fallbackRows.length} VCs with ${pitchEmbedding.length}-dim embeddings in DB)`,
+      logger.integration(
+        `[FAISS] fallback: HTTP/FAISS path <5 pool VCs → in-memory cosine (${fallbackRows.length} rankable rows, ${pitchEmbedding.length}-dim)`,
       )
       picked = await rankAndIntersect('memory')
     }
@@ -494,7 +475,7 @@ export async function runMatchingPipeline(
     candidatePool = mainstream.slice(0, 20)
   }
 
-  logger.log(`[ORCHESTRATOR] Step 5 — Candidate pool: ${candidatePool.length} VCs`)
+  logger.integration(`[ORCHESTRATOR] Step 5 — Candidate pool: ${candidatePool.length} VCs`)
 
   // ── STEP 6 — Rolling Exa + Gemini gate reasoning ──────────────────────────
   //
@@ -503,6 +484,10 @@ export async function runMatchingPipeline(
   // MAX_CONCURRENT_GEMINI caps simultaneous gate reasoning calls.
 
   const exaClient = createExaClient()
+  const MAX_CONCURRENT_GEMINI = 5
+  logger.integration(
+    `[EXA] Step 6 — ${candidatePool.length} VCs (3 Exa searches each, batched) + Gemini gates (max ${MAX_CONCURRENT_GEMINI} concurrent)`,
+  )
 
   const results = new Map<string, {
     bundle: VCExaBundle
@@ -510,7 +495,6 @@ export async function runMatchingPipeline(
   }>()
 
   let activeGeminiCalls = 0
-  const MAX_CONCURRENT_GEMINI = 5
 
   async function processVC(vc: VCProfile): Promise<void> {
     // 1. Fetch Exa bundle
@@ -534,7 +518,7 @@ export async function runMatchingPipeline(
         : undefined
       const likelihood = computeInvestmentLikelihood(gateAnswers, pitchStrength)
       results.set(vc.id, { bundle, likelihood })
-      logger.log(
+      logger.integration(
         `[ORCHESTRATOR] Step 6 — ${vc.firmName}: ${likelihood.label} (conf=${likelihood.confidence})`,
       )
     } finally {
@@ -555,9 +539,12 @@ export async function runMatchingPipeline(
     }
   }
 
-  logger.log(`[ORCHESTRATOR] Step 6 complete — ${results.size} VCs scored`)
+  logger.integration(`[ORCHESTRATOR] Step 6 complete — ${results.size} VCs scored (Exa + Gemini)`)
 
   // ── STEP 7 — Narrative generation (all VCs in parallel) ───────────────────
+  logger.integration(
+    `[OPENROUTER] Step 7 — ${results.size} match narratives in parallel (VC LLM / openrouterGenerateJson)`,
+  )
   const narrativePromises = Array.from(results.entries()).map(([vcId, data]) => {
     const vc = candidatePool.find((v) => v.id === vcId)
     if (!vc) return null
@@ -567,11 +554,11 @@ export async function runMatchingPipeline(
   }).filter(Boolean) as Promise<{ vc: VCProfile; likelihood: InvestmentLikelihoodResult; narrative: Awaited<ReturnType<typeof generateMatchNarrative>> }>[]
 
   const narrativeResults = await Promise.all(narrativePromises)
-  logger.log(`[ORCHESTRATOR] Step 7 complete — ${narrativeResults.length} narratives generated`)
+  logger.integration(`[ORCHESTRATOR] Step 7 complete — ${narrativeResults.length} narratives (LLM + fallbacks)`)
 
   // ── STEP 8 — Rank and cut ─────────────────────────────────────────────────
   const ranked = rankAndCut(narrativeResults)
-  logger.log(`[ORCHESTRATOR] Step 8 — Top ${ranked.length} investors ranked`)
+  logger.integration(`[ORCHESTRATOR] Step 8 — Top ${ranked.length} investors ranked`)
 
   // ── STEP 9 — Return MatchingPipelineResult ────────────────────────────────
   return {

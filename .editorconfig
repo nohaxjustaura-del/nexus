@@ -1,0 +1,10 @@
+# https://editorconfig.org — keeps source as UTF-8 so Next/webpack can read it.
+root = true
+
+[*]
+charset = utf-8
+insert_final_newline = true
+
+[*.{ts,tsx,js,jsx,mjs,cjs,json,css,md}]
+indent_style = space
+indent_size = 2
