@@ -15,8 +15,8 @@ export function NexusWordmark({ className, heightClass = 'h-28 sm:h-32', priorit
     <img
       src={SRC}
       alt={BRAND_NAME}
-      width={554}
-      height={450}
+      width={1536}
+      height={1024}
       decoding="async"
       loading={priority ? 'eager' : 'lazy'}
       className={cn(
