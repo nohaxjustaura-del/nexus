@@ -12,6 +12,7 @@ import { db } from '@/lib/db'
 import { resolveUserApprovalAccess } from '@/lib/user-approval-access'
 import { safeAuthNextPath } from '@/lib/auth-flow-paths'
 import { sendMagicLinkViaSupabaseOtp, sendSignupInviteViaSupabase } from '@/lib/supabase/auth-email-delivery'
+import { AUTH_EMAIL_SPAM_DELIVERABILITY_HINT } from '@/lib/resend-user-messages'
 
 export const dynamic = 'force-dynamic'
 
@@ -102,7 +103,7 @@ export async function POST(request: NextRequest) {
           )
         }
         return respondSupabaseSuccess(
-          'New sign-in link sent via Supabase. Check your inbox (and spam) and tap the link to continue.'
+          `New sign-in link sent via Supabase. Check your inbox (and spam) and tap the link to continue. ${AUTH_EMAIL_SPAM_DELIVERABILITY_HINT}`
         )
       }
       const invite = await sendSignupInviteViaSupabase({
@@ -122,7 +123,7 @@ export async function POST(request: NextRequest) {
         )
       }
       return respondSupabaseSuccess(
-        'New verification link sent via Supabase. Check your inbox (and spam) and tap the link to continue.'
+        `New verification link sent via Supabase. Check your inbox (and spam) and tap the link to continue. ${AUTH_EMAIL_SPAM_DELIVERABILITY_HINT}`
       )
     }
 
@@ -187,7 +188,7 @@ export async function POST(request: NextRequest) {
           })
           if (otp.ok) {
             return respondSupabaseSuccess(
-              'We could not send through Resend, so we sent a new sign-in link via Supabase. Check your inbox (and spam).'
+              `We could not send through Resend, so we sent a new sign-in link via Supabase. Check your inbox (and spam). ${AUTH_EMAIL_SPAM_DELIVERABILITY_HINT}`
             )
           }
         } else {
@@ -199,7 +200,7 @@ export async function POST(request: NextRequest) {
           })
           if (invite.ok) {
             return respondSupabaseSuccess(
-              'We could not send through Resend, so we sent a new verification link via Supabase. Check your inbox (and spam).'
+              `We could not send through Resend, so we sent a new verification link via Supabase. Check your inbox (and spam). ${AUTH_EMAIL_SPAM_DELIVERABILITY_HINT}`
             )
           }
         }
@@ -218,7 +219,7 @@ export async function POST(request: NextRequest) {
       success: true,
       message: emailResult.devConsoleFallback
         ? RESEND_DEV_CONSOLE_FALLBACK_HINT
-        : 'New sign-in link sent. Check your inbox and tap the one-click link to continue.',
+        : `A new link has been sent. Check your inbox and tap the one-click link to continue. ${AUTH_EMAIL_SPAM_DELIVERABILITY_HINT}`,
       ...(emailResult.devConsoleFallback ? { devConsoleFallback: true } : {}),
     })
     applyAuthCookies(res)

@@ -7,7 +7,11 @@ import { Button } from '@/components/ui/button'
 import { Loader2, ArrowLeft, Mail } from 'lucide-react'
 import Link from 'next/link'
 import { BRAND_NAME } from '@/lib/brand'
-import { RESEND_DEV_CONSOLE_FALLBACK_HINT } from '@/lib/resend-user-messages'
+import {
+  AUTH_EMAIL_SPAM_DELIVERABILITY_HINT,
+  AUTH_EMAIL_VERIFY_PAGE_SPAM_NOTE,
+  RESEND_DEV_CONSOLE_FALLBACK_HINT,
+} from '@/lib/resend-user-messages'
 import { CLIENT_STORAGE } from '@/lib/client-storage-keys'
 import { toast } from '@/components/ui/toast-simple'
 import { useAuthSession } from '@/components/auth-session-provider'
@@ -110,7 +114,7 @@ export default function VerifyPage() {
         setDevConsoleHint(true)
         toast.info(RESEND_DEV_CONSOLE_FALLBACK_HINT, 12000)
       } else {
-        toast.success('A new sign-in link has been sent.')
+        toast.success(`A new link has been sent. ${AUTH_EMAIL_SPAM_DELIVERABILITY_HINT}`)
       }
     } catch {
       setError('Failed to resend sign-in link. Please try again.')
@@ -133,6 +137,9 @@ export default function VerifyPage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          <div className="rounded-lg border border-border/60 bg-muted/30 px-3 py-2.5 text-sm text-muted-foreground leading-relaxed">
+            {AUTH_EMAIL_VERIFY_PAGE_SPAM_NOTE}
+          </div>
           {devConsoleHint && (
             <div className="p-3 text-sm text-amber-900 bg-amber-500/10 border border-amber-500/30 rounded-md">
               {RESEND_DEV_CONSOLE_FALLBACK_HINT}

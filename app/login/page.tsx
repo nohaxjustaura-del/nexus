@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Mail, Loader2, ArrowLeft, Clock, X, UserRound } from 'lucide-react'
 import { CLIENT_STORAGE } from '@/lib/client-storage-keys'
 import { useAuthSession } from '@/components/auth-session-provider'
+import { AUTH_EMAIL_SPAM_DELIVERABILITY_LINE } from '@/lib/resend-user-messages'
 
 type ApprovalModalVariant = 'pending' | 'rejected'
 
@@ -261,8 +262,11 @@ export default function LoginPage() {
           </div>
           <CardTitle className="font-heading text-2xl font-bold tracking-tight">Log in</CardTitle>
           <CardDescription>
-            Enter your email to receive a one-tap sign-in link
+            Enter your email to receive a one-tap sign-in link.
           </CardDescription>
+          <p className="text-center text-xs text-muted-foreground leading-relaxed px-1">
+            {AUTH_EMAIL_SPAM_DELIVERABILITY_LINE}
+          </p>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">

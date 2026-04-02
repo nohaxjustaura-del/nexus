@@ -11,6 +11,7 @@ import {
 import { signupCallbackPath } from '@/lib/auth-flow-paths'
 import { isExistingUserAuthError } from '@/lib/auth-user-exists-error'
 import { sendSignupInviteViaSupabase } from '@/lib/supabase/auth-email-delivery'
+import { AUTH_EMAIL_SPAM_DELIVERABILITY_HINT } from '@/lib/resend-user-messages'
 
 export const dynamic = 'force-dynamic'
 
@@ -69,8 +70,7 @@ export async function POST(request: NextRequest) {
       const { applyAuthCookies } = createSupabaseAuthRouteClient(request)
       const res = NextResponse.json({
         success: true,
-        message:
-          'Verification email sent via Supabase. Check your inbox (and spam) and tap the link to continue.',
+        message: `Verification email sent via Supabase. Check your inbox (and spam) and tap the link to continue. ${AUTH_EMAIL_SPAM_DELIVERABILITY_HINT}`,
         email: normalizedEmail,
         deliveredBy: 'supabase' as const,
       })
@@ -152,7 +152,7 @@ export async function POST(request: NextRequest) {
       success: true,
       message: emailResult.devConsoleFallback
         ? RESEND_DEV_CONSOLE_FALLBACK_HINT
-        : 'Verification email sent. Check your inbox and tap the one-click link to continue.',
+        : `Verification email sent. Check your inbox and tap the one-click link to continue. ${AUTH_EMAIL_SPAM_DELIVERABILITY_HINT}`,
       email: normalizedEmail,
       ...(emailResult.devConsoleFallback ? { devConsoleFallback: true } : {}),
     })

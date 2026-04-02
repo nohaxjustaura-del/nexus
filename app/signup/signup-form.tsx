@@ -14,6 +14,7 @@ import { CLIENT_STORAGE } from '@/lib/client-storage-keys'
 import { useAuthSession } from '@/components/auth-session-provider'
 import { signupCallbackPath } from '@/lib/auth-flow-paths'
 import { BRAND_NAME } from '@/lib/brand'
+import { AUTH_EMAIL_SPAM_DELIVERABILITY_LINE } from '@/lib/resend-user-messages'
 
 export function SignUpForm() {
   const router = useRouter()
@@ -151,6 +152,9 @@ export function SignUpForm() {
           </h1>
           <p className="mx-auto mt-2 max-w-sm text-sm text-muted-foreground">
             Pick how you&apos;ll use {BRAND_NAME}, then enter your email. We&apos;ll send a one-tap verification link.
+          </p>
+          <p className="mx-auto mt-2 max-w-md text-xs text-muted-foreground leading-relaxed">
+            {AUTH_EMAIL_SPAM_DELIVERABILITY_LINE}
           </p>
         </header>
 

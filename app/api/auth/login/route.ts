@@ -8,6 +8,7 @@ import {
   formatResendErrorMessage,
   sendMagicLinkEmail,
 } from '@/lib/email'
+import { AUTH_EMAIL_SPAM_DELIVERABILITY_HINT } from '@/lib/resend-user-messages'
 import { resolveUserApprovalAccess } from '@/lib/user-approval-access'
 import { sendCursorDebugIngest } from '@/lib/cursor-debug-ingest'
 import { sendMagicLinkViaSupabaseOtp } from '@/lib/supabase/auth-email-delivery'
@@ -93,8 +94,7 @@ export async function POST(request: NextRequest) {
       }
       const res = NextResponse.json({
         success: true,
-        message:
-          'Sign-in link sent via Supabase. Check your inbox (and spam) and tap the link to continue.',
+        message: `Sign-in link sent via Supabase. Check your inbox (and spam) and tap the link to continue. ${AUTH_EMAIL_SPAM_DELIVERABILITY_HINT}`,
         email: normalizedEmail,
         deliveredBy: 'supabase' as const,
       })
@@ -214,7 +214,7 @@ export async function POST(request: NextRequest) {
           const res = NextResponse.json({
             success: true,
             message:
-              'We could not send email through Resend, so we sent your sign-in link via Supabase instead. Check your inbox (and spam).',
+              `We could not send email through Resend, so we sent your sign-in link via Supabase instead. Check your inbox (and spam). ${AUTH_EMAIL_SPAM_DELIVERABILITY_HINT}`,
             email: normalizedEmail,
             deliveredBy: 'supabase' as const,
             resendError: resendHint || undefined,
@@ -237,7 +237,7 @@ export async function POST(request: NextRequest) {
       success: true,
       message: emailResult.devConsoleFallback
         ? RESEND_DEV_CONSOLE_FALLBACK_HINT
-        : 'Sign-in link sent. Check your inbox and tap the one-click link to continue.',
+        : `Sign-in link sent. Check your inbox and tap the one-click link to continue. ${AUTH_EMAIL_SPAM_DELIVERABILITY_HINT}`,
       email: normalizedEmail,
       ...(emailResult.devConsoleFallback ? { devConsoleFallback: true } : {}),
     })
