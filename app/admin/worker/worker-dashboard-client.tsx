@@ -225,7 +225,7 @@ export function WorkerDashboardClient() {
               Targeted Exa passes (apply, official contact, LinkedIn) plus LLM extraction to fill or fix{' '}
               <code className="rounded bg-muted px-1 py-0.5 text-xs">applicationUrl</code>,{' '}
               <code className="rounded bg-muted px-1 py-0.5 text-xs">websiteUrl</code>, and{' '}
-              <code className="rounded bg-muted px-1 py-0.5 text-xs">linkedinUrl</code>. Not on the maintenance timer — same
+              <code className="rounded bg-muted px-1 py-0.5 text-xs">linkedinUrl</code>. Not on the maintenance timer; same
               job as <code className="rounded bg-muted px-1 py-0.5 text-xs">npm run worker:apply-contact-urls</code>.
               Supabase <code className="rounded bg-muted px-1 py-0.5 text-xs">vc_directory</code> updates on the next
               directory sync job.

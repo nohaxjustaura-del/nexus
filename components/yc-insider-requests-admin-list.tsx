@@ -72,7 +72,7 @@ export function YcInsiderRequestsAdminList({ rows }: { rows: YcInsiderRequestRow
     <ul className="space-y-4">
       {rows.map((r) => {
         const mailSubject = encodeURIComponent(
-          `Re: Partner founder (${r.requestType === 'book' ? 'Book' : 'Ask'}) — ${founderLabel(r.founderKey)}`
+          `Re: Partner founder (${r.requestType === 'book' ? 'Book' : 'Ask'}): ${founderLabel(r.founderKey)}`
         )
         const mailHref = `mailto:${encodeURIComponent(r.userEmail)}?subject=${mailSubject}`
         const busy = updatingId === r.id

@@ -264,7 +264,7 @@ export function UnifiedPitchTab() {
             <div className="min-w-0 space-y-2">
               <CardTitle className="text-lg font-semibold tracking-tight">Unified pitch</CardTitle>
               <CardDescription className="text-sm leading-relaxed">
-                Add structured answers and any supporting files—at least one input is required.{' '}
+                Add structured answers and any supporting files. At least one input is required.{' '}
                 <span className="text-foreground">
                   {UNIFIED_CREDITS} credits (AI) · {REVIEWER_CREDITS} credits (human review)
                 </span>
@@ -278,7 +278,7 @@ export function UnifiedPitchTab() {
             <div>
               <h2 className="text-sm font-medium text-foreground">Structured Q&A</h2>
               <p className="mt-1 text-xs leading-normal text-muted-foreground">
-                Optional but recommended—answer the prompts that fit your stage.
+                Optional but recommended: answer the prompts that fit your stage.
               </p>
             </div>
             <div className="space-y-5">
@@ -306,7 +306,7 @@ export function UnifiedPitchTab() {
             <div>
               <h2 className="text-sm font-medium text-foreground">Supporting materials</h2>
               <p className="mt-1 text-xs leading-normal text-muted-foreground">
-                Deck and/or recording—both optional if your Q&A is detailed enough.
+                Deck and/or recording: both optional if your Q&A is detailed enough.
               </p>
             </div>
 

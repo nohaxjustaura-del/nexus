@@ -8,7 +8,7 @@ const siteUrl = getSiteUrl()
 
 export const metadata: Metadata = {
   title: 'Company',
-  description: `${BRAND_NAME} builds a fundraising match engine and verified investor directory so founders get ranked shortlists aligned to stage, sector, and thesis—not static lists.`,
+  description: `${BRAND_NAME} builds a fundraising match engine and verified investor directory so founders get ranked shortlists aligned to stage, sector, and thesis, not static lists.`,
   openGraph: {
     title: `Company | ${BRAND_NAME}`,
     description: `Problem, product, and moat: ${BRAND_TAGLINE} with human-in-the-loop verification and recurring data refresh.`,
@@ -59,7 +59,7 @@ export default function CompanyPage() {
               </p>
               <p>
                 Founders need a <span className="font-medium text-foreground">ranked, explainable shortlist</span> tied to
-                verified mandates—not another export to sort by hand.
+                verified mandates, not another export to sort by hand.
               </p>
             </CardContent>
           </Card>
@@ -75,7 +75,7 @@ export default function CompanyPage() {
                 ranks investors from a maintained directory of VCs, angels, accelerators, and corporate venture arms.
               </p>
               <p>
-                Discovery, bookmarks, and tailored outreach support the workflow from first pass through follow-up—without
+                Discovery, bookmarks, and tailored outreach support the workflow from first pass through follow-up, without{' '}
                 {BRAND_NAME} brokering securities or sending intros on a founder&apos;s behalf.
               </p>
             </CardContent>
@@ -89,7 +89,7 @@ export default function CompanyPage() {
               <ul className="list-disc space-y-2 pl-5">
                 <li>
                   <span className="font-medium text-foreground">Verified directory:</span> investor records are enriched
-                  and validated through background workers and admin review—not scraped lists alone.
+                  and validated through background workers and admin review, not scraped lists alone.
                 </li>
                 <li>
                   <span className="font-medium text-foreground">Refresh and quality bar:</span> data is updated on a
@@ -98,7 +98,7 @@ export default function CompanyPage() {
                 <li>
                   <span className="font-medium text-foreground">Match depth:</span> retrieval and scoring combine
                   structured mandates (stage, sector, thesis, geography) with semantic signals so rankings reflect how
-                  founders actually tell their story—not keyword stuffing.
+                  founders actually tell their story, not keyword stuffing.
                 </li>
               </ul>
             </CardContent>
@@ -152,8 +152,8 @@ export default function CompanyPage() {
                 <span className="font-medium text-foreground">General inquiries:</span>{' '}
                 <a href="mailto:contact@nexus.app" className="text-primary underline-offset-2 hover:underline">
                   contact@nexus.app
-                </a>{' '}
-                — or use the{' '}
+                </a>
+                , or use the{' '}
                 <Link href="/contact" className="text-primary underline-offset-2 hover:underline">
                   Contact
                 </Link>{' '}

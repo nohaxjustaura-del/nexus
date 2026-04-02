@@ -21,7 +21,7 @@ export default function ContactPage() {
         <header className="mb-10">
           <h1 className="font-heading text-3xl font-semibold tracking-tight sm:text-4xl">Contact us</h1>
           <p className="mt-3 max-w-2xl text-sm leading-relaxed text-muted-foreground sm:text-[15px]">
-            Questions, feedback, partnerships, or investment-related conversations—we read everything.
+            Questions, feedback, partnerships, or investment-related conversations: we read everything.
           </p>
         </header>
 

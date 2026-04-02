@@ -464,7 +464,10 @@ export default function HomeClient({ verifiedInvestorCountLabel, homeDemoRubric 
               Learn from the best
             </h2>
             <p className="mx-auto mt-3 max-w-2xl text-center text-sm leading-relaxed text-muted-foreground sm:text-[15px]">
-              {BRAND_NAME} is built with real partnerships across the venture ecosystem. You will find prestigious mentors on the platform—founders and operators who have been through Y Combinator, scaled at breakout companies, or spent years inside top-tier VC firms—so you are not guessing what great looks like.
+              {BRAND_NAME} works with real partners across the venture ecosystem. On the platform you will find mentors who
+              have raised capital, been through Y Combinator, helped build breakout companies, or spent years at leading
+              venture firms. You get grounded perspective from people who have done the work, not a vague idea of what
+              &quot;great&quot; looks like.
             </p>
 
             <div className="mt-10 grid gap-4 sm:grid-cols-3">
@@ -472,12 +475,12 @@ export default function HomeClient({ verifiedInvestorCountLabel, homeDemoRubric 
                 {
                   icon: Handshake,
                   title: 'Partner-backed',
-                  desc: 'We work with aligned programs and advisors so guidance reflects how fundraising actually works today—not recycled templates.',
+                  desc: 'We work with aligned programs and advisors. Guidance reflects how fundraising actually works today, not recycled templates.',
                 },
                 {
                   icon: Users,
-                  title: 'Prestigious mentors',
-                  desc: 'Learn from people who have raised serious capital, joined elite accelerators, and partnered with major funds. Their playbooks beat generic advice.',
+                  title: 'Experienced mentors',
+                  desc: 'Learn from people who have raised capital, joined strong accelerators, and partnered with real funds. Their playbooks beat generic advice.',
                 },
                 {
                   icon: BadgeCheck,

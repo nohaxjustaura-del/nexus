@@ -36,7 +36,7 @@ export async function generateMetadata(): Promise<Metadata> {
   const verifiedCount = await getVerifiedInvestorCount()
   const label = formatVerifiedInvestorCount(verifiedCount)
   const description = `NEXUS is a fundraising match engine that produces ranked investor shortlists from your pitch. ${label}+ verified VCs, angels, accelerators, and corporate venture arms scored on stage, sector, thesis, and fit.`
-  const ogDescription = `${label}+ verified investors — VCs, angels, accelerators, corporate venture — ranked by stage, sector, thesis, and alignment with your startup.`
+  const ogDescription = `${label}+ verified investors (VCs, angels, accelerators, corporate venture), ranked by stage, sector, thesis, and alignment with your startup.`
 
   return {
     metadataBase: new URL(siteUrl),
@@ -77,7 +77,7 @@ export async function generateMetadata(): Promise<Metadata> {
       card: "summary_large_image",
       title: BRAND_DEFAULT_TITLE,
       description:
-        "Ranked investor shortlists from your pitch materials — VCs, angels, accelerators, and corporate venture, matched by stage, sector, and thesis fit.",
+        "Ranked investor shortlists from your pitch materials: VCs, angels, accelerators, and corporate venture, matched by stage, sector, and thesis fit.",
     },
     robots: {
       index: true,

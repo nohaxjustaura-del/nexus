@@ -470,7 +470,7 @@ export async function sendYcInsiderFounderRequestAdminAlert(payload: YcInsiderFo
   const tzLine =
     payload.timezone?.trim() ? `Timezone: ${payload.timezone.trim()}` : 'Timezone: (not provided)'
 
-  const subject = `[${BRAND_NAME}] Partner founder ${typeLabel} — ${founderLabel}`
+  const subject = `[${BRAND_NAME}] Partner founder ${typeLabel}: ${founderLabel}`
   const plain = `New partner founder request
 
 Type: ${typeLabel}
@@ -528,20 +528,20 @@ export async function sendYcInsiderFounderRequestUserConfirmation(
 ) {
   const subj =
     requestType === 'book'
-      ? `We received your meeting request — ${BRAND_NAME}`
-      : `We received your question — ${BRAND_NAME}`
+      ? `We received your meeting request (${BRAND_NAME})`
+      : `We received your question (${BRAND_NAME})`
   const plain =
     requestType === 'book'
       ? `Hi,
 
 Thanks for requesting time with ${founderDisplayName}. We received your details and will follow up by email to coordinate.
 
-— ${BRAND_NAME}`
+${BRAND_NAME}`
       : `Hi,
 
 Thanks for your question for ${founderDisplayName}. We received it and will follow up by email.
 
-— ${BRAND_NAME}`
+${BRAND_NAME}`
 
   if (!resendApiKey()) {
     console.log(`

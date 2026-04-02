@@ -228,7 +228,7 @@ export default function PartnerResourcesClient({ partnerSlug }: { partnerSlug: s
               </CardTitle>
               <CardDescription className="text-zinc-400">
                 Premium: full founder profiles, LinkedIn, Ask / Book, and every playbook below at no extra credit cost.
-                Without Premium, browse module descriptions and unlock each section with credits—or buy the bundle.
+                Without Premium, browse module descriptions and unlock each section with credits, or buy the bundle.
               </CardDescription>
             </CardHeader>
             <CardContent>

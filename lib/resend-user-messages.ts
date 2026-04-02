@@ -9,7 +9,7 @@ export const AUTH_EMAIL_SPAM_DELIVERABILITY_HINT =
 
 /** Short line for form headers / descriptions (login, signup). */
 export const AUTH_EMAIL_SPAM_DELIVERABILITY_LINE =
-  'If the email does not appear in your inbox, check spam or junk and mark it as not spam—first messages from a new domain often filter there.'
+  'If the email does not appear in your inbox, check spam or junk and mark it as not spam. First messages from a new domain often filter there.'
 
 /** Paragraph for the post-login “check your email” screen. */
 export const AUTH_EMAIL_VERIFY_PAGE_SPAM_NOTE =
@@ -19,4 +19,4 @@ export const RESEND_TESTING_MODE_PUBLIC_MESSAGE =
   'Sign-in email could not be sent. Your Resend project is in test mode: it only delivers to the email on that Resend account until you verify a domain at resend.com/domains and set RESEND_FROM_EMAIL to an address on that domain.'
 
 export const RESEND_DEV_CONSOLE_FALLBACK_HINT =
-  'No Resend API key is set, so nothing was emailed. If you run the app locally, open the terminal where `next dev` is running—the magic link is printed there. For production, set RESEND_API_KEY or rely on Supabase Auth email (SMTP) when Resend is not configured.'
+  'No Resend API key is set, so nothing was emailed. If you run the app locally, open the terminal where `next dev` is running; the magic link is printed there. For production, set RESEND_API_KEY or rely on Supabase Auth email (SMTP) when Resend is not configured.'
