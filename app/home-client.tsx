@@ -17,7 +17,6 @@ import {
   BarChart3,
   Send,
   RefreshCw,
-  ArrowRight,
   Zap,
   X,
   Shield,
@@ -500,38 +499,11 @@ export default function HomeClient({ verifiedInvestorCountLabel, homeDemoRubric 
               ))}
             </div>
 
-            <div className="mt-8 text-center">
+            <div className="mt-8 flex justify-center">
               <Button
                 size="lg"
-                variant="outline"
                 onClick={() => {
                   track('cta_clicked', { name: 'try_it', page: 'home' })
-                  if (!mounted || !isVerifiedUser) {
-                    router.push('/signup')
-                  } else {
-                    router.push('/founder/ai-analysis')
-                  }
-                }}
-                className="h-11 rounded-lg px-8 text-sm font-semibold sm:h-12 sm:text-base"
-              >
-                Try it with your pitch
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-        </section>
-
-        {/* ── FINAL CTA ── */}
-        <section className="px-4 py-14 sm:px-6 sm:py-16 md:py-20">
-          <div className="mx-auto max-w-3xl text-center">
-            <h2 className="font-heading text-xl font-semibold tracking-tight text-foreground sm:text-2xl">
-              Stop searching. Start matching.
-            </h2>
-            <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
-              <Button
-                size="lg"
-                onClick={() => {
-                  track('cta_clicked', { name: 'bottom_cta', page: 'home' })
                   if (!mounted || !isVerifiedUser) {
                     router.push('/signup')
                   } else {
