@@ -37,6 +37,15 @@ next-env.d.ts
 # worker schedule (local)
 data/worker-vc-refresh-state.json
 
+# nondiscoverable hide/restore backups (local)
+scripts/data/vc-nondiscoverable-hidden-backup*.json
+
+# public investor snapshot checkpoints (local; remove from gitignore if you want to commit)
+scripts/data/vc-public-investors-snapshot*.json
+
+# restore-non-canonical full reports (local)
+scripts/data/vc-restore-non-canonical-report*.json
+
 # prisma
 prisma/dev.db
 prisma/dev.db-journal
@@ -44,6 +53,13 @@ prisma/*.db
 prisma/*.db-journal
 prisma/*.db-shm
 prisma/*.db-wal
+
+# FAISS / VC vector artifacts (large; regenerate from DB — npm run build-faiss-index)
+faiss-data/*
+!faiss-data/.gitkeep
+
+# VC embeddings export (optional import path for scripts; do not commit)
+/vcs_embeddings.jsonl
 
 # uploads and temp files
 public/uploads/*
