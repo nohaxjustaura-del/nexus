@@ -15,6 +15,17 @@ export type VcResearchRetrievalSnapshot = {
   exaPassesWithHits: number
 }
 
+// Global Exa cooldown for research pipelines. When Exa returns quota/credit/rate
+// errors, we avoid hammering the API and instead pause Exa calls for a window,
+// then try again later.
+const EXA_RESEARCH_COOLDOWN_MS = (() => {
+  const raw = parseInt(process.env.EXA_RESEARCH_COOLDOWN_MS || '', 10)
+  if (!Number.isFinite(raw) || raw <= 0) return 60 * 60 * 1000 // default 1h
+  return Math.min(raw, 24 * 60 * 60 * 1000) // cap at 24h
+})()
+
+let nextExaResearchAllowedAt: number | null = null
+
 export function getVcResearchPipelineEnvStatus(): {
   exa: boolean
   /** OpenRouter API key present */
@@ -80,6 +91,14 @@ export async function exaSearchPass(query: string, numResults: number): Promise<
     return { textBlock: '', urls: [], resultCount: 0 }
   }
 
+  if (nextExaResearchAllowedAt && Date.now() < nextExaResearchAllowedAt) {
+    const waitMs = nextExaResearchAllowedAt - Date.now()
+    console.warn(
+      `[VC-RETRIEVAL] Exa in cooldown window (~${Math.ceil(waitMs / 1000)}s remaining); skipping query: ${query}`,
+    )
+    return { textBlock: '', urls: [], resultCount: 0 }
+  }
+
   const exa = new Exa(key)
   const since = getVcResearchStartPublishedDate()
   const maxC = researchExaMaxChars()
@@ -108,7 +127,8 @@ export async function exaSearchPass(query: string, numResults: number): Promise<
     const msg = e instanceof Error ? e.message : String(e)
     console.warn('[VC-RETRIEVAL] Exa search failed:', msg)
     if (/402|403|429|quota|credit|limit|exceeded|payment|unauthor/i.test(msg)) {
-      console.warn('[VC-RETRIEVAL] Check EXA_API_KEY and Exa quota (https://exa.ai).')
+      console.warn('[VC-RETRIEVAL] Putting Exa research into cooldown; check EXA_API_KEY/quota (https://exa.ai).')
+      nextExaResearchAllowedAt = Date.now() + EXA_RESEARCH_COOLDOWN_MS
     }
     return { textBlock: '', urls: [], resultCount: 0 }
   }

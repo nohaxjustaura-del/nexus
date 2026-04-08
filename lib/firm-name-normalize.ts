@@ -401,6 +401,14 @@ export function looksLikeFundraisingHeadline(name: string): boolean {
   if (/^#+\s/.test(s)) return true
   if (/\bSearch\s+Home\b/i.test(s)) return true
   if (/^Home\s+(Germany|Israel|Canada|Saudi Arabia)\s/i.test(s)) return true
+  // Infinitive / policy headlines: "UK to launch £500m Sovereign AI venture fund" (not caught by "Launches £")
+  if (/^(?:UK|US|EU|U\.S\.|the\s+UK|the\s+US|the\s+EU)\s+to\s+(?:launch|unveil|announce|introduce)\b/i.test(s))
+    return true
+  if (/\bto\s+launch\s+(?:a\s+(?:new\s+)?)?[£$€₹]/i.test(s)) return true
+  if (/\bto\s+launch\s+(?:a\s+)?\d+[kmb]?(?=\s|$)/i.test(s)) return true
+  if (/\bset\s+to\s+launch\b/i.test(s) && /\b(fund|venture)\b/i.test(s)) return true
+  if (/\bunveils\s+(?:plans?\s+)?to\s+launch\b/i.test(s)) return true
+  if (/\bplans?\s+to\s+launch\s+(?:a\s+)?(?:new\s+)?[£$€₹]/i.test(s)) return true
   if (
     /\b(unveils|raises\s+\$|raises\s+€|closes\s+\$|closes\s+€|Closes\s+\$|Launches\s+\$|Launches\s+€|Launches\s+[₹£]|launches\s+\$|launches\s+€|launches\s+[₹£])\b/i.test(
       s,

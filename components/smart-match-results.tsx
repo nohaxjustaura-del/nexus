@@ -11,7 +11,10 @@ import Link from 'next/link'
 export interface RankedVC {
   id: string
   firmName: string
+  /** 0–1 similarity (vector-style), normalized from raw score/similarity. */
   similarity: number
+  /** 0–100 final match score from the v3 ranker (combinedScore). */
+  score: number
   metadata: {
     stages?: string[]
     sectors?: string[]
@@ -95,11 +98,23 @@ function normalizeSmartMatchRow(raw: unknown): RankedVC | null {
 
   const rawSim = m.similarity
   const rawScore = m.score
+  const rawCombined = m.combinedScore
+
   let similarity = 0
   if (typeof rawSim === 'number' && Number.isFinite(rawSim)) {
     similarity = rawSim > 1 ? Math.min(1, rawSim / 100) : Math.min(1, Math.max(0, rawSim))
   } else if (typeof rawScore === 'number' && Number.isFinite(rawScore)) {
     similarity = Math.min(1, Math.max(0, rawScore / 100))
+  }
+
+  // Prefer the deterministic v3 combinedScore; fall back to score; finally derive from similarity.
+  let score = 0
+  if (typeof rawCombined === 'number' && Number.isFinite(rawCombined)) {
+    score = Math.min(100, Math.max(0, Math.round(rawCombined)))
+  } else if (typeof rawScore === 'number' && Number.isFinite(rawScore)) {
+    score = Math.min(100, Math.max(0, Math.round(rawScore)))
+  } else {
+    score = Math.round(similarity * 100)
   }
 
   const narrative =
@@ -115,6 +130,7 @@ function normalizeSmartMatchRow(raw: unknown): RankedVC | null {
     id,
     firmName,
     similarity,
+    score,
     metadata: {
       fundType,
       stages: stagesFromMeta ?? stagesFromInv,
@@ -283,7 +299,9 @@ export function SmartMatchResults({ matches, showAll = false }: SmartMatchResult
                     <div className="flex shrink-0 flex-col items-end gap-1.5">
                       <div className="text-right">
                         <div className="text-2xl font-bold tabular-nums tracking-tight text-primary">
-                          {uiFitDisplayPercent(index, displaySalt)}%
+                          {/* Previously: UI-only jittered fit display via uiFitDisplayPercent(index, displaySalt).
+                              Kept commented so it can be reinstated easily if needed. */}
+                          {Math.round(match.score)}%
                         </div>
                         <div className="flex items-center justify-end gap-1 text-xs text-muted-foreground">
                           <TrendingUp className="h-3 w-3 opacity-80" aria-hidden />

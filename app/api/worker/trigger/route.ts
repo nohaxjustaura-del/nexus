@@ -7,7 +7,7 @@ import { researchVCsBatch } from '@/scripts/auto-research-vcs'
 import { runApplyContactBatch } from '@/lib/vc-apply-contact-research'
 import { getLiveInvestorPulse } from '@/lib/exa-service'
 import { syncRecentPublicDiscoverableToVcDirectory } from '@/lib/vc-supabase-sync'
-import { isLikelyRealFirmName } from '@/lib/firm-name-quality'
+import { isInvestorEligibleForWorkers } from '@/lib/investor-worker-eligibility'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -52,7 +52,11 @@ export async function POST(request: Request) {
       case 'vc-thesis-research': {
         const limit = Math.min(50, Math.max(1, params?.limit ?? 15))
         const rows = await db.investor.findMany({
-          where: { OR: [{ thesis: null }, { thesis: '' }] },
+          where: {
+            isPublic: true,
+            discoverable: true,
+            OR: [{ thesis: null }, { thesis: '' }],
+          },
           select: { firmName: true, thesis: true },
           take: limit * 2,
           orderBy: { updatedAt: 'asc' },
@@ -60,7 +64,7 @@ export async function POST(request: Request) {
         const firms = rows
           .filter(
             r =>
-              isLikelyRealFirmName(r.firmName) &&
+              isInvestorEligibleForWorkers(r.firmName) &&
               (!r.thesis || r.thesis.trim().length < 20),
           )
           .slice(0, limit)
@@ -92,6 +96,8 @@ export async function POST(request: Request) {
         const limit = Math.min(50, Math.max(1, params?.limit ?? 15))
         const rows = await db.investor.findMany({
           where: {
+            isPublic: true,
+            discoverable: true,
             OR: [
               { checkSizeMin: 0 },
               { portfolio: null },
@@ -105,7 +111,7 @@ export async function POST(request: Request) {
           take: limit,
           orderBy: { updatedAt: 'asc' },
         })
-        const firms = rows.map(r => r.firmName).filter(n => isLikelyRealFirmName(n))
+        const firms = rows.map(r => r.firmName).filter(n => isInvestorEligibleForWorkers(n))
         await researchVCsBatch(firms, { delayBetweenSearches: 2500, maxConcurrent: 2, mode: 'profile' })
         result = { mode: 'profile', firms: firms.length }
         break
@@ -113,13 +119,14 @@ export async function POST(request: Request) {
       case 'exa-enrichment': {
         const take = params?.limit ?? 10
         const investors = await db.investor.findMany({
-          where: { isPublic: true },
+          where: { isPublic: true, discoverable: true },
           select: { id: true, firmName: true, sectors: true },
           take,
           orderBy: { updatedAt: 'desc' },
         })
         let enriched = 0
         for (const inv of investors) {
+          if (!isInvestorEligibleForWorkers(inv.firmName)) continue
           let sectors: string[] = []
           try {
             sectors = JSON.parse(inv.sectors || '[]') as string[]

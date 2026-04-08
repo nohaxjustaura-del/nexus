@@ -34,6 +34,7 @@
 import { db } from './db'
 import { logger } from './logger'
 import { isLikelyRealFirmName } from './firm-name-quality'
+import { isInvestorEligibleForWorkers } from './investor-worker-eligibility'
 import { researchVCsBatch } from '../scripts/auto-research-vcs'
 import { getLiveInvestorPulse } from './exa-service'
 import {
@@ -237,6 +238,8 @@ async function executeVCThesisResearch(): Promise<void> {
 
     const vcsToUpdate = await db.investor.findMany({
       where: {
+        isPublic: true,
+        discoverable: true,
         OR: [{ thesis: { equals: null } }, { thesis: '' }],
       },
       select: { firmName: true, thesis: true },
@@ -245,7 +248,7 @@ async function executeVCThesisResearch(): Promise<void> {
     })
 
     const needingThesis = vcsToUpdate.filter((v) => {
-      if (!isLikelyRealFirmName(v.firmName)) return false
+      if (!isInvestorEligibleForWorkers(v.firmName)) return false
       return !v.thesis || v.thesis.trim().length < 20
     })
 
@@ -303,6 +306,8 @@ async function executeVCProfileResearch(): Promise<void> {
 
     const vcsToUpdate = await db.investor.findMany({
       where: {
+        isPublic: true,
+        discoverable: true,
         OR: [
           { checkSizeMin: { equals: 0 } },
           { portfolio: null },
@@ -324,7 +329,7 @@ async function executeVCProfileResearch(): Promise<void> {
       return
     }
 
-    const firmNames = vcsToUpdate.map((vc) => vc.firmName).filter((name) => isLikelyRealFirmName(name))
+    const firmNames = vcsToUpdate.map((vc) => vc.firmName).filter((name) => isInvestorEligibleForWorkers(name))
     if (firmNames.length === 0) {
       logger.info('WORKER', '✅ Profile queue has no high-quality firm names; skipping this run')
       return
@@ -367,6 +372,7 @@ async function executeExaEnrichment(): Promise<void> {
     const uncachedVCs = await db.investor.findMany({
       where: {
         isPublic: true,
+        discoverable: true,
         enrichmentCache: { is: null },
       },
       select: { id: true, firmName: true, sectors: true },
@@ -384,13 +390,21 @@ async function executeExaEnrichment(): Promise<void> {
       orderBy: { lastUpdated: 'asc' },
     })
 
-    const toEnrich = [
+    const rawEnrich = [
       ...uncachedVCs.map(vc => ({ id: vc.id, firmName: vc.firmName, sectors: vc.sectors })),
       ...staleCache.map(c => ({ id: c.investorId, firmName: c.investor.firmName, sectors: c.investor.sectors })),
     ]
+    const toEnrich = rawEnrich.filter((vc) => isInvestorEligibleForWorkers(vc.firmName))
 
     if (toEnrich.length === 0) {
-      logger.info('WORKER', '✅ All VC enrichment caches are fresh')
+      if (rawEnrich.length > 0) {
+        logger.info(
+          'WORKER',
+          '⏭️ No eligible VCs to enrich (hidden or low-quality firm names skipped)',
+        )
+      } else {
+        logger.info('WORKER', '✅ All VC enrichment caches are fresh')
+      }
       return
     }
 

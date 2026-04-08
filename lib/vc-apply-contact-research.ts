@@ -1,7 +1,10 @@
 /**
- * Targeted Exa retrieval + LLM extraction for official apply/intake and contact URLs.
+ * Targeted Exa retrieval + LLM extraction for official apply/intake and
+ * contact URLs plus key public contact channels (LinkedIn, Twitter,
+ * Crunchbase, and email when clearly official).
  *
- * Worker layout (this job is on-demand only — not part of lib/background-worker.ts timers):
+ * Worker layout (this job is on-demand only — not part of
+ * lib/background-worker.ts timers):
  * - CLI: `npm run worker:apply-contact-urls` → scripts/vc-apply-contact-worker.ts
  * - HTTP: POST /api/worker/trigger { jobType: "vc-apply-contact-research", params?: { limit, overwrite, vcs } }
  * - Admin UI: /admin/worker → “Apply / contact URL refresh”
@@ -14,12 +17,15 @@ import { openrouterGenerateJson, hasVcLlmConfigured } from '@/lib/openrouter'
 import { analyzeInvestorLinks } from '@/lib/vc-link-quality'
 import { exaSearchPass, getVcResearchPipelineEnvStatus } from '@/lib/vc-research-retrieval'
 import { syncInvestorEmbeddingById } from '@/lib/vc-embedding-sync'
-import { isLikelyRealFirmName } from '@/lib/firm-name-quality'
+import { isInvestorEligibleForWorkers } from '@/lib/investor-worker-eligibility'
 
 export type ApplyContactExtraction = {
   applicationUrl: string | null
   websiteUrl: string | null
   linkedinUrl: string | null
+  twitterUrl: string | null
+  crunchbaseUrl: string | null
+  email: string | null
   /** 1 sentence: why these URLs were chosen or null */
   rationale: string | null
 }
@@ -68,7 +74,12 @@ function sliceContext(raw: string): string {
 }
 
 /**
- * Three Exa passes: intake/apply, official presence + contact, LinkedIn / company page.
+ * Exa retrieval for contact + social:
+ * - Primary pass: official site / contact / apply / program pages (broad query).
+ * - Secondary pass: social/profile directories (LinkedIn, Twitter/X, Crunchbase).
+ *
+ * This keeps Exa calls to 2 per firm while still aggressively targeting all
+ * important public contact channels.
  */
 export async function gatherApplyContactRetrievalContext(firmName: string): Promise<{
   mergedContext: string
@@ -84,18 +95,19 @@ export async function gatherApplyContactRetrievalContext(firmName: string): Prom
   const n = exaNumResults()
   const year = new Date().getFullYear()
 
-  const q1 = `"${firmName}" (apply OR application OR "submit" OR pitch OR founders OR intake OR cohort OR batch OR accelerator OR fellowship OR typeform OR airtable OR angels)`
-  const q2 = `"${firmName}" (official OR homepage OR contact OR "get in touch" OR team) (venture OR capital OR fund OR partners OR VC OR accelerator)`
-  const q3 = `"${firmName}" site:linkedin.com/company`
+  // Primary: official presence, contact, apply/program pages, and common program hosts.
+  const qMain = `"${firmName}" (official OR homepage OR contact OR \"get in touch\" OR team OR founders OR partners OR apply OR application OR pitch OR program OR accelerator OR fellowship OR intake OR cohort OR \"contact us\" OR \"get funding\" OR typeform OR airtable)`
 
-  const [pass1, pass2, pass3] = await Promise.all([
-    exaSearchPass(q1, n),
-    exaSearchPass(q2, n),
-    exaSearchPass(q3, Math.min(5, n)),
+  // Secondary: explicit social/profile directories that often host public VC profiles.
+  const qProfiles = `"${firmName}" (linkedin.com/company OR twitter.com OR x.com OR crunchbase.com/organization OR crunchbase.com/organization/${firmName.replace(/"/g, '')})`
+
+  const [passMain, passProfiles] = await Promise.all([
+    exaSearchPass(qMain, n),
+    exaSearchPass(qProfiles, Math.min(5, n)),
   ])
 
   const urlSet = new Set<string>()
-  for (const u of [...pass1.urls, ...pass2.urls, ...pass3.urls]) {
+  for (const u of [...passMain.urls, ...passProfiles.urls]) {
     try {
       if (/^https?:\/\//i.test(u)) urlSet.add(new URL(u).toString())
     } catch {
@@ -105,23 +117,20 @@ export async function gatherApplyContactRetrievalContext(firmName: string): Prom
   const sources = [...urlSet]
 
   const chunks: string[] = []
-  if (pass1.textBlock.trim()) {
-    chunks.push(`--- Apply / intake / programs ---\n${pass1.textBlock.trim()}`)
+  if (passMain.textBlock.trim()) {
+    chunks.push(`--- Official site / contact / apply ---\n${passMain.textBlock.trim()}`)
   }
-  if (pass2.textBlock.trim()) {
-    chunks.push(`--- Official site / contact ---\n${pass2.textBlock.trim()}`)
-  }
-  if (pass3.textBlock.trim()) {
-    chunks.push(`--- LinkedIn / company ---\n${pass3.textBlock.trim()}`)
+  if (passProfiles.textBlock.trim()) {
+    chunks.push(`--- Social / profiles (LinkedIn, Twitter/X, Crunchbase) ---\n${passProfiles.textBlock.trim()}`)
   }
 
   const mergedContext = chunks.join('\n\n')
   const passesWithHits =
-    (pass1.resultCount > 0 ? 1 : 0) + (pass2.resultCount > 0 ? 1 : 0) + (pass3.resultCount > 0 ? 1 : 0)
-  const totalResults = pass1.resultCount + pass2.resultCount + pass3.resultCount
+    (passMain.resultCount > 0 ? 1 : 0) + (passProfiles.resultCount > 0 ? 1 : 0)
+  const totalResults = passMain.resultCount + passProfiles.resultCount
 
   console.log(
-    `[APPLY-CONTACT] Exa (${year}): apply ${pass1.resultCount} | contact ${pass2.resultCount} | linkedin ${pass3.resultCount} | sources ${sources.length}`,
+    `[APPLY-CONTACT] Exa (${year}): main ${passMain.resultCount} | profiles ${passProfiles.resultCount} | sources ${sources.length}`,
   )
 
   if (mergedContext.trim().length < 80) {
@@ -137,22 +146,33 @@ export async function gatherApplyContactRetrievalContext(firmName: string): Prom
   }
 }
 
-async function extractApplyContactUrls(firmName: string, rawContent: string): Promise<ApplyContactExtraction | null> {
+async function extractApplyContactUrls(
+  firmName: string,
+  rawContent: string,
+): Promise<ApplyContactExtraction | null> {
   if (!hasVcLlmConfigured()) return null
   try {
     const result = await openrouterGenerateJson<ApplyContactExtraction>({
-      system: `You extract ONLY verifiable outreach URLs for ONE capital provider (VC, accelerator, angel group, CVC, grant program, etc.).
+      system: `You extract ONLY verifiable outreach and contact details for ONE capital provider (VC, accelerator, angel group, CVC, grant program, etc.).
 
-Return ONE JSON object with keys: applicationUrl, websiteUrl, linkedinUrl, rationale (each string or null).
+Return ONE JSON object with keys: applicationUrl, websiteUrl, linkedinUrl, twitterUrl, crunchbaseUrl, email, rationale (each string or null).
+
+You MUST optimize for accuracy and consistency over guessing:
+- When in doubt, return null instead of a speculative value.
+- Prefer URLs and emails that are consistently supported across multiple excerpts.
+- Prefer URLs that share the same obvious firm domain when there are conflicting candidates.
 
 Rules:
 - Use ONLY URLs that appear in the excerpts or are obviously the official domain described there. Do NOT invent URLs.
 - applicationUrl: A page where founders apply, submit a pitch, join a cohort, or open official intake (including trusted form hosts like typeform.com / airtable.com / forms.gle ONLY if the snippet ties the form to this org). Use null if no explicit apply/intake URL is supported by the text.
 - websiteUrl: The official program or fund homepage (not news articles, not third-party directories unless the excerpt is only that — prefer null over guessing).
 - linkedinUrl: linkedin.com/company/... for this org only; null if not in excerpts.
+- twitterUrl: twitter.com/... or x.com/... profile for this org only (not tweets); null if not clearly present.
+- crunchbaseUrl: crunchbase.com/organization/... or profile that clearly refers to this org; null if not clearly present.
+- email: A generic, official contact or apply email (e.g. "apply@firm.com", "hello@firm.com", "invest@firm.com") that clearly belongs to this org; NEVER a personal founder email or unrelated address.
 - rationale: One short sentence citing what in the text supports the URLs, or null.
 
-NEVER use: press wires (GlobeNewswire, PRNewswire), generic news sites, government tender portals, PDF-only unless it is clearly the apply pack, social posts, or "mailto:".`,
+NEVER use: press wires (GlobeNewswire, PRNewswire), generic news sites, government tender portals, PDF-only unless it is clearly the apply pack, social posts as URLs, or "mailto:" links directly.`,
       user: `Firm: "${firmName}"\n\nSource text:\n${sliceContext(rawContent)}`,
       temperature: 0.1,
       useVcPipeline: true,
@@ -162,6 +182,9 @@ NEVER use: press wires (GlobeNewswire, PRNewswire), generic news sites, governme
       applicationUrl: result.applicationUrl?.trim() || null,
       websiteUrl: result.websiteUrl?.trim() || null,
       linkedinUrl: result.linkedinUrl?.trim() || null,
+      twitterUrl: result.twitterUrl?.trim() || null,
+      crunchbaseUrl: result.crunchbaseUrl?.trim() || null,
+      email: result.email?.trim() || null,
       rationale: result.rationale?.trim() || null,
     }
   } catch (e) {
@@ -174,6 +197,9 @@ function validatedUrls(x: ApplyContactExtraction): {
   applicationUrl: string | null
   websiteUrl: string | null
   linkedinUrl: string | null
+  twitterUrl: string | null
+  crunchbaseUrl: string | null
+  email: string | null
 } {
   const app = x.applicationUrl && !isSuspiciousInvestorUrl(x.applicationUrl) ? x.applicationUrl : null
   const web = x.websiteUrl && !isSuspiciousInvestorUrl(x.websiteUrl) ? x.websiteUrl : null
@@ -189,6 +215,10 @@ function validatedUrls(x: ApplyContactExtraction): {
     applicationUrl: appA.safeApplication,
     websiteUrl: webA.safeWebsite,
     linkedinUrl: linked,
+    twitterUrl: x.twitterUrl && !isSuspiciousInvestorUrl(x.twitterUrl) ? x.twitterUrl : null,
+    crunchbaseUrl:
+      x.crunchbaseUrl && !isSuspiciousInvestorUrl(x.crunchbaseUrl) ? x.crunchbaseUrl : null,
+    email: x.email && x.email.includes('@') ? x.email : null,
   }
 }
 
@@ -215,8 +245,8 @@ export type ApplyContactResearchResult = ApplyContactExtraction & {
  * Run Exa + LLM for one firm; does not write DB.
  */
 export async function researchApplyContactForFirm(firmName: string): Promise<ApplyContactResearchResult | null> {
-  if (!isLikelyRealFirmName(firmName)) {
-    console.log(`[APPLY-CONTACT] Skip low-quality name: ${firmName}`)
+  if (!isInvestorEligibleForWorkers(firmName)) {
+    console.log(`[APPLY-CONTACT] Skip ineligible firm name (hidden or generic/article-style): ${firmName}`)
     return null
   }
   const snap = await gatherApplyContactRetrievalContext(firmName)
@@ -235,6 +265,8 @@ export async function researchApplyContactForFirm(firmName: string): Promise<App
 export type ApplyContactUpdateOptions = {
   /** When true, replace non-empty URLs if the new value validates; default fills empties + replaces suspicious URLs only */
   overwrite?: boolean
+  /** When set, update this row only (avoids duplicate firmName ambiguity). */
+  investorId?: string
 }
 
 /**
@@ -244,8 +276,8 @@ export async function researchApplyContactAndUpdate(
   firmName: string,
   options: ApplyContactUpdateOptions = {},
 ): Promise<{ ok: boolean; updatedFields: string[]; rationale: string | null }> {
-  const { overwrite = false } = options
-  if (!isLikelyRealFirmName(firmName)) {
+  const { overwrite = false, investorId } = options
+  if (!isInvestorEligibleForWorkers(firmName)) {
     return { ok: false, updatedFields: [], rationale: null }
   }
   const pipe = getVcResearchPipelineEnvStatus()
@@ -257,9 +289,13 @@ export async function researchApplyContactAndUpdate(
   const result = await researchApplyContactForFirm(firmName)
   if (!result) return { ok: false, updatedFields: [], rationale: null }
 
-  const existing = await db.investor.findFirst({ where: { firmName } })
+  const existing = investorId
+    ? await db.investor.findUnique({ where: { id: investorId } })
+    : await db.investor.findFirst({
+        where: { firmName: { equals: firmName, mode: 'insensitive' }, isPublic: true },
+      })
   if (!existing) {
-    console.log(`[APPLY-CONTACT] Not in DB: ${firmName}`)
+    console.log(`[APPLY-CONTACT] Not in DB (or no public row): ${firmName}`)
     return { ok: false, updatedFields: [], rationale: result.rationale }
   }
 
@@ -278,6 +314,21 @@ export async function researchApplyContactAndUpdate(
   if (shouldWriteField(existing.linkedinUrl, v.linkedinUrl, overwrite)) {
     updateData.linkedinUrl = v.linkedinUrl!
     updatedFields.push('linkedinUrl')
+  }
+
+  if (shouldWriteField(existing.twitterUrl, v.twitterUrl, overwrite)) {
+    updateData.twitterUrl = v.twitterUrl!
+    updatedFields.push('twitterUrl')
+  }
+
+  if (shouldWriteField(existing.crunchbaseUrl, v.crunchbaseUrl, overwrite)) {
+    updateData.crunchbaseUrl = v.crunchbaseUrl!
+    updatedFields.push('crunchbaseUrl')
+  }
+
+  if (!existing.email && v.email) {
+    updateData.email = v.email
+    updatedFields.push('email')
   }
 
   if (updatedFields.length === 0) {
@@ -312,6 +363,7 @@ export async function runApplyContactBatch(params: {
     const rows = await db.investor.findMany({
       where: {
         isPublic: true,
+        discoverable: true,
         OR: [
           { applicationUrl: null },
           { applicationUrl: '' },
@@ -326,7 +378,7 @@ export async function runApplyContactBatch(params: {
       orderBy: { updatedAt: 'asc' },
     })
     names = rows
-      .filter((r) => isLikelyRealFirmName(r.firmName))
+      .filter((r) => isInvestorEligibleForWorkers(r.firmName))
       .filter(
         (r) =>
           !r.applicationUrl?.trim() ||

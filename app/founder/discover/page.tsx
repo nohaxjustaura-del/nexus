@@ -248,6 +248,8 @@ export default async function DiscoverPage({
         twitterUrl: true,
         fundType: true,
         thesis: true,
+        bio: true,
+        geography: true,
         leadFollow: true,
         ownershipTarget: true,
         proofPoints: true,

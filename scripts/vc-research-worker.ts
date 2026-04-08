@@ -1,11 +1,16 @@
 /**
  * BACKGROUND VC RESEARCH WORKER
- * 
- * Runs continuously in background, researching and updating VCs
- * Can be started with: npm run research-worker
+ *
+ * Runs on an interval: Exa + LLM enrichment via researchVC + updateVCInDatabase.
+ * For full-corpus backfills use: npm run research-vcs -- --all (public / Discover rows only)
+ * Auto-hide bogus public rows: set VC_RESEARCH_AUTO_HIDE_BOGUS=1 (same as CLI script).
+ *
+ * Note: does not run apply-contact URL pass (researchApplyContactAndUpdate) — that stays on the
+ * research-vcs batch path only, to keep this daemon lighter per firm.
  */
 
 import { db } from '../lib/db'
+import { isInvestorEligibleForWorkers } from '../lib/investor-worker-eligibility'
 import { researchVC, updateVCInDatabase } from './auto-research-vcs'
 
 interface WorkerConfig {
@@ -89,9 +94,9 @@ class VCResearchWorker {
       // Research each VC
       for (const vc of vcsToResearch.slice(0, this.config.batchSize)) {
         try {
-          const research = await researchVC(vc.firmName)
+          const research = await researchVC(vc.firmName, 'full', { investorId: vc.id })
           if (research) {
-            const success = await updateVCInDatabase(research)
+            const success = await updateVCInDatabase(research, vc.id)
             if (success) {
               updated++
             } else {
@@ -122,7 +127,12 @@ class VCResearchWorker {
   /**
    * Get list of VCs that need research
    */
-  private async getVCsToResearch(): Promise<Array<{ firmName: string }>> {
+  private async getVCsToResearch(): Promise<Array<{ id: string; firmName: string }>> {
+    const takeEligible = (rows: Array<{ id: string; firmName: string }>) =>
+      rows.filter((r) => isInvestorEligibleForWorkers(r.firmName)).slice(0, this.config.batchSize)
+
+    const overFetch = Math.min(300, Math.max(this.config.batchSize * 15, this.config.batchSize))
+
     // Priority 1: Priority VCs if specified
     if (this.config.priorityVCs && this.config.priorityVCs.length > 0) {
       const priorityVCs = await db.investor.findMany({
@@ -130,35 +140,37 @@ class VCResearchWorker {
           firmName: { in: this.config.priorityVCs },
           verified: true,
         },
-        select: { firmName: true },
+        select: { id: true, firmName: true },
       })
-      
-      if (priorityVCs.length > 0) {
-        return priorityVCs
+
+      const eligible = takeEligible(priorityVCs)
+      if (eligible.length > 0) {
+        return eligible
       }
     }
-    
-    // Priority 2: Unverified VCs
+
+    // Priority 2: Unverified VCs (over-fetch then filter — avoids idle sleeps on ineligible names)
     const unverified = await db.investor.findMany({
-      where: { verified: false },
-      select: { firmName: true },
-      take: this.config.batchSize,
+      where: { verified: false, isPublic: true },
+      select: { id: true, firmName: true },
+      take: overFetch,
+      orderBy: { updatedAt: 'asc' },
     })
-    
-    if (unverified.length > 0) {
-      return unverified
+
+    const eligibleUnverified = takeEligible(unverified)
+    if (eligibleUnverified.length > 0) {
+      return eligibleUnverified
     }
-    
-    // Priority 3: Verified VCs (for re-verification)
-    // Could add logic to check last updated date
+
+    // Priority 3: Verified VCs (re-enrichment / stale)
     const verified = await db.investor.findMany({
-      where: { verified: true },
-      select: { firmName: true },
-      take: this.config.batchSize,
-      orderBy: { firmName: 'asc' },
+      where: { verified: true, isPublic: true },
+      select: { id: true, firmName: true },
+      take: overFetch,
+      orderBy: { updatedAt: 'asc' },
     })
-    
-    return verified
+
+    return takeEligible(verified)
   }
 }
 

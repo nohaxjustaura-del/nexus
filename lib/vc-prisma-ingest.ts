@@ -8,6 +8,7 @@ import {
 import type { VCResearchResult } from '../scripts/auto-research-vcs'
 import { researchVC, updateVCInDatabase } from '../scripts/auto-research-vcs'
 import { syncInvestorEmbeddingById } from '@/lib/vc-embedding-sync'
+import { canonicalInvestorKey } from '@/lib/investor-canonical-key'
 
 function placeholderEmail(firmName: string): string {
   const slug = firmName
@@ -91,21 +92,44 @@ export async function ingestFirmToPrisma(firmName: string): Promise<{
     return { investor: null, research: null, isNew: false }
   }
 
-  const existing = await db.investor.findFirst({
+  let existing = await db.investor.findFirst({
     where: { firmName: { equals: research.firmName, mode: 'insensitive' } },
   })
 
+  if (!existing) {
+    const k = canonicalInvestorKey(research.firmName)
+    const rows = await db.investor.findMany({
+      select: {
+        id: true,
+        firmName: true,
+        isPublic: true,
+        discoverable: true,
+        createdAt: true,
+      },
+    })
+    const hits = rows.filter((r) => canonicalInvestorKey(r.firmName) === k)
+    hits.sort((a, b) => {
+      if (a.isPublic !== b.isPublic) return a.isPublic ? -1 : 1
+      if (a.discoverable !== b.discoverable) return a.discoverable ? -1 : 1
+      return a.createdAt.getTime() - b.createdAt.getTime()
+    })
+    existing = hits[0] ?? null
+  }
+
   let isNew = false
   if (existing) {
-    await updateVCInDatabase(research)
+    const researchForUpdate = { ...research, firmName: existing.firmName }
+    await updateVCInDatabase(researchForUpdate, existing.id)
   } else {
     await createInvestorFromResearch(research)
     isNew = true
   }
 
-  const investor = await db.investor.findFirst({
-    where: { firmName: { equals: research.firmName, mode: 'insensitive' } },
-  })
+  const investor = existing
+    ? await db.investor.findUnique({ where: { id: existing.id } })
+    : await db.investor.findFirst({
+        where: { firmName: { equals: research.firmName, mode: 'insensitive' } },
+      })
 
   if (investor?.isPublic) {
     await syncInvestorEmbeddingById(investor.id)

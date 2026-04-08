@@ -36,6 +36,7 @@ import {
   discoverNewFirmNamesNotInDatabase,
   loadExistingFirmKeysFromDb,
   normalizeFirmKey,
+  hasDiscoveryWebPresence,
 } from '../lib/vc-discovery-from-web'
 import { ingestFirmToPrisma } from '../lib/vc-prisma-ingest'
 import { upsertInvestorToVcDirectory } from '../lib/vc-supabase-sync'
@@ -228,6 +229,11 @@ async function main() {
         if (newCount >= maxNew) break
         const key = normalizeFirmKey(name)
         if (key && keys.has(key)) continue
+        const hasWeb = await hasDiscoveryWebPresence(name)
+        if (!hasWeb) {
+          console.log(`   ⏭️  Skipping ${name} — no strong web presence detected`)
+          continue
+        }
         const { ok, isNew, resolvedKey } = await ingestOneFirm(name, delayMs)
         if (!ok) continue
         if (resolvedKey) keys.add(resolvedKey)

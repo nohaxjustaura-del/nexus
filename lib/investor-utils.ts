@@ -133,11 +133,109 @@ interface InvestorData {
   decisionSpeed?: string
   notableInvestments?: string
   portfolio?: string
+  /** Sector/stage-specific requirements from enrichment */
+  proofPoints?: string | null
+  /** Investment thesis — preferred source for summary when substantive */
+  thesis?: string | null
+  /** Short bio when thesis is thin */
+  bio?: string | null
+  /** Human-readable AUM / fund size when stored */
+  fundSize?: string | null
+}
+
+function resolveCheckRange(inv: InvestorData & { checkMin?: number; checkMax?: number }): {
+  min: number | undefined
+  max: number | undefined
+} {
+  const min = inv.checkSizeMin ?? inv.checkMin
+  const max = inv.checkSizeMax ?? inv.checkMax
+  return { min, max }
+}
+
+/** Thesis long enough and not obvious boilerplate — use as summary lead */
+function isUsableThesisForSummary(t: string | null | undefined): boolean {
+  if (!t || typeof t !== 'string') return false
+  const s = t.trim()
+  if (s.length < 45) return false
+  const lower = s.toLowerCase()
+  if (lower.includes('leading investor') && s.length < 120) return false
+  if (/^#{1,3}\s|^>\s|^===/.test(s)) return false
+  return true
+}
+
+/** First ~1–2 sentences or char-bounded excerpt for UI */
+function excerptThesisText(thesis: string, maxChars: number): string {
+  const s = thesis.trim()
+  if (s.length <= maxChars) return s
+  const chunks = s.split(/(?<=[.!?])\s+/).filter(Boolean)
+  let acc = ''
+  for (const c of chunks) {
+    const next = acc ? `${acc} ${c}` : c
+    if (next.length <= maxChars) acc = next
+    else break
+  }
+  if (acc.length >= 80) return acc.endsWith('.') ? acc : `${acc}.`
+  const cut = s.slice(0, maxChars - 1).trim()
+  const lastSpace = cut.lastIndexOf(' ')
+  if (lastSpace > 60) return `${cut.slice(0, lastSpace)}…`
+  return `${cut}…`
+}
+
+function formatValueAddSnippets(tags: string[], maxTags: number): string {
+  const t = dedupeAndClean(tags)
+    .slice(0, maxTags)
+    .map((x) => x.charAt(0).toUpperCase() + x.slice(1))
+  if (t.length === 0) return ''
+  if (t.length === 1) return t[0]!
+  return `${t.slice(0, -1).join(', ')} and ${t[t.length - 1]}`
+}
+
+/** One readable sentence from proofPoints JSON (arrays or key/value). */
+function formatProofPointsForSummary(raw: string | null | undefined): string {
+  if (!raw || typeof raw !== 'string') return ''
+  const parsed = parseJSON<unknown>(raw, null)
+  if (parsed == null) return ''
+  if (Array.isArray(parsed)) {
+    const items = parsed
+      .map((x) => (typeof x === 'string' ? x.trim() : String(x)))
+      .filter((s) => s.length > 2)
+      .slice(0, 4)
+    if (items.length === 0) return ''
+    return `Looks for ${items.join('; ')}.`
+  }
+  if (typeof parsed === 'object') {
+    const entries = Object.entries(parsed as Record<string, unknown>)
+      .map(([k, v]) => {
+        if (Array.isArray(v)) {
+          const joined = v.map((x) => String(x)).filter(Boolean).join(', ')
+          return joined ? `${k}: ${joined}` : ''
+        }
+        if (v != null && String(v).trim()) return `${k}: ${String(v).trim()}`
+        return ''
+      })
+      .filter(Boolean)
+      .slice(0, 4)
+    if (entries.length === 0) return ''
+    return `Looks for ${entries.join('; ')}.`
+  }
+  return ''
 }
 
 /**
- * Generate unique, high-signal summary (2-3 sentences)
- * Structure: Identity + Behavior + Unique Value
+ * Truncate a summary for discover card previews (single line clamp friendly).
+ */
+export function truncateInvestorSummaryForCard(summary: string, maxChars: number): string {
+  const s = summary.trim()
+  if (s.length <= maxChars) return s
+  const cut = s.slice(0, maxChars - 1)
+  const last = cut.lastIndexOf(' ')
+  if (last > maxChars * 0.55) return `${cut.slice(0, last)}…`
+  return `${cut}…`
+}
+
+/**
+ * Generate high-signal summary (2–4 sentences).
+ * Prefers thesis, then bio; otherwise structured identity + checks + geo + value-add + portfolio.
  */
 export function generateInvestorSummary(investor: InvestorData): string {
   const stages = parseJSON<string[]>(investor.stages, [])
@@ -146,13 +244,62 @@ export function generateInvestorSummary(investor: InvestorData): string {
   const valueAdd = parseJSON<string[]>(investor.valueAddTags, [])
   const notableInvestments = parseJSON<string[]>(investor.notableInvestments, [])
   const portfolio = parseJSON<any[]>(investor.portfolio, [])
+  const { min: checkMin, max: checkMax } = resolveCheckRange(investor)
+
+  const thesis = investor.thesis?.trim()
+  if (isUsableThesisForSummary(thesis)) {
+    const core = excerptThesisText(thesis!, 520)
+    const facts: string[] = []
+    if (checkMin && checkMax) {
+      facts.push(`${formatCheckSize(checkMin, checkMax)} checks`)
+    }
+    if (investor.fundSize?.trim()) {
+      facts.push(`fund size ${investor.fundSize.trim()}`)
+    }
+    if (geo.length > 0) {
+      facts.push(geo.slice(0, 2).join(' & '))
+    }
+    if (investor.leadFollow === 'lead') facts.push('often leads')
+    else if (investor.leadFollow === 'follow') facts.push('often follows')
+    if (investor.decisionSpeed?.trim() && investor.decisionSpeed.length < 100) {
+      facts.push(`decisions: ${investor.decisionSpeed.trim()}`)
+    }
+    const tail = facts.length ? ` (${facts.join(' · ')})` : ''
+    const merged = `${core}${tail}`
+    return merged.endsWith('.') || merged.endsWith(')') ? merged : `${merged}.`
+  }
+
+  // Short thesis still beats pure template — pair excerpt with hard facts
+  if (thesis && thesis.length >= 22 && !isUsableThesisForSummary(thesis)) {
+    const core = excerptThesisText(thesis, 280)
+    const facts: string[] = []
+    if (checkMin && checkMax) facts.push(`${formatCheckSize(checkMin, checkMax)} checks`)
+    if (investor.fundSize?.trim()) facts.push(`fund size ${investor.fundSize.trim()}`)
+    if (geo.length > 0) facts.push(geo.slice(0, 2).join(' & '))
+    if (investor.leadFollow === 'lead') facts.push('often leads')
+    else if (investor.leadFollow === 'follow') facts.push('often follows')
+    const proofLine = formatProofPointsForSummary(investor.proofPoints ?? undefined)
+    const parts = [core]
+    if (proofLine) parts.push(proofLine)
+    const tail = facts.length ? ` (${facts.join(' · ')})` : ''
+    const merged = `${parts.join(' ')}${tail}`
+    return merged.endsWith('.') || merged.endsWith(')') ? merged : `${merged}.`
+  }
+
+  const bio = investor.bio?.trim()
+  if (bio && bio.length >= 55 && bio.length < 900) {
+    const bioExcerpt = bio.length > 320 ? `${bio.slice(0, 317).trim()}…` : bio
+    const bits: string[] = []
+    if (checkMin && checkMax) bits.push(`${formatCheckSize(checkMin, checkMax)} checks`)
+    if (sectors.length > 0) bits.push(dedupeAndClean(sectors).slice(0, 2).join(' & '))
+    const tail = bits.length ? ` ${bits.join(' · ')}.` : ''
+    return `${bioExcerpt}${tail}`.trim()
+  }
 
   const sentences: string[] = []
 
-  // SENTENCE 1: Identity + wedge
   let identity = `${investor.firmName} is `
-  
-  // Type
+
   if (investor.fundType === 'CVC' || investor.fundType === 'corporate') {
     identity += 'a corporate venture arm'
   } else if (investor.fundType === 'accelerator') {
@@ -163,13 +310,11 @@ export function generateInvestorSummary(investor: InvestorData): string {
     identity += 'a venture capital firm'
   }
 
-  // Sector wedge (max 2)
   if (sectors.length > 0) {
     const cleanSectors = dedupeAndClean(sectors).slice(0, 2)
-    identity += ` investing in ${cleanSectors.join(' and ')}`
+    identity += ` focused on ${cleanSectors.join(' and ')}`
   }
 
-  // Stage range
   if (stages.length > 0) {
     const cleanStages = stages.map(normalizeStage).slice(0, 3)
     if (cleanStages.length === 1) {
@@ -179,18 +324,20 @@ export function generateInvestorSummary(investor: InvestorData): string {
     }
   }
 
+  if (investor.fundSize?.trim()) {
+    identity += ` (${investor.fundSize.trim()})`
+  }
+
   sentences.push(identity + '.')
 
-  // SENTENCE 2: Behavior (check size + geo + lead)
   const behaviors: string[] = []
-  
-  if (investor.checkSizeMin && investor.checkSizeMax) {
-    behaviors.push(`writes ${formatCheckSize(investor.checkSizeMin, investor.checkSizeMax)} checks`)
+
+  if (checkMin && checkMax) {
+    behaviors.push(`writes ${formatCheckSize(checkMin, checkMax)} checks`)
   }
 
   if (geo.length > 0) {
-    const geoStr = geo.slice(0, 2).join(' and ')
-    behaviors.push(`focuses on ${geoStr}`)
+    behaviors.push(`geography: ${geo.slice(0, 3).join(', ')}`)
   }
 
   if (investor.leadFollow === 'lead') {
@@ -199,32 +346,38 @@ export function generateInvestorSummary(investor: InvestorData): string {
     behaviors.push('typically follows')
   }
 
-  if (behaviors.length > 0) {
-    sentences.push('Typically ' + behaviors.join(', ') + '.')
+  if (investor.decisionSpeed?.trim()) {
+    behaviors.push(`decision cadence: ${investor.decisionSpeed.trim()}`)
   }
 
-  // SENTENCE 3: Unique value
+  if (behaviors.length > 0) {
+    sentences.push(behaviors.slice(0, 4).join('; ') + '.')
+  }
+
   if (investor.fundType === 'CVC' || investor.fundType === 'corporate') {
-    sentences.push('Best fit when strategic partnership or distribution matters.')
+    sentences.push('Strong fit when strategic partnership or distribution materially accelerates the business.')
   } else if (investor.personalityType === 'hands-on') {
     sentences.push('Known for hands-on operational support.')
   } else if (investor.personalityType === 'mentor') {
-    sentences.push('Offers deep mentorship for first-time founders.')
-  } else if (valueAdd.length > 0 && valueAdd[0]) {
-    const uniqueValue = valueAdd[0].toLowerCase()
-    if (uniqueValue.includes('oss') || uniqueValue.includes('open source')) {
-      sentences.push('Strong open-source community connections.')
-    } else if (uniqueValue.includes('recruiting')) {
-      sentences.push('Helps with early team building and recruiting.')
-    } else if (uniqueValue.includes('technical')) {
-      sentences.push('Deep technical expertise and network.')
-    }
+    sentences.push('Known for deep mentorship with first-time founders.')
+  }
+
+  const proofSentence = formatProofPointsForSummary(investor.proofPoints ?? undefined)
+  if (proofSentence) {
+    sentences.push(proofSentence)
+  }
+
+  const vaPhrase = formatValueAddSnippets(valueAdd, 2)
+  if (vaPhrase) {
+    sentences.push(`Emphasizes ${vaPhrase}.`)
   } else if (notableInvestments.length > 0) {
-    sentences.push(`Portfolio includes ${notableInvestments[0]}.`)
+    const names = notableInvestments.slice(0, 3).join(', ')
+    sentences.push(`Notable portfolio names include ${names}.`)
   } else if (portfolio.length > 0 && portfolio[0]) {
-    const companyName = typeof portfolio[0] === 'string' ? portfolio[0] : portfolio[0].name || portfolio[0].company
+    const companyName =
+      typeof portfolio[0] === 'string' ? portfolio[0] : portfolio[0].name || portfolio[0].company
     if (companyName) {
-      sentences.push(`Backed ${companyName}.`)
+      sentences.push(`Backed companies such as ${companyName}.`)
     }
   }
 

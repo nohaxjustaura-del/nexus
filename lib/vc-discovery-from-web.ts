@@ -66,6 +66,42 @@ export const VC_DISCOVERY_CONTENT_SINCE: string = (() => {
   return '2026-01-01'
 })()
 
+/**
+ * Domain allowlist for Exa discovery, per blueprint.
+ * When set, only results from these hosts are kept. This kills the
+ * "article headline as firm name" problem by ignoring general news sites.
+ *
+ * ENV: EXA_DOMAIN_ALLOWLIST=crunchbase.com,pitchbook.com,angel.co,...
+ */
+const EXA_DOMAIN_ALLOWLIST: string[] = (() => {
+  const raw = process.env.EXA_DOMAIN_ALLOWLIST?.trim()
+  if (!raw) {
+    return [
+      'crunchbase.com',
+      'pitchbook.com',
+      'angel.co',
+      'nfx.com',
+      'visible.vc',
+      'signal.nfx.com',
+      'fundingwire.com',
+    ]
+  }
+  return raw
+    .split(',')
+    .map((s) => s.trim().toLowerCase())
+    .filter(Boolean)
+})()
+
+const EXA_BLOCKED_HOST_SUBSTRINGS = [
+  'techcrunch.com',
+  'forbes.com',
+  'bloomberg.com',
+  'reuters.com',
+  'businessinsider.com',
+  'nytimes.com',
+  'wsj.com',
+]
+
 const BLUEPRINTS = [
   '{period} {sector} venture capital fund close {region}',
   'new {stage} VC fund {sector} {region} raised {year}',
@@ -295,12 +331,30 @@ function discoveryExaMaxChars(): number {
   return Math.min(8000, Math.max(800, Number.isFinite(raw) ? raw : 2400))
 }
 
+const EXA_DISCOVERY_COOLDOWN_MS = (() => {
+  const raw = parseInt(process.env.EXA_DISCOVERY_COOLDOWN_MS || '', 10)
+  if (!Number.isFinite(raw) || raw <= 0) return 60 * 60 * 1000 // default 1h
+  return Math.min(raw, 24 * 60 * 60 * 1000) // cap at 24h
+})()
+
+let nextExaDiscoveryAllowedAt: number | null = null
+
 /** Exa: neural/autocomplete search + text snippets (scrape). */
 export async function exaScrapeQuery(query: string, numResults: number): Promise<ExaScrapeResult> {
   const key = process.env.EXA_API_KEY?.trim()
   if (!key) return { urls: [], textBlock: '' }
   const maxC = discoveryExaMaxChars()
   try {
+    if (nextExaDiscoveryAllowedAt && Date.now() < nextExaDiscoveryAllowedAt) {
+      const waitMs = nextExaDiscoveryAllowedAt - Date.now()
+      console.warn(
+        `[VC-DISCOVERY] Exa in cooldown window (~${Math.ceil(
+          waitMs / 1000,
+        )}s remaining); skipping discovery query: ${query}`,
+      )
+      return { urls: [], textBlock: '' }
+    }
+
     const exa = new Exa(key)
     const res = await exa.search(query, {
       type: 'auto',
@@ -309,7 +363,19 @@ export async function exaScrapeQuery(query: string, numResults: number): Promise
       contents: { text: { maxCharacters: maxC } },
     })
     const results = res.results ?? []
-    const urls = results.map((r) => r.url).filter((u) => typeof u === 'string' && /^https?:\/\//i.test(u))
+    const urls = results
+      .map((r) => r.url)
+      .filter((u) => typeof u === 'string' && /^https?:\/\//i.test(u))
+      .filter((u) => {
+        try {
+          const host = new URL(u!).hostname.toLowerCase()
+          if (EXA_BLOCKED_HOST_SUBSTRINGS.some((b) => host.includes(b))) return false
+          if (EXA_DOMAIN_ALLOWLIST.length === 0) return true
+          return EXA_DOMAIN_ALLOWLIST.some((allowed) => host === allowed || host.endsWith(`.${allowed}`))
+        } catch {
+          return false
+        }
+      })
     const textBlock = results
       .map((r, i) => {
         const title = r.title ?? 'Untitled'
@@ -322,9 +388,49 @@ export async function exaScrapeQuery(query: string, numResults: number): Promise
     const msg = e instanceof Error ? e.message : String(e)
     console.warn('[VC-DISCOVERY] Exa scrape failed:', msg)
     if (/402|403|429|quota|credit|limit|exceeded|payment|unauthor/i.test(msg)) {
-      console.warn('[VC-DISCOVERY] Exa may be billing/auth/rate limited. See https://exa.ai')
+      console.warn('[VC-DISCOVERY] Putting Exa discovery into cooldown; check EXA_API_KEY/quota (https://exa.ai).')
+      nextExaDiscoveryAllowedAt = Date.now() + EXA_DISCOVERY_COOLDOWN_MS
     }
     return { urls: [], textBlock: '' }
+  }
+}
+
+/**
+ * Lightweight web presence check for a candidate firm name.
+ * Uses a small Exa query and domain heuristics to ensure the name
+ * maps to a real investment entity homepage/profile before we spend
+ * full research budget.
+ */
+export async function hasDiscoveryWebPresence(name: string): Promise<boolean> {
+  const key = process.env.EXA_API_KEY?.trim()
+  if (!key) return false
+
+  const q = `"${name}" official site`
+  const { urls } = await exaScrapeQuery(q, 3)
+  if (!urls.length) return false
+
+  try {
+    const u = new URL(urls[0]!)
+    const host = u.hostname.toLowerCase()
+    const path = u.pathname.toLowerCase()
+
+    // Reject obvious news / generic content hosts
+    if (EXA_BLOCKED_HOST_SUBSTRINGS.some((b) => host.includes(b))) return false
+
+    // Accept common firm / directory patterns
+    if (/\.(vc|fund|capital)$/.test(host)) return true
+    if (/linkedin\.com$/.test(host) && path.includes('/company/')) return true
+    if (/crunchbase\.com$/.test(host) && path.includes('/organization/')) return true
+
+    // If we have an allowlist, require membership
+    if (EXA_DOMAIN_ALLOWLIST.length > 0) {
+      const allowed = EXA_DOMAIN_ALLOWLIST.some((a) => host === a || host.endsWith(`.${a}`))
+      return allowed
+    }
+
+    return false
+  } catch {
+    return false
   }
 }
 

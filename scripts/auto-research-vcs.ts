@@ -6,11 +6,22 @@
  */
 
 import { db } from '../lib/db'
+import { clearInvestorCache } from '../lib/investor-cache'
+import { isInvestorEligibleForWorkers } from '../lib/investor-worker-eligibility'
 import { syncInvestorEmbeddingById } from '../lib/vc-embedding-sync'
 import { isLikelyRealFirmName } from '../lib/firm-name-quality'
 import { openrouterGenerateJson, hasVcLlmConfigured } from '../lib/openrouter'
 import { normalizeResearchForDb } from '../lib/vc-research-normalize'
 import { gatherVCFirmRetrievalContext, getVcResearchPipelineEnvStatus } from '../lib/vc-research-retrieval'
+import {
+  classifyVcEntityFromExaContext,
+  entityGateIndicatesBogusPublicListing,
+  getVcResearchAutoHideBogus,
+  getVcResearchEntityGateMode,
+  getVcResearchEntitySkipMinConfidence,
+  type VcEntityGateResult,
+} from '../lib/vc-research-entity-gate'
+import { researchApplyContactAndUpdate } from '../lib/vc-apply-contact-research'
 import {
   sanitizeInvestmentThesis,
   isDealAnnouncementThesis,
@@ -304,17 +315,57 @@ If you cannot produce a mandate summary, use "thesis": null.`,
   }
 }
 
+export type ResearchVcOptions = {
+  /** When set, bogus auto-hide updates this row; otherwise we look up by firmName (case-insensitive). */
+  investorId?: string
+}
+
+async function tryAutoHideInvestorAfterEntityGate(
+  gate: VcEntityGateResult,
+  firmName: string,
+  investorId?: string,
+): Promise<boolean> {
+  if (!getVcResearchAutoHideBogus()) return false
+  if (!entityGateIndicatesBogusPublicListing(gate)) return false
+  let id = investorId
+  if (!id) {
+    const row = await db.investor.findFirst({
+      where: { firmName: { equals: firmName, mode: 'insensitive' } },
+      select: { id: true },
+    })
+    id = row?.id
+  }
+  if (!id) return false
+  await db.investor.update({
+    where: { id },
+    data: { isPublic: false, discoverable: false },
+  })
+  clearInvestorCache()
+  console.log(
+    `   🚫 Auto-hidden (entity gate): "${firmName}" — ${gate.name_kind} / ${gate.entity_kind} (${gate.confidence}%)`,
+  )
+  return true
+}
+
 /**
  * Research a single VC firm (dual-Exa + OpenRouter). Mode limits extraction/application.
  */
 async function researchVC(
   firmName: string,
   mode: ResearchBatchMode = 'full',
+  opts?: ResearchVcOptions,
 ): Promise<VCResearchResult | null> {
   const label = mode === 'full' ? 'Researching' : mode === 'thesis' ? 'Thesis refresh' : 'Profile refresh'
   console.log(`\n🔍 ${label}: ${firmName}`)
 
   try {
+    if (!isInvestorEligibleForWorkers(firmName)) {
+      console.log(
+        `   ⏭️ Skipping — firm name not eligible for workers (generic, bogus, or article-style title): ${firmName}`,
+      )
+      return null
+    }
+
     if (!hasVcLlmConfigured()) {
       console.error(
         `   ⚠️ Set OPENROUTER_API_KEY or Ollama (OLLAMA_BASE_URL + OLLAMA_MODEL / OLLAMA_VC_MODEL) for extraction. Exa supplies text.`,
@@ -337,6 +388,38 @@ async function researchVC(
     console.log(
       `   📚 Context: Exa ${snapshot.exaTotalResults} result(s), ${snapshot.exaPassesWithHits}/3 passes, ${snapshot.mergedContext.length} chars`,
     )
+
+    const gateMode = getVcResearchEntityGateMode()
+    const gate = await classifyVcEntityFromExaContext(
+      firmName,
+      snapshot.mergedContext,
+      snapshot.exaTotalResults,
+    )
+    if (gate) {
+      console.log(
+        `   🧭 Entity gate: ${gate.entity_kind} | name: ${gate.name_kind} | extract=${gate.should_run_full_extraction} (${gate.confidence}%)`,
+      )
+      if (gate.canonical_name_hint) {
+        console.log(`   🧭 Canonical name hint: ${gate.canonical_name_hint}`)
+      }
+      if (gate.rationale_one_line) {
+        console.log(`   🧭 ${gate.rationale_one_line}`)
+      }
+      const hidden = await tryAutoHideInvestorAfterEntityGate(gate, firmName, opts?.investorId)
+      if (hidden) {
+        console.log(`   ⏭️ Skipping enrichment — row auto-hidden (bogus listing)`)
+        return null
+      }
+      const minC = getVcResearchEntitySkipMinConfidence()
+      if (
+        gateMode === 'enforce' &&
+        !gate.should_run_full_extraction &&
+        gate.confidence >= minC
+      ) {
+        console.log(`   ⏭️ Skipping enrichment — entity gate (enforce, confidence ≥ ${minC})`)
+        return null
+      }
+    }
 
     const base = {
       firmName,
@@ -373,16 +456,26 @@ async function researchVC(
  * Update VC in database  -  only fills in missing fields, never overwrites
  * existing good data with potentially worse AI-extracted data.
  */
+async function loadInvestorRowForUpdate(firmName: string, investorRowId?: string | null) {
+  if (investorRowId) {
+    return db.investor.findUnique({ where: { id: investorRowId } })
+  }
+  return db.investor.findFirst({
+    where: { firmName: { equals: firmName, mode: 'insensitive' } },
+  })
+}
+
 /** Apply only thesis (+ verified). */
-export async function updateVCInDatabaseThesisOnly(research: VCResearchResult): Promise<boolean> {
+export async function updateVCInDatabaseThesisOnly(
+  research: VCResearchResult,
+  investorRowId?: string | null,
+): Promise<boolean> {
   try {
     if (!isLikelyRealFirmName(research.firmName)) {
       console.log(`   ⚠️ Skipping low-quality firm name: ${research.firmName}`)
       return false
     }
-    const existing = await db.investor.findFirst({
-      where: { firmName: research.firmName },
-    })
+    const existing = await loadInvestorRowForUpdate(research.firmName, investorRowId)
     if (!existing) {
       console.log(`   ⚠️ VC not found in database: ${research.firmName}`)
       return false
@@ -414,15 +507,16 @@ export async function updateVCInDatabaseThesisOnly(research: VCResearchResult): 
 }
 
 /** Apply profile fields only — never touches thesis. */
-export async function updateVCInDatabaseProfileOnly(research: VCResearchResult): Promise<boolean> {
+export async function updateVCInDatabaseProfileOnly(
+  research: VCResearchResult,
+  investorRowId?: string | null,
+): Promise<boolean> {
   try {
     if (!isLikelyRealFirmName(research.firmName)) {
       console.log(`   ⚠️ Skipping low-quality firm name: ${research.firmName}`)
       return false
     }
-    const existing = await db.investor.findFirst({
-      where: { firmName: research.firmName },
-    })
+    const existing = await loadInvestorRowForUpdate(research.firmName, investorRowId)
     if (!existing) {
       console.log(`   ⚠️ VC not found in database: ${research.firmName}`)
       return false
@@ -496,15 +590,16 @@ export async function updateVCInDatabaseProfileOnly(research: VCResearchResult):
   }
 }
 
-async function updateVCInDatabase(research: VCResearchResult): Promise<boolean> {
+async function updateVCInDatabase(
+  research: VCResearchResult,
+  investorRowId?: string | null,
+): Promise<boolean> {
   try {
     if (!isLikelyRealFirmName(research.firmName)) {
       console.log(`   ⚠️ Skipping low-quality firm name: ${research.firmName}`)
       return false
     }
-    const existing = await db.investor.findFirst({
-      where: { firmName: research.firmName },
-    })
+    const existing = await loadInvestorRowForUpdate(research.firmName, investorRowId)
 
     if (!existing) {
       console.log(`   ⚠️ VC not found in database: ${research.firmName}`)
@@ -600,30 +695,44 @@ async function updateVCInDatabase(research: VCResearchResult): Promise<boolean> 
   }
 }
 
+export type ResearchVcBatchOptions = {
+  delayBetweenSearches?: number
+  maxConcurrent?: number
+  mode?: ResearchBatchMode
+  /**
+   * When true (default), only resolve rows with isPublic=true (Discover corpus). Skips Exa/LLM if none.
+   * Set false only for internal jobs that must touch non-public rows.
+   */
+  discoverCorpusOnly?: boolean
+}
+
 /**
  * Research multiple VCs (batch processing)
  */
 async function researchVCsBatch(
   firmNames: string[],
-  options: {
-    delayBetweenSearches?: number
-    maxConcurrent?: number
-    mode?: ResearchBatchMode
-  } = {}
+  options: ResearchVcBatchOptions = {},
 ): Promise<void> {
-  const { delayBetweenSearches = 2000, maxConcurrent = 3, mode = 'full' } = options
+  const {
+    delayBetweenSearches = 2000,
+    maxConcurrent = 3,
+    mode = 'full',
+    discoverCorpusOnly = true,
+  } = options
 
   console.log(`\n🚀 Starting batch research: ${firmNames.length} VCs (mode=${mode})`)
-  console.log(`   Delay: ${delayBetweenSearches}ms, Max concurrent: ${maxConcurrent}\n`)
+  console.log(
+    `   Delay: ${delayBetweenSearches}ms, Max concurrent: ${maxConcurrent}, discover corpus only: ${discoverCorpusOnly}\n`,
+  )
 
   let updated = 0
   let failed = 0
 
-  const apply = async (research: VCResearchResult) => {
+  const apply = async (research: VCResearchResult, rowId: string) => {
     const n = normalizeResearchForDb(research)
-    if (mode === 'thesis') return updateVCInDatabaseThesisOnly(n)
-    if (mode === 'profile') return updateVCInDatabaseProfileOnly(n)
-    return updateVCInDatabase(n)
+    if (mode === 'thesis') return updateVCInDatabaseThesisOnly(n, rowId)
+    if (mode === 'profile') return updateVCInDatabaseProfileOnly(n, rowId)
+    return updateVCInDatabase(n, rowId)
   }
 
   for (let i = 0; i < firmNames.length; i += maxConcurrent) {
@@ -631,12 +740,37 @@ async function researchVCsBatch(
 
     const results = await Promise.all(
       batch.map(async (firmName) => {
-        const research = await researchVC(firmName, mode)
-        if (research) {
-          const ok = await apply(research)
-          return { firmName, success: ok }
+        const inv = await db.investor.findFirst({
+          where: discoverCorpusOnly
+            ? { firmName: { equals: firmName, mode: 'insensitive' }, isPublic: true }
+            : { firmName: { equals: firmName, mode: 'insensitive' } },
+          select: { id: true },
+        })
+        if (discoverCorpusOnly && !inv) {
+          console.log(`   ⏭️ Skipping — no public (Discover) investor row for "${firmName}"`)
+          return { firmName, success: false }
         }
-        return { firmName, success: false }
+        const research = await researchVC(firmName, mode, { investorId: inv?.id })
+        if (!research) {
+          return { firmName, success: false }
+        }
+
+        if (!inv?.id) {
+          console.log(`   ⏭️ Skipping apply — could not resolve investor row for "${firmName}"`)
+          return { firmName, success: false }
+        }
+
+        const ok = await apply(research, inv.id)
+
+        if (ok) {
+          try {
+            await researchApplyContactAndUpdate(firmName, { overwrite: false, investorId: inv.id })
+          } catch (err) {
+            console.error(`[VC-RESEARCH] Apply/contact enrichment failed for ${firmName}:`, err)
+          }
+        }
+
+        return { firmName, success: ok }
       })
     )
 
@@ -673,24 +807,56 @@ async function main() {
     ]
     await researchVCsBatch(topVCs, { delayBetweenSearches: 2000, maxConcurrent: 2 })
   } else if (args[0] === '--all') {
-    console.log('⚠️ Researching ALL VCs  -  this will take hours!')
+    console.log('⚠️ Researching public (Discover) investors only  -  this will take hours!')
     const allVCs = await db.investor.findMany({
+      where: { isPublic: true },
       select: { firmName: true },
       orderBy: { updatedAt: 'asc' },
     })
-    await researchVCsBatch(allVCs.map(vc => vc.firmName), {
+    const eligibleNames = allVCs.map((vc) => vc.firmName).filter((n) => isInvestorEligibleForWorkers(n))
+    const skipped = allVCs.length - eligibleNames.length
+    if (skipped > 0) {
+      console.log(
+        `⏭️ Skipping ${skipped} investor(s) — firm name not eligible for worker spend (no Exa/LLM). Run worker:hide-low-quality to de-public junk still marked public.`,
+      )
+    }
+    await researchVCsBatch(eligibleNames, {
       delayBetweenSearches: 3000,
       maxConcurrent: 1,
     })
   } else if (args[0]) {
-    const research = await researchVC(args[0])
-    if (research) await updateVCInDatabase(normalizeResearchForDb(research))
+    const inv = await db.investor.findFirst({
+      where: { firmName: { equals: args[0], mode: 'insensitive' }, isPublic: true },
+      select: { id: true },
+    })
+    if (!inv) {
+      console.log(
+        `⏭️ No public investor found for "${args[0]}". CLI only enriches isPublic=true rows (Discover).`,
+      )
+      return
+    }
+    const research = await researchVC(args[0], 'full', { investorId: inv.id })
+    if (research) {
+      await updateVCInDatabase(normalizeResearchForDb(research), inv.id)
+      try {
+        await researchApplyContactAndUpdate(args[0], { investorId: inv.id })
+      } catch (err) {
+        console.error(`[VC-RESEARCH] Apply/contact enrichment failed:`, err)
+      }
+    }
   } else {
     console.log(`
 Usage:
   npm run research-vcs -- --batch    # Research top 10 VCs
-  npm run research-vcs -- --all      # Research all VCs (slow!)
-  npm run research-vcs -- "VC Name"  # Research specific VC
+  npm run research-vcs -- --all      # Public (Discover) investors only; eligible names; see worker:hide-low-quality
+  npm run research-vcs -- "VC Name"  # One public investor by name (isPublic=true only)
+
+Enrichment + auto-hide (entity classifier runs when gate not off or AUTO_HIDE_BOGUS=1):
+  VC_RESEARCH_ENTITY_GATE=observe|enforce|off
+  VC_RESEARCH_AUTO_HIDE_BOGUS=1   # set isPublic/discoverable false when gate marks bogus listing
+
+Continuous daemon: npm run research-worker
+Env: VC_RESEARCH_INTERVAL_MINUTES, VC_RESEARCH_BATCH_SIZE
     `)
   }
 }

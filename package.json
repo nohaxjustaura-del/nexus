@@ -58,7 +58,15 @@
     "check-embeddings": "tsx scripts/check-embeddings.ts",
     "vc:fix-headline-names": "tsx scripts/fix-headline-firm-names.ts",
     "faiss:sync-firm-names": "tsx scripts/sync-faiss-jsonl-firm-names.ts",
-    "logo:knockout-bg": "node scripts/knockout-nexus-logo-bg.mjs"
+    "logo:knockout-bg": "node scripts/knockout-nexus-logo-bg.mjs",
+    "worker:hide-low-quality": "tsx scripts/vc-hide-low-quality-investors.ts",
+    "worker:enforce-pristine": "tsx scripts/enforce-investor-pristine.ts",
+    "worker:hide-nondiscoverable-public": "tsx scripts/vc-hide-nondiscoverable-from-public.ts",
+    "worker:restore-nondiscoverable-public": "tsx scripts/vc-hide-nondiscoverable-from-public.ts --restore",
+    "worker:restore-non-canonical": "tsx scripts/vc-restore-if-not-canonical-dup.ts",
+    "worker:export-public-snapshot": "tsx scripts/vc-export-public-investors-snapshot.ts",
+    "worker:list-hidden": "tsx scripts/vc-list-hidden-investors.ts",
+    "worker:audit-firm-dupes": "tsx scripts/audit-similar-firm-names.ts"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
