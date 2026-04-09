@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { getUserFromRequest } from '@/lib/auth'
-import { sendFounderApplicationReceipt } from '@/lib/email'
+import { notifyAdminsNewFounderSignup, sendFounderApplicationReceipt } from '@/lib/email'
 import type { Founder, FounderContact, FounderPrefs } from '@prisma/client'
 
 export const dynamic = 'force-dynamic'
@@ -236,6 +236,7 @@ export async function POST(request: NextRequest) {
     const existingFounder = await db.founder.findUnique({
       where: { email: normalizedEmail },
     })
+    const isNewFounder = !existingFounder
 
     const founderData = {
       name,
@@ -368,6 +369,21 @@ export async function POST(request: NextRequest) {
       await sendFounderApplicationReceipt(normalizedEmail, name)
     } catch (e) {
       console.warn('sendFounderApplicationReceipt failed:', e)
+    }
+
+    if (isNewFounder) {
+      try {
+        await notifyAdminsNewFounderSignup({
+          name,
+          email: normalizedEmail,
+          startupName: startupName || null,
+          stage: String(stage),
+          location,
+          phone: phone ? String(phone) : null,
+        })
+      } catch (e) {
+        console.warn('notifyAdminsNewFounderSignup failed:', e)
+      }
     }
 
     // Redirect client to thank-you page via JSON hint

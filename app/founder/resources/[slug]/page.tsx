@@ -1,7 +1,15 @@
 import type { Metadata } from 'next'
+import dynamic from 'next/dynamic'
 import { notFound } from 'next/navigation'
 import { getResourcePartner } from '@/lib/partner-resources'
-import PartnerResourcesClient from '../partner-resources-client'
+
+const PartnerResourcesClient = dynamic(() => import('../partner-resources-client'), {
+  loading: () => (
+    <div className="flex min-h-[50vh] items-center justify-center text-sm text-muted-foreground">
+      Loading resources…
+    </div>
+  ),
+})
 
 type Props = { params: { slug: string } }
 

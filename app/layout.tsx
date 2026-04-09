@@ -35,8 +35,8 @@ const outfit = Outfit({
 export async function generateMetadata(): Promise<Metadata> {
   const verifiedCount = await getVerifiedInvestorCount()
   const label = formatVerifiedInvestorCount(verifiedCount)
-  const description = `NEXUS is purpose-built fundraising intelligence. It reads your pitch with an allocator-style lens, scores fit signals, and ranks ${label}+ verified VCs, angels, accelerators, and corporate venture arms. You get a shortlist tied to real mandates instead of a generic chatbot take on “who might invest.”`
-  const ogDescription = `${label}+ verified investors ranked against your story and stage. Built for real fundraising workflows (shortlists, rationale, outreach), not one-off answers from a general-purpose model.`
+  const description = `NEXUS is fundraising intelligence built for investor fit. It reads your pitch like an investor would, scores fit, and ranks ${label}+ verified VCs, angels, accelerators, and corporate venture arms. You get a shortlist tied to real mandates, not a generic chatbot list of who might invest.`
+  const ogDescription = `${label}+ verified investors ranked to your story and stage. Shortlists, rationale, and outreach in one workflow, not a one-off answer from a general chat model.`
 
   return {
     metadataBase: new URL(siteUrl),
@@ -77,7 +77,7 @@ export async function generateMetadata(): Promise<Metadata> {
       card: "summary_large_image",
       title: BRAND_DEFAULT_TITLE,
       description:
-        "Ranked investor shortlists from your pitch with verified mandates, allocator-style scoring, and workflow tools. More specific than asking a general AI who to email.",
+        "Ranked investor shortlists from your pitch using verified mandates, clear scores, and workflow tools. More specific than asking a general AI who to email.",
     },
     robots: {
       index: true,
@@ -103,6 +103,7 @@ export const viewport = {
   width: 'device-width',
   initialScale: 1,
   maximumScale: 5,
+  themeColor: '#1D3567',
 }
 
 type RootLayoutProps = Readonly<{
@@ -155,6 +156,9 @@ export default function RootLayout({ children }: RootLayoutProps) {
                     <nav className="mt-3 flex flex-col gap-2 text-sm" aria-label="Footer product">
                       <Link href="/pricing" className="text-muted-foreground transition-colors hover:text-foreground">
                         Pricing
+                      </Link>
+                      <Link href="/vc-guide" className="text-muted-foreground transition-colors hover:text-foreground">
+                        VC guide
                       </Link>
                       <Link href="/about" className="text-muted-foreground transition-colors hover:text-foreground">
                         About

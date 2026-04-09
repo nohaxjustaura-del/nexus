@@ -44,7 +44,7 @@ export default function AboutClient({ verifiedInvestorCountLabel }: { verifiedIn
           <p className="mx-auto max-w-2xl text-base leading-relaxed text-muted-foreground sm:text-lg">
             We analyze your idea, deck, or video with a fundraising-specific lens, then rank investors from{' '}
             <span className="font-medium text-foreground">{verifiedInvestorCountLabel} verified profiles</span> so suggestions
-            map to real mandates—not invented names.
+            map to real mandates, not invented names.
           </p>
         </div>
 
@@ -58,8 +58,8 @@ export default function AboutClient({ verifiedInvestorCountLabel }: { verifiedIn
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-base leading-relaxed text-muted-foreground">
-              {BRAND_NAME} reviews what you share like an allocator would, then ranks investors by mandate fit so you focus on
-              credible outreach—not spray-and-pray volume.
+              {BRAND_NAME} reviews what you share the way an investor would, then ranks investors by mandate fit so you focus on
+              credible outreach, not spray-and-pray volume.
             </p>
             <Accordion type="single" collapsible className="w-full rounded-lg border border-border/40 px-3">
               <AccordionItem value="why-not-chat" className="border-0">
@@ -69,7 +69,7 @@ export default function AboutClient({ verifiedInvestorCountLabel }: { verifiedIn
                 <AccordionContent>
                   <p className="pb-2 text-sm leading-relaxed">
                     Big models optimize for fluent text, not a maintained investor graph. Directories alone are noisy without
-                    a fit layer tied to your materials—we combine both.
+                    a fit layer tied to your materials. We combine both.
                   </p>
                 </AccordionContent>
               </AccordionItem>
@@ -135,7 +135,7 @@ export default function AboutClient({ verifiedInvestorCountLabel }: { verifiedIn
                         <li className="flex items-start gap-2">
                           <CheckCircle className={checkClass} aria-hidden />
                           <span>
-                            <strong className="text-foreground">Resume:</strong> Team and traction context—{' '}
+                            <strong className="text-foreground">Resume:</strong> Team and traction context. See{' '}
                             <Link
                               href="/founder/resume-analysis"
                               className="font-medium text-primary underline-offset-2 hover:underline"
@@ -166,7 +166,7 @@ export default function AboutClient({ verifiedInvestorCountLabel }: { verifiedIn
                   <li className="flex items-start gap-2">
                     <CheckCircle className={checkClass} aria-hidden />
                     <span>
-                      Rankings use stage, sector, vision, and how you operate—backed by{' '}
+                      Rankings use stage, sector, vision, and how you operate, backed by{' '}
                       <strong className="text-foreground">{verifiedInvestorCountLabel} verified investors</strong>.
                     </span>
                   </li>
@@ -250,7 +250,7 @@ export default function AboutClient({ verifiedInvestorCountLabel }: { verifiedIn
                     <h3 className="mb-2 font-heading text-lg font-semibold">Privacy-conscious</h3>
                     <p className="text-muted-foreground">
                       We treat decks and personal data carefully and do not share them without your consent. As noted in
-                      the product, uploaded analysis content is automatically removed after 30–90 days per retention
+                      the product, uploaded analysis content is automatically removed after 30 to 90 days per retention
                       settings.
                     </p>
                   </div>
@@ -312,13 +312,13 @@ export default function AboutClient({ verifiedInvestorCountLabel }: { verifiedIn
           </div>
         </div>
 
-        {/* How it works — link to home walkthrough */}
+        {/* How it works - link to home walkthrough */}
         <div className="mb-12">
           <Card className={cn('text-center', cardClass)}>
             <CardContent className="py-10">
               <h2 className="font-heading text-xl font-semibold tracking-tight md:text-2xl">How it works</h2>
               <p className="mx-auto mt-3 max-w-lg text-sm text-muted-foreground">
-                The step-by-step walkthrough—with visuals—is on the homepage so we do not repeat it here.
+                The step-by-step walkthrough, with visuals, is on the homepage so we do not repeat it here.
               </p>
               <Link
                 href="/#home-how-heading"

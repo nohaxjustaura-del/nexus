@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import { useAuthSession } from '@/components/auth-session-provider'
+import { useChromeMode } from '@/components/chrome-mode-provider'
 
 interface ProtectedNavLinkProps {
   href: string
@@ -17,9 +18,13 @@ export function ProtectedNavLink({ href, children, className, publicRoute = fals
   const pathname = usePathname()
   const [mounted, setMounted] = useState(false)
   const { loading, authenticated, verified } = useAuthSession()
+  const { chrome } = useChromeMode()
   const [linkHref, setLinkHref] = useState(href)
 
   const authed = authenticated && verified
+  const prefetchFounderWorkspace =
+    authenticated &&
+    (pathname?.startsWith('/founder') || chrome === 'founder')
 
   useEffect(() => {
     setMounted(true)
@@ -52,7 +57,7 @@ export function ProtectedNavLink({ href, children, className, publicRoute = fals
           : 'text-muted-foreground hover:bg-muted/55 hover:text-foreground',
         className
       )}
-      prefetch={publicRoute || authed}
+      prefetch={publicRoute || authed || prefetchFounderWorkspace}
     >
       {children}
     </Link>

@@ -307,7 +307,8 @@ export const UNIVERSITY_PROGRAMS: UniversityProgram[] = [
     checkSize: { min: 500, max: 3000 },
     applicationUrl: 'https://pear.vc',
     deadline: 'rolling',
-    description: 'Pre-seed and seed fund with deep Stanford roots, investing in technical founders — Stanford affiliation preferred but not required.',
+    description:
+      'Pre-seed and seed fund with deep Stanford roots for technical founders. Stanford ties help but are not required.',
     stageFocus: ['pre-seed', 'seed'],
     sectorFocus: [],
     isOpenAccelerator: false,

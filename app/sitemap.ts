@@ -1,5 +1,6 @@
 import { MetadataRoute } from 'next'
 import { getSiteUrl } from '@/lib/site-url'
+import { RESOURCE_PARTNERS } from '@/lib/partner-resources'
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const baseUrl = getSiteUrl()
@@ -14,6 +15,13 @@ export default function sitemap(): MetadataRoute.Sitemap {
 
   const staticPages: Array<{ path: string; priority: number; changeFrequency: MetadataRoute.Sitemap[number]['changeFrequency'] }> = [
     { path: '/about', priority: 0.8, changeFrequency: 'monthly' },
+    { path: '/company', priority: 0.8, changeFrequency: 'monthly' },
+    { path: '/founder/resources', priority: 0.7, changeFrequency: 'weekly' },
+    ...RESOURCE_PARTNERS.map((p) => ({
+      path: `/founder/resources/${p.slug}` as const,
+      priority: 0.65,
+      changeFrequency: 'weekly' as const,
+    })),
     { path: '/contact', priority: 0.7, changeFrequency: 'monthly' },
     { path: '/blog', priority: 0.6, changeFrequency: 'weekly' },
     { path: '/vc-guide', priority: 0.7, changeFrequency: 'monthly' },
@@ -29,8 +37,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { path: '/verification-notice', priority: 0.3, changeFrequency: 'yearly' },
   ]
 
-  const staticDate = new Date('2025-01-01')
-
   return [
     ...dynamicPages.map(page => ({
       url: `${baseUrl}${page.path}`,
@@ -40,7 +46,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     })),
     ...staticPages.map(page => ({
       url: `${baseUrl}${page.path}`,
-      lastModified: staticDate,
+      lastModified: now,
       changeFrequency: page.changeFrequency,
       priority: page.priority,
     })),

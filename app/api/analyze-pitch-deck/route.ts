@@ -13,49 +13,11 @@ import { getComprehensiveFounderContext } from '@/lib/founder-context'
 import { saveFileToDisk, buildFounderSnapshot } from '@/lib/file-storage'
 import { getDeepMarketContext } from '@/lib/market-intelligence'
 import { runScoringPipeline } from '@/lib/scoring/scoring-pipeline'
+import { extractDeckTextFromFile, validateDeckFile } from '@/lib/unified-pitch/extract-deck-text'
+import { analyzeFounderNotFoundResponse, analyzeUnauthorizedResponse } from '@/lib/analyze-routes/responses'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
-
-// Simple text extraction from PDF (basic implementation)
-async function extractTextFromPDF(file: File): Promise<string> {
-  // For now, return a placeholder - in production you'd use a PDF parsing library
-  // like pdf-parse or pdfjs-dist
-  const arrayBuffer = await file.arrayBuffer()
-  const buffer = Buffer.from(arrayBuffer)
-  
-  // Basic text extraction - this is a simplified version
-  // In production, use a proper PDF parser
-  try {
-    // Try to extract text from buffer (very basic)
-    const text = buffer.toString('utf-8', 0, Math.min(buffer.length, 50000))
-    // Remove non-printable characters but keep some structure
-    return text.replace(/[^\x20-\x7E\n\r\t]/g, ' ').substring(0, 50000)
-  } catch (error) {
-    logger.error('[ANALYZE-PITCH-DECK] Error extracting text from PDF:', error)
-    return 'Unable to extract text from pitch deck. Please ensure the file is readable.'
-  }
-}
-
-// Validate file
-function validateFile(file: File): { valid: boolean; error?: string } {
-  const maxSize = 50 * 1024 * 1024 // 50MB
-  const allowedTypes = ['application/pdf', 'application/vnd.openxmlformats-officedocument.presentationml.presentation', 'application/vnd.ms-powerpoint']
-  const allowedExtensions = ['.pdf', '.pptx', '.ppt']
-  
-  if (file.size > maxSize) {
-    return { valid: false, error: 'File size must be less than 50MB' }
-  }
-  
-  const fileName = file.name.toLowerCase()
-  const hasValidExtension = allowedExtensions.some(ext => fileName.endsWith(ext))
-  
-  if (!allowedTypes.includes(file.type) && !hasValidExtension) {
-    return { valid: false, error: 'Only PDF and PowerPoint files are supported' }
-  }
-  
-  return { valid: true }
-}
 
 export async function POST(request: NextRequest) {
   // Rate limiting - check before processing
@@ -77,13 +39,7 @@ export async function POST(request: NextRequest) {
       if (process.env.NODE_ENV === 'development') {
         logger.log('[ANALYZE-PITCH-DECK] No user found, returning 401')
       }
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { 
-          status: 401,
-          headers: { 'Content-Type': 'application/json' },
-        }
-      )
+      return analyzeUnauthorizedResponse()
     }
 
     // Get founder profile
@@ -98,13 +54,7 @@ export async function POST(request: NextRequest) {
     })
 
     if (!founder) {
-      return NextResponse.json(
-        { error: 'Founder profile not found. Please complete onboarding first.' },
-        { 
-          status: 404,
-          headers: { 'Content-Type': 'application/json' },
-        }
-      )
+      return analyzeFounderNotFoundResponse()
     }
 
     let formData: FormData
@@ -133,7 +83,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate file
-    const validation = validateFile(file)
+    const validation = validateDeckFile(file)
     if (!validation.valid) {
       const maxSize = 50 * 1024 * 1024 // 50MB
       const fileSizeMB = (file.size / (1024 * 1024)).toFixed(2)
@@ -233,7 +183,11 @@ export async function POST(request: NextRequest) {
     }
 
     // Extract text from pitch deck
-    const deckText = await extractTextFromPDF(file)
+    const deckTextRaw = await extractDeckTextFromFile(file)
+    const deckText =
+      deckTextRaw.trim().length > 0
+        ? deckTextRaw
+        : 'Unable to extract text from pitch deck. Please ensure the file is readable.'
     
     if (!deckText || deckText.length < 50) {
       return NextResponse.json({

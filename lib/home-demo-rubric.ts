@@ -1,5 +1,9 @@
+import { unstable_cache } from 'next/cache'
 import type { UniversalAnalysisResult } from '@/lib/universal-analysis-engine'
 import { resolveRubricForDashboard } from '@/lib/analysis/is-safe-rubric-for-dashboard'
+
+/** Tag for `revalidateTag` when demo analysis data changes. */
+export const HOME_DEMO_RUBRIC_CACHE_TAG = 'home-demo-rubric'
 
 /**
  * Snapshot from the latest advanced scoring run (video pitch, 2026-03-30) for
@@ -49,11 +53,7 @@ export const HOME_DEMO_RUBRIC_FALLBACK: UniversalAnalysisResult = {
     'Calibrated outcome: 73/100 (STRONG, HIGH conviction). Vira shows promise with strong founder-market fit and early traction, but faces significant challenges in a crowded market and lacks a clear moat. The startup needs to focus on building proprietary technology and scaling quickly to compete effectively. While the idea is compelling, further validation is needed before committing to an investment.',
 }
 
-/**
- * When `HOME_DEMO_RUBRIC_EMAIL` is set, loads the newest stored analysis (video, deck, or idea)
- * for that founder email and resolves the rubric for the marketing preview.
- */
-export async function getHomeDemoRubric(): Promise<UniversalAnalysisResult> {
+async function loadHomeDemoRubricFromDb(): Promise<UniversalAnalysisResult> {
   const email = process.env.HOME_DEMO_RUBRIC_EMAIL?.trim()
   if (!email) return HOME_DEMO_RUBRIC_FALLBACK
 
@@ -99,3 +99,15 @@ export async function getHomeDemoRubric(): Promise<UniversalAnalysisResult> {
     return HOME_DEMO_RUBRIC_FALLBACK
   }
 }
+
+const homeDemoRubricEmailKey = process.env.HOME_DEMO_RUBRIC_EMAIL?.trim() ?? ''
+
+/**
+ * When `HOME_DEMO_RUBRIC_EMAIL` is set, loads the newest stored analysis (video, deck, or idea)
+ * for that founder email and resolves the rubric for the marketing preview.
+ * Cached so the home page does not hit the database on every request.
+ */
+export const getHomeDemoRubric = unstable_cache(loadHomeDemoRubricFromDb, ['home-demo-rubric', homeDemoRubricEmailKey], {
+  revalidate: 300,
+  tags: [HOME_DEMO_RUBRIC_CACHE_TAG],
+})

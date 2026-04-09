@@ -9,10 +9,10 @@ const siteUrl = getSiteUrl()
 
 export const metadata: Metadata = {
   title: 'Company',
-  description: `${BRAND_NAME} builds purpose-built fundraising intelligence: verified investor data plus allocator-style scoring so founders get ranked, explainable shortlists, not static lists or generic model output.`,
+  description: `${BRAND_NAME} is fundraising intelligence built for fit. Verified investor data and clear scoring give founders ranked shortlists with reasons, not static lists or vague AI guesses.`,
   openGraph: {
     title: `Company | ${BRAND_NAME}`,
-    description: `Problem, product, and moat: ${BRAND_TAGLINE}. Human-in-the-loop verification, recurring data refresh, and workflows tuned to how rounds are actually raised.`,
+    description: `${BRAND_TAGLINE}. Teams verify profiles, refresh data on a schedule, and tune the product to how founders actually raise rounds.`,
     url: `${siteUrl}/company`,
     siteName: BRAND_NAME,
     locale: 'en_US',
@@ -20,7 +20,7 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary_large_image',
     title: `Company | ${BRAND_NAME}`,
-    description: `Why ${BRAND_NAME}: curated mandates, match depth tied to your pitch, and credits or subscriptions aligned to serious fundraising work.`,
+    description: `${BRAND_NAME} pairs curated mandates with matches tied to your pitch. Credits and subscriptions fit teams that fundraise seriously.`,
   },
 }
 

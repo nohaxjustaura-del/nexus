@@ -1,12 +1,26 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
+/** Skip `getUser()` when no Supabase session cookies are present — avoids a network round-trip for anonymous traffic. */
+function hasSupabaseSessionCookies(request: NextRequest): boolean {
+  return request.cookies.getAll().some(({ name }) => {
+    if (!name.startsWith('sb-')) return false
+    return /auth|access-token|refresh-token/.test(name)
+  })
+}
+
 export async function updateSupabaseSession(request: NextRequest) {
-  let response = NextResponse.next({
+  const forward = {
     request: {
       headers: request.headers,
     },
-  })
+  }
+
+  if (!hasSupabaseSessionCookies(request)) {
+    return NextResponse.next(forward)
+  }
+
+  let response = NextResponse.next(forward)
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY

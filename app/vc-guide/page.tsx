@@ -124,7 +124,7 @@ export default function VCGuidePage() {
             VC landscape: what each type looks for
           </h1>
           <p className="mx-auto mt-3 max-w-xl text-sm leading-relaxed text-muted-foreground sm:text-base">
-            Use the right proof points for each stage and sector—one section at a time.
+            Use the right proof points for each stage and sector. Work through one section at a time.
           </p>
         </div>
 
@@ -168,7 +168,7 @@ export default function VCGuidePage() {
                   <BulletsCollapsible
                     items={[
                       <>
-                        <strong>Founder–market fit</strong>: unique insight or edge
+                        <strong>Founder-market fit</strong>: unique insight or edge
                       </>,
                       <>
                         <strong>Speed</strong>: can you ship fast?
@@ -289,7 +289,7 @@ export default function VCGuidePage() {
             <div>
               <h2 className="sr-only">By sector</h2>
               <p className="mx-auto mb-6 max-w-2xl text-center text-sm text-muted-foreground">
-                Proof points investors expect—tailor your deck and data room to your vertical.
+                These are proof points investors often expect. Tailor your deck and data room to your vertical.
               </p>
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                 {[
@@ -408,19 +408,19 @@ export default function VCGuidePage() {
                     <div className="flex items-start gap-2">
                       <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden />
                       <span>
-                        <strong>Founder-story fit</strong> — they often bet on people first.
+                        <strong>Founder-story fit</strong>: they often bet on people first.
                       </span>
                     </div>
                     <div className="flex items-start gap-2">
                       <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden />
                       <span>
-                        <strong>Fast conviction</strong> — sometimes 1–2 meetings to a term sheet.
+                        <strong>Fast conviction</strong>: sometimes 1 to 2 meetings to a term sheet.
                       </span>
                     </div>
                     <div className="flex items-start gap-2">
                       <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden />
                       <span>
-                        <strong>Operator help</strong> — hands-on when they have been there before.
+                        <strong>Operator help</strong>: hands-on when they have been there before.
                       </span>
                     </div>
                   </div>
@@ -437,19 +437,19 @@ export default function VCGuidePage() {
                     <div className="flex items-start gap-2">
                       <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-orange-500" aria-hidden />
                       <span>
-                        <strong>IC process</strong> — often 3–5 meetings.
+                        <strong>IC process</strong>: often 3 to 5 meetings.
                       </span>
                     </div>
                     <div className="flex items-start gap-2">
                       <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-orange-500" aria-hidden />
                       <span>
-                        <strong>Ownership</strong> — often ~15–20% at lead rounds.
+                        <strong>Ownership</strong>: often about 15 to 20% at lead rounds.
                       </span>
                     </div>
                     <div className="flex items-start gap-2">
                       <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-orange-500" aria-hidden />
                       <span>
-                        <strong>Board bandwidth</strong> — partners only take so many boards.
+                        <strong>Board bandwidth</strong>: partners only take so many boards.
                       </span>
                     </div>
                   </div>
@@ -466,19 +466,19 @@ export default function VCGuidePage() {
                     <div className="flex items-start gap-2">
                       <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden />
                       <span>
-                        <strong>Strategic value</strong> — how you help the parent.
+                        <strong>Strategic value</strong>: how you help the parent.
                       </span>
                     </div>
                     <div className="flex items-start gap-2">
                       <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden />
                       <span>
-                        <strong>BD potential</strong> — can the parent be a customer or partner?
+                        <strong>BD potential</strong>: can the parent be a customer or partner?
                       </span>
                     </div>
                     <div className="flex items-start gap-2">
                       <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-orange-500" aria-hidden />
                       <span>
-                        <strong>Conflicts</strong> — data sharing, competing products.
+                        <strong>Conflicts</strong>: data sharing, competing products.
                       </span>
                     </div>
                   </div>
@@ -495,19 +495,19 @@ export default function VCGuidePage() {
                     <div className="flex items-start gap-2">
                       <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden />
                       <span>
-                        <strong>Coachability</strong> — iterate with feedback.
+                        <strong>Coachability</strong>: iterate with feedback.
                       </span>
                     </div>
                     <div className="flex items-start gap-2">
                       <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden />
                       <span>
-                        <strong>Cadence</strong> — ship weekly, learn constantly.
+                        <strong>Cadence</strong>: ship weekly, learn constantly.
                       </span>
                     </div>
                     <div className="flex items-start gap-2">
                       <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden />
                       <span>
-                        <strong>Network</strong> — use alumni and partner intros.
+                        <strong>Network</strong>: use alumni and partner intros.
                       </span>
                     </div>
                   </div>
@@ -530,8 +530,8 @@ export default function VCGuidePage() {
                   materials so you can see strengths and gaps.
                 </p>
                 <p className="text-sm leading-relaxed text-muted-foreground">
-                  Each match includes the thesis cues that moved the score—not a black box—and notes on what to tighten before
-                  you reach out.
+                  Each match shows the thesis cues that moved the score, so it is not a black box. You also get notes on what
+                  to tighten before you reach out.
                 </p>
                 <div className="flex flex-col gap-3 pt-2 sm:flex-row sm:justify-center">
                   <Link href="/founder/resume-analysis">

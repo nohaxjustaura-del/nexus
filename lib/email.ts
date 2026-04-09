@@ -347,6 +347,88 @@ ${plain}
   }
 }
 
+function parseCommaSeparatedEmails(raw: string | undefined): string[] {
+  if (!raw?.trim()) return []
+  const out: string[] = []
+  const seen = new Set<string>()
+  for (const part of raw.split(',')) {
+    const e = part.trim().toLowerCase()
+    if (e.includes('@') && !seen.has(e)) {
+      seen.add(e)
+      out.push(e)
+    }
+  }
+  return out
+}
+
+/** Recipients for internal “new founder” alerts; set FOUNDER_SIGNUP_NOTIFY_EMAIL in env (comma-separated). */
+function founderSignupNotifyRecipients(): string[] {
+  return parseCommaSeparatedEmails(process.env.FOUNDER_SIGNUP_NOTIFY_EMAIL)
+}
+
+/**
+ * Internal alert when a founder row is first created (profile onboarding submit).
+ * Configure FOUNDER_SIGNUP_NOTIFY_EMAIL; uses Resend like other transactional mail.
+ */
+export async function notifyAdminsNewFounderSignup(info: {
+  name: string
+  email: string
+  startupName?: string | null
+  stage: string
+  location: string
+  phone?: string | null
+}) {
+  const to = founderSignupNotifyRecipients()
+  if (to.length === 0) return { success: true as const, skipped: true as const }
+
+  const base = getSiteUrl()
+  const subject = `New founder signup — ${info.name} (${BRAND_NAME})`
+  const lines = [
+    'A new founder completed profile onboarding.',
+    '',
+    `Name: ${info.name}`,
+    `Email: ${info.email}`,
+    ...(info.phone ? [`Phone: ${info.phone}`] : []),
+    ...(info.startupName ? [`Startup: ${info.startupName}`] : []),
+    `Stage: ${info.stage}`,
+    `Location: ${info.location}`,
+    '',
+    ...(base ? [`Open app: ${base}`] : []),
+  ]
+  const plain = lines.join('\n')
+
+  if (!resendApiKey()) {
+    console.log(`
+📧 New founder signup (admin notify) — Development Mode
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+To: ${to.join(', ')}
+Subject: ${subject}
+
+${plain}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+`)
+    return { success: true as const }
+  }
+
+  const resend = getResendClient()
+  if (!resend) return { success: true as const }
+
+  try {
+    const { data, error } = await resend.emails.send({
+      from: emailFromHeader(),
+      to,
+      subject,
+      text: plain,
+      html: `<p>${plain.replace(/\n/g, '<br>')}</p>`,
+    })
+    if (error) return { success: false as const, error }
+    return { success: true as const, data }
+  } catch (error) {
+    console.error('Email send error (new founder admin notify):', error)
+    return { success: false as const, error }
+  }
+}
+
 export async function sendFounderApplicationReceipt(toEmail: string, name?: string) {
   const subject = `Your Founder application is under review - ${BRAND_NAME}`
   const plain = `Hi ${name || 'there'},

@@ -23,7 +23,7 @@ export default function Error({
   }, [error])
 
   return (
-    <div className="flex min-h-[calc(100vh-12rem)] flex-col items-center justify-center px-4 text-center">
+    <div className="relative flex min-h-[calc(100vh-12rem)] flex-col items-center justify-center overflow-x-hidden px-4 text-center">
       <AlertTriangle className="h-20 w-20 text-destructive mb-6 animate-bounce" />
       
       <h1 className="text-4xl md:text-5xl font-bold text-foreground mb-4">

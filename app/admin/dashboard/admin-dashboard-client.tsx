@@ -266,7 +266,7 @@ export function AdminDashboardClient({
               <li>Process VC profile claims and verify new investor records from the lists below.</li>
               <li>
                 Use <span className="font-medium text-foreground">Revoke by email</span> only when someone is not on these
-                queues—see expanded notes on that card.
+                queues. See expanded notes on that card.
               </li>
             </ul>
           </AccordionContent>

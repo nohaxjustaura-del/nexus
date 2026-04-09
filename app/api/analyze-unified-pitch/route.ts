@@ -29,6 +29,7 @@ import {
 import { mergePitchAnalysesForMatching } from '@/lib/unified-pitch/merge-pitch-analysis'
 import { buildUnifiedFounderContext } from '@/lib/unified-pitch/unified-founder-context'
 import { reviewerAssignableWhere } from '@/lib/reviewer-filters'
+import { analyzeFounderNotFoundResponse, analyzeUnauthorizedResponse } from '@/lib/analyze-routes/responses'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -47,15 +48,12 @@ export async function POST(request: NextRequest) {
   try {
     const user = await getUserForAiAnalysis(request)
     if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return analyzeUnauthorizedResponse()
     }
 
     const founder = await db.founder.findUnique({ where: { email: user.email } }).catch(() => null)
     if (!founder) {
-      return NextResponse.json(
-        { error: 'Founder profile not found. Please complete onboarding first.', redirectTo: '/founder/onboarding' },
-        { status: 404 },
-      )
+      return analyzeFounderNotFoundResponse({ redirectTo: '/founder/onboarding' })
     }
 
     let formData: FormData

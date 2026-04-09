@@ -32,10 +32,3 @@ if (fs.existsSync(cacheDir)) {
 }
 
 console.log('✨ Cache cleared! Run "npm run dev" to restart.');
-
-
-
-
-
-
-

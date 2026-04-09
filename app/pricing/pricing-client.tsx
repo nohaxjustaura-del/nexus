@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useAuthSession } from '@/components/auth-session-provider'
 import { normalizeUserCreditsApiPayload } from '@/lib/client/normalize-user-credits-api'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -26,7 +27,10 @@ const creditCostSub = "text-sm text-slate-700 dark:text-zinc-300"
 const creditCostBadge =
   "shrink-0 border border-zinc-300 bg-zinc-200 text-base font-medium text-zinc-900 shadow-none hover:bg-zinc-200 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100 dark:hover:bg-zinc-800 px-3 py-1"
 
-export default function PricingClient({ verifiedInvestorCountLabel, isAuthenticated = true }: { verifiedInvestorCountLabel: string; isAuthenticated?: boolean }) {
+export default function PricingClient({ verifiedInvestorCountLabel }: { verifiedInvestorCountLabel: string }) {
+  const { loading: authLoading, authenticated, verified } = useAuthSession()
+  const isAuthenticated = !authLoading && authenticated && verified
+
   const [credits, setCredits] = useState<{
     credits: number
     isPremium: boolean
@@ -48,6 +52,7 @@ export default function PricingClient({ verifiedInvestorCountLabel, isAuthentica
   }, [isAuthenticated])
 
   const handlePurchase = async (packageType: 'starter' | 'founder' | 'pro') => {
+    if (authLoading) return
     if (!isAuthenticated) {
       window.location.href = '/signup?redirect=/pricing'
       return
@@ -77,6 +82,7 @@ export default function PricingClient({ verifiedInvestorCountLabel, isAuthentica
   }
 
   const handleSubscribe = async () => {
+    if (authLoading) return
     if (!isAuthenticated) {
       window.location.href = '/signup?redirect=/pricing'
       return
@@ -165,7 +171,7 @@ export default function PricingClient({ verifiedInvestorCountLabel, isAuthentica
                 className="mt-auto w-full" 
                 size="lg"
                 onClick={() => handlePurchase('starter')}
-                disabled={loading !== null}
+                disabled={loading !== null || authLoading}
               >
                 {loading === 'starter' ? 'Processing...' : 'Buy 50 Credits'}
               </Button>
@@ -210,7 +216,7 @@ export default function PricingClient({ verifiedInvestorCountLabel, isAuthentica
                 size="lg" 
                 variant="default"
                 onClick={() => handlePurchase('founder')}
-                disabled={loading !== null}
+                disabled={loading !== null || authLoading}
               >
                 {loading === 'founder' ? 'Processing...' : 'Buy 150 Credits'}
               </Button>
@@ -253,7 +259,7 @@ export default function PricingClient({ verifiedInvestorCountLabel, isAuthentica
                 className="mt-auto w-full" 
                 size="lg"
                 onClick={() => handlePurchase('pro')}
-                disabled={loading !== null}
+                disabled={loading !== null || authLoading}
               >
                 {loading === 'pro' ? 'Processing...' : 'Buy 400 Credits'}
               </Button>
@@ -307,7 +313,7 @@ export default function PricingClient({ verifiedInvestorCountLabel, isAuthentica
                 className="mt-auto w-full bg-gradient-to-r from-primary to-blue-600 hover:from-primary/90 hover:to-blue-600/90" 
                 size="lg"
                 onClick={handleSubscribe}
-                disabled={loading !== null}
+                disabled={loading !== null || authLoading}
               >
                 {loading === 'premium' ? 'Processing...' : (
                   <>

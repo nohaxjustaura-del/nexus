@@ -368,7 +368,7 @@ export default function FounderOnboarding() {
                   id="competitors"
                   value={formData.competitors}
                   onChange={(e) => updateField('competitors', e.target.value)}
-                  placeholder="Competitor A, Competitor B — we differentiate by..."
+                  placeholder="e.g. Competitor A, Competitor B; we differentiate by..."
                   className="mt-2"
                 />
               </div>

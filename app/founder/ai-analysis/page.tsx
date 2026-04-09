@@ -1,12 +1,21 @@
 'use client'
 
+import dynamic from 'next/dynamic'
 import { useState } from 'react'
 import Link from 'next/link'
 import { Layers, Lightbulb } from 'lucide-react'
-import { UnifiedPitchTab } from '@/components/ai-analysis/unified-pitch-tab'
-import { PitchIdeaAnalysisTab } from '@/components/ai-analysis/pitch-idea-tab'
 import { cn } from '@/lib/utils'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
+
+const UnifiedPitchTab = dynamic(
+  () => import('@/components/ai-analysis/unified-pitch-tab').then((m) => ({ default: m.UnifiedPitchTab })),
+  { loading: () => <div className="py-12 text-center text-sm text-muted-foreground">Loading…</div> }
+)
+
+const PitchIdeaAnalysisTab = dynamic(
+  () => import('@/components/ai-analysis/pitch-idea-tab').then((m) => ({ default: m.PitchIdeaAnalysisTab })),
+  { loading: () => <div className="py-12 text-center text-sm text-muted-foreground">Loading…</div> }
+)
 
 type AnalysisMode = 'unified' | 'pitch-idea'
 
@@ -33,13 +42,13 @@ export default function AIAnalysisPage() {
             <p className="mt-3 text-sm text-muted-foreground">
               {mode === 'unified' ? (
                 <>
-                  <span className="font-medium text-foreground">Unified pitch</span> — one submission merges Q&A, deck,
+                  <span className="font-medium text-foreground">Unified pitch</span>: one submission merges Q&A, deck,
                   video, and notes for scoring and matching.
                 </>
               ) : (
                 <>
-                  <span className="font-medium text-foreground">Pitch idea</span> — concept-only: text, short doc, or voice;
-                  feedback and matches without a full deck.
+                  <span className="font-medium text-foreground">Pitch idea</span>: concept only (text, short doc, or voice).
+                  Feedback and matches without a full deck.
                 </>
               )}
             </p>
@@ -50,7 +59,7 @@ export default function AIAnalysisPage() {
                 </AccordionTrigger>
                 <AccordionContent>
                   <p className="pb-2 text-xs leading-relaxed text-muted-foreground">
-                    Content stays private and is removed automatically after 30–90 days per retention settings.
+                    Content stays private and is removed automatically after 30 to 90 days per retention settings.
                   </p>
                 </AccordionContent>
               </AccordionItem>

@@ -1,5 +1,6 @@
 'use client'
 
+import dynamic from 'next/dynamic'
 import { useEffect, useLayoutEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
@@ -30,7 +31,6 @@ import {
 } from 'lucide-react'
 import { track as trackEvent } from '@/lib/analytics'
 import { useAuthSession } from '@/components/auth-session-provider'
-import AnalysisDashboard from '@/components/analysis/AnalysisDashboard'
 import type { UniversalAnalysisResult } from '@/lib/universal-analysis-engine'
 import { BRAND_NAME } from '@/lib/brand'
 import { HeroSection } from '@/components/ui/hero-section-1'
@@ -54,36 +54,35 @@ const HOME_COMPARE_ROWS = [
   { old: 'One model for every task', nw: 'Product logic scoped to fundraising fit and mandates' },
 ] as const
 
-function HomeDemoAnalysisDashboard({ result }: { result: UniversalAnalysisResult }) {
-  const [ready, setReady] = useState(false)
-  useEffect(() => {
-    setReady(true)
-  }, [])
-  if (!ready) {
-    return (
-      <div
-        className="flex min-h-[240px] flex-col gap-3 rounded-xl border border-border/40 bg-background/90 p-3 sm:min-h-[260px] sm:p-3.5"
-        aria-hidden
-      >
-        <div className="mb-2 flex shrink-0 items-center gap-2 border-b border-border/35 pb-2">
-          <span className="h-1.5 w-1.5 rounded-sm bg-muted-foreground/40" />
-          <span className="h-1.5 w-1.5 rounded-sm bg-muted-foreground/40" />
-          <span className="h-1.5 w-1.5 rounded-sm bg-muted-foreground/40" />
-          <span className="ml-auto font-mono text-[10px] text-muted-foreground">{BRAND_NAME}</span>
-        </div>
-        <div className="flex min-h-0 flex-1 flex-col gap-2">
-          {['market', 'moat', 'fit', 'mom', 'exe'].map((k) => (
-            <div
-              key={k}
-              className="h-[52px] rounded-xl border border-border/40 bg-card/80 sm:h-[56px]"
-            />
-          ))}
-        </div>
-      </div>
-    )
-  }
+function HomeDemoAnalysisDashboardSkeleton() {
   return (
-    <AnalysisDashboard
+    <div
+      className="flex min-h-[240px] flex-col gap-3 rounded-xl border border-border/40 bg-background/90 p-3 sm:min-h-[260px] sm:p-3.5"
+      aria-hidden
+    >
+      <div className="mb-2 flex shrink-0 items-center gap-2 border-b border-border/35 pb-2">
+        <span className="h-1.5 w-1.5 rounded-sm bg-muted-foreground/40" />
+        <span className="h-1.5 w-1.5 rounded-sm bg-muted-foreground/40" />
+        <span className="h-1.5 w-1.5 rounded-sm bg-muted-foreground/40" />
+        <span className="ml-auto font-mono text-[10px] text-muted-foreground">{BRAND_NAME}</span>
+      </div>
+      <div className="flex min-h-0 flex-1 flex-col gap-2">
+        {['market', 'moat', 'fit', 'mom', 'exe'].map((k) => (
+          <div key={k} className="h-[52px] rounded-xl border border-border/40 bg-card/80 sm:h-[56px]" />
+        ))}
+      </div>
+    </div>
+  )
+}
+
+const AnalysisDashboardLazy = dynamic(
+  () => import('@/components/analysis/AnalysisDashboard'),
+  { ssr: false, loading: () => <HomeDemoAnalysisDashboardSkeleton /> }
+)
+
+function HomeDemoAnalysisDashboard({ result }: { result: UniversalAnalysisResult }) {
+  return (
+    <AnalysisDashboardLazy
       result={result}
       tilesOnly
       compact
@@ -245,8 +244,8 @@ export default function HomeClient({ verifiedInvestorCountLabel, homeDemoRubric 
                   </AccordionTrigger>
                   <AccordionContent>
                     <p className="max-w-prose pb-2 text-sm leading-relaxed text-muted-foreground">
-                      {BRAND_NAME} runs a fundraising-tuned pipeline on what you share—aligned to how investors evaluate
-                      stage, sector, and thesis—so you are not hand-tuning prompts in a general model.
+                      {BRAND_NAME} runs a pipeline tuned for fundraising on what you share. It follows how investors look at
+                      stage, sector, and thesis, so you are not hand-tuning prompts in a general chat model.
                     </p>
                   </AccordionContent>
                 </AccordionItem>
@@ -291,7 +290,7 @@ export default function HomeClient({ verifiedInvestorCountLabel, homeDemoRubric 
                   <div className="min-w-0 flex-1">
                     <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Score & Rank</p>
                     <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">
-                      Scores reflect how your story maps to each investor&apos;s mandate—not a generic bullet list.
+                      Scores reflect how your story maps to each investor&apos;s mandate, not a generic bullet list.
                     </p>
                   </div>
                   <span className="shrink-0 rounded-full border border-border/50 bg-muted/25 px-2.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
@@ -351,8 +350,8 @@ export default function HomeClient({ verifiedInvestorCountLabel, homeDemoRubric 
               Why not a spreadsheet, a static database, or a general chatbot?
             </h2>
             <p className="mx-auto mt-3 max-w-xl text-center text-sm leading-relaxed text-muted-foreground sm:text-[15px]">
-              Verified mandates plus a fundraising-specific read on <em>your</em> materials—ranked shortlist and rationale in
-              one flow.
+              Verified mandates and a fundraising-focused read on <em>your</em> materials. You get a ranked shortlist and
+              clear rationale in one flow.
             </p>
 
             <div className="mt-10 overflow-hidden rounded-2xl border border-border/40 shadow-sm">
@@ -503,7 +502,7 @@ export default function HomeClient({ verifiedInvestorCountLabel, homeDemoRubric 
               Learn from the best
             </h2>
             <p className="mx-auto mt-3 max-w-xl text-center text-sm leading-relaxed text-muted-foreground sm:text-[15px]">
-              Mentors and partners with real fundraising and fund experience—grounded perspective, not generic templates.
+              Mentors and partners with real fundraising and fund experience. Practical guidance, not generic templates.
             </p>
             <div className="mx-auto mt-4 max-w-md">
               <Accordion type="single" collapsible className="rounded-xl border border-border/40 bg-card/50 px-3">

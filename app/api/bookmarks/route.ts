@@ -5,7 +5,7 @@ import { logger } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'
 
-// GET: Get all bookmarks for the current founder
+// GET: Get all bookmarks for the current founder (?countOnly=1 returns { total } only)
 export async function GET(request: NextRequest) {
   try {
     const user = await getCurrentUser()
@@ -17,8 +17,12 @@ export async function GET(request: NextRequest) {
       )
     }
 
+    const countOnlyParam = request.nextUrl.searchParams.get('countOnly')
+    const countOnly = countOnlyParam === '1' || countOnlyParam === 'true'
+
     const founder = await db.founder.findUnique({
       where: { email: user.email },
+      select: { id: true },
     })
 
     if (!founder) {
@@ -26,6 +30,11 @@ export async function GET(request: NextRequest) {
         { error: 'Founder profile not found' },
         { status: 404 }
       )
+    }
+
+    if (countOnly) {
+      const total = await db.bookmark.count({ where: { founderId: founder.id } })
+      return NextResponse.json({ total })
     }
 
     const bookmarks = await db.bookmark.findMany({

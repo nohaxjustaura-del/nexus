@@ -16,6 +16,7 @@ import { getPersonalizedVCRecommendations } from '@/lib/predictive-matching'
 import { buildFounderSnapshot } from '@/lib/file-storage'
 import { getDeepMarketContext } from '@/lib/market-intelligence'
 import { runScoringPipeline } from '@/lib/scoring/scoring-pipeline'
+import { analyzeFounderNotFoundResponse, analyzeUnauthorizedResponse } from '@/lib/analyze-routes/responses'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -52,13 +53,7 @@ export async function POST(request: NextRequest) {
     }
     
     if (!user) {
-      return NextResponse.json(
-        { error: 'Unauthorized' }, 
-        { 
-          status: 401,
-          headers: { 'Content-Type': 'application/json' },
-        }
-      )
+      return analyzeUnauthorizedResponse()
     }
 
     // 🚀 OPTIMIZED: Simpler error handling
@@ -67,13 +62,7 @@ export async function POST(request: NextRequest) {
     })
 
     if (!founder) {
-      return NextResponse.json(
-        { error: 'Founder profile not found. Please complete onboarding first.' },
-        { 
-          status: 404,
-          headers: { 'Content-Type': 'application/json' },
-        }
-      )
+      return analyzeFounderNotFoundResponse()
     }
 
     // Accept either JSON (text idea) or FormData (file upload or text field)

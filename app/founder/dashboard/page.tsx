@@ -1,104 +1,69 @@
 'use client'
 
+import dynamic from 'next/dynamic'
 import { useEffect, useState } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import DailyClaim from '@/components/daily-claim'
 import { Search, Sparkles, Target, Bookmark, Crown, Shield, ArrowRight, FileText, Video, Lightbulb, Clock } from 'lucide-react'
 import Link from 'next/link'
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
-import { computeFounderProfileCompletenessPercentUi } from '@/lib/founder-profile-completeness'
 import { useAuthSession } from '@/components/auth-session-provider'
-import { getUserCreditsClient } from '@/lib/client/user-credits-client'
+
+const DailyClaim = dynamic(() => import('@/components/daily-claim'), {
+  loading: () => <Skeleton className="mb-8 h-36 w-full rounded-lg" aria-hidden />,
+  ssr: false,
+})
+
+type HubSummary = {
+  credits: { credits: number; isPremium: boolean }
+  bookmarksCount: number
+  analysesCount: number
+  matchesCount: number
+  profileCompleteness: number
+  recentAnalyses: Array<{
+    id: string
+    type: string
+    createdAt: string
+    compatibilityScore: number
+  }>
+}
 
 export default function FounderDashboard() {
   const { isAdmin } = useAuthSession()
-  const [loading, setLoading] = useState(true)
-  const [credits, setCredits] = useState<{ credits: number; isPremium: boolean } | null>(null)
-  const [stats, setStats] = useState<{
-    analysesCount: number
-    bookmarksCount: number
-    matchesCount: number
-    profileCompleteness: number
-    recentAnalyses: any[]
-  } | null>(null)
+  const [pending, setPending] = useState(true)
+  const [summary, setSummary] = useState<HubSummary | null>(null)
+
   useEffect(() => {
-    let isMounted = true
+    let alive = true
     const maxWaitMs = 25_000
     const maxWait = window.setTimeout(() => {
-      if (isMounted) setLoading(false)
+      if (alive) setPending(false)
     }, maxWaitMs)
 
-    getUserCreditsClient()
-      .then(({ ok, data }) => {
-        if (isMounted && ok) setCredits(data as { credits: number; isPremium: boolean })
+    fetch('/api/founder/hub-summary', { credentials: 'include' })
+      .then(async (r) => {
+        if (!r.ok) throw new Error(String(r.status))
+        return r.json() as Promise<HubSummary>
       })
-      .catch(() => {})
-
-    Promise.all([
-      fetch('/api/all-analyses', { credentials: 'include' })
-        .then((r) => r.json())
-        .catch(() => ({ analyses: [] })),
-      fetch('/api/founder/profile', { credentials: 'include' })
-        .then((r) => r.json())
-        .catch(() => ({ founder: null })),
-      fetch('/api/bookmarks', { credentials: 'include' })
-        .then((r) => r.json())
-        .catch(() => ({ total: 0 })),
-    ])
-      .then(([analysesData, profileData, bookmarksData]) => {
-        if (!isMounted) return
-
-        const analyses = (analysesData.analyses || []).filter((a: any) => a.type !== 'resume')
-        const founder = profileData.founder || profileData.profile
-        const bookmarksCount = typeof bookmarksData.total === 'number' ? bookmarksData.total : 0
-
-        const verificationStatus = profileData.verification?.status ?? null
-        const completeness = computeFounderProfileCompletenessPercentUi(founder, verificationStatus)
-
-        const matchesCount = analyses.reduce((sum: number, a: any) => {
-          const count = a.result?.matchCount || a.result?.matches?.length || 0
-          return sum + (typeof count === 'number' ? count : 0)
-        }, 0)
-
-        setStats({
-          analysesCount: analyses.length,
-          bookmarksCount,
-          matchesCount,
-          profileCompleteness: completeness,
-          recentAnalyses: analyses.slice(0, 5),
-        })
+      .then((body) => {
+        if (!alive) return
+        setSummary(body)
       })
-      .catch(() => {})
+      .catch(() => {
+        if (alive) setSummary(null)
+      })
       .finally(() => {
         window.clearTimeout(maxWait)
-        if (isMounted) setLoading(false)
+        if (alive) setPending(false)
       })
 
     return () => {
-      isMounted = false
+      alive = false
       window.clearTimeout(maxWait)
     }
   }, [])
-
-  if (loading) {
-    return (
-      <div className="relative min-h-screen bg-background">
-        <div className="pointer-events-none fixed inset-0 -z-10 bg-page-mesh" aria-hidden />
-        <div className="page-shell-narrow">
-          <Skeleton className="mb-8 h-10 w-48" />
-          <Skeleton className="mb-6 h-36 w-full" />
-          <div className="grid grid-cols-3 gap-3">
-            {[1, 2, 3].map((i) => (
-              <Skeleton key={i} className="h-24" />
-            ))}
-          </div>
-        </div>
-      </div>
-    )
-  }
 
   const primaryLinks = [
     {
@@ -127,6 +92,8 @@ export default function FounderDashboard() {
     },
   ] as const
 
+  const stats = summary
+
   return (
     <div className="relative min-h-screen bg-background">
       <div className="pointer-events-none fixed inset-0 -z-10 bg-page-mesh" aria-hidden />
@@ -154,27 +121,38 @@ export default function FounderDashboard() {
             <h1 className="font-heading text-3xl font-bold tracking-tight text-foreground md:text-4xl">Your hub</h1>
             <p className="mt-1 text-muted-foreground">Discover investors, run analysis, track saves.</p>
           </div>
-          {credits && (
+          {pending ? (
+            <div className="flex flex-col items-end gap-2 sm:text-right">
+              <Skeleton className="h-9 w-24" />
+              <Skeleton className="h-4 w-16" />
+            </div>
+          ) : stats ? (
             <div className="flex items-center gap-3 sm:text-right">
               <div>
-                <div className="text-2xl font-bold tabular-nums text-foreground">{credits.credits ?? 0}</div>
+                <div className="text-2xl font-bold tabular-nums text-foreground">{stats.credits.credits ?? 0}</div>
                 <div className="text-xs text-muted-foreground">Credits</div>
               </div>
-              {credits.isPremium && (
+              {stats.credits.isPremium && (
                 <Badge className="bg-amber-500 text-white">
                   <Crown className="mr-1 h-3 w-3" />
                   Premium
                 </Badge>
               )}
             </div>
-          )}
+          ) : null}
         </header>
 
         <div className="mb-8">
           <DailyClaim />
         </div>
 
-        {stats && (
+        {pending ? (
+          <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
+            {[1, 2, 3].map((i) => (
+              <Skeleton key={i} className="h-24 rounded-lg sm:h-[5.5rem]" />
+            ))}
+          </div>
+        ) : stats ? (
           <>
             <div className="mb-6 grid grid-cols-1 sm:grid-cols-3 gap-3">
               <Card className="border-border/80">
@@ -209,7 +187,7 @@ export default function FounderDashboard() {
               </Link>
             )}
           </>
-        )}
+        ) : null}
 
         <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">Start here</h2>
         <div className="mb-10 grid gap-3 sm:grid-cols-2">
@@ -231,14 +209,26 @@ export default function FounderDashboard() {
           ))}
         </div>
 
-        {stats && stats.recentAnalyses.length > 0 && (
+        {pending ? (
+          <Card className="border-border/80">
+            <CardHeader className="pb-2">
+              <Skeleton className="h-6 w-40" />
+              <Skeleton className="mt-2 h-4 w-56" />
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {[1, 2, 3].map((i) => (
+                <Skeleton key={i} className="h-14 w-full rounded-lg" />
+              ))}
+            </CardContent>
+          </Card>
+        ) : stats && stats.recentAnalyses.length > 0 ? (
           <Card className="border-border/80">
             <CardHeader className="pb-2">
               <CardTitle className="text-lg">Recent analyses</CardTitle>
               <CardDescription>Open full history anytime.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-2">
-              {stats.recentAnalyses.map((analysis: any) => (
+              {stats.recentAnalyses.map((analysis) => (
                 <Link key={analysis.id} href="/founder/my-analyses">
                   <div
                     className={cn(
@@ -247,13 +237,16 @@ export default function FounderDashboard() {
                   >
                     <div className="flex items-center gap-3">
                       <div className="rounded-md bg-primary/10 p-2">
-                        {analysis.type === 'video-pitch' && <Video className="h-4 w-4 text-primary" />}
+                        {(analysis.type === 'video-pitch' || analysis.type === 'unified-pitch') && (
+                          <Video className="h-4 w-4 text-primary" />
+                        )}
                         {analysis.type === 'pitch-deck' && <FileText className="h-4 w-4 text-primary" />}
                         {analysis.type === 'pitch-idea' && <Lightbulb className="h-4 w-4 text-primary" />}
                       </div>
                       <div>
                         <p className="text-sm font-medium text-foreground">
                           {analysis.type === 'video-pitch' && 'Video pitch'}
+                          {analysis.type === 'unified-pitch' && 'Unified pitch'}
                           {analysis.type === 'pitch-deck' && 'Pitch deck'}
                           {analysis.type === 'pitch-idea' && 'Pitch idea'}
                         </p>
@@ -282,7 +275,7 @@ export default function FounderDashboard() {
               </Link>
             </CardContent>
           </Card>
-        )}
+        ) : null}
       </div>
     </div>
   )

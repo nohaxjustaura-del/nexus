@@ -14,6 +14,7 @@ import { getDeepMarketContextSafe } from '@/lib/market-intelligence'
 import { runScoringPipeline } from '@/lib/scoring/scoring-pipeline'
 import { getComprehensiveFounderContext } from '@/lib/founder-context'
 import { reviewerAssignableWhere } from '@/lib/reviewer-filters'
+import { analyzeFounderNotFoundResponse, analyzeUnauthorizedResponse } from '@/lib/analyze-routes/responses'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -48,13 +49,7 @@ export async function POST(request: NextRequest) {
     const user = await getUserFromRequest(request)
     
     if (!user) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { 
-          status: 401,
-          headers: { 'Content-Type': 'application/json' },
-        }
-      )
+      return analyzeUnauthorizedResponse()
     }
 
     // Get founder profile - REQUIRED, no auto-creation
@@ -66,16 +61,7 @@ export async function POST(request: NextRequest) {
     })
 
     if (!founder) {
-      return NextResponse.json(
-        { 
-          error: 'Founder profile not found. Please complete onboarding first.',
-          redirectTo: '/founder/onboarding',
-        },
-        { 
-          status: 404,
-          headers: { 'Content-Type': 'application/json' },
-        }
-      )
+      return analyzeFounderNotFoundResponse({ redirectTo: '/founder/onboarding' })
     }
 
     let formData: FormData
