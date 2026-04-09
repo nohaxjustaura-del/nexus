@@ -1,447 +1,555 @@
-import React from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { TrendingUp, Building2, Target, Zap, Globe, CheckCircle, AlertCircle } from "lucide-react"
-import Link from "next/link"
+'use client'
 
-export default function VCGuidePage() {
+import React, { useState } from 'react'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { cn } from '@/lib/utils'
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
+import { TrendingUp, Building2, Target, Zap, Globe, CheckCircle, AlertCircle, ChevronDown, Layers } from 'lucide-react'
+import Link from 'next/link'
+import { BRAND_NAME } from '@/lib/brand'
+
+type TabId = 'stage' | 'sector' | 'structure' | 'next'
+
+function BulletsCollapsible({
+  items,
+  initialVisible = 3,
+  label = 'Show all',
+}: {
+  items: React.ReactNode[]
+  initialVisible?: number
+  label?: string
+}) {
+  const visible = items.slice(0, initialVisible)
+  const rest = items.slice(initialVisible)
+  if (rest.length === 0) {
+    return (
+      <ul className="space-y-2 text-sm">
+        {visible.map((node, i) => (
+          <li key={i} className="flex items-start gap-2">
+            <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
+            <span>{node}</span>
+          </li>
+        ))}
+      </ul>
+    )
+  }
   return (
-    <div className="min-h-screen bg-background">
-      <div className="container-body px-4 py-12">
-        {/* Hero */}
-        <div className="mb-12 text-center">
-          <Badge className="mb-4" variant="secondary">
-            <Target className="mr-1 h-3 w-3" />
-            How matching works
-          </Badge>
-          <h1 className="mb-4 text-4xl font-bold md:text-5xl">
-            VC Landscape: What Each Type Actually Looks For
-          </h1>
-          <p className="mx-auto max-w-2xl text-lg text-muted-foreground">
-            Understanding VC taxonomy helps you target the right investors with the right proof points
-          </p>
-        </div>
-
-        {/* By Stage */}
-        <section className="mb-16">
-          <h2 className="mb-6 text-3xl font-bold">By Stage</h2>
-          
-          <div className="grid gap-6 md:grid-cols-2">
-            <Card>
-              <CardHeader>
-                <div className="flex items-center gap-2 mb-2">
-                  <Zap className="h-5 w-5 text-orange-500" />
-                  <CardTitle>Pre-Seed / Angel / Scout / Micro-VC</CardTitle>
-                </div>
-                <CardDescription>Checks: ~$50K–$750K</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="font-semibold text-sm">They Look For:</div>
-                <ul className="space-y-2 text-sm">
-                  <li className="flex items-start gap-2">
-                    <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-green-500" />
-                    <span><strong>Founder-market fit</strong>: Unique insight or unfair advantage</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-green-500" />
-                    <span><strong>Speed of execution</strong>: Can you ship fast?</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-green-500" />
-                    <span><strong>Early proof</strong>: Waitlist signups, prototype, pilot users</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-green-500" />
-                    <span><strong>Technical depth</strong>: Can you build this?</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-green-500" />
-                    <span><strong>Low burn</strong>: Capital efficient path to next milestone</span>
-                  </li>
-                </ul>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <div className="flex items-center gap-2 mb-2">
-                  <TrendingUp className="h-5 w-5 text-blue-500" />
-                  <CardTitle>Seed</CardTitle>
-                </div>
-                <CardDescription>Checks: ~$750K–$3M (may lead)</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="font-semibold text-sm">They Look For:</div>
-                <ul className="space-y-2 text-sm">
-                  <li className="flex items-start gap-2">
-                    <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-green-500" />
-                    <span><strong>PMF trajectory</strong>: Retention (D30/WAU/MAU)</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-green-500" />
-                    <span><strong>Early revenue</strong>: $5K–$100K MRR or validated pilots</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-green-500" />
-                    <span><strong>Repeatable GTM</strong>: Clear hypothesis for customer acquisition</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-green-500" />
-                    <span><strong>Credible plan to A</strong>: 18-month roadmap with milestones</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-green-500" />
-                    <span><strong>Team completeness</strong>: Key roles filled or hiring plan</span>
-                  </li>
-                </ul>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <div className="flex items-center gap-2 mb-2">
-                  <Building2 className="h-5 w-5 text-purple-500" />
-                  <CardTitle>Series A</CardTitle>
-                </div>
-                <CardDescription>Checks: ~$5M–$20M (ownership targets 12-20%)</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="font-semibold text-sm">They Look For:</div>
-                <ul className="space-y-2 text-sm">
-                  <li className="flex items-start gap-2">
-                    <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-green-500" />
-                    <span><strong>Repeatable sales</strong>: {'>'}$1-2M ARR for SaaS</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-green-500" />
-                    <span><strong>Strong retention</strong>: Net revenue retention {'>'}100%</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-green-500" />
-                    <span><strong>Efficient payback</strong>: CAC payback {'<'}18 months</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-green-500" />
-                    <span><strong>Hiring plan</strong>: Clear path to build A-player team</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-green-500" />
-                    <span><strong>Moat narrative</strong>: Why you win over time</span>
-                  </li>
-                </ul>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <div className="flex items-center gap-2 mb-2">
-                  <Globe className="h-5 w-5 text-green-500" />
-                  <CardTitle>Growth (B/C+)</CardTitle>
-                </div>
-                <CardDescription>Checks: $20M+</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="font-semibold text-sm">They Look For:</div>
-                <ul className="space-y-2 text-sm">
-                  <li className="flex items-start gap-2">
-                    <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-green-500" />
-                    <span><strong>Scale</strong>: {'>'}$10-30M ARR</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-green-500" />
-                    <span><strong>Category leadership</strong>: Clear market position</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-green-500" />
-                    <span><strong>Best-in-class metrics</strong>: Top quartile in all KPIs</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-green-500" />
-                    <span><strong>Governance</strong>: Strong board, processes, reporting</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-green-500" />
-                    <span><strong>Path to profit</strong>: Clear route to profitability</span>
-                  </li>
-                </ul>
-              </CardContent>
-            </Card>
-          </div>
-        </section>
-
-        {/* By Sector */}
-        <section className="mb-16">
-          <h2 className="mb-6 text-3xl font-bold">By Sector: Proof Points That Matter</h2>
-          
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {/* AI/ML */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">AI/ML</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ul className="space-y-1.5 text-sm">
-                  <li>• Proprietary data or model advantage</li>
-                  <li>• Evaluation benchmarks (quality/cost/latency)</li>
-                  <li>• Defensibility beyond "we call an API"</li>
-                  <li>• Inference cost curves</li>
-                  <li>• AI-native UX</li>
-                  <li>• Security & privacy controls</li>
-                </ul>
-              </CardContent>
-            </Card>
-
-            {/* Developer Tools */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Developer Tools</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ul className="space-y-1.5 text-sm">
-                  <li>• Bottoms-up adoption metrics</li>
-                  <li>• OSS traction (stars, contributors)</li>
-                  <li>• CI/CD integration story</li>
-                  <li>• Time-to-value in minutes</li>
-                  <li>• Expansion to enterprise</li>
-                  <li>• Security posture</li>
-                </ul>
-              </CardContent>
-            </Card>
-
-            {/* Fintech */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Fintech</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ul className="space-y-1.5 text-sm">
-                  <li>• Regulatory strategy (licenses/partners)</li>
-                  <li>• Fraud & risk controls</li>
-                  <li>• Unit economics</li>
-                  <li>• Risk capital requirements</li>
-                  <li>• Compliance framework</li>
-                  <li>• Banking partnerships</li>
-                </ul>
-              </CardContent>
-            </Card>
-
-            {/* Healthcare */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Healthcare / Biotech</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ul className="space-y-1.5 text-sm">
-                  <li>• Clinical/regulatory path</li>
-                  <li>• Key opinion leaders (KOLs)</li>
-                  <li>• Intellectual property (IP)</li>
-                  <li>• Milestones (IND, IDE, clinical trials)</li>
-                  <li>• Reimbursement strategy</li>
-                  <li>• HIPAA compliance</li>
-                </ul>
-              </CardContent>
-            </Card>
-
-            {/* Climate */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Climate / Hardtech</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ul className="space-y-1.5 text-sm">
-                  <li>• Technology readiness level (TRL)</li>
-                  <li>• Pilot sites or LOIs</li>
-                  <li>• Capex/opex model</li>
-                  <li>• Supply chain risk mitigation</li>
-                  <li>• Incentives & tax credits</li>
-                  <li>• Carbon impact metrics</li>
-                </ul>
-              </CardContent>
-            </Card>
-
-            {/* Consumer */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Consumer</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ul className="space-y-1.5 text-sm">
-                  <li>• Retention cohorts (D7, D30)</li>
-                  <li>• DAU/MAU & session depth</li>
-                  <li>• Content or creator engine</li>
-                  <li>• Distribution loops (viral, paid, organic)</li>
-                  <li>• Creator/influencer partnerships</li>
-                  <li>• Brand differentiation</li>
-                </ul>
-              </CardContent>
-            </Card>
-
-            {/* SaaS */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">SaaS / B2B</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ul className="space-y-1.5 text-sm">
-                  <li>• ICP clarity & validation</li>
-                  <li>• Pipeline health (volume, velocity)</li>
-                  <li>• Sales efficiency (CAC, LTV, payback)</li>
-                  <li>• Implementation time</li>
-                  <li>• Integration ecosystem</li>
-                  <li>• Net revenue retention</li>
-                </ul>
-              </CardContent>
-            </Card>
-
-            {/* Crypto */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Crypto / Web3</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ul className="space-y-1.5 text-sm">
-                  <li>• On-chain traction (wallets, TVL)</li>
-                  <li>• Token plan & compliance</li>
-                  <li>• Security audits</li>
-                  <li>• Community governance model</li>
-                  <li>• Exchange/market maker relationships</li>
-                  <li>• Smart contract risk mitigation</li>
-                </ul>
-              </CardContent>
-            </Card>
-          </div>
-        </section>
-
-        {/* By Structure */}
-        <section className="mb-16">
-          <h2 className="mb-6 text-3xl font-bold">By Fund Structure</h2>
-          
-          <div className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Solo GP / Rolling Fund / Emerging Manager</CardTitle>
-                <CardDescription>Concentrated bets, strong operator networks</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2 text-sm">
-                  <div className="flex items-start gap-2">
-                    <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-                    <span>Look for <strong>crisp founder-story fit</strong> - they bet on people</span>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-                    <span>Move <strong>fast on conviction</strong> - often 1-2 meetings to term sheet</span>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-                    <span>Provide <strong>deep operator help</strong> - been there, done that</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Multi-Partner Institutional Fund</CardTitle>
-                <CardDescription>Process-driven, ownership targets, board capacity</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2 text-sm">
-                  <div className="flex items-start gap-2">
-                    <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-orange-500" />
-                    <span><strong>Investment committee process</strong> - expect 3-5 meetings</span>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-orange-500" />
-                    <span><strong>Ownership targets</strong> - typically 15-20% at lead rounds</span>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-orange-500" />
-                    <span><strong>Board bandwidth</strong> - partner can only take ~8-12 boards</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Corporate VC (CVC)</CardTitle>
-                <CardDescription>Strategic fit to parent company</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2 text-sm">
-                  <div className="flex items-start gap-2">
-                    <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-                    <span><strong>Strategic value</strong> - how you help the corporate parent</span>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-                    <span><strong>BD potential</strong> - can parent be a customer/partner?</span>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-orange-500" />
-                    <span><strong>Watch for conflicts</strong> - data sharing, competing products</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Accelerators / Studios</CardTitle>
-                <CardDescription>Cohort-based, intense mentorship</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2 text-sm">
-                  <div className="flex items-start gap-2">
-                    <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-                    <span><strong>Team coachability</strong> - willingness to learn and iterate</span>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-                    <span><strong>Iteration cadence</strong> - ship weekly, learn constantly</span>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-                    <span><strong>Network leverage</strong> - use the alumni & partner network</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </section>
-
-        {/* Key Takeaways */}
-        <Card className="border-primary/50 bg-primary/5">
-          <CardHeader>
-            <CardTitle>💡 Key Takeaway</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <p className="text-sm">
-              <strong>Scores tie back to what you actually wrote.</strong> We line up sector- and stage-specific
-              proof points from your materials so you can see where you are strong and what is still thin.
-            </p>
-            <p className="text-sm">
-              Each match includes the lines and thesis cues that moved the score, not a black-box number, and
-              notes on what to tighten before you reach out.
-            </p>
-            <div className="flex gap-4 mt-6">
-              <Link href="/founder/resume-analysis">
-                <Button size="lg">
-                  Analyze My Resume
-                </Button>
-              </Link>
-              <Link href="/founder/discover">
-                <Button size="lg" variant="outline">
-                  Browse VCs
-                </Button>
-              </Link>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+    <div className="space-y-2">
+      <ul className="space-y-2 text-sm">
+        {visible.map((node, i) => (
+          <li key={i} className="flex items-start gap-2">
+            <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
+            <span>{node}</span>
+          </li>
+        ))}
+      </ul>
+      <Collapsible className="group/vcguide-more">
+        <CollapsibleTrigger className="flex w-full items-center gap-1 text-xs font-medium text-primary underline-offset-4 hover:underline">
+          <span>{label}</span>
+          <ChevronDown
+            className="h-3.5 w-3.5 shrink-0 transition-transform duration-200 group-data-[state=open]/vcguide-more:rotate-180"
+            aria-hidden
+          />
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <ul className="mt-2 space-y-2 text-sm">
+            {rest.map((node, i) => (
+              <li key={i} className="flex items-start gap-2">
+                <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
+                <span>{node}</span>
+              </li>
+            ))}
+          </ul>
+        </CollapsibleContent>
+      </Collapsible>
     </div>
   )
 }
 
+function SectorBulletList({ lines }: { lines: string[] }) {
+  const visible = lines.slice(0, 3)
+  const rest = lines.slice(3)
+  return (
+    <div>
+      <ul className="space-y-1.5 text-sm text-muted-foreground">
+        {visible.map((line) => (
+          <li key={line}>• {line.replace(/^•\s*/, '')}</li>
+        ))}
+      </ul>
+      {rest.length > 0 ? (
+        <Collapsible className="group/sec-more mt-2">
+          <CollapsibleTrigger className="text-xs font-medium text-primary underline-offset-4 hover:underline">
+            <span className="inline-flex items-center gap-1">
+              Show all proof points
+              <ChevronDown
+                className="h-3.5 w-3.5 transition-transform duration-200 group-data-[state=open]/sec-more:rotate-180"
+                aria-hidden
+              />
+            </span>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <ul className="mt-2 space-y-1.5 text-sm text-muted-foreground">
+              {rest.map((line) => (
+                <li key={line}>• {line.replace(/^•\s*/, '')}</li>
+              ))}
+            </ul>
+          </CollapsibleContent>
+        </Collapsible>
+      ) : null}
+    </div>
+  )
+}
+
+const TABS: { id: TabId; label: string }[] = [
+  { id: 'stage', label: 'By stage' },
+  { id: 'sector', label: 'By sector' },
+  { id: 'structure', label: 'Fund structure' },
+  { id: 'next', label: 'Next steps' },
+]
+
+export default function VCGuidePage() {
+  const [tab, setTab] = useState<TabId>('stage')
+
+  return (
+    <div className="min-h-screen bg-background">
+      <div className="container-body px-4 py-10 sm:py-12">
+        <div className="mx-auto max-w-4xl text-center">
+          <Badge className="mb-3" variant="secondary">
+            <Target className="mr-1 h-3 w-3" aria-hidden />
+            How matching works
+          </Badge>
+          <h1 className="font-heading text-3xl font-semibold tracking-tight text-foreground md:text-4xl">
+            VC landscape: what each type looks for
+          </h1>
+          <p className="mx-auto mt-3 max-w-xl text-sm leading-relaxed text-muted-foreground sm:text-base">
+            Use the right proof points for each stage and sector—one section at a time.
+          </p>
+        </div>
+
+        <div
+          role="tablist"
+          aria-label="Guide sections"
+          className="mx-auto mt-8 flex max-w-3xl flex-wrap justify-center gap-2"
+        >
+          {TABS.map(({ id, label }) => (
+            <button
+              key={id}
+              type="button"
+              role="tab"
+              aria-selected={tab === id}
+              className={cn(
+                'rounded-full border px-4 py-2 text-sm font-medium transition-colors',
+                tab === id
+                  ? 'border-border/70 bg-background text-foreground shadow-sm ring-1 ring-border/60'
+                  : 'border-transparent bg-muted/30 text-muted-foreground hover:bg-muted/50 hover:text-foreground',
+              )}
+              onClick={() => setTab(id)}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
+        <div className="mt-10" role="tabpanel">
+          {tab === 'stage' && (
+            <div className="grid gap-6 md:grid-cols-2">
+              <Card className="border-border/50 shadow-sm">
+                <CardHeader>
+                  <div className="mb-2 flex items-center gap-2">
+                    <Zap className="h-5 w-5 text-orange-500" aria-hidden />
+                    <CardTitle className="text-lg">Pre-seed / angel / scout / micro-VC</CardTitle>
+                  </div>
+                  <CardDescription>Checks: ~$50K–$750K</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">They look for</p>
+                  <BulletsCollapsible
+                    items={[
+                      <>
+                        <strong>Founder–market fit</strong>: unique insight or edge
+                      </>,
+                      <>
+                        <strong>Speed</strong>: can you ship fast?
+                      </>,
+                      <>
+                        <strong>Early proof</strong>: waitlist, prototype, pilots
+                      </>,
+                      <>
+                        <strong>Technical depth</strong>: can you build it?
+                      </>,
+                      <>
+                        <strong>Low burn</strong>: efficient path to the next milestone
+                      </>,
+                    ]}
+                  />
+                </CardContent>
+              </Card>
+
+              <Card className="border-border/50 shadow-sm">
+                <CardHeader>
+                  <div className="mb-2 flex items-center gap-2">
+                    <TrendingUp className="h-5 w-5 text-blue-500" aria-hidden />
+                    <CardTitle className="text-lg">Seed</CardTitle>
+                  </div>
+                  <CardDescription>Checks: ~$750K–$3M (may lead)</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">They look for</p>
+                  <BulletsCollapsible
+                    items={[
+                      <>
+                        <strong>PMF trajectory</strong>: retention (D30 / WAU / MAU)
+                      </>,
+                      <>
+                        <strong>Early revenue</strong>: $5K–$100K MRR or validated pilots
+                      </>,
+                      <>
+                        <strong>Repeatable GTM</strong>: clear acquisition hypothesis
+                      </>,
+                      <>
+                        <strong>Path to Series A</strong>: 18-month roadmap with milestones
+                      </>,
+                      <>
+                        <strong>Team</strong>: key roles filled or a hiring plan
+                      </>,
+                    ]}
+                  />
+                </CardContent>
+              </Card>
+
+              <Card className="border-border/50 shadow-sm">
+                <CardHeader>
+                  <div className="mb-2 flex items-center gap-2">
+                    <Building2 className="h-5 w-5 text-purple-500" aria-hidden />
+                    <CardTitle className="text-lg">Series A</CardTitle>
+                  </div>
+                  <CardDescription>Checks: ~$5M–$20M (ownership often 12–20%)</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">They look for</p>
+                  <BulletsCollapsible
+                    items={[
+                      <>
+                        <strong>Repeatable sales</strong>: typically {'>'}$1–2M ARR for SaaS
+                      </>,
+                      <>
+                        <strong>Retention</strong>: NRR {'>'}100%
+                      </>,
+                      <>
+                        <strong>Efficient payback</strong>: CAC payback {'<'}18 months
+                      </>,
+                      <>
+                        <strong>Hiring plan</strong>: path to an A-player team
+                      </>,
+                      <>
+                        <strong>Moat</strong>: why you win over time
+                      </>,
+                    ]}
+                  />
+                </CardContent>
+              </Card>
+
+              <Card className="border-border/50 shadow-sm">
+                <CardHeader>
+                  <div className="mb-2 flex items-center gap-2">
+                    <Globe className="h-5 w-5 text-green-500" aria-hidden />
+                    <CardTitle className="text-lg">Growth (B / C+)</CardTitle>
+                  </div>
+                  <CardDescription>Checks: $20M+</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">They look for</p>
+                  <BulletsCollapsible
+                    items={[
+                      <>
+                        <strong>Scale</strong>: {'>'}$10–30M ARR
+                      </>,
+                      <>
+                        <strong>Category leadership</strong>
+                      </>,
+                      <>
+                        <strong>Top-quartile KPIs</strong>
+                      </>,
+                      <>
+                        <strong>Governance</strong>: board, processes, reporting
+                      </>,
+                      <>
+                        <strong>Path to profit</strong>
+                      </>,
+                    ]}
+                  />
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
+          {tab === 'sector' && (
+            <div>
+              <h2 className="sr-only">By sector</h2>
+              <p className="mx-auto mb-6 max-w-2xl text-center text-sm text-muted-foreground">
+                Proof points investors expect—tailor your deck and data room to your vertical.
+              </p>
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {[
+                  {
+                    title: 'AI / ML',
+                    lines: [
+                      'Proprietary data or model advantage',
+                      'Evaluation benchmarks (quality / cost / latency)',
+                      'Defensibility beyond “we call an API”',
+                      'Inference cost curves',
+                      'AI-native UX',
+                      'Security and privacy controls',
+                    ],
+                  },
+                  {
+                    title: 'Developer tools',
+                    lines: [
+                      'Bottoms-up adoption metrics',
+                      'OSS traction (stars, contributors)',
+                      'CI/CD integration story',
+                      'Time-to-value in minutes',
+                      'Expansion to enterprise',
+                      'Security posture',
+                    ],
+                  },
+                  {
+                    title: 'Fintech',
+                    lines: [
+                      'Regulatory strategy (licenses / partners)',
+                      'Fraud and risk controls',
+                      'Unit economics',
+                      'Risk capital requirements',
+                      'Compliance framework',
+                      'Banking partnerships',
+                    ],
+                  },
+                  {
+                    title: 'Healthcare / biotech',
+                    lines: [
+                      'Clinical / regulatory path',
+                      'Key opinion leaders (KOLs)',
+                      'Intellectual property (IP)',
+                      'Milestones (IND, IDE, trials)',
+                      'Reimbursement strategy',
+                      'HIPAA compliance',
+                    ],
+                  },
+                  {
+                    title: 'Climate / hardtech',
+                    lines: [
+                      'Technology readiness level (TRL)',
+                      'Pilot sites or LOIs',
+                      'Capex / opex model',
+                      'Supply chain risk mitigation',
+                      'Incentives and tax credits',
+                      'Carbon impact metrics',
+                    ],
+                  },
+                  {
+                    title: 'Consumer',
+                    lines: [
+                      'Retention cohorts (D7, D30)',
+                      'DAU/MAU and session depth',
+                      'Content or creator engine',
+                      'Distribution loops (viral, paid, organic)',
+                      'Creator / influencer partnerships',
+                      'Brand differentiation',
+                    ],
+                  },
+                  {
+                    title: 'SaaS / B2B',
+                    lines: [
+                      'ICP clarity and validation',
+                      'Pipeline health (volume, velocity)',
+                      'Sales efficiency (CAC, LTV, payback)',
+                      'Implementation time',
+                      'Integration ecosystem',
+                      'Net revenue retention',
+                    ],
+                  },
+                  {
+                    title: 'Crypto / Web3',
+                    lines: [
+                      'On-chain traction (wallets, TVL)',
+                      'Token plan and compliance',
+                      'Security audits',
+                      'Community governance model',
+                      'Exchange / market maker relationships',
+                      'Smart contract risk mitigation',
+                    ],
+                  },
+                ].map(({ title, lines }) => (
+                  <Card key={title} className="border-border/50 shadow-sm">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-base">{title}</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <SectorBulletList lines={lines} />
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {tab === 'structure' && (
+            <div className="space-y-4">
+              <h2 className="sr-only">By fund structure</h2>
+              <Card>
+                <CardHeader>
+                  <CardTitle>Solo GP / rolling fund / emerging manager</CardTitle>
+                  <CardDescription>Concentrated bets, strong operator networks</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex items-start gap-2">
+                      <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden />
+                      <span>
+                        <strong>Founder-story fit</strong> — they often bet on people first.
+                      </span>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden />
+                      <span>
+                        <strong>Fast conviction</strong> — sometimes 1–2 meetings to a term sheet.
+                      </span>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden />
+                      <span>
+                        <strong>Operator help</strong> — hands-on when they have been there before.
+                      </span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Multi-partner institutional fund</CardTitle>
+                  <CardDescription>Process-driven, ownership targets, board capacity</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex items-start gap-2">
+                      <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-orange-500" aria-hidden />
+                      <span>
+                        <strong>IC process</strong> — often 3–5 meetings.
+                      </span>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-orange-500" aria-hidden />
+                      <span>
+                        <strong>Ownership</strong> — often ~15–20% at lead rounds.
+                      </span>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-orange-500" aria-hidden />
+                      <span>
+                        <strong>Board bandwidth</strong> — partners only take so many boards.
+                      </span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Corporate VC (CVC)</CardTitle>
+                  <CardDescription>Strategic fit to the parent company</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex items-start gap-2">
+                      <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden />
+                      <span>
+                        <strong>Strategic value</strong> — how you help the parent.
+                      </span>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden />
+                      <span>
+                        <strong>BD potential</strong> — can the parent be a customer or partner?
+                      </span>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-orange-500" aria-hidden />
+                      <span>
+                        <strong>Conflicts</strong> — data sharing, competing products.
+                      </span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Accelerators / studios</CardTitle>
+                  <CardDescription>Cohort-based, intense mentorship</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex items-start gap-2">
+                      <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden />
+                      <span>
+                        <strong>Coachability</strong> — iterate with feedback.
+                      </span>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden />
+                      <span>
+                        <strong>Cadence</strong> — ship weekly, learn constantly.
+                      </span>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden />
+                      <span>
+                        <strong>Network</strong> — use alumni and partner intros.
+                      </span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
+          {tab === 'next' && (
+            <Card className="mx-auto max-w-2xl border-primary/40 bg-primary/[0.06] shadow-sm">
+              <CardHeader>
+                <div className="flex items-center gap-2">
+                  <Layers className="h-5 w-5 text-primary" aria-hidden />
+                  <CardTitle>How this shows up in {BRAND_NAME}</CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <p className="text-sm leading-relaxed text-muted-foreground">
+                  Scores tie back to what you actually wrote. We line up stage- and sector-specific proof points from your
+                  materials so you can see strengths and gaps.
+                </p>
+                <p className="text-sm leading-relaxed text-muted-foreground">
+                  Each match includes the thesis cues that moved the score—not a black box—and notes on what to tighten before
+                  you reach out.
+                </p>
+                <div className="flex flex-col gap-3 pt-2 sm:flex-row sm:justify-center">
+                  <Link href="/founder/resume-analysis">
+                    <Button size="lg" className="w-full sm:w-auto">
+                      Analyze my resume
+                    </Button>
+                  </Link>
+                  <Link href="/founder/discover">
+                    <Button size="lg" variant="outline" className="w-full sm:w-auto">
+                      Browse investors
+                    </Button>
+                  </Link>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}

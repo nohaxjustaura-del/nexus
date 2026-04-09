@@ -1,7 +1,7 @@
 {
   "name": "NEXUS · Investor matching for founders",
   "short_name": "NEXUS",
-  "description": "Ranked matches to verified investors and programs from your pitch, by stage, sector, thesis, and fit.",
+  "description": "Fundraising-specific intelligence: ranked matches to verified investors and programs from your pitch, using stage, sector, thesis, and narrative fit.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0a0a0a",

@@ -113,7 +113,10 @@ export async function ingestFirmToPrisma(firmName: string): Promise<{
       if (a.discoverable !== b.discoverable) return a.discoverable ? -1 : 1
       return a.createdAt.getTime() - b.createdAt.getTime()
     })
-    existing = hits[0] ?? null
+    const best = hits[0]
+    existing = best
+      ? await db.investor.findUnique({ where: { id: best.id } })
+      : null
   }
 
   let isNew = false

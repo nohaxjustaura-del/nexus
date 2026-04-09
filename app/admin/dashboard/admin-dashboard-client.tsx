@@ -26,6 +26,7 @@ import { Label } from "@/components/ui/label"
 import { toast } from '@/components/ui/toast-simple'
 import { FounderVerificationReviewPanel } from '@/components/admin/founder-verification-review-panel'
 import type { FounderVerificationReviewItem } from '@/lib/admin/founder-verifications'
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
 
 interface UserApproval {
   email: string
@@ -253,6 +254,25 @@ export function AdminDashboardClient({
 
   return (
     <div className="space-y-6">
+      <Accordion type="single" collapsible className="rounded-lg border border-border/60 bg-card/40">
+        <AccordionItem value="admin-guide" className="border-0 px-4">
+          <AccordionTrigger className="py-3 text-sm font-medium hover:no-underline">
+            How this dashboard works
+          </AccordionTrigger>
+          <AccordionContent>
+            <ul className="list-disc space-y-1.5 pb-3 pl-5 text-sm text-muted-foreground">
+              <li>Approve or reject pending signups before users get full access.</li>
+              <li>Review founder ID uploads, then verify or reject from the panel.</li>
+              <li>Process VC profile claims and verify new investor records from the lists below.</li>
+              <li>
+                Use <span className="font-medium text-foreground">Revoke by email</span> only when someone is not on these
+                queues—see expanded notes on that card.
+              </li>
+            </ul>
+          </AccordionContent>
+        </AccordionItem>
+      </Accordion>
+
       {!hasPending && (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
@@ -504,11 +524,21 @@ export function AdminDashboardClient({
             <UserX className="h-4 w-4" />
             Revoke by email
           </CardTitle>
-          <CardDescription>
-            For accounts that are already approved or not on the queues above: remove access (signup + founder ID) or
-            revoke founder ID verification only.
-          </CardDescription>
         </CardHeader>
+        <Accordion type="single" collapsible className="border-t border-border/40 px-6">
+          <AccordionItem value="revoke-notes" className="border-0">
+            <AccordionTrigger className="py-3 text-sm text-muted-foreground hover:no-underline">
+              When to use revoke actions
+            </AccordionTrigger>
+            <AccordionContent>
+              <p className="max-w-prose pb-3 text-sm leading-relaxed text-muted-foreground">
+                For accounts that are already approved or not on the queues above: remove access (signup + founder ID) or
+                revoke founder ID verification only. Revoke access sends a rejection email and clears founder ID if present;
+                revoke verification leaves signup status unchanged.
+              </p>
+            </AccordionContent>
+          </AccordionItem>
+        </Accordion>
         <CardContent className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="admin-revoke-email">Email</Label>

@@ -1,8 +1,12 @@
-'use client';
+'use client'
 
-import { useState, useEffect } from 'react';
-import Link from 'next/link';
-import { BRAND_NAME } from '@/lib/brand';
+import { useState, useEffect, useMemo } from 'react'
+import Link from 'next/link'
+import { BRAND_NAME } from '@/lib/brand'
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
+import { ChevronDown } from 'lucide-react'
+import { cn } from '@/lib/utils'
 
 interface InvestorMatch {
   id: string;
@@ -48,6 +52,15 @@ export default function AnalysisPage() {
     fetchAnalysis();
   }, []);
 
+  const assessmentParagraphs = useMemo(() => {
+    const raw = feedback?.overallAssessment
+    if (!raw) return [] as string[]
+    return raw
+      .split('\n')
+      .map((p) => p.trim())
+      .filter(Boolean)
+  }, [feedback?.overallAssessment])
+
   const fetchAnalysis = async () => {
     try {
       setLoading(true);
@@ -92,19 +105,24 @@ export default function AnalysisPage() {
     );
   }
 
+  const assessmentLead = assessmentParagraphs[0] ?? ''
+  const assessmentRest = assessmentParagraphs.slice(1)
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-muted/50 via-primary/5 to-primary/10">
+    <div className="min-h-screen bg-background">
       {/* Header */}
-      <div className="bg-card border-b border-border shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex items-center justify-between">
+      <div className="border-b border-border bg-card/80 shadow-sm backdrop-blur-sm">
+        <div className="page-shell-narrow py-6">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-foreground">{BRAND_NAME} Analysis</h1>
-              <p className="text-muted-foreground mt-1">Your personalized fundraising roadmap</p>
+              <h1 className="font-heading text-2xl font-semibold tracking-tight text-foreground md:text-3xl">
+                {BRAND_NAME} analysis
+              </h1>
+              <p className="mt-1 text-sm text-muted-foreground">Fundraising roadmap from your onboarding answers</p>
             </div>
             <Link
               href="/onboarding/founder"
-              className="text-primary hover:text-primary/80 font-medium flex items-center gap-2"
+              className="flex items-center gap-2 text-sm font-medium text-primary hover:text-primary/80"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -116,61 +134,81 @@ export default function AnalysisPage() {
       </div>
 
       {/* Tab Navigation */}
-      <div className="bg-card border-b border-border">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex space-x-8">
+      <div className="border-b border-border bg-card/60">
+        <div className="page-shell-narrow">
+          <div className="flex flex-wrap gap-2 sm:gap-6">
             <button
+              type="button"
               onClick={() => setActiveTab('overview')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
+              className={cn(
+                'border-b-2 py-3 px-1 text-sm font-medium transition-colors',
                 activeTab === 'overview'
                   ? 'border-primary text-primary'
-                  : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
-              }`}
+                  : 'border-transparent text-muted-foreground hover:border-border hover:text-foreground',
+              )}
             >
-              Overview & Assessment
+              Overview
             </button>
             <button
+              type="button"
               onClick={() => setActiveTab('pitch')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
+              className={cn(
+                'border-b-2 py-3 px-1 text-sm font-medium transition-colors',
                 activeTab === 'pitch'
                   ? 'border-primary text-primary'
-                  : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
-              }`}
+                  : 'border-transparent text-muted-foreground hover:border-border hover:text-foreground',
+              )}
             >
-              Pitch & Strategy
+              Pitch and strategy
             </button>
             <button
+              type="button"
               onClick={() => setActiveTab('matching')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
+              className={cn(
+                'border-b-2 py-3 px-1 text-sm font-medium transition-colors',
                 activeTab === 'matching'
                   ? 'border-primary text-primary'
-                  : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
-              }`}
+                  : 'border-transparent text-muted-foreground hover:border-border hover:text-foreground',
+              )}
             >
-              Investor Matches ({feedback.topMatches.length})
+              Matches ({feedback.topMatches.length})
             </button>
           </div>
         </div>
       </div>
 
       {/* Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="page-shell-narrow py-8">
         {activeTab === 'overview' && (
           <div className="space-y-6">
             {/* Overall Assessment */}
-            <div className="bg-card rounded-xl shadow-sm border border-border p-6">
-              <h2 className="text-2xl font-bold text-foreground mb-4">Overall Assessment</h2>
-              <div className="prose max-w-none text-muted-foreground leading-relaxed">
-                {feedback.overallAssessment.split('\n').map((paragraph, idx) => (
-                  <p key={idx} className="mb-3">{paragraph}</p>
-                ))}
-              </div>
+            <div className="surface-panel p-6">
+              <h2 className="font-heading text-xl font-semibold text-foreground">Overall assessment</h2>
+              <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{assessmentLead}</p>
+              {assessmentRest.length > 0 ? (
+                <Accordion type="single" collapsible className="mt-4 rounded-lg border border-border/50">
+                  <AccordionItem value="full-assessment" className="border-0">
+                    <AccordionTrigger className="py-3 text-sm hover:no-underline">
+                      Read full assessment
+                    </AccordionTrigger>
+                    <AccordionContent>
+                      <div className="prose prose-sm max-w-none pb-2 text-muted-foreground">
+                        {assessmentRest.map((paragraph, idx) => (
+                          <p key={idx} className="mb-3 last:mb-0">
+                            {paragraph}
+                          </p>
+                        ))}
+                      </div>
+                    </AccordionContent>
+                  </AccordionItem>
+                </Accordion>
+              ) : null}
             </div>
 
             {/* Strengths & Weaknesses */}
-            <div className="grid md:grid-cols-2 gap-6">
+            <div className="grid gap-6 md:grid-cols-2">
               {/* Strengths */}
-              <div className="bg-card rounded-xl shadow-sm border border-border p-6">
+              <div className="surface-panel p-6">
                 <div className="flex items-center gap-2 mb-4">
                   <div className="w-8 h-8 bg-green-500/15 rounded-lg flex items-center justify-center">
                     <svg className="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 20 20">
@@ -190,7 +228,7 @@ export default function AnalysisPage() {
               </div>
 
               {/* Weaknesses */}
-              <div className="bg-card rounded-xl shadow-sm border border-border p-6">
+              <div className="surface-panel p-6">
                 <div className="flex items-center gap-2 mb-4">
                   <div className="w-8 h-8 bg-amber-500/15 rounded-lg flex items-center justify-center">
                     <svg className="w-5 h-5 text-amber-600" fill="currentColor" viewBox="0 0 20 20">
@@ -210,100 +248,110 @@ export default function AnalysisPage() {
               </div>
             </div>
 
-            {/* Deep Dive Sections */}
-            <div className="space-y-6">
-              <DetailSection title="Team Assessment" content={feedback.teamAssessment} />
-              <DetailSection title="Traction Analysis" content={feedback.tractionAnalysis} />
-              <DetailSection title="Market Opportunity" content={feedback.marketOpportunity} />
-              <DetailSection title="Competitive Positioning" content={feedback.competitivePositioning} />
-            </div>
+            <Accordion type="multiple" className="rounded-xl border border-border/50 bg-card/40 px-2">
+              <DetailAccordionItem value="team" title="Team assessment" content={feedback.teamAssessment} />
+              <DetailAccordionItem value="traction" title="Traction analysis" content={feedback.tractionAnalysis} />
+              <DetailAccordionItem value="market" title="Market opportunity" content={feedback.marketOpportunity} />
+              <DetailAccordionItem value="competitive" title="Competitive positioning" content={feedback.competitivePositioning} />
+            </Accordion>
           </div>
         )}
 
         {activeTab === 'pitch' && (
-          <div className="space-y-6">
-            {/* Pitch Improvements */}
-            <div className="bg-card rounded-xl shadow-sm border border-border p-6">
-              <h2 className="text-2xl font-bold text-foreground mb-4">Pitch Improvements</h2>
-              <p className="text-muted-foreground mb-6">Specific recommendations to strengthen your pitch narrative:</p>
-              <div className="space-y-4">
-                {feedback.pitchImprovements.map((improvement, idx) => (
-                  <div key={idx} className="flex items-start gap-4 p-4 bg-primary/10 rounded-lg border border-primary/20">
-                    <div className="flex-shrink-0 w-6 h-6 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-sm font-bold">
-                      {idx + 1}
+          <Accordion type="single" collapsible className="space-y-4">
+            <AccordionItem value="pitch-improvements" className="surface-panel border-0 px-4">
+              <AccordionTrigger className="py-4 text-left font-heading text-lg font-semibold hover:no-underline">
+                Pitch improvements
+              </AccordionTrigger>
+              <AccordionContent>
+                <p className="mb-4 text-sm text-muted-foreground">Recommendations to strengthen your narrative:</p>
+                <div className="space-y-3 pb-2">
+                  {feedback.pitchImprovements.map((improvement, idx) => (
+                    <div
+                      key={idx}
+                      className="flex items-start gap-3 rounded-lg border border-primary/20 bg-primary/10 p-4"
+                    >
+                      <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">
+                        {idx + 1}
+                      </div>
+                      <p className="flex-1 text-sm text-foreground/90">{improvement}</p>
                     </div>
-                    <p className="text-foreground/90 flex-1">{improvement}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
+                  ))}
+                </div>
+              </AccordionContent>
+            </AccordionItem>
 
-            {/* Deck Feedback */}
-            <div className="bg-card rounded-xl shadow-sm border border-border p-6">
-              <h2 className="text-2xl font-bold text-foreground mb-4">Pitch Deck Feedback</h2>
-              <p className="text-muted-foreground mb-6">How to create or improve your investor deck:</p>
-              <div className="space-y-3">
-                {feedback.deckFeedback.map((item, idx) => (
-                  <div key={idx} className="flex items-start gap-3 text-muted-foreground">
-                    <span className="text-indigo-500 mt-1">📊</span>
-                    <span>{item}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
+            <AccordionItem value="deck" className="surface-panel border-0 px-4">
+              <AccordionTrigger className="py-4 text-left font-heading text-lg font-semibold hover:no-underline">
+                Pitch deck feedback
+              </AccordionTrigger>
+              <AccordionContent>
+                <ul className="space-y-2 pb-2 text-sm text-muted-foreground">
+                  {feedback.deckFeedback.map((item, idx) => (
+                    <li key={idx} className="flex gap-2">
+                      <span className="text-primary">•</span>
+                      <span>{item}</span>
+                    </li>
+                  ))}
+                </ul>
+              </AccordionContent>
+            </AccordionItem>
 
-            {/* Fundraising Strategy */}
-            <div className="bg-card rounded-xl shadow-sm border border-border p-6">
-              <h2 className="text-2xl font-bold text-foreground mb-4">Fundraising Strategy</h2>
-              <p className="text-muted-foreground mb-6">Tactical playbook for running your fundraise:</p>
-              <div className="space-y-3">
-                {feedback.fundraisingStrategy.map((item, idx) => (
-                  <div key={idx} className="flex items-start gap-3 text-muted-foreground">
-                    <span className="text-purple-500 mt-1">💡</span>
-                    <span>{item}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
+            <AccordionItem value="strategy" className="surface-panel border-0 px-4">
+              <AccordionTrigger className="py-4 text-left font-heading text-lg font-semibold hover:no-underline">
+                Fundraising strategy
+              </AccordionTrigger>
+              <AccordionContent>
+                <ul className="space-y-2 pb-2 text-sm text-muted-foreground">
+                  {feedback.fundraisingStrategy.map((item, idx) => (
+                    <li key={idx} className="flex gap-2">
+                      <span className="text-primary">•</span>
+                      <span>{item}</span>
+                    </li>
+                  ))}
+                </ul>
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
         )}
 
         {activeTab === 'matching' && (
           <div className="space-y-6">
-            {/* Matching Overview */}
-            <div className="bg-card rounded-xl shadow-sm border border-border p-6">
-              <h2 className="text-2xl font-bold text-foreground mb-2">Your Top Investor Matches</h2>
-              <p className="text-muted-foreground">
-                We've analyzed {feedback.topMatches.length} investors that align with your startup profile.
-                Each match includes a personalized pitch adaptation and outreach strategy.
+            <div className="surface-panel p-6">
+              <h2 className="font-heading text-xl font-semibold text-foreground">Your investor matches</h2>
+              <p className="mt-2 text-sm text-muted-foreground">
+                {feedback.topMatches.length} investors aligned with your profile. Open a card for pitch angles and talking
+                points.
               </p>
             </div>
 
-            {/* Match Score Legend */}
-            <div className="bg-gradient-to-r from-primary/10 to-primary/10 rounded-lg p-4 border border-primary/20">
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground font-medium">Match Score:</span>
-                <div className="flex items-center gap-6">
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full bg-green-500"></div>
-                    <span className="text-muted-foreground">80-100: Excellent</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full bg-blue-500"></div>
-                    <span className="text-muted-foreground">60-79: Good</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
-                    <span className="text-muted-foreground">40-59: Moderate</span>
-                  </div>
+            <Collapsible className="group/legend rounded-lg border border-border/50 bg-muted/20 px-4">
+              <CollapsibleTrigger className="flex w-full items-center justify-between py-3 text-sm font-medium text-foreground">
+                <span>How to read match scores</span>
+                <ChevronDown
+                  className="h-4 w-4 shrink-0 transition-transform duration-200 group-data-[state=open]/legend:rotate-180"
+                  aria-hidden
+                />
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <div className="flex flex-col gap-2 pb-4 text-xs text-muted-foreground sm:flex-row sm:flex-wrap sm:gap-6">
+                  <span className="flex items-center gap-2">
+                    <span className="h-2.5 w-2.5 rounded-full bg-green-500" /> 80–100 excellent
+                  </span>
+                  <span className="flex items-center gap-2">
+                    <span className="h-2.5 w-2.5 rounded-full bg-blue-500" /> 60–79 good
+                  </span>
+                  <span className="flex items-center gap-2">
+                    <span className="h-2.5 w-2.5 rounded-full bg-yellow-500" /> 40–59 moderate
+                  </span>
                 </div>
-              </div>
-            </div>
+              </CollapsibleContent>
+            </Collapsible>
 
             {/* Investor Matches */}
             <div className="grid gap-6">
               {feedback.topMatches.map((match, idx) => (
-                <div key={match.id} className="bg-card rounded-xl shadow-sm border border-border p-6 hover:shadow-md transition-shadow">
+                <div key={match.id} className="surface-panel p-6 transition-shadow hover:shadow-md">
                   <div className="flex items-start justify-between mb-4">
                     <div className="flex items-start gap-4">
                       <div className="flex-shrink-0 w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 text-white rounded-lg flex items-center justify-center text-xl font-bold">
@@ -432,7 +480,7 @@ export default function AnalysisPage() {
             </div>
 
             {feedback.topMatches.length === 0 && (
-              <div className="bg-card rounded-xl shadow-sm border border-border p-12 text-center">
+              <div className="surface-panel p-12 text-center">
                 <p className="text-muted-foreground">No matches found. Try updating your profile with more details.</p>
               </div>
             )}
@@ -440,18 +488,20 @@ export default function AnalysisPage() {
         )}
       </div>
     </div>
-  );
+  )
 }
 
-function DetailSection({ title, content }: { title: string; content: string }) {
+function DetailAccordionItem({ value, title, content }: { value: string; title: string; content: string }) {
   return (
-    <div className="bg-card rounded-xl shadow-sm border border-border p-6">
-      <h3 className="text-xl font-bold text-foreground mb-4">{title}</h3>
-      <div className="prose max-w-none text-muted-foreground text-sm leading-relaxed whitespace-pre-line">
-        {content}
-      </div>
-    </div>
-  );
+    <AccordionItem value={value} className="border-b border-border/40 last:border-b-0">
+      <AccordionTrigger className="py-4 text-left font-heading text-base font-semibold hover:no-underline sm:text-lg">
+        {title}
+      </AccordionTrigger>
+      <AccordionContent>
+        <div className="prose prose-sm max-w-none whitespace-pre-line pb-4 text-muted-foreground leading-relaxed">{content}</div>
+      </AccordionContent>
+    </AccordionItem>
+  )
 }
 
 

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { toast } from 'sonner'
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
 
 type JobRow = {
   id: string
@@ -121,12 +122,25 @@ export function WorkerDashboardClient() {
     <div className="min-h-screen bg-background p-8 text-foreground">
       <div className="mx-auto max-w-4xl">
         <h1 className="mb-2 font-heading text-2xl font-semibold tracking-tight sm:text-3xl">Background worker</h1>
-        <p className="mb-8 text-sm text-muted-foreground">
-          Status below reflects scheduled jobs inside this Next.js Node process only. On your machine, run{' '}
-          <code className="rounded bg-muted px-1 py-0.5 text-xs">npm run workers:all</code> in a dedicated terminal for
-          maintenance plus VC discovery (Exa → research → Prisma and Supabase). Use Run now to invoke the same handlers
-          on demand via API.
+        <p className="mb-3 text-sm text-muted-foreground">
+          Scheduled jobs in this Node process. Use <strong className="font-medium text-foreground">Run now</strong> to trigger
+          handlers on demand.
         </p>
+        <Accordion type="single" collapsible className="mb-8 rounded-lg border border-border/60 bg-card/50">
+          <AccordionItem value="worker-local" className="border-0 px-4">
+            <AccordionTrigger className="py-3 text-sm hover:no-underline">
+              Running workers locally
+            </AccordionTrigger>
+            <AccordionContent>
+              <p className="max-w-prose pb-3 text-sm leading-relaxed text-muted-foreground">
+                Status here reflects this Next.js app only. On your machine, run{' '}
+                <code className="rounded bg-muted px-1 py-0.5 text-xs">npm run workers:all</code> in a dedicated terminal for
+                maintenance plus VC discovery (Exa → research → Prisma and Supabase). Run now calls the same handlers via
+                API.
+              </p>
+            </AccordionContent>
+          </AccordionItem>
+        </Accordion>
 
         <div className="mb-8 rounded-lg border bg-card p-6">
           <div className="flex flex-wrap items-center justify-between gap-4">

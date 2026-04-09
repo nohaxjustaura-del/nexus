@@ -6,6 +6,7 @@ import { Layers, Lightbulb } from 'lucide-react'
 import { UnifiedPitchTab } from '@/components/ai-analysis/unified-pitch-tab'
 import { PitchIdeaAnalysisTab } from '@/components/ai-analysis/pitch-idea-tab'
 import { cn } from '@/lib/utils'
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
 
 type AnalysisMode = 'unified' | 'pitch-idea'
 
@@ -29,24 +30,31 @@ export default function AIAnalysisPage() {
                 Past reports and scores
               </Link>
             </div>
-            <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+            <p className="mt-3 text-sm text-muted-foreground">
               {mode === 'unified' ? (
                 <>
-                  <span className="font-medium text-foreground">Unified pitch</span> uses one submission: structured
-                  Q&A plus any deck, video, and written context you want to include. Everything is merged for scoring,
-                  feedback, and investor matching.
+                  <span className="font-medium text-foreground">Unified pitch</span> — one submission merges Q&A, deck,
+                  video, and notes for scoring and matching.
                 </>
               ) : (
                 <>
-                  <span className="font-medium text-foreground">Pitch idea</span> is for a concept-only pass:
-                  describe your idea in text, upload a short doc, or use voice. You get feedback and investor matches
-                  without a full deck or recording.
+                  <span className="font-medium text-foreground">Pitch idea</span> — concept-only: text, short doc, or voice;
+                  feedback and matches without a full deck.
                 </>
               )}
             </p>
-            <p className="mt-2 text-xs text-muted-foreground">
-              Content stays private and is removed automatically after 30–90 days.
-            </p>
+            <Accordion type="single" collapsible className="mt-3 rounded-lg border border-border/50 bg-muted/10 px-3">
+              <AccordionItem value="details" className="border-0">
+                <AccordionTrigger className="py-2.5 text-xs hover:no-underline sm:text-sm">
+                  Privacy and retention
+                </AccordionTrigger>
+                <AccordionContent>
+                  <p className="pb-2 text-xs leading-relaxed text-muted-foreground">
+                    Content stays private and is removed automatically after 30–90 days per retention settings.
+                  </p>
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
           </header>
 
           <div className="mx-auto mb-8 flex w-full max-w-xl justify-center px-1">

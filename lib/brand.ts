@@ -2,7 +2,7 @@
 export const BRAND_NAME = 'NEXUS'
 
 /** Short tagline (sentence case) for subtitles and descriptions. */
-export const BRAND_TAGLINE = 'Fundraising match engine for founders'
+export const BRAND_TAGLINE = 'Fundraising intelligence built for fit, not generic answers'
 
 /** Home hero eyebrow (uppercase styling in UI). Must stay SSR/CSR-identical to avoid hydration mismatches. */
 export const BRAND_HERO_EYEBROW = 'Fundraising match engine'

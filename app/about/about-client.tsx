@@ -16,6 +16,7 @@ import {
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
 import { BRAND_NAME, BRAND_TAGLINE } from '@/lib/brand'
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
 
 const cardClass =
   'border border-border/40 bg-card/80 shadow-sm ring-1 ring-border/15 transition-colors hover:border-border/55 hover:bg-card/90'
@@ -40,12 +41,10 @@ export default function AboutClient({ verifiedInvestorCountLabel }: { verifiedIn
             {BRAND_TAGLINE}
           </p>
           <h1 className="font-heading mb-4 text-4xl font-semibold tracking-tight md:text-5xl">About {BRAND_NAME}</h1>
-          <p className="mx-auto max-w-3xl text-lg leading-relaxed text-muted-foreground">
-            {BRAND_NAME} analyzes your pitch idea, deck, or video and builds a ranked shortlist of aligned investors from
-            our verified directory, so you focus on conversations that fit your stage, sector, and story, not endless
-            list-building. The live directory includes{' '}
-            <span className="font-medium text-foreground">{verifiedInvestorCountLabel} verified investor profiles</span>{' '}
-            we use for matching and discovery.
+          <p className="mx-auto max-w-2xl text-base leading-relaxed text-muted-foreground sm:text-lg">
+            We analyze your idea, deck, or video with a fundraising-specific lens, then rank investors from{' '}
+            <span className="font-medium text-foreground">{verifiedInvestorCountLabel} verified profiles</span> so suggestions
+            map to real mandates—not invented names.
           </p>
         </div>
 
@@ -57,13 +56,34 @@ export default function AboutClient({ verifiedInvestorCountLabel }: { verifiedIn
               Our mission
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <p className="text-lg leading-relaxed text-muted-foreground">
-              Fundraising is noisy: huge directories, weak overlap, and outreach that does not convert. {BRAND_NAME}{' '}
-              reviews what you share in an allocator-style lens, then ranks investors by mandate fit so you spend time on
-              credible outreach, not spray-and-pray volume. We surface matches and rationale; warm intros and closes remain
-              yours to earn.
+          <CardContent className="space-y-4">
+            <p className="text-base leading-relaxed text-muted-foreground">
+              {BRAND_NAME} reviews what you share like an allocator would, then ranks investors by mandate fit so you focus on
+              credible outreach—not spray-and-pray volume.
             </p>
+            <Accordion type="single" collapsible className="w-full rounded-lg border border-border/40 px-3">
+              <AccordionItem value="why-not-chat" className="border-0">
+                <AccordionTrigger className="py-3 text-sm hover:no-underline">
+                  Why not a generic chat model?
+                </AccordionTrigger>
+                <AccordionContent>
+                  <p className="pb-2 text-sm leading-relaxed">
+                    Big models optimize for fluent text, not a maintained investor graph. Directories alone are noisy without
+                    a fit layer tied to your materials—we combine both.
+                  </p>
+                </AccordionContent>
+              </AccordionItem>
+              <AccordionItem value="your-job" className="border-0 border-t border-border/30">
+                <AccordionTrigger className="py-3 text-sm hover:no-underline">
+                  What stays on you
+                </AccordionTrigger>
+                <AccordionContent>
+                  <p className="pb-2 text-sm leading-relaxed">
+                    We surface matches and rationale. Warm intros, diligence, and closes are yours to earn.
+                  </p>
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
           </CardContent>
         </Card>
 
@@ -78,7 +98,7 @@ export default function AboutClient({ verifiedInvestorCountLabel }: { verifiedIn
                 </div>
                 <CardTitle className="font-heading">Pitch analysis</CardTitle>
                 <CardDescription className="text-muted-foreground">
-                  Structured feedback on materials you submit in the app
+                  Structured, investor-style feedback tuned to how pitches are judged, not generic writing advice
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -86,37 +106,48 @@ export default function AboutClient({ verifiedInvestorCountLabel }: { verifiedIn
                   <li className="flex items-start gap-2">
                     <CheckCircle className={checkClass} aria-hidden />
                     <span>
-                      <strong className="text-foreground">Pitch idea:</strong> Stress-test the concept with concise,
-                      investor-style commentary
-                    </span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <CheckCircle className={checkClass} aria-hidden />
-                    <span>
-                      <strong className="text-foreground">Pitch deck:</strong> Slide-level notes and messaging suggestions
-                    </span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <CheckCircle className={checkClass} aria-hidden />
-                    <span>
-                      <strong className="text-foreground">Video pitch:</strong> Feedback on clarity, delivery, and
-                      narrative (some flows may complete asynchronously by email)
-                    </span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <CheckCircle className={checkClass} aria-hidden />
-                    <span>
-                      <strong className="text-foreground">Resume:</strong> Separate founder resume analysis for team and
-                      traction context; see{' '}
-                      <Link
-                        href="/founder/resume-analysis"
-                        className="font-medium text-primary underline-offset-2 hover:underline"
-                      >
-                        Resume analysis
-                      </Link>
+                      <strong className="text-foreground">Pitch idea:</strong> Concise, investor-style commentary on your
+                      concept.
                     </span>
                   </li>
                 </ul>
+                <Accordion type="single" collapsible className="mt-2 w-full">
+                  <AccordionItem value="pitch-more" className="border-0">
+                    <AccordionTrigger className="py-2 text-xs font-medium text-primary hover:no-underline">
+                      All analysis types
+                    </AccordionTrigger>
+                    <AccordionContent>
+                      <ul className="space-y-2 text-sm text-muted-foreground">
+                        <li className="flex items-start gap-2">
+                          <CheckCircle className={checkClass} aria-hidden />
+                          <span>
+                            <strong className="text-foreground">Pitch deck:</strong> Slide-level notes and messaging
+                            suggestions.
+                          </span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <CheckCircle className={checkClass} aria-hidden />
+                          <span>
+                            <strong className="text-foreground">Video pitch:</strong> Clarity, delivery, and narrative (some
+                            flows finish by email).
+                          </span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <CheckCircle className={checkClass} aria-hidden />
+                          <span>
+                            <strong className="text-foreground">Resume:</strong> Team and traction context—{' '}
+                            <Link
+                              href="/founder/resume-analysis"
+                              className="font-medium text-primary underline-offset-2 hover:underline"
+                            >
+                              Resume analysis
+                            </Link>
+                          </span>
+                        </li>
+                      </ul>
+                    </AccordionContent>
+                  </AccordionItem>
+                </Accordion>
               </CardContent>
             </Card>
 
@@ -134,24 +165,31 @@ export default function AboutClient({ verifiedInvestorCountLabel }: { verifiedIn
                 <ul className="space-y-2 text-sm text-muted-foreground">
                   <li className="flex items-start gap-2">
                     <CheckCircle className={checkClass} aria-hidden />
-                    <span>Weights stage, sector, vision, and how you operate</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <CheckCircle className={checkClass} aria-hidden />
                     <span>
-                      Draws on <strong className="text-foreground">{verifiedInvestorCountLabel} verified investors</strong>{' '}
-                      in our maintained dataset
+                      Rankings use stage, sector, vision, and how you operate—backed by{' '}
+                      <strong className="text-foreground">{verifiedInvestorCountLabel} verified investors</strong>.
                     </span>
                   </li>
-                  <li className="flex items-start gap-2">
-                    <CheckCircle className={checkClass} aria-hidden />
-                    <span>Talking points tailored to names on your shortlist</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <CheckCircle className={checkClass} aria-hidden />
-                    <span>Inspectable scores: transparent inputs and reasoning where the UI exposes them</span>
-                  </li>
                 </ul>
+                <Accordion type="single" collapsible className="mt-2 w-full">
+                  <AccordionItem value="match-more" className="border-0">
+                    <AccordionTrigger className="py-2 text-xs font-medium text-primary hover:no-underline">
+                      More on matching
+                    </AccordionTrigger>
+                    <AccordionContent>
+                      <ul className="space-y-2 text-sm text-muted-foreground">
+                        <li className="flex items-start gap-2">
+                          <CheckCircle className={checkClass} aria-hidden />
+                          <span>Talking points tailored to names on your shortlist.</span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <CheckCircle className={checkClass} aria-hidden />
+                          <span>Inspectable scores where the UI exposes inputs and reasoning.</span>
+                        </li>
+                      </ul>
+                    </AccordionContent>
+                  </AccordionItem>
+                </Accordion>
               </CardContent>
             </Card>
 
@@ -167,21 +205,32 @@ export default function AboutClient({ verifiedInvestorCountLabel }: { verifiedIn
                 <ul className="space-y-2 text-sm text-muted-foreground">
                   <li className="flex items-start gap-2">
                     <CheckCircle className={checkClass} aria-hidden />
-                    <span>Filter by stage, sector, check size, geography, and more</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <CheckCircle className={checkClass} aria-hidden />
-                    <span>Read criteria, focus, and context on each profile</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <CheckCircle className={checkClass} aria-hidden />
-                    <span>Bookmark investors for follow-up</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <CheckCircle className={checkClass} aria-hidden />
-                    <span>Recommendations informed by your founder profile where available</span>
+                    <span>Filter by stage, sector, check size, geography, and more.</span>
                   </li>
                 </ul>
+                <Accordion type="single" collapsible className="mt-2 w-full">
+                  <AccordionItem value="disc-more" className="border-0">
+                    <AccordionTrigger className="py-2 text-xs font-medium text-primary hover:no-underline">
+                      Discovery details
+                    </AccordionTrigger>
+                    <AccordionContent>
+                      <ul className="space-y-2 text-sm text-muted-foreground">
+                        <li className="flex items-start gap-2">
+                          <CheckCircle className={checkClass} aria-hidden />
+                          <span>Criteria and context on each profile.</span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <CheckCircle className={checkClass} aria-hidden />
+                          <span>Bookmarks for follow-up.</span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <CheckCircle className={checkClass} aria-hidden />
+                          <span>Recommendations from your founder profile when available.</span>
+                        </li>
+                      </ul>
+                    </AccordionContent>
+                  </AccordionItem>
+                </Accordion>
               </CardContent>
             </Card>
           </div>
@@ -235,8 +284,9 @@ export default function AboutClient({ verifiedInvestorCountLabel }: { verifiedIn
                   <div>
                     <h3 className="mb-2 font-heading text-lg font-semibold">Grounded profiles</h3>
                     <p className="text-muted-foreground">
-                      Investor signals draw on structured fields (stages, sectors, thesis, check size, geography), not
-                      generic startup buzzwords alone.
+                      Investor signals draw on structured fields (stages, sectors, thesis, check size, geography) inside a
+                      verified dataset, so matching stays tied to what funds actually publish and approve, not loose keyword
+                      overlap or model guesswork.
                     </p>
                   </div>
                 </div>
@@ -262,53 +312,22 @@ export default function AboutClient({ verifiedInvestorCountLabel }: { verifiedIn
           </div>
         </div>
 
-        {/* How it works */}
+        {/* How it works — link to home walkthrough */}
         <div className="mb-12">
-          <h2 className="font-heading mb-8 text-center text-3xl font-semibold tracking-tight">How it works</h2>
-          <div className="grid gap-6 md:grid-cols-3">
-            <Card className={cn('text-center', cardClass)}>
-              <CardHeader>
-                <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary text-primary-foreground">
-                  <span className="text-2xl font-bold">1</span>
-                </div>
-                <CardTitle className="font-heading">Share materials</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground">
-                  Upload a deck or video, paste a short idea, or complete onboarding so we can infer your company
-                  profile. You receive structured feedback and a profile used for matching.
-                </p>
-              </CardContent>
-            </Card>
-            <Card className={cn('text-center', cardClass)}>
-              <CardHeader>
-                <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary text-primary-foreground">
-                  <span className="text-2xl font-bold">2</span>
-                </div>
-                <CardTitle className="font-heading">Review matches</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground">
-                  See ranked investors with scores and notes per name, not a flat export, so you understand why each
-                  suggestion appears.
-                </p>
-              </CardContent>
-            </Card>
-            <Card className={cn('text-center', cardClass)}>
-              <CardHeader>
-                <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary text-primary-foreground">
-                  <span className="text-2xl font-bold">3</span>
-                </div>
-                <CardTitle className="font-heading">Outreach & iterate</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground">
-                  Bookmark priorities, open applications or emails on your side, and refine your narrative as the round
-                  evolves. {BRAND_NAME} does not send introductions on your behalf.
-                </p>
-              </CardContent>
-            </Card>
-          </div>
+          <Card className={cn('text-center', cardClass)}>
+            <CardContent className="py-10">
+              <h2 className="font-heading text-xl font-semibold tracking-tight md:text-2xl">How it works</h2>
+              <p className="mx-auto mt-3 max-w-lg text-sm text-muted-foreground">
+                The step-by-step walkthrough—with visuals—is on the homepage so we do not repeat it here.
+              </p>
+              <Link
+                href="/#home-how-heading"
+                className="mt-5 inline-flex items-center justify-center text-sm font-medium text-primary underline-offset-4 hover:underline"
+              >
+                See how it works on the homepage
+              </Link>
+            </CardContent>
+          </Card>
         </div>
 
         {/* Stats */}

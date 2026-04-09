@@ -18,9 +18,12 @@ import {
   Eye,
   EyeOff,
   AlertTriangle,
+  ChevronDown,
 } from "lucide-react"
 import { parseStringArray } from "@/lib/utils"
 import { toast } from '@/components/ui/toast-simple'
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 
 type VcLinkIssue = { field: 'websiteUrl' | 'linkedinUrl' | 'applicationUrl'; message: string }
 
@@ -235,6 +238,24 @@ export function AdminVcsClient({
             {loadError}
           </div>
         )}
+
+        <Accordion type="single" collapsible className="mb-6 rounded-lg border border-border/60 bg-card/50">
+          <AccordionItem value="vc-admin-tips" className="border-0 px-4">
+            <AccordionTrigger className="py-3 text-sm font-medium hover:no-underline">
+              VC admin tips
+            </AccordionTrigger>
+            <AccordionContent>
+              <ul className="list-disc space-y-1.5 pb-3 pl-5 text-sm text-muted-foreground">
+                <li>Use search and filters to narrow the list; export CSV for offline review.</li>
+                <li>
+                  <span className="font-medium text-foreground">Needs attention</span> flags unverified profiles or broken
+                  links from automated checks.
+                </li>
+                <li>Approve claims only after ID verification looks legitimate; reject with a short internal note.</li>
+              </ul>
+            </AccordionContent>
+          </AccordionItem>
+        </Accordion>
 
         {/* Stats */}
         <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
@@ -484,16 +505,40 @@ export function AdminVcsClient({
                         <strong>{investor.name}</strong> • {investor.email}
                       </p>
 
-                      <div className="flex flex-wrap gap-2 mb-3">
+                      <div className="flex flex-wrap items-center gap-2 mb-3">
                         <Badge variant="secondary">
                           ${investor.checkMin}K - ${investor.checkMax}K
                         </Badge>
                         {parseStringArray(investor.stages).map((stage) => (
                           <Badge key={stage} variant="secondary">{stage}</Badge>
                         ))}
-                        {parseStringArray(investor.sectors).slice(0, 3).map((sector) => (
-                          <Badge key={sector} variant="outline">{sector}</Badge>
-                        ))}
+                        {(() => {
+                          const sectors = parseStringArray(investor.sectors)
+                          const head = sectors.slice(0, 3)
+                          const tail = sectors.slice(3)
+                          return (
+                            <>
+                              {head.map((sector) => (
+                                <Badge key={sector} variant="outline">{sector}</Badge>
+                              ))}
+                              {tail.length > 0 ? (
+                                <Collapsible className="group/sec-more inline-flex items-center">
+                                  <CollapsibleTrigger className="inline-flex items-center gap-0.5 rounded-full border border-dashed border-border px-2 py-0.5 text-[11px] font-medium text-primary hover:bg-muted/50">
+                                    +{tail.length} sectors
+                                    <ChevronDown className="h-3 w-3 transition-transform group-data-[state=open]/sec-more:rotate-180" aria-hidden />
+                                  </CollapsibleTrigger>
+                                  <CollapsibleContent>
+                                    <span className="mt-1 flex flex-wrap gap-2">
+                                      {tail.map((sector) => (
+                                        <Badge key={sector} variant="outline">{sector}</Badge>
+                                      ))}
+                                    </span>
+                                  </CollapsibleContent>
+                                </Collapsible>
+                              ) : null}
+                            </>
+                          )
+                        })()}
                       </div>
 
                       <div className="flex flex-wrap gap-x-4 gap-y-2 mt-3">

@@ -35,8 +35,8 @@ const outfit = Outfit({
 export async function generateMetadata(): Promise<Metadata> {
   const verifiedCount = await getVerifiedInvestorCount()
   const label = formatVerifiedInvestorCount(verifiedCount)
-  const description = `NEXUS is a fundraising match engine that produces ranked investor shortlists from your pitch. ${label}+ verified VCs, angels, accelerators, and corporate venture arms scored on stage, sector, thesis, and fit.`
-  const ogDescription = `${label}+ verified investors (VCs, angels, accelerators, corporate venture), ranked by stage, sector, thesis, and alignment with your startup.`
+  const description = `NEXUS is purpose-built fundraising intelligence. It reads your pitch with an allocator-style lens, scores fit signals, and ranks ${label}+ verified VCs, angels, accelerators, and corporate venture arms. You get a shortlist tied to real mandates instead of a generic chatbot take on “who might invest.”`
+  const ogDescription = `${label}+ verified investors ranked against your story and stage. Built for real fundraising workflows (shortlists, rationale, outreach), not one-off answers from a general-purpose model.`
 
   return {
     metadataBase: new URL(siteUrl),
@@ -77,7 +77,7 @@ export async function generateMetadata(): Promise<Metadata> {
       card: "summary_large_image",
       title: BRAND_DEFAULT_TITLE,
       description:
-        "Ranked investor shortlists from your pitch materials: VCs, angels, accelerators, and corporate venture, matched by stage, sector, and thesis fit.",
+        "Ranked investor shortlists from your pitch with verified mandates, allocator-style scoring, and workflow tools. More specific than asking a general AI who to email.",
     },
     robots: {
       index: true,

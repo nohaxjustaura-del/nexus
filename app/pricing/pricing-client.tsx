@@ -5,6 +5,7 @@ import { normalizeUserCreditsApiPayload } from '@/lib/client/normalize-user-cred
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { toast } from "@/components/ui/toast-simple"
 import { 
   Sparkles, 
@@ -110,8 +111,8 @@ export default function PricingClient({ verifiedInvestorCountLabel, isAuthentica
           <h1 className="text-4xl md:text-5xl font-bold mb-4 bg-gradient-to-r from-blue-400 via-blue-500 to-blue-700 bg-clip-text text-transparent">
             Simple Credit-Based Pricing
           </h1>
-          <p className="text-foreground/80 text-lg md:text-xl max-w-2xl mx-auto">
-            Pay only for what you use. No subscriptions, no hidden fees.
+          <p className="mx-auto max-w-lg text-sm text-foreground/80 md:text-base">
+            Credits for analyses and unlocks, or Premium for unlimited. Expand below for per-feature costs.
           </p>
           <div className="mt-4 inline-flex items-center gap-2 rounded-full bg-primary/10 px-4 py-2">
             <Zap className="h-4 w-4 text-primary" />
@@ -319,16 +320,13 @@ export default function PricingClient({ verifiedInvestorCountLabel, isAuthentica
           </Card>
         </div>
 
-        {/* Feature Pricing */}
-        <Card className="mb-6 border-2">
-          <CardHeader>
-            <CardTitle className="text-xl">Credit Costs</CardTitle>
-            <CardDescription className="text-foreground/70">
-              How many credits each feature costs
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <Accordion type="single" collapsible className="mb-6 rounded-xl border border-border/60 bg-card/30">
+          <AccordionItem value="credit-costs" className="border-0 px-4">
+            <AccordionTrigger className="py-4 text-left text-base font-semibold hover:no-underline">
+              Credit costs by feature
+            </AccordionTrigger>
+            <AccordionContent>
+              <div className="grid gap-4 pb-4 md:grid-cols-2 lg:grid-cols-3">
               {/* FREE FEATURES FIRST */}
               <div className={creditCostRow}>
                 <div className="flex items-center gap-3 min-w-0">
@@ -436,12 +434,20 @@ export default function PricingClient({ verifiedInvestorCountLabel, isAuthentica
                 </Badge>
               </div>
             </div>
-          </CardContent>
-        </Card>
-
-        <p className="mt-6 text-center text-xs text-foreground/65">
-          Refund policy: If an analyzer fails to generate a report, you'll be fully refunded. Credits never expire.
-        </p>
+            </AccordionContent>
+          </AccordionItem>
+          <AccordionItem value="policies" className="border-t border-border/40 px-4">
+            <AccordionTrigger className="py-4 text-left text-base font-semibold hover:no-underline">
+              Refunds and billing notes
+            </AccordionTrigger>
+            <AccordionContent>
+              <p className="pb-4 text-center text-xs leading-relaxed text-foreground/65 sm:text-left">
+                If an analyzer fails to generate a report, you are fully refunded. Credits do not expire. Premium bills
+                monthly through Stripe; cancel anytime from your account.
+              </p>
+            </AccordionContent>
+          </AccordionItem>
+        </Accordion>
       </div>
     </div>
   )

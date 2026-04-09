@@ -23,38 +23,8 @@ export const NavAuth = memo(function NavAuth() {
     setMounted(true)
   }, [])
 
-  if (!mounted || loading) {
-    return (
-      <div
-        className="flex items-center gap-1.5"
-        suppressHydrationWarning
-        aria-busy="true"
-        aria-label="Checking sign-in status"
-      >
-        <Link
-          href="/login"
-          className={cn(
-            buttonVariants({ variant: 'ghost', size: 'sm' }),
-            'h-8 min-w-[4.5rem] justify-center rounded-full px-3 text-sm font-medium',
-            loading && 'animate-pulse'
-          )}
-        >
-          Log in
-        </Link>
-        <Link
-          href="/signup"
-          className={cn(
-            buttonVariants({ size: 'sm' }),
-            'h-8 min-w-[4.5rem] justify-center rounded-full px-3 text-sm font-medium shadow-none',
-            loading && 'animate-pulse'
-          )}
-        >
-          Sign up
-        </Link>
-      </div>
-    )
-  }
-
+  // Authenticated UI must not be hidden behind `loading`: refresh/re-fetch sets loading true while
+  // session is still valid, which used to flash guest "Log in / Sign up" (worse under dev Strict Mode).
   if (authenticated) {
     return (
       <div className="flex items-center gap-3" suppressHydrationWarning>
@@ -130,23 +100,27 @@ export const NavAuth = memo(function NavAuth() {
     )
   }
 
+  const guestSessionPending = !mounted || loading
+
   return (
-    <div className="flex items-center gap-1.5" suppressHydrationWarning>
+    <div
+      className={cn(
+        'flex items-center gap-1.5',
+        guestSessionPending && 'pointer-events-none opacity-60 motion-reduce:opacity-100'
+      )}
+      suppressHydrationWarning
+      aria-busy={guestSessionPending}
+      aria-label={guestSessionPending ? 'Checking sign-in status' : undefined}
+    >
       <Link
         href="/login"
-        className={cn(
-          buttonVariants({ variant: 'ghost', size: 'sm' }),
-          'h-8 rounded-full px-3 text-sm font-medium'
-        )}
+        className={cn(buttonVariants({ variant: 'ghost', size: 'sm' }), 'h-8 rounded-full px-3 text-sm font-medium')}
       >
         Log in
       </Link>
       <Link
         href="/signup"
-        className={cn(
-          buttonVariants({ size: 'sm' }),
-          'h-8 rounded-full px-3 text-sm font-medium shadow-none'
-        )}
+        className={cn(buttonVariants({ size: 'sm' }), 'h-8 rounded-full px-3 text-sm font-medium shadow-none')}
       >
         Sign up
       </Link>

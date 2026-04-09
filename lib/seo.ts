@@ -16,7 +16,7 @@ const siteUrl = getSiteUrl()
 const defaultMetadata = {
   title: BRAND_DEFAULT_TITLE,
   description:
-    'NEXUS ranks verified VCs, angels, and programs against your pitch using stage, sector, thesis, and how you tell your story, not keyword lists alone.',
+    'NEXUS ranks verified VCs, angels, and programs against your pitch using stage, sector, thesis, and narrative fit. Results tie to a maintained investor graph, not a one-shot reply from a general chat model.',
   image: `${siteUrl}/opengraph-image`,
   url: siteUrl,
 }
@@ -76,7 +76,7 @@ export function generateOrganizationSchema() {
     '@type': 'Organization',
     name: BRAND_NAME,
     description:
-      'Fundraising intelligence that connects founders with verified investors aligned on stage, sector, thesis, and narrative.',
+      'Purpose-built fundraising intelligence: ranked, explainable investor matches from verified data, built for this problem instead of open-ended LLM answers.',
     url: siteUrl,
     logo: `${siteUrl}/nexus-logo.png`,
     sameAs: [
@@ -92,7 +92,7 @@ export function generateWebsiteSchema() {
     name: BRAND_NAME,
     url: siteUrl,
     description:
-      'Fundraising intelligence that connects founders with verified investors aligned on stage, sector, thesis, and narrative.',
+      'Purpose-built fundraising intelligence: ranked, explainable investor matches from verified data, built for this problem instead of open-ended LLM answers.',
   }
 }
 

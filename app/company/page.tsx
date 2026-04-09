@@ -2,16 +2,17 @@ import Link from 'next/link'
 import type { Metadata } from 'next'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { BRAND_NAME, BRAND_TAGLINE } from '@/lib/brand'
+import { cn } from '@/lib/utils'
 import { getSiteUrl } from '@/lib/site-url'
 
 const siteUrl = getSiteUrl()
 
 export const metadata: Metadata = {
   title: 'Company',
-  description: `${BRAND_NAME} builds a fundraising match engine and verified investor directory so founders get ranked shortlists aligned to stage, sector, and thesis, not static lists.`,
+  description: `${BRAND_NAME} builds purpose-built fundraising intelligence: verified investor data plus allocator-style scoring so founders get ranked, explainable shortlists, not static lists or generic model output.`,
   openGraph: {
     title: `Company | ${BRAND_NAME}`,
-    description: `Problem, product, and moat: ${BRAND_TAGLINE} with human-in-the-loop verification and recurring data refresh.`,
+    description: `Problem, product, and moat: ${BRAND_TAGLINE}. Human-in-the-loop verification, recurring data refresh, and workflows tuned to how rounds are actually raised.`,
     url: `${siteUrl}/company`,
     siteName: BRAND_NAME,
     locale: 'en_US',
@@ -19,7 +20,7 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary_large_image',
     title: `Company | ${BRAND_NAME}`,
-    description: `Why ${BRAND_NAME}: curated investor data, match quality, and a clear path to monetization via credits and subscriptions.`,
+    description: `Why ${BRAND_NAME}: curated mandates, match depth tied to your pitch, and credits or subscriptions aligned to serious fundraising work.`,
   },
 }
 
@@ -34,21 +35,43 @@ export default function CompanyPage() {
         aria-hidden
       />
       <div className="relative z-10 mx-auto max-w-3xl px-4 py-14 sm:px-6 sm:py-16">
-        <header className="mb-12 border-b border-border/30 pb-10">
+        <header className="mb-8 border-b border-border/30 pb-8">
           <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">{BRAND_NAME}</p>
           <h1 className="font-heading mt-2 text-3xl font-semibold tracking-tight sm:text-4xl">Company overview</h1>
-          <p className="mt-4 text-base leading-relaxed text-muted-foreground sm:text-[17px]">
-            A concise narrative for partners, strategics, and capital allocators evaluating {BRAND_NAME}. Product details
-            for founders live on the{' '}
+          <p className="mt-3 max-w-prose text-sm leading-relaxed text-muted-foreground sm:text-base">
+            For partners and strategics evaluating {BRAND_NAME}. Founder-facing product detail is on{' '}
             <Link href="/about" className="font-medium text-primary underline-offset-2 hover:underline">
               About
-            </Link>{' '}
-            page.
+            </Link>
+            .
           </p>
+          <nav
+            className="mt-6 flex flex-wrap gap-x-4 gap-y-2 border-t border-border/30 pt-5 text-xs font-medium text-muted-foreground"
+            aria-label="On this page"
+          >
+            <a href="#company-problem" className="hover:text-foreground">
+              Problem
+            </a>
+            <a href="#company-product" className="hover:text-foreground">
+              Product
+            </a>
+            <a href="#company-moat" className="hover:text-foreground">
+              Moat
+            </a>
+            <a href="#company-model" className="hover:text-foreground">
+              Model
+            </a>
+            <a href="#company-traction" className="hover:text-foreground">
+              Traction
+            </a>
+            <a href="#company-contact" className="hover:text-foreground">
+              Contact
+            </a>
+          </nav>
         </header>
 
-        <div className="flex flex-col gap-10">
-          <Card className={sectionCard}>
+        <div className="flex flex-col gap-8">
+          <Card id="company-problem" className={cn(sectionCard, 'scroll-mt-24')}>
             <CardHeader>
               <CardTitle className="font-heading text-xl">Problem and opportunity</CardTitle>
             </CardHeader>
@@ -59,20 +82,25 @@ export default function CompanyPage() {
               </p>
               <p>
                 Founders need a <span className="font-medium text-foreground">ranked, explainable shortlist</span> tied to
-                verified mandates, not another export to sort by hand.
+                verified mandates, not another export to sort by hand, or a one-off answer from a general model that was not
+                built to track who actually backs what.
               </p>
             </CardContent>
           </Card>
 
-          <Card className={sectionCard}>
+          <Card id="company-product" className={cn(sectionCard, 'scroll-mt-24')}>
             <CardHeader>
               <CardTitle className="font-heading text-xl">What {BRAND_NAME} does</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3 text-sm leading-relaxed text-muted-foreground sm:text-[15px]">
               <p>
-                {BRAND_NAME} is a <span className="font-medium text-foreground">{BRAND_TAGLINE.toLowerCase()}</span>:
-                founders submit pitch materials or structured answers; the product scores narrative and fit signals, then
-                ranks investors from a maintained directory of VCs, angels, accelerators, and corporate venture arms.
+                {BRAND_NAME} is{' '}
+                <span className="font-medium text-foreground">
+                  {BRAND_TAGLINE.charAt(0).toLowerCase() + BRAND_TAGLINE.slice(1)}
+                </span>
+                : founders submit pitch materials or structured answers; the product scores narrative and fit signals with
+                fundraising-specific calibration, then ranks investors from a maintained directory of VCs, angels,
+                accelerators, and corporate venture arms.
               </p>
               <p>
                 Discovery, bookmarks, and tailored outreach support the workflow from first pass through follow-up, without{' '}
@@ -81,7 +109,7 @@ export default function CompanyPage() {
             </CardContent>
           </Card>
 
-          <Card className={sectionCard}>
+          <Card id="company-moat" className={cn(sectionCard, 'scroll-mt-24')}>
             <CardHeader>
               <CardTitle className="font-heading text-xl">Why it is defensible</CardTitle>
             </CardHeader>
@@ -97,14 +125,15 @@ export default function CompanyPage() {
                 </li>
                 <li>
                   <span className="font-medium text-foreground">Match depth:</span> retrieval and scoring combine
-                  structured mandates (stage, sector, thesis, geography) with semantic signals so rankings reflect how
-                  founders actually tell their story, not keyword stuffing.
+                  structured mandates (stage, sector, thesis, geography) with narrative signals so rankings reflect how
+                  founders actually tell their story. The product stays scoped to this domain. Unlike a general chat interface,
+                  outputs map to verified profiles and explainable fit, not open-ended prose alone.
                 </li>
               </ul>
             </CardContent>
           </Card>
 
-          <Card className={sectionCard}>
+          <Card id="company-model" className={cn(sectionCard, 'scroll-mt-24')}>
             <CardHeader>
               <CardTitle className="font-heading text-xl">Business model</CardTitle>
             </CardHeader>
@@ -124,7 +153,7 @@ export default function CompanyPage() {
             </CardContent>
           </Card>
 
-          <Card className={sectionCard}>
+          <Card id="company-traction" className={cn(sectionCard, 'scroll-mt-24')}>
             <CardHeader>
               <CardTitle className="font-heading text-xl">Traction (update with your metrics)</CardTitle>
             </CardHeader>
@@ -137,7 +166,7 @@ export default function CompanyPage() {
             </CardContent>
           </Card>
 
-          <Card className={sectionCard}>
+          <Card id="company-contact" className={cn(sectionCard, 'scroll-mt-24')}>
             <CardHeader>
               <CardTitle className="font-heading text-xl">Contact</CardTitle>
             </CardHeader>

@@ -5,11 +5,11 @@ import type { Metadata } from 'next'
 export const metadata: Metadata = {
   title: `About`,
   description:
-    'NEXUS helps founders analyze pitch materials, explore a verified investor directory, and get ranked shortlists aligned to stage, sector, and thesis.',
+    'NEXUS helps founders analyze pitch materials and get ranked investor shortlists from verified mandates, with fundraising-specific depth and workflow instead of a generic chat-style answer.',
   openGraph: {
     title: `About | NEXUS`,
     description:
-      'Investor matching for founders: AI-assisted analysis, verified investor data, and ranked match shortlists.',
+      'Investor matching for founders: allocator-style pitch analysis, verified investor data, and ranked shortlists with rationale.',
   },
 }
 

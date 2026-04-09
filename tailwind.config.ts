@@ -99,6 +99,44 @@ const config = {
           "0%, 100%": { transform: "translateY(0)", opacity: "0.55" },
           "50%": { transform: "translateY(4px)", opacity: "1" },
         },
+        /** Home "How it works" — vertical line highlight (one pass per cycle; % tuned to node glow) */
+        "home-step-snake": {
+          "0%, 2%": { transform: "translate(-50%, -180%)", opacity: "0" },
+          "4%": { opacity: "1" },
+          "20%": { transform: "translate(-50%, 420%)", opacity: "1" },
+          "24%, 100%": { opacity: "0", transform: "translate(-50%, 420%)" },
+        },
+        /** Chevron ring: slow peak when snake passes (no transform — fast breathe runs on inner icon) */
+        "home-step-node": {
+          "0%, 3%": {
+            opacity: "0.52",
+            borderColor: "hsl(var(--border) / 0.35)",
+            color: "hsl(var(--muted-foreground) / 0.55)",
+            boxShadow: "0 0 0 0 hsl(var(--primary) / 0)",
+          },
+          "8%, 18%": {
+            opacity: "1",
+            borderColor: "hsl(var(--primary) / 0.55)",
+            color: "hsl(var(--primary))",
+            boxShadow: "0 0 18px 2px hsl(var(--primary) / 0.24), 0 0 32px 4px hsl(var(--primary) / 0.09)",
+          },
+          "24%, 100%": {
+            opacity: "0.52",
+            borderColor: "hsl(var(--border) / 0.35)",
+            color: "hsl(var(--muted-foreground) / 0.55)",
+            boxShadow: "0 0 0 0 hsl(var(--primary) / 0)",
+          },
+        },
+        /** Fast continuous breathe on chevron icon (layered with slow home-step-node on parent) */
+        "home-step-breathe-fast": {
+          "0%, 100%": { transform: "scale(1)", opacity: "0.88" },
+          "50%": { transform: "scale(1.09)", opacity: "1" },
+        },
+        /** Fast pulse on vertical rail background only */
+        "home-step-line-breathe": {
+          "0%, 100%": { opacity: "0.42" },
+          "50%": { opacity: "0.92" },
+        },
         "trend-nudge": {
           "0%, 100%": { transform: "translate(0, 0)", opacity: "0.88" },
           "50%": { transform: "translate(2px, -2px)", opacity: "1" },
@@ -113,6 +151,10 @@ const config = {
         "shimmer": "shimmer 2s infinite",
         "chevron-bounce": "chevron-bounce 1.6s ease-in-out infinite",
         "trend-nudge": "trend-nudge 1.6s ease-in-out infinite",
+        "home-step-snake": "home-step-snake 3.5s linear infinite",
+        "home-step-node": "home-step-node 3.5s linear infinite",
+        "home-step-breathe-fast": "home-step-breathe-fast 0.5s ease-in-out infinite",
+        "home-step-line-breathe": "home-step-line-breathe 0.5s ease-in-out infinite",
       },
       fontFamily: {
         sans: ["var(--font-sans)", "system-ui", "sans-serif"],
