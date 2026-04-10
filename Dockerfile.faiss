@@ -18,5 +18,6 @@ WORKDIR /app/faiss-service
 ENV PYTHONUNBUFFERED=1
 EXPOSE 8001
 
+# Bootstrap downloads gitignored faiss-data when FAISS_*_URL env vars are set (Railway).
 # Railway sets PORT; local fallback 8001
-CMD ["sh", "-c", "exec python -m uvicorn faiss_api:app --host 0.0.0.0 --port ${PORT:-8001}"]
+CMD ["sh", "-c", "python /app/faiss-service/bootstrap_faiss_data.py && exec python -m uvicorn faiss_api:app --host 0.0.0.0 --port ${PORT:-8001}"]

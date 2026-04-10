@@ -10,6 +10,6 @@ dockerfilePath = "Dockerfile.faiss"
 [deploy]
 # FAISS image is Python-only — do not set Start Command to `npm start` in the dashboard.
 # This pins the runtime so Railway does not run Node/npm on this service.
-startCommand = "/bin/sh -c 'cd /app/faiss-service && exec python -m uvicorn faiss_api:app --host 0.0.0.0 --port ${PORT:-8001}'"
+startCommand = "/bin/sh -c 'python /app/faiss-service/bootstrap_faiss_data.py && cd /app/faiss-service && exec python -m uvicorn faiss_api:app --host 0.0.0.0 --port ${PORT:-8001}'"
 restartPolicyType = "ON_FAILURE"
 restartPolicyMaxRetries = 10

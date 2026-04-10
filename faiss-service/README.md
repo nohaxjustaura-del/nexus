@@ -35,6 +35,30 @@ $env:FAISS_SERVICE_PORT=8002; python faiss_api.py
 
 Then set `FAISS_SERVICE_URL=http://localhost:8002` in `.env.local` (Next.js).
 
+## Railway / Docker
+
+`faiss-data/*` is **gitignored** (large binaries). The image from `Dockerfile.faiss` only includes whatever is in the repo, so **`vc_index.faiss` is missing** unless you supply it at runtime.
+
+1. Build artifacts locally: `npm run build-faiss-index` (requires DB + Voyage; see repo root scripts).
+2. Create an archive (paths inside the tar can be nested; bootstrap finds the files by name):
+
+```bash
+# from repo root, after build
+tar -czf faiss-bundle.tar.gz -C faiss-data vc_index.faiss vcs_embedding_inputs_trimmed.json
+```
+
+3. Upload `faiss-bundle.tar.gz` to a host that Railway can reach (S3/R2/Supabase Storage with a stable HTTPS URL, or a signed URL).
+4. In the Railway **nexus** (FAISS) service, set:
+
+| Variable | Purpose |
+|----------|---------|
+| `FAISS_DATA_ARCHIVE_URL` | HTTPS URL to the `.tar.gz` |
+| `FAISS_DATA_DOWNLOAD_TOKEN` | Optional `Authorization: Bearer …` if the URL is private |
+
+**Or** set both `FAISS_VC_INDEX_URL` and `FAISS_VC_JSON_URL` to direct file URLs.
+
+On start, `bootstrap_faiss_data.py` runs before uvicorn and downloads into `/app/faiss-data`.
+
 ## API Endpoints
 
 ### POST /rank
