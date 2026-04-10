@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { getCurrentUser } from '@/lib/auth'
 import { logger } from '@/lib/logger'
-import { canAccessFounderResources } from '@/lib/founder-resources-access'
+import { canAccessFounderNetwork } from '@/lib/founder-network-access'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -70,20 +70,32 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Item ID required' }, { status: 400 })
     }
 
-    const userCredits = await db.userCredits.findUnique({
-      where: { userId: user.id },
-      select: { purchases: true, isPremium: true },
-    })
+    const [userCredits, approvalRow, investorRow] = await Promise.all([
+      db.userCredits.findUnique({
+        where: { userId: user.id },
+        select: { purchases: true, isPremium: true },
+      }),
+      db.userApproval.findUnique({
+        where: { email: user.email },
+        select: { status: true },
+      }),
+      db.investor.findUnique({
+        where: { email: user.email },
+        select: { verified: true },
+      }),
+    ])
 
     if (!userCredits) {
       return NextResponse.json({ error: 'No credits record found' }, { status: 404 })
     }
 
     if (
-      !canAccessFounderResources({
+      !canAccessFounderNetwork({
         isPremium: Boolean(userCredits.isPremium),
         purchasesJson: userCredits.purchases,
         email: user.email,
+        userApprovalStatus: approvalRow?.status ?? null,
+        investorVerified: Boolean(investorRow?.verified),
       })
     ) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })

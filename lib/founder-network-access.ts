@@ -11,14 +11,19 @@ export function parsePurchasesJson(purchases: string | null | undefined): string
 }
 
 /**
- * Partner resources pages: premium subscribers, legacy module buyers, or admin-style bypass.
+ * Partner network pages (`/founder/network`): admins/dev bypass, accounts approved into the network,
+ * verified investors, premium subscribers, or legacy module purchasers.
  */
-export function canAccessFounderResources(params: {
+export function canAccessFounderNetwork(params: {
   isPremium: boolean
   purchasesJson: string | null | undefined
   email?: string | null
+  userApprovalStatus?: string | null
+  investorVerified?: boolean
 }): boolean {
   if (params.email && bypassesAiCredits(params.email)) return true
+  if (params.userApprovalStatus === 'approved') return true
+  if (params.investorVerified) return true
   if (params.isPremium) return true
   return parsePurchasesJson(params.purchasesJson).length > 0
 }

@@ -6,24 +6,24 @@ import { buttonVariants } from '@/components/ui/button-variants'
 import { Badge } from '@/components/ui/badge'
 import { RESOURCE_PARTNERS } from '@/lib/partner-resources'
 import { cn } from '@/lib/utils'
-import { ensureFounderResourcesPageAccess } from '@/lib/founder-resources-page-gate'
+import { ensureFounderNetworkPageAccess } from '@/lib/founder-network-page-gate'
 
 export const metadata: Metadata = {
-  title: 'Resources - Partners',
+  title: 'Network - Partners',
   description:
-    'Partner resource hubs: YC application teardowns, deck autopsies, interview prep, and optional mentorship.',
+    'Partner hubs for approved founders and verified investors: YC application teardowns, deck autopsies, interview prep, and optional mentorship.',
 }
 
-export default async function FounderResourcesIndexPage() {
-  await ensureFounderResourcesPageAccess()
+export default async function FounderNetworkIndexPage() {
+  await ensureFounderNetworkPageAccess()
   return (
     <div className="min-h-screen bg-black text-zinc-100">
       <div className="mx-auto max-w-4xl px-4 py-10 sm:py-14">
         <div className="mb-8 space-y-2">
-          <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Resources</h1>
+          <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Network</h1>
           <p className="max-w-2xl text-sm text-zinc-400 sm:text-base">
-            Partner hubs with playbooks, templates, and optional founder access. Open a card to read a short
-            company intro and browse resources.
+            Partner hubs for members of our network: playbooks, templates, and optional founder access. Open a card to
+            read a short company intro and browse materials.
           </p>
         </div>
 
@@ -31,7 +31,7 @@ export default async function FounderResourcesIndexPage() {
           {RESOURCE_PARTNERS.map((partner) => (
             <Link
               key={partner.slug}
-              href={`/founder/resources/${partner.slug}`}
+              href={`/founder/network/${partner.slug}`}
               className="group block rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/70 focus-visible:ring-offset-2 focus-visible:ring-offset-black"
             >
               <article
@@ -56,7 +56,7 @@ export default async function FounderResourcesIndexPage() {
                       'inline-flex shrink-0 items-center gap-1.5 bg-amber-500 text-black hover:bg-amber-400',
                     )}
                   >
-                    Open resources &amp; playbooks
+                    Open partner hub
                     <ArrowRight className="h-3.5 w-3.5" />
                   </span>
                 </div>

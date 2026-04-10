@@ -15,7 +15,7 @@ type Caps = {
   hasFounderProfile?: boolean
   hasInvestorProfile?: boolean
   userType?: string
-  canAccessFounderResources?: boolean
+  canAccessFounderNetwork?: boolean
 } | null
 
 function guestExploreHref(next: string): string {
@@ -27,7 +27,7 @@ const GUEST_EXPLORE_TABS = [
   { next: '/founder/dashboard', label: 'Hub' },
   { next: '/founder/discover', label: 'Investors' },
   { next: '/founder/ai-analysis', label: 'Analyze' },
-  { next: '/pricing?from=resources', label: 'Resources' },
+  { next: '/pricing?from=network', label: 'Network' },
   { next: '/pricing', label: 'Pricing' },
 ] as const
 
@@ -77,7 +77,7 @@ export function SiteHeader() {
             hasFounderProfile: data.hasFounderProfile,
             hasInvestorProfile: data.hasInvestorProfile,
             userType: data.userType,
-            canAccessFounderResources: data.canAccessFounderResources,
+            canAccessFounderNetwork: data.canAccessFounderNetwork,
           })
         }
       })
@@ -92,7 +92,7 @@ export function SiteHeader() {
       { section: 'Explore', href: `/signup?next=${encodeURIComponent('/founder/dashboard')}`, label: 'Hub' },
       { href: `/signup?next=${encodeURIComponent('/founder/discover')}`, label: 'Investors' },
       { href: `/signup?next=${encodeURIComponent('/founder/ai-analysis')}`, label: 'Analyze' },
-      { href: '/pricing?from=resources', label: 'Resources' },
+      { href: '/pricing?from=network', label: 'Network' },
       { section: 'More', href: `/signup?next=${encodeURIComponent('/pricing')}`, label: 'Pricing' },
     ],
     []
@@ -103,27 +103,27 @@ export function SiteHeader() {
       { section: 'Workspace', href: '/founder/dashboard', label: 'Hub' },
       { href: '/founder/discover', label: 'Investors' },
       { href: '/founder/ai-analysis', label: 'Analyze' },
-      ...(caps?.canAccessFounderResources ? [{ href: '/founder/resources', label: 'Resources' as const }] : []),
+      ...(caps?.canAccessFounderNetwork ? [{ href: '/founder/network', label: 'Network' as const }] : []),
       { section: 'More', href: '/pricing', label: 'Pricing' },
     ]
     if (authenticated) {
       base.push({ href: '/account', label: 'Account' })
     }
     return base
-  }, [authenticated, caps?.canAccessFounderResources])
+  }, [authenticated, caps?.canAccessFounderNetwork])
 
   const investorMobileLinks: MobileNavItem[] = useMemo(() => {
     const base: MobileNavItem[] = [
       { section: 'Workspace', href: '/vc/extract', label: 'Extract' },
       { href: '/vc/profile', label: 'Your listing' },
       { href: '/vc/dashboard', label: 'Matches' },
-      ...(caps?.canAccessFounderResources ? [{ href: '/founder/resources', label: 'Resources' as const }] : []),
+      ...(caps?.canAccessFounderNetwork ? [{ href: '/founder/network', label: 'Network' as const }] : []),
     ]
     if (authenticated) {
       base.push({ section: 'Account', href: '/account', label: 'Account' })
     }
     return base
-  }, [authenticated, caps?.canAccessFounderResources])
+  }, [authenticated, caps?.canAccessFounderNetwork])
 
   const mobileLinks =
     chrome === 'guest' ? guestMobileLinks : chrome === 'investor' ? investorMobileLinks : founderMobileLinks
@@ -195,8 +195,8 @@ export function SiteHeader() {
                   <ProtectedNavLink href="/founder/dashboard">Hub</ProtectedNavLink>
                   <ProtectedNavLink href="/founder/discover">Investors</ProtectedNavLink>
                   <ProtectedNavLink href="/founder/ai-analysis">Analyze</ProtectedNavLink>
-                  {caps?.canAccessFounderResources ? (
-                    <ProtectedNavLink href="/founder/resources">Resources</ProtectedNavLink>
+                  {caps?.canAccessFounderNetwork ? (
+                    <ProtectedNavLink href="/founder/network">Network</ProtectedNavLink>
                   ) : null}
                   <ProtectedNavLink href="/pricing">Pricing</ProtectedNavLink>
                 </div>
@@ -209,8 +209,8 @@ export function SiteHeader() {
                   <DesktopNavLink href="/vc/extract" label="Extract" pathname={pathname} />
                   <DesktopNavLink href="/vc/profile" label="Your listing" pathname={pathname} />
                   <DesktopNavLink href="/vc/dashboard" label="Matches" pathname={pathname} />
-                  {caps?.canAccessFounderResources ? (
-                    <DesktopNavLink href="/founder/resources" label="Resources" pathname={pathname} />
+                  {caps?.canAccessFounderNetwork ? (
+                    <DesktopNavLink href="/founder/network" label="Network" pathname={pathname} />
                   ) : null}
                 </div>
               </div>

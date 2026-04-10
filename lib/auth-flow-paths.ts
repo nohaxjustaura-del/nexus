@@ -11,7 +11,7 @@ const SAFE_AUTH_NEXT = new Set([
   '/founder/dashboard',
   '/vc/dashboard',
   '/vc/profile',
-  '/founder/resources',
+  '/founder/network',
 ])
 
 const FOUNDER_AUTH_NEXT_EXACT = new Set(['/founder/onboarding', '/founder/dashboard'])
@@ -50,11 +50,12 @@ export function sanitizeAuthNextPathForUserType(
 
   if (isInvestorUserType(userType)) {
     if (INVESTOR_AUTH_NEXT_EXACT.has(p)) return p
-    if (p === '/founder/resources' || p.startsWith('/founder/resources/')) return p
+    if (p === '/founder/network' || p.startsWith('/founder/network/')) return p
     return fallback
   }
 
   if (p.startsWith('/vc/')) return fallback
+  if (p === '/founder/network' || p.startsWith('/founder/network/')) return p
   if (FOUNDER_AUTH_NEXT_EXACT.has(p)) return p
   return fallback
 }

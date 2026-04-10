@@ -455,7 +455,7 @@ model User {
   @@index([email])
 }
 
-/// Historical partner-founder Ask/Book requests (legacy flow; public partner bios live on /founder/resources).
+/// Historical partner-founder Ask/Book requests (legacy flow; public partner bios live on /founder/network).
 model YCInsiderFounderRequest {
   id          String   @id @default(cuid())
   userId      String

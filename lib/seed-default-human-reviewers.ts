@@ -2,7 +2,7 @@ import type { PrismaClient } from '@prisma/client'
 
 /**
  * Default human reviewers for unified / video pitch reviewer flows.
- * `founderKey` matches partner founder keys used on `/founder/resources` (not stored on Reviewer).
+ * `founderKey` matches partner founder keys used on `/founder/network` (not stored on Reviewer).
  *
  * Emails are stable seed identities (example.com). Replace in production with real
  * reviewer inboxes if you send mail to `Reviewer.email`.

@@ -18,9 +18,9 @@ export function portalRedirectIfNeeded(
 
   if (role === 'investor') {
     if (pathname.startsWith('/founder')) {
-      const resourcesOk =
-        pathname === '/founder/resources' || pathname.startsWith('/founder/resources/')
-      if (!resourcesOk) {
+      const networkOk =
+        pathname === '/founder/network' || pathname.startsWith('/founder/network/')
+      if (!networkOk) {
         const url = request.nextUrl.clone()
         url.pathname = '/vc/profile'
         url.search = ''

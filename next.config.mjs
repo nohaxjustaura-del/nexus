@@ -61,6 +61,13 @@ const nextConfig = {
     return config
   },
 
+  async redirects() {
+    return [
+      { source: '/founder/resources', destination: '/founder/network', permanent: true },
+      { source: '/founder/resources/:slug*', destination: '/founder/network/:slug*', permanent: true },
+    ]
+  },
+
   // Headers for caching and security
   async headers() {
     const globalSecurity = [
