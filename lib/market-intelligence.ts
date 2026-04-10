@@ -15,18 +15,9 @@
  * ground its analysis in real market data rather than training-set knowledge.
  */
 
-import { exaQuotaErrorMessage } from "./exa-global-cooldown"
 import { runExaWithKeyFailover } from "./exa-key-failover"
 import { hasExaApiKey } from "./exa-keys"
 import { logger } from "./logger"
-
-function settledReasonMessage(reason: unknown): string {
-  if (reason instanceof Error) return reason.message
-  if (typeof reason === "object" && reason !== null && "message" in reason) {
-    return String((reason as { message: unknown }).message)
-  }
-  return String(reason)
-}
 
 // ---------------------------------------------------------------------------
 // Types
@@ -158,80 +149,37 @@ export async function getDeepMarketContext(
 
   logger.log(`[MARKET-INTEL] Launching 4 parallel Exa searches for domain="${domain}"`)
 
-  const failover = await runExaWithKeyFailover(async (exa) => {
-    const searchOpts = (
-      query: string,
-      category: "company" | "news" | "research paper",
-    ) =>
-      exa.search(query, {
+  // Each search gets its own runExaWithKeyFailover call so round-robin distributes
+  // them across different live keys — if key 1 is dead, saturation retries on key 2,
+  // catalysts independently retries on key 3, etc. This is more resilient than sharing
+  // one key instance across all 4 searches.
+  async function runSearch(
+    query: string,
+    category: "company" | "news" | "research paper",
+    label: string,
+  ): Promise<MarketSearchResult[]> {
+    const result = await runExaWithKeyFailover(async (exa) => {
+      const res = await exa.search(query, {
         type: "auto",
         numResults: 3,
         category,
         contents: { text: { maxCharacters: 800 } },
       })
-
-    const [saturationRes, catalystsRes, graveyardRes, incumbentsRes] = await Promise.allSettled([
-      searchOpts(saturationQuery, "company"),
-      searchOpts(catalystsQuery, "news"),
-      searchOpts(graveyardQuery, "research paper"),
-      searchOpts(incumbentsQuery, "company"),
-    ])
-
-    const saturation = saturationRes.status === "fulfilled"
-      ? cleanResults(saturationRes.value.results)
-      : []
-    const catalysts = catalystsRes.status === "fulfilled"
-      ? cleanResults(catalystsRes.value.results)
-      : []
-    const graveyard = graveyardRes.status === "fulfilled"
-      ? cleanResults(graveyardRes.value.results)
-      : []
-    const incumbents = incumbentsRes.status === "fulfilled"
-      ? cleanResults(incumbentsRes.value.results)
-      : []
-
-    if (saturationRes.status === "rejected") {
-      logger.warn("[MARKET-INTEL] Saturation search failed:", saturationRes.reason?.message)
+      return cleanResults(res.results)
+    })
+    if (!result.ok) {
+      logger.warn(`[MARKET-INTEL] ${label} search failed:`, result.message)
+      return []
     }
-    if (catalystsRes.status === "rejected") {
-      logger.warn("[MARKET-INTEL] Catalysts search failed:", catalystsRes.reason?.message)
-    }
-    if (graveyardRes.status === "rejected") {
-      logger.warn("[MARKET-INTEL] Graveyard search failed:", graveyardRes.reason?.message)
-    }
-    if (incumbentsRes.status === "rejected") {
-      logger.warn("[MARKET-INTEL] Incumbents search failed:", incumbentsRes.reason?.message)
-    }
-
-    // Quota/rate-limit/auth on any parallel search must fail the whole key attempt so
-    // runExaWithKeyFailover can advance through EXA_API_KEYS (otherwise allSettled would
-    // return empty slices and we'd never try keys 2–7).
-    const parallel = [saturationRes, catalystsRes, graveyardRes, incumbentsRes] as const
-    for (const r of parallel) {
-      if (r.status !== "rejected") continue
-      const m = settledReasonMessage(r.reason)
-      if (exaQuotaErrorMessage(m)) {
-        throw new Error(m)
-      }
-    }
-
-    return { saturation, catalysts, graveyard, incumbents }
-  })
-
-  if (!failover.ok) {
-    if (failover.kind === "all_keys_quota") {
-      throw new Error(failover.message || "Exa quota exhausted for all keys")
-    }
-    if (failover.kind === "cooldown") {
-      throw new Error("Exa in cooldown")
-    }
-    if (failover.kind === "no_keys") {
-      throw new Error("No Exa API keys configured")
-    }
-    throw new Error(failover.message || "Exa market intelligence search failed")
+    return result.data
   }
 
-  const { saturation, catalysts, graveyard, incumbents } = failover.data
+  const [saturation, catalysts, graveyard, incumbents] = await Promise.all([
+    runSearch(saturationQuery, "company", "Saturation"),
+    runSearch(catalystsQuery, "news", "Catalysts"),
+    runSearch(graveyardQuery, "research paper", "Graveyard"),
+    runSearch(incumbentsQuery, "company", "Incumbents"),
+  ])
 
   logger.log(
     `[MARKET-INTEL] Results: saturation ${saturation.length}, catalysts ${catalysts.length}, graveyard ${graveyard.length}, incumbents ${incumbents.length}`,

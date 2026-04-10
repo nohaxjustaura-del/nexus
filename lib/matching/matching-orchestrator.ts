@@ -24,6 +24,7 @@ import { getAIClient } from '@/lib/ai'
 import { getModelName } from '@/lib/openrouter'
 import { parseJSON } from '@/lib/utils'
 import {
+  cosineSimilarity,
   countInvestorEmbeddingFilters,
   generatePitchEmbedding,
   investorsToRankableEmbeddings,
@@ -370,6 +371,7 @@ export async function runMatchingPipeline(
   const { mainstream: embeddingPool } = filterOutUniversityPrograms(allPublicVCs as VCProfile[])
 
   let candidatePool: VCProfile[] = []
+  let pitchEmbeddingForInjection: number[] | null = null
 
   const intersectRankedWithDb = (
     ranked: Awaited<ReturnType<typeof rankVCsForPitch>>,
@@ -397,6 +399,7 @@ export async function runMatchingPipeline(
     const pitchCtx = buildPitchContext(founder, pitchAnalysis, transcript, founderSignal.pitchKeywords)
     const enrichment = buildAnalysisEnrichment(scoringSignals)
     const pitchEmbedding = await generatePitchEmbedding(pitchCtx as any, enrichment)
+    pitchEmbeddingForInjection = pitchEmbedding
 
     // Tier-adjusted FAISS retrieval: high-quality pitches get a wider net to find niche fits
     const tierTopK =
@@ -473,6 +476,86 @@ export async function runMatchingPipeline(
   } catch (embErr: any) {
     logger.warn('[ORCHESTRATOR] Pitch embedding failed — using top 20 mainstream VCs:', embErr?.message)
     candidatePool = mainstream.slice(0, 20)
+  }
+
+  // ── STEP 5b — Sector injection: guarantee niche-sector VCs are evaluated ────
+  //
+  // Cosine similarity naturally surfaces SaaS/enterprise VCs because those terms
+  // dominate most pitch descriptions. Niche VCs (media, gaming, climate, etc.)
+  // get buried even when they are the best fit.
+  //
+  // Rules:
+  //   1. Only trigger for NICHE groups — broad groups (AI, SaaS) already surface
+  //      via cosine without help.
+  //   2. A VC qualifies only if the matching synonym appears in its SECTORS array
+  //      (primary focus), not merely its thesis text — avoids generic VCs that
+  //      mention "media" or "AI" in passing.
+  //   3. Candidates are ranked by cosine similarity to the pitch embedding so the
+  //      BEST sector-matched VCs fill the injection slots.
+  //   4. Up to 5 slots; displaces the tail of the cosine pool.
+  if (pitchEmbeddingForInjection) {
+    const allKeywords = [
+      ...founderSignal.sectors,
+      ...founderSignal.pitchKeywords,
+    ].map((k) => k.toLowerCase())
+
+    // Only NICHE groups that don't naturally surface via cosine similarity
+    const NICHE_SECTOR_SYNONYMS: Record<string, string[]> = {
+      media:       ['media', 'entertainment', 'film', 'video', 'broadcast', 'ott', 'streaming', 'dubbing', 'localization'],
+      gaming:      ['gaming', 'esports', 'interactive media', 'game'],
+      climatetech: ['climate', 'cleantech', 'sustainability', 'clean energy'],
+      adtech:      ['adtech', 'ad tech', 'advertising tech', 'martech'],
+      biotech:     ['biotech', 'life sciences', 'genomics', 'therapeutics'],
+      spacetech:   ['space', 'aerospace', 'satellite', 'defense tech'],
+    }
+
+    const activeSectorGroups = new Set<string>()
+    for (const [group, synonyms] of Object.entries(NICHE_SECTOR_SYNONYMS)) {
+      if (synonyms.some((s) => allKeywords.some((k) => k.includes(s) || s.includes(k)))) {
+        activeSectorGroups.add(group)
+      }
+    }
+
+    logger.integration(
+      `[ORCHESTRATOR] Step 5b — keywords=[${allKeywords.slice(0, 8).join(', ')}] niche_groups=[${[...activeSectorGroups].join(',') || 'none'}]`,
+    )
+
+    if (activeSectorGroups.size > 0) {
+      const activeSynonyms = [...activeSectorGroups].flatMap((g) => NICHE_SECTOR_SYNONYMS[g] ?? [])
+      const poolIds = new Set(candidatePool.map((v) => v.id))
+
+      // Only match against PRIMARY sectors array — not thesis or firm name
+      const sectorCandidates = (embeddingPool as VCProfile[]).filter((vc) => {
+        if (poolIds.has(vc.id)) return false
+        let vcSectors: string[] = []
+        try { vcSectors = JSON.parse(vc.sectors ?? '[]') } catch { /* ignore */ }
+        const sectorsLower = vcSectors.map((s) => s.toLowerCase()).join(' ')
+        return activeSynonyms.some((s) => sectorsLower.includes(s))
+      })
+
+      // Rank by cosine similarity to pitch so best matches fill slots
+      const pitchEmb = pitchEmbeddingForInjection
+      const ranked = sectorCandidates
+        .map((vc) => {
+          let sim = 0
+          try {
+            const vcEmb = JSON.parse(vc.embedding ?? '[]') as number[]
+            if (vcEmb.length === pitchEmb.length) sim = cosineSimilarity(pitchEmb, vcEmb)
+          } catch { /* ignore */ }
+          return { vc, sim }
+        })
+        .sort((a, b) => b.sim - a.sim)
+
+      const inject = ranked.slice(0, 5).map((r) => r.vc)
+      if (inject.length > 0) {
+        candidatePool = [...candidatePool.slice(0, 20 - inject.length), ...inject]
+        logger.integration(
+          `[ORCHESTRATOR] Step 5b — Injected ${inject.length} niche VCs: ${inject.map((v) => `${v.firmName}(${ranked.find((r) => r.vc.id === v.id)?.sim.toFixed(3)})`).join(', ')}`,
+        )
+      } else {
+        logger.integration(`[ORCHESTRATOR] Step 5b — No niche VCs found for groups=[${[...activeSectorGroups].join(',')}]`)
+      }
+    }
   }
 
   logger.integration(`[ORCHESTRATOR] Step 5 — Candidate pool: ${candidatePool.length} VCs`)
