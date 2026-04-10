@@ -3,6 +3,7 @@ import { db } from '@/lib/db'
 import { getCurrentUser } from '@/lib/auth'
 import { bypassesAiCredits } from '@/lib/dev-ai-analysis-bypass'
 import { logger } from '@/lib/logger'
+import { canAccessFounderResources } from '@/lib/founder-resources-access'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -46,6 +47,22 @@ export async function POST(request: NextRequest) {
         },
         select: { credits: true, purchases: true, isPremium: true },
       })
+    }
+
+    if (
+      !canAccessFounderResources({
+        isPremium: Boolean(userCredits.isPremium),
+        purchasesJson: userCredits.purchases,
+        email: user.email,
+      })
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            'Partner resources are available to Premium members or to accounts with a prior module purchase.',
+        },
+        { status: 403 }
+      )
     }
 
     let currentPurchases: string[] = []

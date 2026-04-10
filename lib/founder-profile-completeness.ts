@@ -1,6 +1,6 @@
 /**
  * Single source of truth for founder profile completeness.
- * - UI mode: ID-verified founders with a discover-grade core profile are 100% (no false "finish profile" nags).
+ * - UI mode: founders who meet the discover core bar are 100% (no false "finish profile" nags).
  * - Analytical mode: optional fields (bio, deck, video, LinkedIn) still count — used for AI context, not nagging.
  */
 
@@ -69,14 +69,14 @@ export function computeFounderProfileCompletenessPercentAnalytical(
 }
 
 /**
- * Hub / banners — verified founders who meet the discover core bar are treated as profile-complete.
+ * Hub / banners — founders who meet the discover core bar are treated as profile-complete.
  */
 export function computeFounderProfileCompletenessPercentUi(
   f: FounderLikeForCompleteness | null | undefined,
-  verificationStatus?: string | null
+  _verificationStatus?: string | null
 ): number {
   if (!f) return 0
-  if (verificationStatus === 'approved' && isFounderCoreProfileComplete(f)) {
+  if (isFounderCoreProfileComplete(f)) {
     return 100
   }
   return computeFounderProfileCompletenessPercentAnalytical(f)

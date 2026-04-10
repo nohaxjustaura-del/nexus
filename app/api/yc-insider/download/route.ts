@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { getCurrentUser } from '@/lib/auth'
 import { logger } from '@/lib/logger'
+import { canAccessFounderResources } from '@/lib/founder-resources-access'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -76,6 +77,16 @@ export async function GET(request: NextRequest) {
 
     if (!userCredits) {
       return NextResponse.json({ error: 'No credits record found' }, { status: 404 })
+    }
+
+    if (
+      !canAccessFounderResources({
+        isPremium: Boolean(userCredits.isPremium),
+        purchasesJson: userCredits.purchases,
+        email: user.email,
+      })
+    ) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
     let purchases: string[] = []

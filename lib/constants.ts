@@ -74,6 +74,8 @@ export const PAGINATION = {
 export const USER_LIMITS = {
   FREE_TIER_VC_MATCHES: 5,
   PREMIUM_TIER_VC_MATCHES: 20,
+  /** Pitch idea analyses per UTC week (Mon 00:00) without spending credits; non-premium only. */
+  FREE_PITCH_IDEA_ANALYSES_PER_WEEK: 2,
   MIN_AGE: 16,
   MAX_AGE: 100,
 } as const

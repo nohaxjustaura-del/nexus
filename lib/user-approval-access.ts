@@ -3,6 +3,7 @@ import { isAdminEmail } from '@/lib/constants'
 
 export type UserApprovalStatus = 'pending' | 'approved' | 'rejected'
 
+/** Ensures a `UserApproval` row exists. Only `rejected` blocks auth email flows; app access uses email verification in `/api/auth/check`. */
 export async function resolveUserApprovalAccess(email: string): Promise<{
   approved: boolean
   status: UserApprovalStatus

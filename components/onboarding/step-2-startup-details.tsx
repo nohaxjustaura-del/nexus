@@ -185,10 +185,10 @@ export function Step2StartupDetails({
             }
             setErrors(prev => ({ ...prev, ...nextErrors }))
             if (Object.keys(nextErrors).length === 0) {
-              setStep(5) // Skip the "Working Style" step and go straight to verification
+              setStep(3)
             }
           }} className="flex-1">
-            Continue to Verification
+            Continue to Preferences
             <ArrowRight className="ml-2 h-4 w-4" />
           </Button>
         </div>

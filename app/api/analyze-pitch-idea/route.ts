@@ -17,6 +17,7 @@ import { buildFounderSnapshot } from '@/lib/file-storage'
 import { getDeepMarketContext } from '@/lib/market-intelligence'
 import { runScoringPipeline } from '@/lib/scoring/scoring-pipeline'
 import { analyzeFounderNotFoundResponse, analyzeUnauthorizedResponse } from '@/lib/analyze-routes/responses'
+import { getPitchIdeaWeeklyQuotaInfo } from '@/lib/pitch-idea-weekly-quota'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -64,6 +65,10 @@ export async function POST(request: NextRequest) {
     if (!founder) {
       return analyzeFounderNotFoundResponse()
     }
+
+    /** Set during credit / free-tier gate; read again after successful AI for deduction. */
+    let pitchIdeaUsesFreeWeeklySlot = false
+    let pitchIdeaIsPremium = false
 
     // Accept either JSON (text idea) or FormData (file upload or text field)
     const contentType = request.headers.get('content-type') || ''
@@ -209,32 +214,44 @@ export async function POST(request: NextRequest) {
       logger.error('[ANALYZE-PITCH-IDEA] Validation failed:', validationError)
     }
 
-    // Check credits (admin bypass) - but don't deduct yet
+    // Check credits + weekly free tier (admin/dev bypass skips)
     if (shouldEnforceAiCredits(user.email)) {
       const userCredits = await db.userCredits.findUnique({
         where: { userId: user.id },
       })
+      pitchIdeaIsPremium = Boolean(userCredits?.isPremium)
+      const weeklyQuota = await getPitchIdeaWeeklyQuotaInfo(founder.id)
+      const creditsBalance = userCredits?.credits ?? 0
+      const hasPaidCredits = creditsBalance >= CREDIT_COSTS.PITCH_IDEA
+      pitchIdeaUsesFreeWeeklySlot = !pitchIdeaIsPremium && weeklyQuota.remaining > 0
 
-      if (!userCredits || (!userCredits.isPremium && (userCredits.credits ?? 0) < CREDIT_COSTS.PITCH_IDEA)) {
-        const creditsNeeded = CREDIT_COSTS.PITCH_IDEA - (userCredits?.credits ?? 0)
+      const allowed =
+        pitchIdeaIsPremium || pitchIdeaUsesFreeWeeklySlot || hasPaidCredits
+
+      if (!allowed) {
+        const creditsNeeded = Math.max(0, CREDIT_COSTS.PITCH_IDEA - creditsBalance)
         return NextResponse.json(
-          { 
+          {
             error: 'Insufficient Credits',
-            message: `Pitch idea analysis costs ${CREDIT_COSTS.PITCH_IDEA} credits. You have ${userCredits?.credits ?? 0} credits.`,
-            whatWentWrong: `You need ${creditsNeeded} more credit${creditsNeeded > 1 ? 's' : ''} to analyze your pitch idea`,
-            whyItFailed: 'Each analysis uses credits to cover AI processing costs',
+            message: `Pitch idea analysis costs ${CREDIT_COSTS.PITCH_IDEA} credits after your free weekly analyses. You have ${creditsBalance} credits.`,
+            whatWentWrong: `You need ${creditsNeeded} more credit${creditsNeeded !== 1 ? 's' : ''} to analyze your pitch idea this week`,
+            whyItFailed: 'You have used your free pitch idea analyses for this week, or you need more credits',
             howToFix: [
-              'Claim your daily free credits (available every 24 hours)',
+              `Your free analyses reset next Monday 00:00 UTC (resets at ${weeklyQuota.resetsAt})`,
+              'Claim daily free credits or purchase credits to continue this week',
               'Purchase additional credits from your account page',
               'Upgrade to Premium for unlimited analyses',
-              'Wait until you have enough credits from daily claims',
             ],
             requiresPayment: true,
             creditCost: CREDIT_COSTS.PITCH_IDEA,
-            currentCredits: userCredits?.credits ?? 0,
+            currentCredits: creditsBalance,
             creditsNeeded,
+            weeklyFreeRemaining: weeklyQuota.remaining,
+            weeklyFreeLimit: weeklyQuota.limit,
+            weekResetsAt: weeklyQuota.resetsAt,
+            usedWeeklyFreeAnalyses: weeklyQuota.used,
           },
-          { 
+          {
             status: 402,
             headers: { 'Content-Type': 'application/json' },
           }
@@ -355,8 +372,12 @@ Return valid JSON:
 
       // (rest of handler expects `analysis` to exist below)
 
-      // Deduct credits AFTER successful analysis (admin bypass)
-      if (shouldEnforceAiCredits(user.email)) {
+      // Deduct credits AFTER successful analysis (skip premium, weekly free slot, admin bypass)
+      if (
+        shouldEnforceAiCredits(user.email) &&
+        !pitchIdeaIsPremium &&
+        !pitchIdeaUsesFreeWeeklySlot
+      ) {
         try {
           await db.userCredits.update({
             where: { userId: user.id },
@@ -368,6 +389,8 @@ Return valid JSON:
         } catch (creditError: any) {
           logger.error('[ANALYZE-PITCH-IDEA] Credit deduction failed:', creditError)
         }
+      } else if (shouldEnforceAiCredits(user.email) && pitchIdeaUsesFreeWeeklySlot) {
+        logger.log('[ANALYZE-PITCH-IDEA] Weekly free pitch idea slot — no credits deducted')
       }
 
       // Matching Pipeline v3

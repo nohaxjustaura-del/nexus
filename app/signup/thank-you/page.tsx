@@ -50,14 +50,33 @@ export default function SignupThankYouPage() {
     void run()
   }, [authLoading, authenticated, verified, user, router, searchParams])
 
+  if (!authLoading && authenticated && !verified) {
+    return (
+      <div className="min-h-screen bg-background">
+        <div className="container mx-auto max-w-2xl px-4 py-20">
+          <div className="rounded-lg border bg-card p-10 text-center shadow-sm">
+            <h1 className="mb-3 font-heading text-3xl font-bold tracking-tight">Check your email</h1>
+            <p className="text-muted-foreground">
+              We sent you a verification link. Open it on this device to confirm your email and open your account.
+            </p>
+            <div className="mt-8 space-x-3">
+              <a href="/login" className="inline-flex items-center rounded-md bg-primary px-4 py-2 text-primary-foreground">
+                Back to sign in
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto max-w-2xl px-4 py-20">
         <div className="rounded-lg border bg-card p-10 text-center shadow-sm">
-          <h1 className="mb-3 font-heading text-3xl font-bold tracking-tight">Thanks. Your signup is under review.</h1>
+          <h1 className="mb-3 font-heading text-3xl font-bold tracking-tight">Almost there</h1>
           <p className="text-muted-foreground">
-            We received your information and ID. Our team will verify your account and email you with the result.
-            This typically takes less than 24 hours.
+            Follow the link in your email to verify your address. After that, you can use the product right away.
           </p>
           <div className="mt-8 space-x-3">
             <a href="/" className="inline-flex items-center rounded-md bg-primary px-4 py-2 text-primary-foreground">

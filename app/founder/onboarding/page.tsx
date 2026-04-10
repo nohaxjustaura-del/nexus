@@ -7,7 +7,6 @@ import { isKnownUniversity } from "@/lib/universities"
 import { Step1BasicInfo } from "@/components/onboarding/step-1-basic-info"
 import { Step2StartupDetails } from "@/components/onboarding/step-2-startup-details"
 import { Step3Preferences } from "@/components/onboarding/step-3-preferences"
-import { Step5Verification } from "@/components/onboarding/step-5-verification"
 import { CLIENT_STORAGE } from '@/lib/client-storage-keys'
 import { toast } from '@/components/ui/toast-simple'
 
@@ -55,9 +54,6 @@ export default function OnboardingPage() {
   const [step, setStep] = useState(1)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
-  const [idFile, setIdFile] = useState<File | null>(null)
-  const [idUploading, setIdUploading] = useState(false)
-  const [idUploaded, setIdUploaded] = useState(false)
   const [errors, setErrors] = useState<{ name?: string; email?: string; age?: string; education?: string; phone?: string; stage?: string; location?: string; sectors?: string }>({})
   const [formData, setFormData] = useState<OnboardingFormData>({
     name: '',
@@ -102,8 +98,8 @@ export default function OnboardingPage() {
           : NaN
 
     if (!Number.isFinite(n)) return null
-    if (n === 4) return 5 // the UI skips "step 4"
-    if ([1, 2, 3, 5].includes(n)) return n
+    if (n === 4 || n === 5) return 3 // legacy steps after preferences
+    if ([1, 2, 3].includes(n)) return n
     return null
   }
 
@@ -117,15 +113,6 @@ export default function OnboardingPage() {
         
         if (response.ok) {
           const data = await response.json()
-          // Fully verified founders should use Hub; avoid looping them through onboarding after sign-in.
-          if (
-            data.exists &&
-            data.profile &&
-            data.verification?.status === 'approved'
-          ) {
-            router.replace('/founder/dashboard')
-            return
-          }
           if (data.exists && data.profile) {
             const p = data.profile
             setFormData(prev => ({
@@ -160,10 +147,31 @@ export default function OnboardingPage() {
               isVeteran: Boolean(p.isVeteran),
             }))
 
-            // Verification upload happens during step 5.
-            // If the backend says we already uploaded an ID, resume there.
-            setIdUploaded(Boolean(data.verification?.uploaded))
-            setStep(5)
+            let resolvedStep: number | null = null
+            try {
+              const draftRes = await fetch('/api/onboarding/founder/draft', { credentials: 'include' })
+              if (draftRes.ok) {
+                const draftData = await draftRes.json()
+                if (draftData?.exists && draftData?.draft && typeof draftData.draft === 'object') {
+                  const draft = draftData.draft as Partial<OnboardingFormData> & { onboardingStep?: unknown }
+                  resolvedStep = normalizeOnboardingStep(draft.onboardingStep)
+                  setFormData(prev => ({ ...prev, ...(draftData.draft as Partial<OnboardingFormData>) }))
+                }
+              }
+            } catch {}
+            if (resolvedStep == null) {
+              try {
+                const draft =
+                  localStorage.getItem(CLIENT_STORAGE.ONBOARDING_DRAFT) ||
+                  localStorage.getItem(CLIENT_STORAGE.ONBOARDING_DRAFT_LEGACY)
+                if (draft) {
+                  const parsed = JSON.parse(draft) as Partial<OnboardingFormData> & { onboardingStep?: unknown }
+                  resolvedStep = normalizeOnboardingStep(parsed.onboardingStep)
+                  setFormData(prev => ({ ...prev, ...parsed }))
+                }
+              } catch {}
+            }
+            if (resolvedStep != null) setStep(resolvedStep)
           } else {
             try {
               const draftRes = await fetch('/api/onboarding/founder/draft', { credentials: 'include' })
@@ -215,11 +223,6 @@ export default function OnboardingPage() {
     return () => clearTimeout(t)
   }, [formData])
 
-  // Skip step 4
-  useEffect(() => {
-    if (step === 4) setStep(5)
-  }, [step])
-
   // Persist the effective step into the existing onboarding draft JSON.
   useEffect(() => {
     setFormData(prev => {
@@ -261,7 +264,7 @@ export default function OnboardingPage() {
             if (el) { el.focus(); break }
           }
         }, 0)
-        throw new Error('Please complete required profile fields before uploading ID.')
+        throw new Error('Please complete required profile fields before continuing.')
       }
 
       const response = await fetch('/api/founder/profile', {
@@ -344,7 +347,7 @@ export default function OnboardingPage() {
     )
   }
 
-  const displayStep = step >= 5 ? 4 : step === 4 ? 4 : step
+  const displayStep = step
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-muted/50 via-background to-primary/5">
@@ -367,17 +370,19 @@ export default function OnboardingPage() {
             >
               Save & Exit
             </button>
-            <span className="text-sm text-muted-foreground font-medium">Step {displayStep} of 4</span>
+            <span className="text-sm text-muted-foreground font-medium">Step {displayStep} of 3</span>
           </div>
         </div>
         
         <div className="mb-8">
-          <div className="grid grid-cols-4 gap-2 mb-2">
-            {[1, 2, 3, 4].map((s) => (
+          <div className="grid grid-cols-3 gap-2 mb-2">
+            {[1, 2, 3].map((s) => (
               <button
                 key={s}
                 type="button"
-                onClick={() => { if (s <= displayStep) setStep(s === 4 ? 5 : s) }}
+                onClick={() => {
+                  if (s <= displayStep) setStep(s)
+                }}
                 className={`h-2 rounded-full transition-all ${
                   s <= displayStep ? 'bg-gradient-to-r from-primary to-blue-600 shadow-sm' : 'bg-slate-200'
                 }`}
@@ -389,7 +394,6 @@ export default function OnboardingPage() {
             <span>Basic Info</span>
             <span>Startup Details</span>
             <span>Preferences</span>
-            <span>Verification</span>
           </div>
         </div>
 
@@ -420,21 +424,8 @@ export default function OnboardingPage() {
             setFormData={setFormData as any}
             setStep={setStep}
             toggleArrayItem={toggleArrayItem as any}
-          />
-        )}
-
-        {step === 5 && (
-          <Step5Verification
-            idFile={idFile}
-            setIdFile={setIdFile}
-            idUploading={idUploading}
-            setIdUploading={setIdUploading}
-            idUploaded={idUploaded}
-            setIdUploaded={setIdUploaded}
+            onFinish={() => void handleSubmit()}
             saving={saving}
-            setStep={setStep}
-            ensureProfileSaved={ensureProfileSaved}
-            handleSubmit={handleSubmit}
           />
         )}
       </div>

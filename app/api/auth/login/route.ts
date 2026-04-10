@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
     const adminClient = createSupabaseAdminClient()
 
     // Admins use the same magic-link flow; resolveUserApprovalAccess auto-approves admin emails.
-    // Everyone else: require approval before we send a sign-in link.
+    // Rejected accounts cannot request a new sign-in link.
     try {
       const { approved, status } = await resolveUserApprovalAccess(normalizedEmail)
       if (!approved) {

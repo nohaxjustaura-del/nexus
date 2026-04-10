@@ -16,11 +16,9 @@ export async function GET(_request: NextRequest) {
       return res
     }
 
-    let approved = false
-    /** Used for dev auto-approve; undefined if approval read failed. */
-    let signupApprovalStatus: string | undefined
+    /** `UserApproval` is only used to hard-block rejected accounts; email verification unlocks the product. */
+    let accountRejected = false
     try {
-      // Read-first: avoid a write on every poll (layout + nav used to upsert each time).
       let row = await db.userApproval.findUnique({
         where: { email: user.email },
       })
@@ -35,23 +33,13 @@ export async function GET(_request: NextRequest) {
           })
         }
       }
-      signupApprovalStatus = row?.status
-      approved = row?.status === 'approved'
-      // Founder ID verification (admin panel) updates FounderVerification, not always UserApproval.
-      if (!approved) {
-        const fv = await db.founderVerification.findUnique({
-          where: { email: user.email },
-        })
-        if (fv?.status === 'approved') {
-          approved = true
-        }
-      }
+      accountRejected = row?.status === 'rejected'
     } catch (approvalError) {
       logger.error('AUTH_CHECK', 'Approval check error', approvalError)
-      approved = false
+      accountRejected = false
     }
 
-    if (isAdminEmail(user.email) && !approved) {
+    if (isAdminEmail(user.email) && accountRejected) {
       try {
         await db.userApproval.upsert({
           where: { email: user.email },
@@ -65,39 +53,16 @@ export async function GET(_request: NextRequest) {
             reviewedAt: new Date(),
           },
         })
-        approved = true
-        logger.log('AUTH_CHECK', `Auto-approved admin email: ${user.email}`)
-      } catch (autoApproveErr) {
-        approved = true
-        logger.warn('AUTH_CHECK', 'Auto-approve DB update failed, granting access anyway')
-      }
-    }
-
-    // Local dev: new accounts get UserApproval `pending`, while login still allows them through
-    // resolveUserApprovalAccess — but founder routes require verified=true here, which left the hub
-    // permanently blocked. Auto-approve pending signups in development only (opt out below).
-    const devAutoApprove =
-      process.env.NODE_ENV === 'development' &&
-      process.env.DISABLE_DEV_APPROVAL_BYPASS !== '1' &&
-      !approved &&
-      signupApprovalStatus === 'pending'
-
-    if (devAutoApprove) {
-      try {
-        await db.userApproval.update({
-          where: { email: user.email },
-          data: { status: 'approved', reviewedAt: new Date() },
-        })
-        approved = true
-        logger.log('AUTH_CHECK', `Dev auto-approved pending signup: ${user.email}`)
+        accountRejected = false
+        logger.log('AUTH_CHECK', `Cleared rejection for admin email: ${user.email}`)
       } catch {
-        approved = true
-        logger.warn('AUTH_CHECK', 'Dev auto-approve DB update failed; granting verified session anyway')
+        accountRejected = false
+        logger.warn('AUTH_CHECK', 'Admin unblock DB update failed; granting access anyway')
       }
     }
 
     const isAdmin = isAdminEmail(user.email)
-    const isVerified = isAdmin || (user.emailVerified && approved)
+    const isVerified = isAdmin || (Boolean(user.emailVerified) && !accountRejected)
 
     if (!isVerified) {
       const res = NextResponse.json({
@@ -106,7 +71,8 @@ export async function GET(_request: NextRequest) {
         email: user.email,
         userEmail: user.email,
         isAdmin,
-        needsApproval: !approved,
+        needsApproval: false,
+        accountRejected,
         user: {
           id: user.id,
           email: user.email,

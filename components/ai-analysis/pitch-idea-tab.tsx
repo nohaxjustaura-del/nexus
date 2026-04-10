@@ -12,6 +12,9 @@ import SmartMatchResults from '@/components/smart-match-results'
 import AnalysisDashboard from '@/components/analysis/AnalysisDashboard'
 import { toast } from '@/components/ui/toast-simple'
 import { fmtCheckRange } from '@/lib/utils'
+import { normalizeUserCreditsApiPayload } from '@/lib/client/normalize-user-credits-api'
+
+type PitchIdeaCreditsState = ReturnType<typeof normalizeUserCreditsApiPayload>
 
 export function PitchIdeaAnalysisTab() {
   const [ideaText, setIdeaText] = useState('')
@@ -20,7 +23,7 @@ export function PitchIdeaAnalysisTab() {
   const [analyzing, setAnalyzing] = useState(false)
   const [result, setResult] = useState<any>(null)
   const [error, setError] = useState<string | null>(null)
-  const [credits, setCredits] = useState<{ credits: number; isPremium: boolean } | null>(null)
+  const [credits, setCredits] = useState<PitchIdeaCreditsState | null>(null)
   const [requestingFeedback, setRequestingFeedback] = useState(false)
   const PITCH_IDEA_CREDIT_COST = 15
 
@@ -197,12 +200,12 @@ export function PitchIdeaAnalysisTab() {
 
   useEffect(() => {
     fetch('/api/user/credits', { credentials: 'include' })
-      .then(res => res.json())
-      .then(data => {
-        setCredits(data)
+      .then((res) => res.json())
+      .then((data) => {
+        setCredits(normalizeUserCreditsApiPayload(data))
         setError(null)
       })
-      .catch(err => console.error('Error loading credits:', err))
+      .catch((err) => console.error('Error loading credits:', err))
   }, [])
 
   const handleAnalyze = async () => {
@@ -222,8 +225,15 @@ export function PitchIdeaAnalysisTab() {
       return
     }
     
-    if (!credits.isPremium && (credits.credits ?? 0) < PITCH_IDEA_CREDIT_COST) {
-      setError(`Insufficient credits. Pitch idea analysis costs ${PITCH_IDEA_CREDIT_COST} credits. You have ${credits.credits ?? 0} credits. Please purchase credits or upgrade to premium.`)
+    const freeLeft = credits.pitchIdeaWeeklyFree?.remaining ?? 0
+    const canRun =
+      credits.isPremium ||
+      freeLeft > 0 ||
+      (credits.credits ?? 0) >= PITCH_IDEA_CREDIT_COST
+    if (!canRun) {
+      setError(
+        `Insufficient credits. Pitch idea analysis costs ${PITCH_IDEA_CREDIT_COST} credits after your free weekly runs. You have ${credits.credits ?? 0} credits. Please purchase credits or upgrade to premium.`
+      )
       return
     }
     
@@ -271,7 +281,7 @@ export function PitchIdeaAnalysisTab() {
           const creditsRes = await fetch('/api/user/credits', { credentials: 'include' })
           if (creditsRes.ok) {
             const creditsData = await creditsRes.json()
-            setCredits(creditsData)
+            setCredits(normalizeUserCreditsApiPayload(creditsData))
           }
           setAnalyzing(false)
           return
@@ -286,11 +296,11 @@ export function PitchIdeaAnalysisTab() {
       }
 
       setResult(data)
-      
+
       const creditsRes = await fetch('/api/user/credits', { credentials: 'include' })
       if (creditsRes.ok) {
         const creditsData = await creditsRes.json()
-        setCredits(creditsData)
+        setCredits(normalizeUserCreditsApiPayload(creditsData))
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to analyze pitch idea. Please try again.')
@@ -329,7 +339,7 @@ export function PitchIdeaAnalysisTab() {
       const creditsRes = await fetch('/api/user/credits', { credentials: 'include' })
       if (creditsRes.ok) {
         const creditsData = await creditsRes.json()
-        setCredits(creditsData)
+        setCredits(normalizeUserCreditsApiPayload(creditsData))
       }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to get founder feedback')
@@ -674,7 +684,16 @@ export function PitchIdeaAnalysisTab() {
         <CardHeader className="space-y-1 pb-2">
           <CardTitle className="text-lg">Pitch idea</CardTitle>
           <CardDescription>
-            Text or a small document · {PITCH_IDEA_CREDIT_COST} credits per run
+            Text or a small document · {PITCH_IDEA_CREDIT_COST} credits per run after your free weekly quota
+            {credits && !credits.isPremium && credits.pitchIdeaWeeklyFree ? (
+              <span className="mt-1 block text-xs text-muted-foreground">
+                Free tier: {credits.pitchIdeaWeeklyFree.remaining} of {credits.pitchIdeaWeeklyFree.limit} analyses left
+                this week (UTC week). Resets {new Date(credits.pitchIdeaWeeklyFree.resetsAt).toLocaleString()}.
+              </span>
+            ) : null}
+            {credits?.isPremium ? (
+              <span className="mt-1 block text-xs text-muted-foreground">Premium: unlimited pitch idea analyses.</span>
+            ) : null}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-5 pt-2">
@@ -880,24 +899,31 @@ export function PitchIdeaAnalysisTab() {
                 'Loading balance…'
               )}
             </p>
-            {credits && (!credits.isPremium && (credits.credits ?? 0) < PITCH_IDEA_CREDIT_COST) && (
-              <Link href="/pricing" className="shrink-0">
-                <Button variant="outline" size="sm">
-                  Add credits
-                </Button>
-              </Link>
-            )}
+            {credits &&
+              !credits.isPremium &&
+              (credits.pitchIdeaWeeklyFree?.remaining ?? 0) === 0 &&
+              (credits.credits ?? 0) < PITCH_IDEA_CREDIT_COST && (
+                <Link href="/pricing" className="shrink-0">
+                  <Button variant="outline" size="sm">
+                    Add credits
+                  </Button>
+                </Link>
+              )}
           </div>
 
-          <Button 
-            onClick={handleAnalyze} 
-            disabled={
-              (inputMode === 'text' && !ideaText.trim()) ||
-              (inputMode === 'file' && !ideaFile) ||
-              analyzing || 
-              !credits || 
-              (!credits.isPremium && (credits.credits ?? 0) < PITCH_IDEA_CREDIT_COST)
-            }
+          <Button
+            onClick={handleAnalyze}
+            disabled={(() => {
+              if ((inputMode === 'text' && !ideaText.trim()) || (inputMode === 'file' && !ideaFile) || analyzing)
+                return true
+              if (!credits) return true
+              const freeLeft = credits.pitchIdeaWeeklyFree?.remaining ?? 0
+              const canRun =
+                credits.isPremium ||
+                freeLeft > 0 ||
+                (credits.credits ?? 0) >= PITCH_IDEA_CREDIT_COST
+              return !canRun
+            })()}
             className="w-full"
             size="lg"
           >

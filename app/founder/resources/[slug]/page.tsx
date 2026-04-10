@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import dynamic from 'next/dynamic'
 import { notFound } from 'next/navigation'
 import { getResourcePartner } from '@/lib/partner-resources'
+import { ensureFounderResourcesPageAccess } from '@/lib/founder-resources-page-gate'
 
 const PartnerResourcesClient = dynamic(() => import('../partner-resources-client'), {
   loading: () => (
@@ -22,7 +23,8 @@ export function generateMetadata({ params }: Props): Metadata {
   }
 }
 
-export default function PartnerResourceDetailPage({ params }: Props) {
+export default async function PartnerResourceDetailPage({ params }: Props) {
   if (!getResourcePartner(params.slug)) notFound()
+  await ensureFounderResourcesPageAccess()
   return <PartnerResourcesClient partnerSlug={params.slug} />
 }

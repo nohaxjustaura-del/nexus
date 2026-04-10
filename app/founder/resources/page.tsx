@@ -6,6 +6,7 @@ import { buttonVariants } from '@/components/ui/button-variants'
 import { Badge } from '@/components/ui/badge'
 import { RESOURCE_PARTNERS } from '@/lib/partner-resources'
 import { cn } from '@/lib/utils'
+import { ensureFounderResourcesPageAccess } from '@/lib/founder-resources-page-gate'
 
 export const metadata: Metadata = {
   title: 'Resources - Partners',
@@ -13,7 +14,8 @@ export const metadata: Metadata = {
     'Partner resource hubs: YC application teardowns, deck autopsies, interview prep, and optional mentorship.',
 }
 
-export default function FounderResourcesIndexPage() {
+export default async function FounderResourcesIndexPage() {
+  await ensureFounderResourcesPageAccess()
   return (
     <div className="min-h-screen bg-black text-zinc-100">
       <div className="mx-auto max-w-4xl px-4 py-10 sm:py-14">

@@ -87,6 +87,7 @@
     "@types/pdfkit": "^0.17.4",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.0",
+    "disposable-email-domains": "^1.0.62",
     "dotenv": "^16.6.1",
     "exa-js": "^2.7.0",
     "framer-motion": "^11.0.5",

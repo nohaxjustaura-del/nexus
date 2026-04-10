@@ -15,14 +15,19 @@ type Caps = {
   hasFounderProfile?: boolean
   hasInvestorProfile?: boolean
   userType?: string
+  canAccessFounderResources?: boolean
 } | null
+
+function guestExploreHref(next: string): string {
+  return next.startsWith('/pricing') ? next : `/signup?next=${encodeURIComponent(next)}`
+}
 
 /** Logged-out marketing nav: same labels as the founder workspace, gated through signup. */
 const GUEST_EXPLORE_TABS = [
   { next: '/founder/dashboard', label: 'Hub' },
   { next: '/founder/discover', label: 'Investors' },
   { next: '/founder/ai-analysis', label: 'Analyze' },
-  { next: '/founder/resources', label: 'Resources' },
+  { next: '/pricing?from=resources', label: 'Resources' },
   { next: '/pricing', label: 'Pricing' },
 ] as const
 
@@ -73,6 +78,7 @@ export function SiteHeader() {
             hasFounderProfile: data.hasFounderProfile,
             hasInvestorProfile: data.hasInvestorProfile,
             userType: data.userType,
+            canAccessFounderResources: data.canAccessFounderResources,
           })
         }
       })
@@ -97,7 +103,7 @@ export function SiteHeader() {
       { section: 'Explore', href: `/signup?next=${encodeURIComponent('/founder/dashboard')}`, label: 'Hub' },
       { href: `/signup?next=${encodeURIComponent('/founder/discover')}`, label: 'Investors' },
       { href: `/signup?next=${encodeURIComponent('/founder/ai-analysis')}`, label: 'Analyze' },
-      { href: `/signup?next=${encodeURIComponent('/founder/resources')}`, label: 'Resources' },
+      { href: '/pricing?from=resources', label: 'Resources' },
       { section: 'More', href: `/signup?next=${encodeURIComponent('/pricing')}`, label: 'Pricing' },
     ],
     []
@@ -108,7 +114,7 @@ export function SiteHeader() {
       { section: 'Workspace', href: '/founder/dashboard', label: 'Hub' },
       { href: '/founder/discover', label: 'Investors' },
       { href: '/founder/ai-analysis', label: 'Analyze' },
-      { href: '/founder/resources', label: 'Resources' },
+      ...(caps?.canAccessFounderResources ? [{ href: '/founder/resources', label: 'Resources' as const }] : []),
       { section: 'More', href: '/pricing', label: 'Pricing' },
     ]
     if (authenticated) {
@@ -123,14 +129,14 @@ export function SiteHeader() {
       })
     }
     return base
-  }, [authenticated, showInvestorSwitch, setPreferredChrome])
+  }, [authenticated, showInvestorSwitch, setPreferredChrome, caps?.canAccessFounderResources])
 
   const investorMobileLinks: MobileNavItem[] = useMemo(() => {
     const base: MobileNavItem[] = [
       { section: 'Workspace', href: '/vc/extract', label: 'Extract' },
       { href: '/vc/profile', label: 'Your listing' },
       { href: '/vc/dashboard', label: 'Matches' },
-      { href: '/founder/resources', label: 'Resources' },
+      ...(caps?.canAccessFounderResources ? [{ href: '/founder/resources', label: 'Resources' as const }] : []),
     ]
     if (authenticated) {
       base.push({ section: 'Account', href: '/account', label: 'Account' })
@@ -144,7 +150,7 @@ export function SiteHeader() {
       })
     }
     return base
-  }, [authenticated, showFounderSwitch, setPreferredChrome])
+  }, [authenticated, showFounderSwitch, setPreferredChrome, caps?.canAccessFounderResources])
 
   const mobileLinks =
     chrome === 'guest' ? guestMobileLinks : chrome === 'investor' ? investorMobileLinks : founderMobileLinks
@@ -201,7 +207,7 @@ export function SiteHeader() {
                 {GUEST_EXPLORE_TABS.map(({ next, label }) => (
                   <Link
                     key={next}
-                    href={`/signup?next=${encodeURIComponent(next)}`}
+                    href={guestExploreHref(next)}
                     className="rounded-full px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted/55 hover:text-foreground"
                   >
                     {label}
@@ -216,7 +222,9 @@ export function SiteHeader() {
                   <ProtectedNavLink href="/founder/dashboard">Hub</ProtectedNavLink>
                   <ProtectedNavLink href="/founder/discover">Investors</ProtectedNavLink>
                   <ProtectedNavLink href="/founder/ai-analysis">Analyze</ProtectedNavLink>
-                  <ProtectedNavLink href="/founder/resources">Resources</ProtectedNavLink>
+                  {caps?.canAccessFounderResources ? (
+                    <ProtectedNavLink href="/founder/resources">Resources</ProtectedNavLink>
+                  ) : null}
                   <ProtectedNavLink href="/pricing">Pricing</ProtectedNavLink>
                 </div>
               </div>
@@ -228,7 +236,9 @@ export function SiteHeader() {
                   <DesktopNavLink href="/vc/extract" label="Extract" pathname={pathname} />
                   <DesktopNavLink href="/vc/profile" label="Your listing" pathname={pathname} />
                   <DesktopNavLink href="/vc/dashboard" label="Matches" pathname={pathname} />
-                  <DesktopNavLink href="/founder/resources" label="Resources" pathname={pathname} />
+                  {caps?.canAccessFounderResources ? (
+                    <DesktopNavLink href="/founder/resources" label="Resources" pathname={pathname} />
+                  ) : null}
                 </div>
               </div>
             )}
