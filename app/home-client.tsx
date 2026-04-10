@@ -512,8 +512,8 @@ export default function HomeClient({ verifiedInvestorCountLabel, homeDemoRubric 
                   </AccordionTrigger>
                   <AccordionContent>
                     <p className="pb-2 text-left text-xs leading-relaxed text-muted-foreground sm:text-sm">
-                      On the platform you will find people who have raised capital, been through strong accelerators, helped
-                      build breakout companies, or spent years at leading venture firms.
+                      On the platform you will find people who have raised capital, been through programs like YC, helped
+                      build breakout companies, or spent years at top firms—Sequoia, a16z, and others in that tier.
                     </p>
                   </AccordionContent>
                 </AccordionItem>
@@ -534,8 +534,8 @@ export default function HomeClient({ verifiedInvestorCountLabel, homeDemoRubric 
                 },
                 {
                   icon: BadgeCheck,
-                  title: 'YC & top-VC perspective',
-                  desc: 'Many mentors bring experience from YC paths and leading venture firms. You get signal on narrative, diligence, and what partners really respond to.',
+                  title: 'YC, Sequoia, a16z & more',
+                  desc: 'Many mentors bring experience from YC-style paths and tier-one funds—Sequoia, a16z, and comparable shops. You get signal on narrative, diligence, and what partners really respond to.',
                 },
               ].map(({ icon: Icon, title, desc }) => (
                 <div key={title} className="flex flex-col gap-3 rounded-2xl border border-border/40 bg-card/80 p-5 shadow-sm ring-1 ring-border/15 sm:p-6">
