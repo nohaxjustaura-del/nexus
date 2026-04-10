@@ -57,6 +57,8 @@ prisma/*.db-wal
 # FAISS / VC vector artifacts (large; regenerate from DB — npm run build-faiss-index)
 faiss-data/*
 !faiss-data/.gitkeep
+# Local bundle for Railway upload (do not commit)
+faiss-bundle.tar.gz
 
 # VC embeddings export (optional import path for scripts; do not commit)
 /vcs_embeddings.jsonl
