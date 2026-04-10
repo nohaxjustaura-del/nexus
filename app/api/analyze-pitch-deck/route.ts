@@ -350,6 +350,7 @@ export async function POST(request: NextRequest) {
       marketAnalysis: features.marketAnalysis,
       teamAnalysis: features.teamAnalysis,
       productFit: features.productFit,
+      universityPrograms: matchPipelineResult?.universityPrograms ?? [],
       matches: top20Matches.map((m, idx) => ({
         rank: idx + 1,
         investorId: m.investor.id,

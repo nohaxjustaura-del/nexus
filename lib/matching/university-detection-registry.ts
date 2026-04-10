@@ -48,6 +48,10 @@ export function detectUniversityFromRegistry(t: string): string | undefined {
   if (/\bru\b/.test(t) && /\bbrown\b/.test(t) && /(student|undergraduate|graduate|class of|alumni)/.test(t)) {
     return 'Brown University'
   }
+  // City-based inference: Providence, RI is Brown's home — map unless RISD is explicitly mentioned
+  if (/\bprovidence\b/.test(t) && !t.includes('risd') && !t.includes('rhode island school of design')) {
+    return 'Brown University'
+  }
 
   if (t.includes('uc berkeley') || t.includes('university of california, berkeley')) return 'UC Berkeley'
   if (/\bberkeley\b/.test(t) && (t.includes('haas') || t.includes('cal ') || t.endsWith(' cal'))) {

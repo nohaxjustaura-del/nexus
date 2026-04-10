@@ -16,6 +16,7 @@ import {
 } from "lucide-react"
 import Link from "next/link"
 import { toast } from '@/components/ui/toast-simple'
+import { fmtCheckRange } from '@/lib/utils'
 
 interface Bookmark {
   id: string
@@ -177,7 +178,7 @@ export default function BookmarksPage() {
                     <div className="flex items-center gap-2 text-sm">
                       <DollarSign className="h-4 w-4 text-muted-foreground" />
                       <span className="font-medium">
-                        ${investor.checkMin}K - ${investor.checkMax}K
+                        {fmtCheckRange(investor.checkMin, investor.checkMax)}
                       </span>
                     </div>
 

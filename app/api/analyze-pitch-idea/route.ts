@@ -656,6 +656,9 @@ Return valid JSON:
         analysis.rubricAnalysis = rubricAnalysis
       }
 
+      // Persist university programs so they are available from stored analysis
+      ;(analysis as any).universityPrograms = matchPipelineResult?.universityPrograms ?? []
+
       // Save pitch idea analysis to database for training data
       let pitchIdeaRecord: any = null
       try {

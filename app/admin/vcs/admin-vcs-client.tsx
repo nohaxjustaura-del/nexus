@@ -20,7 +20,7 @@ import {
   AlertTriangle,
   ChevronDown,
 } from "lucide-react"
-import { parseStringArray } from "@/lib/utils"
+import { parseStringArray, fmtCheckRange } from "@/lib/utils"
 import { toast } from '@/components/ui/toast-simple'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
@@ -507,7 +507,7 @@ export function AdminVcsClient({
 
                       <div className="flex flex-wrap items-center gap-2 mb-3">
                         <Badge variant="secondary">
-                          ${investor.checkMin}K - ${investor.checkMax}K
+                          {fmtCheckRange(investor.checkMin, investor.checkMax)}
                         </Badge>
                         {parseStringArray(investor.stages).map((stage) => (
                           <Badge key={stage} variant="secondary">{stage}</Badge>

@@ -10,7 +10,7 @@
  */
 
 import './load-env'
-import { parseJSON } from '@/lib/utils'
+import { parseJSON, fmtCheckRange } from '@/lib/utils'
 import { logger } from '@/lib/logger'
 
 const EMBEDDING_MODEL = 'voyage-3'
@@ -404,8 +404,8 @@ Geography focus: ${safe(vc.geography)}`
   )
 
   // INVESTMENT CRITERIA
-  const checkSize = vc.checkSizeMin && vc.checkSizeMax 
-    ? `$${vc.checkSizeMin}K - $${vc.checkSizeMax}K`
+  const checkSize = vc.checkSizeMin || vc.checkSizeMax
+    ? fmtCheckRange(vc.checkSizeMin, vc.checkSizeMax)
     : 'Not specified'
   
   sections.push(
@@ -535,8 +535,8 @@ export function investorsToRankableEmbeddings(
         sectors: parseJSON<string[]>(inv.sectors, []),
         geography: parseJSON<string[]>(inv.geography || inv.geoFocus, []),
         checkSize:
-          inv.checkSizeMin && inv.checkSizeMax
-            ? `$${inv.checkSizeMin}K-$${inv.checkSizeMax}K`
+          inv.checkSizeMin || inv.checkSizeMax
+            ? fmtCheckRange(inv.checkSizeMin, inv.checkSizeMax)
             : undefined,
         fundType: inv.fundType,
       },

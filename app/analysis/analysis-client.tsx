@@ -6,7 +6,7 @@ import { BRAND_NAME } from '@/lib/brand'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { ChevronDown } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { cn, fmtCheckRange } from '@/lib/utils'
 
 interface InvestorMatch {
   id: string;
@@ -363,7 +363,7 @@ export default function AnalysisClient() {
                           <span className="px-2 py-1 bg-muted rounded">{match.fundType}</span>
                           <span>{match.stages.join(', ')}</span>
                           <span>•</span>
-                          <span>${(match.checkSizeMin / 1000).toFixed(0)}K - ${(match.checkSizeMax / 1000000).toFixed(1)}M</span>
+                          <span>{fmtCheckRange(match.checkSizeMin, match.checkSizeMax)}</span>
                         </div>
                       </div>
                     </div>

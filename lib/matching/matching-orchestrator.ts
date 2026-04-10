@@ -7,11 +7,14 @@
  * Wires together all lib/matching/ modules into a single async pipeline.
  *
  * Pipeline summary:
- *   Step 1 — Build FounderMatchSignal (onboarding + pitch text for university resolution)
- *   Step 3 — Hard filter (Prisma)
- *   Step 4 — Pitch keyword LLM; Step 4b — university/accelerator programs (after keywords)
- *   Step 5 — FAISS + 5b niche injection + 5c thesis overlap
- *   Step 6–8 — Exa/Gemini, narratives, rank+cut (incl. pre-traction thesis boost when traction is none/early)
+ *   Step 1 — Build FounderMatchSignal (pure TS, no I/O)
+ *   Step 2 — University program matching (pure TS, sync)
+ *   Step 3 — Hard filter: Prisma WHERE clause (unchanged from v2)
+ *   Step 4 — Pattern detection from transcript (Gemini, keywords only)
+ *   Step 5 — FAISS vector search (top 20, up from 15)
+ *   Step 6 — Rolling Exa + Gemini gate reasoning (max 5 concurrent Gemini)
+ *   Step 7 — Narrative generation (OpenRouter matching/scoring model, e.g. DeepSeek; all VCs in parallel)
+ *   Step 8 — Rank and cut (top 12, pure TS)
  *   Step 9 — Return MatchingPipelineResult
  */
 
@@ -28,8 +31,6 @@ import {
   rankVCsForPitch,
 } from '@/lib/embeddings'
 import type { ComprehensiveFounderContext } from '@/lib/founder-context'
-import { detectUniversityAffiliation } from '@/lib/founder-context'
-import { buildFounderIdentitySignals } from './founder-identity-signals'
 import type { Investor } from '@prisma/client'
 
 import { matchUniversityPrograms, filterOutUniversityPrograms } from './university-matcher'
@@ -38,11 +39,12 @@ import { reasonGates } from './gate-reasoner'
 import { computeInvestmentLikelihood, type PitchStrengthSignal } from './investment-likelihood'
 import { generateMatchNarrative } from './narrative-generator'
 import { rankAndCut } from './ranker'
+import { buildFounderIdentitySignals, inferStudentFromText } from './founder-identity-signals'
+import { detectUniversityAffiliation } from '@/lib/founder-context'
 import type {
   FounderMatchSignal,
   InvestmentLikelihoodResult,
   MatchingPipelineResult,
-  UniversityProgramMatch,
   VCExaBundle,
   VCProfile,
 } from './types'
@@ -61,7 +63,6 @@ export interface PitchAnalysisResult {
   solutionDescription?: string
   businessModel?: string
   targetCustomer?: string
-  /** Deck/video model output: sector → 0–100 fit; merged into matching for all modalities. */
   sectorFit?: Record<string, number>
   tractionMetrics?: {
     revenue?: string | number
@@ -72,12 +73,6 @@ export interface PitchAnalysisResult {
   }
   productFit?: { differentiators?: string[] }
   uniqueness?: string
-  /** Rich idea / unified analysis (same signals often passed later as ScoringSignals). */
-  marketFit?: string
-  subSectorTags?: string[]
-  riskFactors?: string[]
-  strengths?: string[]
-  reasoning?: string
 }
 
 // ---------------------------------------------------------------------------
@@ -94,7 +89,15 @@ const STAGE_EXPANSION: Record<string, string[]> = {
 
 function buildStageWhereConditions(founderStage: string) {
   const acceptable = STAGE_EXPANSION[founderStage] ?? [founderStage]
-  return acceptable.map((stage) => ({ stages: { contains: `"${stage}"` } }))
+  return [
+    // VCs that explicitly list a matching stage
+    ...acceptable.map((stage) => ({
+      stages: { contains: `"${stage}"`, mode: 'insensitive' as const },
+    })),
+    // VCs with no stage data should pass through — empty means "unknown", not "none"
+    { stages: { equals: '[]' } },
+    { stages: { equals: '' } },
+  ]
 }
 
 // ---------------------------------------------------------------------------
@@ -144,50 +147,17 @@ function deriveTractionTier(founder: ComprehensiveFounderContext): FounderMatchS
   return 'none'
 }
 
+// ---------------------------------------------------------------------------
+// Sector signal detection — regex-based, scans full pitch text
+// ---------------------------------------------------------------------------
+
 const GENERIC_KEYWORD = /^(idea|mvp|seed|pre-seed|preseed|usa|us|uk|ai|ml)$/i
 
-/** Single blob for gates/Exa: product reality + themes (cap ~800 chars). */
-function buildCompanyThesisSummary(
-  founder: ComprehensiveFounderContext,
-  pitchAnalysis: PitchAnalysisResult | null,
-  transcript: string | null | undefined,
-  rawPitchText: string | null | undefined,
-  pitchKeywords: string[],
-  sectorFocusPhrases: string[],
-): string {
-  const parts: string[] = []
-  if (founder.startupName?.trim()) parts.push(`Company: ${founder.startupName.trim()}.`)
-  if (pitchAnalysis?.oneLineSummary?.trim()) parts.push(pitchAnalysis.oneLineSummary.trim())
-  if (pitchAnalysis?.problemStatement?.trim()) {
-    parts.push(pitchAnalysis.problemStatement.trim().slice(0, 420))
-  }
-  if (pitchAnalysis?.solutionDescription?.trim()) {
-    parts.push(pitchAnalysis.solutionDescription.trim().slice(0, 420))
-  }
-  if (pitchAnalysis?.businessModel?.trim()) {
-    parts.push(`Model: ${pitchAnalysis.businessModel.trim().slice(0, 200)}`)
-  }
-  const rawBlob = [transcript, rawPitchText].filter(Boolean).join('\n').trim()
-  if (rawBlob.length > 80) {
-    parts.push(rawBlob.slice(0, 380).trim())
-  }
-  const themeSet = new Set<string>()
-  for (const x of [...sectorFocusPhrases, ...pitchKeywords]) {
-    const k = String(x).trim()
-    if (k.length < 3 || GENERIC_KEYWORD.test(k)) continue
-    themeSet.add(k)
-    if (themeSet.size >= 14) break
-  }
-  if (themeSet.size) parts.push(`Themes: ${[...themeSet].join(', ')}`)
-  let s = parts.join(' ').replace(/\s+/g, ' ').trim()
-  if (s.length > 800) s = `${s.slice(0, 797)}...`
-  return s
-}
+const GENERIC_SECTOR_LABELS = new Set([
+  'ai', 'saas', 'enterprise', 'consumer', 'smb', 'marketplace', 'platforms',
+  'data', 'analytics', 'cloud', 'infrastructure', 'b2b',
+])
 
-/**
- * Broad lexical signals → thesis buckets used everywhere (gates, Exa, overlap, ranker).
- * Keep in sync with typical VC sector tags in the investor DB.
- */
 const SECTOR_SIGNALS: Array<{ re: RegExp; labels: string[] }> = [
   { re: /\b(video|videos|editing|editor|premiere|capcut|descript|footage|b-roll|b roll)\b/, labels: ['Media', 'video'] },
   { re: /\b(creator|influencer|youtube|tiktok|short[- ]form|podcast|streamer)\b/, labels: ['creator economy', 'Consumer'] },
@@ -236,10 +206,6 @@ const SECTOR_SIGNALS: Array<{ re: RegExp; labels: string[] }> = [
   { re: /\b(nonprofit|ngo|impact investing|esg)\b/, labels: ['Impact'] },
 ]
 
-/**
- * Infer sector / product themes from pitch prose + structured sectorFit so gates and Exa
- * are not stuck on the founder profile's first sector alone (any vertical).
- */
 function deriveSectorFocusPhrases(
   founder: ComprehensiveFounderContext,
   pitchAnalysis: PitchAnalysisResult | null,
@@ -261,17 +227,12 @@ function deriveSectorFocusPhrases(
     founder.startupName,
     founder.businessModel,
     (founder.bio ?? '').slice(0, 400),
-    scoringSignals?.marketFit ?? pitchAnalysis?.marketFit,
-    scoringSignals?.bullCase ?? pitchAnalysis?.reasoning,
+    scoringSignals?.marketFit,
+    scoringSignals?.bullCase,
     scoringSignals?.uniqueness ?? pitchAnalysis?.uniqueness,
-    ...(scoringSignals?.subSectorTags?.length
-      ? scoringSignals.subSectorTags
-      : pitchAnalysis?.subSectorTags ?? []),
-    (scoringSignals?.strengths?.length
-      ? scoringSignals.strengths
-      : pitchAnalysis?.strengths ?? []
-    ).join(' '),
-    (pitchAnalysis?.riskFactors ?? scoringSignals?.riskFactors ?? []).join(' '),
+    ...(scoringSignals?.subSectorTags ?? []),
+    (scoringSignals?.strengths ?? []).join(' '),
+    (scoringSignals?.riskFactors ?? []).join(' '),
   ]
     .filter(Boolean)
     .join(' ')
@@ -303,30 +264,49 @@ function deriveSectorFocusPhrases(
     out.push(s)
     if (out.length >= 16) break
   }
-
-  // #region agent log
-  void fetch('http://127.0.0.1:7464/ingest/8942f439-d0f1-43ea-9e6d-5d7995eef824', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '368bf4' },
-    body: JSON.stringify({
-      sessionId: '368bf4',
-      hypothesisId: 'H-sector-breadth',
-      runId: 'pre-verify',
-      location: 'matching-orchestrator.ts:deriveSectorFocusPhrases',
-      message: 'sector_focus_derivation',
-      data: {
-        phraseCount: out.length,
-        blobLen: blob.length,
-        sectorFitKeyCount: sf && typeof sf === 'object' ? Object.keys(sf).length : 0,
-        sample: out.slice(0, 10),
-      },
-      timestamp: Date.now(),
-    }),
-  }).catch(() => {})
-  // #endregion
-
   return out
 }
+
+function buildCompanyThesisSummary(
+  founder: ComprehensiveFounderContext,
+  pitchAnalysis: PitchAnalysisResult | null,
+  transcript: string | null | undefined,
+  rawPitchText: string | null | undefined,
+  pitchKeywords: string[],
+  sectorFocusPhrases: string[],
+): string {
+  const parts: string[] = []
+  if (founder.startupName?.trim()) parts.push(`Company: ${founder.startupName.trim()}.`)
+  if (pitchAnalysis?.oneLineSummary?.trim()) parts.push(pitchAnalysis.oneLineSummary.trim())
+  if (pitchAnalysis?.problemStatement?.trim()) {
+    parts.push(pitchAnalysis.problemStatement.trim().slice(0, 420))
+  }
+  if (pitchAnalysis?.solutionDescription?.trim()) {
+    parts.push(pitchAnalysis.solutionDescription.trim().slice(0, 420))
+  }
+  if (pitchAnalysis?.businessModel?.trim()) {
+    parts.push(`Model: ${pitchAnalysis.businessModel.trim().slice(0, 200)}`)
+  }
+  const rawBlob = [transcript, rawPitchText].filter(Boolean).join('\n').trim()
+  if (rawBlob.length > 80) {
+    parts.push(rawBlob.slice(0, 380).trim())
+  }
+  const themeSet = new Set<string>()
+  for (const x of [...sectorFocusPhrases, ...pitchKeywords]) {
+    const k = String(x).trim()
+    if (k.length < 3 || GENERIC_KEYWORD.test(k)) continue
+    themeSet.add(k)
+    if (themeSet.size >= 14) break
+  }
+  if (themeSet.size) parts.push(`Themes: ${[...themeSet].join(', ')}`)
+  let s = parts.join(' ').replace(/\s+/g, ' ').trim()
+  if (s.length > 800) s = `${s.slice(0, 797)}...`
+  return s
+}
+
+// ---------------------------------------------------------------------------
+// VC sector helpers
+// ---------------------------------------------------------------------------
 
 function parseVcSectorTokens(vc: VCProfile): string[] {
   try {
@@ -338,7 +318,6 @@ function parseVcSectorTokens(vc: VCProfile): string[] {
   }
 }
 
-/** Gaming / metaverse funds often tag "Interactive Media"; do not treat as plain "Media" for video SaaS. */
 function vcIsGamingHeavy(vc: VCProfile): boolean {
   return parseVcSectorTokens(vc).some(
     (t) =>
@@ -348,15 +327,22 @@ function vcIsGamingHeavy(vc: VCProfile): boolean {
   )
 }
 
-/**
- * Match Step 5b synonym to VC sector tags. Plain "media" only hits exact token "media"
- * so "Interactive Media" does not pull BITKRAFT-style funds for Vyra-style pitches.
- */
 function vcSectorSynonymHit(synonym: string, sectorTokens: string[]): boolean {
   const s = synonym.toLowerCase()
   if (s === 'media') {
     return sectorTokens.some(
-      (t) => t === 'media' || t === 'film & media' || t === 'film / media' || t === 'film and media',
+      (t) => t === 'media' || t === 'film & media' || t === 'film / media' ||
+             t === 'film and media' || t === 'digital media' || t === 'new media' ||
+             t.includes('content creat') || t.includes('creative'),
+    )
+  }
+  if (s === 'creative tools' || s === 'creative software') {
+    return sectorTokens.some((t) => t.includes('creative') || t.includes('design'))
+  }
+  if (s === 'healthcare' || s === 'health tech' || s === 'digital health') {
+    return sectorTokens.some(
+      (t) => t.includes('health') || t.includes('medical') || t.includes('clinical') ||
+             t.includes('biotech') || t.includes('pharma'),
     )
   }
   return sectorTokens.some((t) => t.includes(s))
@@ -379,29 +365,37 @@ function scoreVcSectorThesisOverlap(vc: VCProfile, phrases: string[]): number {
   try {
     const arr = JSON.parse(vc.sectors ?? '[]') as string[]
     if (Array.isArray(arr)) vcText += arr.join(' ')
-  } catch {
-    /* ignore */
-  }
-  vcText += ` ${vc.thesis ?? ''} ${vc.firmName ?? ''}`
+  } catch { /* ignore */ }
+  vcText += ` ${vc.thesis ?? ''} ${vc.firmName ?? ''} ${vc.bio ?? ''}`
   const t = vcText.toLowerCase()
+
+  // Derive standardized labels from VC text using the same SECTOR_SIGNALS regexes
+  // so label-level comparison works even when raw text uses different vocabulary
+  const vcLabels = new Set<string>()
+  for (const { re, labels } of SECTOR_SIGNALS) {
+    if (re.test(t)) {
+      for (const l of labels) vcLabels.add(l.toLowerCase())
+    }
+  }
+  for (const tok of vcSectorTokens) vcLabels.add(tok)
+
   let s = 0
   for (const p of phrases) {
     const q = p.toLowerCase().trim()
     if (q.length < 3) continue
+    const isNiche = !GENERIC_SECTOR_LABELS.has(q)
+    const weight = isNiche ? 2 : 1
     let hit = 0
     if (vcSectorTokens.some((tok) => tok === q)) hit = 10
     else if (q.length >= 4 && vcSectorTokens.some((tok) => tok.includes(q))) hit = 6
+    else if (vcSectorTokens.some((tok) => tok.length >= 3 && q.includes(tok))) hit = 5
+    else if (vcLabels.has(q)) hit = 8
     else if (t.includes(q)) hit = q.length >= 6 ? 5 : 3
-    s += hit
+    s += hit * weight
   }
   return s
 }
 
-/**
- * Pull high-overlap VCs from the full embedding universe into the pool (e.g. betaworks + Media).
- * When making room, drops **non-protected** rows from the tail first so Step 5b niche injections
- * are not wiped by a blind `slice(0, n)`.
- */
 function injectSectorThesisOverlap(
   pool: VCProfile[],
   universe: VCProfile[],
@@ -439,6 +433,22 @@ function injectSectorThesisOverlap(
 
   const kept = pool.filter((_, i) => !dropIdx.has(i))
   return [...kept, ...add]
+}
+
+function preTractionThesisFit01(vc: VCProfile): number {
+  const blob = `${vc.thesis ?? ''} ${vc.bio ?? ''}`.toLowerCase()
+  if (!blob.trim()) return 0
+  const needles = [
+    'pre-seed', 'preseed', 'pre seed', 'first check', 'first-check',
+    'idea stage', 'pre-revenue', 'pre revenue', 'at inception',
+    'first institutional', 'backing founders early', 'early-stage founder',
+    'early stage founder', 'no revenue', '0 to 1', '0-1', 'student founder',
+    'first-time founder', 'first time founder', 'pre-product', 'pre product',
+    'inception',
+  ]
+  let hits = 0
+  for (const n of needles) if (blob.includes(n)) hits += 1
+  return Math.min(1, hits / 5)
 }
 
 // ---------------------------------------------------------------------------
@@ -495,11 +505,6 @@ export interface ScoringSignals {
   marketFit?: string
   subSectorTags?: string[]
   riskFactors?: string[]
-}
-
-/** Optional text passed from API routes so matching sees the real pitch, not only profile sectors. */
-export interface MatchingPipelineHints {
-  rawPitchText?: string | null
 }
 
 function buildPitchContext(
@@ -574,39 +579,6 @@ function buildAnalysisEnrichment(scoring?: ScoringSignals): import('@/lib/embedd
   }
 }
 
-/** Thesis/bio language that indicates comfort investing before strong traction. */
-function preTractionThesisFit01(vc: VCProfile): number {
-  const blob = `${vc.thesis ?? ''} ${vc.bio ?? ''}`.toLowerCase()
-  if (!blob.trim()) return 0
-  const needles = [
-    'pre-seed',
-    'preseed',
-    'pre seed',
-    'first check',
-    'first-check',
-    'idea stage',
-    'pre-revenue',
-    'pre revenue',
-    'at inception',
-    'first institutional',
-    'backing founders early',
-    'early-stage founder',
-    'early stage founder',
-    'no revenue',
-    '0 to 1',
-    '0-1',
-    'student founder',
-    'first-time founder',
-    'first time founder',
-    'pre-product',
-    'pre product',
-    'inception',
-  ]
-  let hits = 0
-  for (const n of needles) if (blob.includes(n)) hits += 1
-  return Math.min(1, hits / 5)
-}
-
 // ---------------------------------------------------------------------------
 // Main export
 // ---------------------------------------------------------------------------
@@ -616,63 +588,89 @@ export async function runMatchingPipeline(
   pitchAnalysis: PitchAnalysisResult | null,
   transcript: string | null,
   scoringSignals?: ScoringSignals,
-  hints?: MatchingPipelineHints,
+  opts?: { rawPitchText?: string },
 ): Promise<MatchingPipelineResult> {
   const startTime = Date.now()
 
   // ── STEP 1 — Build FounderMatchSignal ──────────────────────────────────────
+
+  const pitchBlob = [
+    transcript ?? '',
+    opts?.rawPitchText ?? '',
+    pitchAnalysis?.oneLineSummary ?? '',
+    pitchAnalysis?.solutionDescription ?? '',
+    pitchAnalysis?.problemStatement ?? '',
+  ].join('\n')
+
+  // Detect university from pitch text if not already set in profile
+  const pitchUniversity =
+    founder.universityAffiliation ??
+    detectUniversityAffiliation(founder.education, founder.bio, pitchBlob) ??
+    null
+
+  const isStudent =
+    founder.isStudent ||
+    (founder.age !== undefined && founder.age < 22) ||
+    inferStudentFromText(pitchBlob)
+
+  // Build identity tags and thesis affinity phrases from profile + pitch
+  const { identityTags, thesisAffinityPhrases } = buildFounderIdentitySignals(
+    { ...founder, isStudent, universityAffiliation: pitchUniversity ?? undefined },
+    pitchBlob,
+  )
+
+  // Use the comprehensive regex-based sector detection on ALL text sources
   const sectorFocusPhrases = deriveSectorFocusPhrases(
     founder,
     pitchAnalysis,
     transcript,
-    hints?.rawPitchText,
+    opts?.rawPitchText,
     scoringSignals,
   )
-  const primarySector = sectorFocusPhrases[0] ?? founder.sectors[0] ?? ''
-  const textForUniversityDetect = [
-    hints?.rawPitchText,
-    transcript,
-    pitchAnalysis?.oneLineSummary,
-    pitchAnalysis?.problemStatement,
-    pitchAnalysis?.solutionDescription,
-  ]
-    .filter(Boolean)
-    .join('\n')
-  const identitySignals = buildFounderIdentitySignals(founder, textForUniversityDetect)
-  const universityResolved =
-    detectUniversityAffiliation(founder.education, founder.bio, textForUniversityDetect) ??
-    founder.universityAffiliation ??
-    (founder.education && !/^https?:\/\//i.test(founder.education.trim())
-      ? founder.education.trim()
-      : null)
+  const seenSectors = new Set(sectorFocusPhrases.map((s) => s.toLowerCase()))
 
   const founderSignal: FounderMatchSignal = {
     stage: founder.stage,
     sectors: founder.sectors,
-    primarySector,
+    primarySector: sectorFocusPhrases[0] ?? founder.sectors[0] ?? '',
     sectorFocusPhrases,
     founderArchetype: deriveArchetype(founder),
     checkNeeded: founder.fundingNeed ?? 0,
     location: founder.location,
-    university: universityResolved,
-    isStudent:
-      founder.isStudent ||
-      (founder.age !== undefined && founder.age < 22) ||
-      identitySignals.identityTags.includes('student'),
+    university: pitchUniversity,
+    isStudent,
     isRepeatFounder:
       (!!founder.prevFunding && founder.prevFunding !== 'none') ||
       (founder.bio ?? '').toLowerCase().includes('repeat founder'),
     tractionTier: deriveTractionTier(founder),
-    keyStrengths: [],
-    redFlags: [],
+    keyStrengths: scoringSignals?.strengths ?? [],
+    redFlags: scoringSignals?.riskFactors ?? [],
     pitchKeywords: [...new Set([...founder.sectors, founder.stage, ...sectorFocusPhrases])],
     companyThesisSummary: '',
-    identityTags: identitySignals.identityTags,
-    thesisAffinityPhrases: identitySignals.thesisAffinityPhrases,
+    identityTags,
+    thesisAffinityPhrases,
   }
 
   logger.integration(
-    `[ORCHESTRATOR] Step 1b — identity tags=[${identitySignals.identityTags.join(', ') || 'none'}] thesisAffinity=[${identitySignals.thesisAffinityPhrases.slice(0, 8).join(', ') || 'none'}]`,
+    `[ORCHESTRATOR] Step 1 — FounderMatchSignal:\n` +
+    `  stage=${founderSignal.stage} | archetype=${founderSignal.founderArchetype} | tractionTier=${founderSignal.tractionTier}\n` +
+    `  university=${founderSignal.university ?? 'NONE'} | isStudent=${founderSignal.isStudent}\n` +
+    `  sectors=[${founderSignal.sectors.join(', ')}]\n` +
+    `  sectorFocusPhrases=[${founderSignal.sectorFocusPhrases.slice(0, 6).join(', ')}]\n` +
+    `  identityTags=[${founderSignal.identityTags.join(', ') || 'none'}]\n` +
+    `  thesisAffinityPhrases=[${founderSignal.thesisAffinityPhrases.slice(0, 5).join(', ') || 'none'}]\n` +
+    `  companyThesis=${founderSignal.companyThesisSummary?.substring(0, 120) ?? 'NONE'}…\n` +
+    `  profile.education=${founder.education ?? 'NONE'} | profile.universityAffiliation=${founder.universityAffiliation ?? 'NONE'}\n` +
+    `  profile.location=${founder.location ?? 'NONE'} | profile.bio=${(founder.bio ?? '').substring(0, 80) || 'NONE'}`,
+  )
+
+  // ── STEP 2 — University program matching (sync, no await) ─────────────────
+  const universityPrograms = matchUniversityPrograms(founderSignal)
+  logger.integration(
+    `[ORCHESTRATOR] Step 2 — University programs: ${universityPrograms.length} matches` +
+    (universityPrograms.length > 0
+      ? '\n  ' + universityPrograms.map((m) => `${m.program.name} (${m.program.university || 'open'}) [${m.urgency}]`).join('\n  ')
+      : ' — no university detected or no matching programs'),
   )
 
   // ── STEP 3 — Hard filter Prisma query (unchanged from v2) ─────────────────
@@ -690,6 +688,23 @@ export async function runMatchingPipeline(
     })
   }
 
+  // Debug: sample DB stages format to diagnose hard-filter misses
+  try {
+    const stagesSample = await db.investor.findMany({
+      where: { isPublic: true },
+      take: 5,
+      select: { firmName: true, stages: true },
+    })
+    logger.integration(
+      `[ORCHESTRATOR] Step 3 — DEBUG stages sample: ${stagesSample.map((v) => `${v.firmName}→"${v.stages}"`).join(' | ')}`,
+    )
+    const allPublic = await db.investor.count({ where: { isPublic: true } })
+    const emptyStages = await db.investor.count({ where: { isPublic: true, stages: '[]' } })
+    logger.integration(
+      `[ORCHESTRATOR] Step 3 — DEBUG: ${allPublic} public VCs, ${emptyStages} with stages="[]" (${Math.round((emptyStages / allPublic) * 100)}% empty)`,
+    )
+  } catch { /* diagnostic only */ }
+
   let stageFiltered: Investor[]
   try {
     stageFiltered = await db.investor.findMany({
@@ -699,7 +714,7 @@ export async function runMatchingPipeline(
         NOT: checkSizeExclusions.length > 0 ? { OR: checkSizeExclusions } : undefined,
       },
     })
-    logger.log(`[ORCHESTRATOR] Step 3 — Hard filter: ${stageFiltered.length} VCs passed`)
+    logger.integration(`[ORCHESTRATOR] Step 3 — Hard filter: ${stageFiltered.length} VCs passed (stage=${founderStage} fundingNeed=${fundingNeed})`)
   } catch (dbErr: any) {
     logger.error('[ORCHESTRATOR] Prisma hard-filter failed, falling back to visibility-only:', dbErr?.message)
     stageFiltered = await db.investor.findMany({ where: { isPublic: true } })
@@ -715,18 +730,19 @@ export async function runMatchingPipeline(
     const n = (vc.firmName ?? '').trim()
     return n.length >= 3 && n.length <= 80 && !JUNK_VC_NAME.test(n)
   })
-  logger.log(`[ORCHESTRATOR] Step 3 — After name quality filter: ${stageFiltered.length} VCs`)
+  logger.integration(`[ORCHESTRATOR] Step 3 — After name quality filter: ${stageFiltered.length} VCs`)
 
   // Split out university-exclusive programs so they never appear in the VC pool
   const { mainstream } = filterOutUniversityPrograms(stageFiltered as VCProfile[])
-  logger.log(`[ORCHESTRATOR] Step 3 — After university filter: ${mainstream.length} mainstream VCs`)
+  logger.integration(`[ORCHESTRATOR] Step 3 — After university filter: ${mainstream.length} mainstream VCs`)
 
   // ── STEP 4 — Pattern detection (keywords only, no score boosts) ────────────
+  // Use transcript when available; fall back to rawPitchText for text-only pitches
   const textForKeywordLLM =
     transcript && transcript.length > 50
       ? transcript
-      : hints?.rawPitchText && hints.rawPitchText.length > 40
-        ? hints.rawPitchText
+      : opts?.rawPitchText && opts.rawPitchText.length > 40
+        ? opts.rawPitchText
         : ''
   if (textForKeywordLLM) {
     try {
@@ -734,49 +750,30 @@ export async function runMatchingPipeline(
       founderSignal.pitchKeywords = [
         ...new Set([...founderSignal.pitchKeywords, ...keywords]),
       ]
-      logger.log(`[ORCHESTRATOR] Step 4 — Extracted ${keywords.length} pitch keywords`)
+      logger.integration(`[ORCHESTRATOR] Step 4 — Extracted ${keywords.length} pitch keywords: [${keywords.slice(0, 12).join(', ')}]`)
+
+      const STAGE_WORDS = new Set(['mvp', 'idea', 'seed', 'revenue', 'pre-seed', 'series', 'angel'])
+      for (const kw of keywords) {
+        const k = kw.toLowerCase().trim()
+        if (k.length >= 3 && !seenSectors.has(k) && !STAGE_WORDS.has(k) && !GENERIC_KEYWORD.test(k)) {
+          seenSectors.add(k)
+          founderSignal.sectorFocusPhrases.push(kw)
+        }
+      }
     } catch (err: any) {
       logger.warn('[ORCHESTRATOR] Step 4 — Keyword extraction failed (non-critical):', err?.message)
     }
   }
 
+  // Build the final company thesis summary AFTER keywords are extracted
   founderSignal.companyThesisSummary = buildCompanyThesisSummary(
     founder,
     pitchAnalysis,
     transcript,
-    hints?.rawPitchText,
+    opts?.rawPitchText,
     founderSignal.pitchKeywords,
     founderSignal.sectorFocusPhrases,
   )
-
-  // After LLM keywords — program sector filters see pitch themes (Media, video, …).
-  const universityPrograms: UniversityProgramMatch[] = matchUniversityPrograms(founderSignal)
-  logger.log(
-    `[ORCHESTRATOR] Step 4b — University programs: ${universityPrograms.length} (uni=${founderSignal.university ?? 'none'}, student=${founderSignal.isStudent})`,
-  )
-
-  // #region agent log
-  void fetch('http://127.0.0.1:7464/ingest/8942f439-d0f1-43ea-9e6d-5d7995eef824', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '368bf4' },
-    body: JSON.stringify({
-      sessionId: '368bf4',
-      hypothesisId: 'H-founder-context',
-      runId: 'signals',
-      location: 'matching-orchestrator.ts:Step4b',
-      message: 'university_and_traction_signals',
-      data: {
-        university: founderSignal.university,
-        tractionTier: founderSignal.tractionTier,
-        stage: founderSignal.stage,
-        programCount: universityPrograms.length,
-        programSample: universityPrograms.slice(0, 5).map((p) => p.program.name),
-        sectorFocusHead: founderSignal.sectorFocusPhrases.slice(0, 8),
-      },
-      timestamp: Date.now(),
-    }),
-  }).catch(() => {})
-  // #endregion
 
   // ── STEP 5 — FAISS vector search (top 20) ─────────────────────────────────
   logger.integration(
@@ -906,65 +903,47 @@ export async function runMatchingPipeline(
   }
 
   // ── STEP 5b — Sector injection: guarantee niche-sector VCs are evaluated ────
-  //
-  // Cosine similarity naturally surfaces SaaS/enterprise VCs because those terms
-  // dominate most pitch descriptions. Niche VCs (media, gaming, climate, etc.)
-  // get buried even when they are the best fit.
-  //
-  // Rules:
-  //   1. Only trigger for NICHE groups — broad groups (AI, SaaS) already surface
-  //      via cosine without help.
-  //   2. A VC qualifies only if the matching synonym appears in its SECTORS array
-  //      (primary focus), not merely its thesis text — avoids generic VCs that
-  //      mention "media" or "AI" in passing.
-  //   3. Candidates are ranked by cosine similarity to the pitch embedding so the
-  //      BEST sector-matched VCs fill the injection slots.
-  //   4. Up to 5 slots; displaces the tail of the cosine pool.
   let nicheInjectedIds: ReadonlySet<string> = new Set()
 
   if (pitchEmbeddingForInjection) {
     const allKeywords = [
       ...founderSignal.sectors,
       ...founderSignal.pitchKeywords,
+      ...(scoringSignals?.subSectorTags ?? []),
+      pitchAnalysis?.oneLineSummary ?? '',
+      pitchAnalysis?.solutionDescription ?? '',
+      pitchAnalysis?.problemStatement ?? '',
     ].map((k) => k.toLowerCase())
 
-    // Only NICHE groups that don't naturally surface via cosine similarity
     const NICHE_SECTOR_SYNONYMS: Record<string, string[]> = {
-      media:       ['media', 'entertainment', 'film', 'video', 'broadcast', 'ott', 'streaming', 'dubbing', 'localization'],
+      media:       ['media', 'entertainment', 'film', 'video', 'broadcast', 'ott', 'streaming', 'dubbing', 'localization', 'editing', 'post-production', 'digital media', 'content production'],
       social_media: [
-        'social media',
-        'instagram',
-        'tiktok',
-        'snapchat',
-        'twitter',
-        'x.com',
-        'reddit',
-        'facebook',
-        'linkedin',
-        'short-form video',
+        'social media', 'instagram', 'tiktok', 'snapchat', 'twitter', 'x.com',
+        'reddit', 'facebook', 'linkedin', 'short-form video',
       ],
       creator_economy: [
-        'creator economy',
-        'creator tools',
-        'influencer',
-        'content creator',
-        'youtube',
-        'ugc',
-        'subscriber',
-        'patron',
-        'fan subscription',
+        'creator economy', 'creator tools', 'influencer', 'content creator',
+        'youtube', 'ugc', 'subscriber', 'patron', 'fan subscription',
+        'creative tools', 'creative software', 'content creation',
       ],
       gaming:      ['gaming', 'esports', 'interactive media', 'game'],
       climatetech: ['climate', 'cleantech', 'sustainability', 'clean energy'],
       adtech:      ['adtech', 'ad tech', 'advertising tech', 'martech'],
-      biotech:     ['biotech', 'life sciences', 'genomics', 'therapeutics'],
-      // Never use bare "space" — it false-triggers on "workspace" (logs: media+spacetech for Vyra).
+      biotech:     ['biotech', 'life sciences', 'genomics', 'therapeutics', 'healthcare', 'health tech', 'digital health', 'telehealth', 'medtech', 'clinical', 'pharma', 'drug discovery'],
+      fintech:     ['fintech', 'neobank', 'payments', 'lending', 'insurtech', 'wealthtech', 'banking', 'remittance'],
       spacetech:   ['spacetech', 'space tech', 'space-tech', 'aerospace', 'satellite', 'orbital', 'launch vehicle', 'defense tech'],
+      edtech:      ['edtech', 'education tech', 'e-learning', 'learning management', 'tutoring', 'upskilling'],
+      legaltech:   ['legaltech', 'legal tech', 'law tech', 'contract automation', 'legal ai', 'e-discovery'],
+      proptech:    ['proptech', 'real estate tech', 'property tech', 'construction tech', 'smart building'],
+      agritech:    ['agritech', 'agriculture tech', 'food tech', 'precision farming', 'agtech'],
+      hardwaretech: ['hardware', 'semiconductor', 'chip', 'robotics', 'iot', 'embedded', 'sensors', 'deep tech'],
+      sportstech:  ['sports tech', 'athlete', 'fitness tech', 'wearable', 'sports analytics'],
+      cybersecurity: ['cybersecurity', 'cyber security', 'infosec', 'zero trust', 'identity', 'soc2', 'security software'],
+      web3:        ['web3', 'blockchain', 'crypto', 'defi', 'nft', 'decentralized', 'smart contract', 'dao'],
+      logistics:   ['logistics', 'supply chain', 'fulfillment', 'freight', 'fleet', 'shipping', 'warehouse'],
     }
 
-    // Only treat a keyword as matching a synonym when the keyword CONTAINS the synonym.
-    // Do NOT use synonym.includes(keyword): e.g. "media" must not activate gaming via
-    // synonym "interactive media" (substring false positive in production logs).
+    // keyword.includes(synonym) — NOT synonym.includes(keyword) — avoids false positives
     const activeSectorGroups = new Set<string>()
     for (const [group, synonyms] of Object.entries(NICHE_SECTOR_SYNONYMS)) {
       if (synonyms.some((s) => allKeywords.some((k) => k.includes(s)))) {
@@ -972,8 +951,7 @@ export async function runMatchingPipeline(
       }
     }
 
-    // Rank groups by keyword evidence; only blend the top 1–2 so weak false groups
-    // (e.g. spacetech from typos) do not widen synonym union and drown Media thesis funds.
+    // Score and limit to top 1-2 groups so weak false groups don't widen synonym union
     const scoredNicheGroups = [...activeSectorGroups]
       .map((g) => ({ g, score: scoreNicheKeywordGroup(NICHE_SECTOR_SYNONYMS[g] ?? [], allKeywords) }))
       .filter((x) => x.score > 0)
@@ -998,31 +976,9 @@ export async function runMatchingPipeline(
       `[ORCHESTRATOR] Step 5b — keywords=[${allKeywords.slice(0, 8).join(', ')}] niche_active=[${[...activeSectorGroups].join(',') || 'none'}] niche_top=[${topNicheGroups.join(',') || 'none'}]`,
     )
 
-    // #region agent log
-    void fetch('http://127.0.0.1:7464/ingest/8942f439-d0f1-43ea-9e6d-5d7995eef824', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '368bf4' },
-      body: JSON.stringify({
-        sessionId: '368bf4',
-        hypothesisId: 'H-niche-pool',
-        runId: 'post-niche-fix',
-        location: 'matching-orchestrator.ts:Step5b',
-        message: 'niche_injection_context',
-        data: {
-          topNicheGroups,
-          scoredNicheGroups: scoredNicheGroups.slice(0, 4),
-          pitchLooksGaming,
-          synonymCount: activeSynonyms.length,
-        },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {})
-    // #endregion
-
     if (activeSynonyms.length > 0) {
       const poolIds = new Set(candidatePool.map((v) => v.id))
 
-      // Only match against PRIMARY sectors array — not thesis or firm name
       const sectorCandidates = (embeddingPool as VCProfile[]).filter((vc) => {
         if (poolIds.has(vc.id)) return false
         const sectorTokens = parseVcSectorTokens(vc)
@@ -1033,7 +989,6 @@ export async function runMatchingPipeline(
         return true
       })
 
-      // Rank by cosine similarity to pitch so best matches fill slots
       const pitchEmb = pitchEmbeddingForInjection
       const ranked = sectorCandidates
         .map((vc) => {
@@ -1059,13 +1014,14 @@ export async function runMatchingPipeline(
     }
   }
 
-  // ── Step 5c — Sector + thesis overlap: ensure obvious thesis fits (e.g. Media VC for a video product)
-  // are in the Exa/Gemini pool even if pure embedding rank buried them behind generic SaaS funds.
+  // ── Step 5c — Sector + thesis overlap: ensure obvious thesis fits are in the pool
+  // Only use NICHE-specific phrases — generic labels (AI, SaaS, Consumer) would inject
+  // generalist VCs (Y Combinator, Benchmark) that crowd out the specialist media/sector funds
   const idsBefore5c = new Set(candidatePool.map((v) => v.id))
   const thesisOverlapPhrases = [
     ...founderSignal.sectorFocusPhrases,
     ...founderSignal.thesisAffinityPhrases,
-  ]
+  ].filter((p) => !GENERIC_SECTOR_LABELS.has(p.toLowerCase().trim()))
   candidatePool = injectSectorThesisOverlap(
     candidatePool,
     embeddingPool as VCProfile[],
@@ -1081,9 +1037,6 @@ export async function runMatchingPipeline(
   }
 
   logger.integration(`[ORCHESTRATOR] Step 5 — Candidate pool: ${candidatePool.length} VCs`)
-  logger.integration(
-    `[ORCHESTRATOR] Step 5 — Pool order (pre-Exa): ${candidatePool.map((v) => v.firmName).join(' | ')}`,
-  )
 
   // ── STEP 6 — Rolling Exa + Gemini gate reasoning ──────────────────────────
   //
@@ -1179,6 +1132,12 @@ export async function runMatchingPipeline(
       retrievalRank01ByVcId.set(vc.id, nPool <= 1 ? 1 : (nPool - 1 - i) / (nPool - 1))
     })
   }
+  // Boost retrieval rank for niche-injected VCs — they were specifically identified
+  // as sector-relevant but placed at the tail of the pool, getting the worst rank
+  for (const id of nicheInjectedIds) {
+    const current = retrievalRank01ByVcId.get(id) ?? 0
+    retrievalRank01ByVcId.set(id, Math.min(1, current + 0.35))
+  }
   if (pitchEmbeddingForInjection) {
     const pe = pitchEmbeddingForInjection
     for (const { vc } of narrativeResults) {
@@ -1188,9 +1147,7 @@ export async function runMatchingPipeline(
           const c = cosineSimilarity(pe, emb)
           pitchSimilarity01ByVcId.set(vc.id, Math.max(0, Math.min(1, c)))
         }
-      } catch {
-        /* ignore */
-      }
+      } catch { /* ignore */ }
     }
   }
 
@@ -1211,6 +1168,17 @@ export async function runMatchingPipeline(
     for (const { vc } of narrativeResults) {
       sectorOverlap01ByVcId.set(vc.id, Math.min(1, (rawOv.get(vc.id) ?? 0) / denom))
     }
+    logger.integration(
+      `[ORCHESTRATOR] Step 8 — sectorOverlap raw scores (top 12): ` +
+      [...rawOv.entries()]
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 12)
+        .map(([id, raw]) => {
+          const vc = narrativeResults.find((r) => r.vc.id === id)?.vc
+          return `${vc?.firmName ?? id}=${raw}(${(raw / denom).toFixed(3)})`
+        })
+        .join(', '),
+    )
   }
 
   const preTractionThesis01ByVcId = new Map<string, number>()
@@ -1227,40 +1195,20 @@ export async function runMatchingPipeline(
     sectorOverlap01ByVcId,
     preTractionThesis01ByVcId,
   })
+
   logger.integration(`[ORCHESTRATOR] Step 8 — Top ${ranked.length} investors ranked`)
   logger.integration(
     `[ORCHESTRATOR] Step 8 — Ranked firms: ${ranked.map((r) => r.vc.firmName).join(' | ')}`,
   )
-
-  // #region agent log
-  {
-    const head = ranked.slice(0, 12).map((r) => ({
-      firm: r.vc.firmName,
-      combinedScore: r.combinedScore,
-      lScore: r.investmentLikelihood.score,
-      conf: r.investmentLikelihood.confidence,
-      deployDim: r.investmentLikelihood.dimensionScores.deploymentLikelihood,
-      pitchSim: pitchSimilarity01ByVcId.get(r.vc.id),
-      poolRank01: retrievalRank01ByVcId.get(r.vc.id),
-      sectorOv: sectorOverlap01ByVcId.get(r.vc.id),
-      preTraction: preTractionThesis01ByVcId.get(r.vc.id),
-    }))
-    const distinct = new Set(ranked.map((r) => r.combinedScore)).size
-    void fetch('http://127.0.0.1:7464/ingest/8942f439-d0f1-43ea-9e6d-5d7995eef824', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '368bf4' },
-      body: JSON.stringify({
-        sessionId: '368bf4',
-        runId: 'post-vector-blend',
-        hypothesisId: 'verify-blend',
-        location: 'matching-orchestrator.ts:Step8',
-        message: 'ranked VC combined scores (post rankAndCut)',
-        data: { distinctCombinedScores: distinct, head },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {})
+  for (const r of ranked) {
+    logger.integration(
+      `[ORCHESTRATOR] Step 8 — #${r.rank} ${r.vc.firmName}: score=${r.combinedScore} ` +
+      `(likelihood=${r.investmentLikelihood.label} conf=${r.investmentLikelihood.confidence} ` +
+      `sim=${pitchSimilarity01ByVcId.get(r.vc.id)?.toFixed(3) ?? 'n/a'} ` +
+      `sector=${sectorOverlap01ByVcId.get(r.vc.id)?.toFixed(3) ?? 'n/a'} ` +
+      `preTraction=${preTractionThesis01ByVcId.get(r.vc.id)?.toFixed(3) ?? 'n/a'})`,
+    )
   }
-  // #endregion
 
   // ── STEP 9 — Return MatchingPipelineResult ────────────────────────────────
   return {

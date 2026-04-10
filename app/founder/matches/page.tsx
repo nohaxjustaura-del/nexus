@@ -16,11 +16,13 @@ import {
   Sparkles,
   Lock,
   Video,
+  GraduationCap,
+  ArrowUpRight,
 } from "lucide-react"
 import Link from "next/link"
 import { db } from "@/lib/db"
 import { getCurrentUser } from "@/lib/auth"
-import { parseJSON } from "@/lib/utils"
+import { parseJSON, fmtCheckSize, fmtCheckRange } from "@/lib/utils"
 import { logger } from "@/lib/logger"
 import { loadFounderAnalysisById } from "@/lib/analysis/load-founder-analysis"
 
@@ -44,6 +46,7 @@ export default async function MatchesPage({
   let hasAnalysis = false
   let latestAnalysis: any = null
   let topMatches: any[] = []
+  let universityPrograms: any[] = []
   let analysisType: 'resume' | 'video' | 'other' = 'resume'
 
   if (user?.email) {
@@ -100,6 +103,9 @@ export default async function MatchesPage({
               topMatches = matchesArray.slice(0, 20)
               analysisType = 'video'
               resolvedFromParam = true
+            }
+            if (Array.isArray(r.universityPrograms)) {
+              universityPrograms = r.universityPrograms
             }
           }
         }
@@ -161,35 +167,26 @@ export default async function MatchesPage({
         latestAnalysis = latest.data
         analysisType = latest.type as any
         
-        // Parse matches from the latest analysis
+        // Parse matches and university programs from the latest analysis
+        const extractFromResult = (result: any) => {
+          const matchesArray = result.matches || result.matchedVCs || []
+          if (Array.isArray(matchesArray) && matchesArray.length > 0) {
+            topMatches = matchesArray.slice(0, 20)
+          }
+          if (Array.isArray(result.universityPrograms)) {
+            universityPrograms = result.universityPrograms
+          }
+        }
+
         if (latest.type === 'resume' && latest.data.fullResult) {
           try {
-            const result = JSON.parse(latest.data.fullResult)
-            if (result.matches && Array.isArray(result.matches)) {
-              topMatches = result.matches.slice(0, 20)
-            }
+            extractFromResult(JSON.parse(latest.data.fullResult))
           } catch (e) {
             // Failed to parse - continue without matches
           }
-        } else if (latest.type === 'video' && latest.data.analysisResult) {
+        } else if ((latest.type === 'video' || latest.type === 'pitch-deck') && latest.data.analysisResult) {
           try {
-            const result = JSON.parse(latest.data.analysisResult)
-            // Video pitch stores matches as "matchedVCs" not "matches"
-            const matchesArray = result.matches || result.matchedVCs || []
-            if (Array.isArray(matchesArray) && matchesArray.length > 0) {
-              topMatches = matchesArray.slice(0, 20)
-            }
-          } catch (e) {
-            // Failed to parse - continue without matches
-          }
-        } else if (latest.type === 'pitch-deck' && latest.data.analysisResult) {
-          try {
-            const result = JSON.parse(latest.data.analysisResult)
-            // Pitch deck stores matches as "matches" or "matchedVCs"
-            const matchesArray = result.matches || result.matchedVCs || []
-            if (Array.isArray(matchesArray) && matchesArray.length > 0) {
-              topMatches = matchesArray.slice(0, 20)
-            }
+            extractFromResult(JSON.parse(latest.data.analysisResult))
           } catch (e) {
             // Failed to parse - continue without matches
           }
@@ -364,6 +361,7 @@ export default async function MatchesPage({
     )
   }
 
+
   // Format matches from analysis result
   const formattedMatches = topMatches.map((match: any, idx: number) => {
     const investor = match.investor || {}
@@ -434,6 +432,88 @@ export default async function MatchesPage({
           </p>
         </div>
 
+        {/* School-specific programs — displayed above general investor matches */}
+        {universityPrograms.length > 0 && (
+          <Card className="mb-6 overflow-hidden rounded-2xl border-2 border-primary/20 bg-gradient-to-br from-primary/[0.06] via-card to-card shadow-sm ring-1 ring-primary/10">
+            <CardHeader className="pb-3">
+              <div className="flex items-start gap-3">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary ring-1 ring-primary/15">
+                  <GraduationCap className="h-5 w-5" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <CardTitle className="flex flex-wrap items-center gap-2 text-lg text-foreground">
+                    Campus and accelerator programs
+                    <Badge variant="secondary" className="font-normal text-muted-foreground">
+                      {universityPrograms.length} matched
+                    </Badge>
+                  </CardTitle>
+                  <CardDescription>
+                    Based on your school affiliation and stage — exclusive opportunities separate from the general investor list.
+                  </CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <div className="grid gap-3 sm:grid-cols-2">
+                {universityPrograms.map((match: any, i: number) => {
+                  const p = match.program || match
+                  const key = p.id || `${p.name}-${i}`
+                  const url = typeof p.applicationUrl === 'string' ? p.applicationUrl : ''
+                  const urgency = match.urgency
+                  return (
+                    <div
+                      key={key}
+                      className="flex flex-col justify-between rounded-xl border border-border/60 bg-card/80 p-4 transition-colors hover:border-primary/25 hover:bg-accent/30"
+                    >
+                      <div className="space-y-2">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0">
+                            <h3 className="font-semibold leading-snug text-foreground">{p.name}</h3>
+                            {p.university && (
+                              <p className="text-xs font-medium text-muted-foreground">{p.university}</p>
+                            )}
+                          </div>
+                          {urgency === 'apply_now' && (
+                            <Badge variant="destructive" className="shrink-0 text-xs">Apply now</Badge>
+                          )}
+                          {urgency === 'upcoming_deadline' && (
+                            <Badge variant="secondary" className="shrink-0 text-xs">Upcoming</Badge>
+                          )}
+                        </div>
+
+                        {typeof match.qualificationReason === 'string' && match.qualificationReason.trim() && (
+                          <p className="text-sm leading-relaxed text-foreground/80">{match.qualificationReason}</p>
+                        )}
+                        {typeof p.description === 'string' && p.description.trim() && (
+                          <p className="text-xs leading-relaxed text-muted-foreground">{p.description}</p>
+                        )}
+                        {p.checkSize && (p.checkSize.min || p.checkSize.max) && (
+                          <p className="text-xs text-muted-foreground">
+                            <span className="font-medium text-foreground/80">Check size:</span>{' '}
+                            {fmtCheckRange(p.checkSize.min, p.checkSize.max)}
+                          </p>
+                        )}
+                      </div>
+
+                      {url && (
+                        <a
+                          href={url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold text-primary underline-offset-4 hover:underline"
+                        >
+                          Apply / learn more
+                          <ArrowUpRight className="h-3 w-3" />
+                        </a>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Matches */}
         <div className="space-y-4">
           {formattedMatches.map((match, idx) => (
@@ -472,7 +552,7 @@ export default async function MatchesPage({
                   </div>
                   <div className="flex items-center gap-2">
                     <Target className="h-4 w-4 text-muted-foreground" />
-                    <span>${match.investor.checkMin}K - ${match.investor.checkMax}K</span>
+                    <span>{fmtCheckRange(match.investor.checkMin, match.investor.checkMax)}</span>
                   </div>
                 </div>
               </CardHeader>

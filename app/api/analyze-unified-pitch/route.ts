@@ -519,6 +519,7 @@ export async function POST(request: NextRequest) {
             score: Math.round(m.combinedScore || m.score || 0),
             reasons: m.reasons,
           })),
+          universityPrograms: matchPipelineResult?.universityPrograms ?? [],
           savedDeckPath,
           savedVideoPath,
         }),

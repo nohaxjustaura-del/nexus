@@ -39,8 +39,11 @@ function parseKeyDeadMs(): number {
   return EXA_GLOBAL_COOLDOWN_MS // mirrors global cooldown by default (1 h)
 }
 
-/** How long a quota-exhausted key is skipped before being retried (ms). */
+/** How long a rate-limited key is skipped before being retried (ms). */
 export const EXA_KEY_DEAD_MS = parseKeyDeadMs()
+
+/** Credit-exhausted keys won't recover without manual top-up — park for 24 h. */
+const EXA_KEY_CREDITS_DEAD_MS = 24 * 60 * 60 * 1000
 
 const keyDeadUntil = new Map<string, number>()
 
@@ -54,18 +57,30 @@ function isKeyDead(key: string): boolean {
   return true
 }
 
-function markKeyDead(key: string): void {
-  keyDeadUntil.set(key, Date.now() + EXA_KEY_DEAD_MS)
+function isCreditsExhausted(msg: string): boolean {
+  return /credits?\s*limit|exceeded.*credits|top\s*up/i.test(msg)
+}
+
+function markKeyDead(key: string, errorMsg?: string): void {
+  const duration = errorMsg && isCreditsExhausted(errorMsg) ? EXA_KEY_CREDITS_DEAD_MS : EXA_KEY_DEAD_MS
+  keyDeadUntil.set(key, Date.now() + duration)
 }
 
 /** Expose for the debug route (/api/debug/exa). */
-export function getKeyDeadStatus(): Array<{ index: number; key: string; deadUntil: number | null }> {
+export function getKeyDeadStatus(): Array<{ index: number; key: string; deadUntil: number | null; alive: boolean; deadForMs: number }> {
   const keys = getExaApiKeys()
-  return keys.map((k, i) => ({
-    index: i + 1,
-    key: k,
-    deadUntil: keyDeadUntil.get(k) ?? null,
-  }))
+  const now = Date.now()
+  return keys.map((k, i) => {
+    const until = keyDeadUntil.get(k) ?? null
+    const alive = until === null || now >= until
+    return {
+      index: i + 1,
+      key: k,
+      deadUntil: until,
+      alive,
+      deadForMs: until && !alive ? until - now : 0,
+    }
+  })
 }
 
 // ─── Round-robin cursor ───────────────────────────────────────────────────────
@@ -134,15 +149,16 @@ export async function runExaWithKeyFailover<T>(
       const isLastAttempt = attempt >= attemptOrder.length - 1
       if (!isLastAttempt) {
         const tag = isQuota ? 'quota/rate-limit' : 'failed'
-        if (isQuota) markKeyDead(key)
+        if (isQuota) markKeyDead(key, msg)
+        const deadHrs = isCreditsExhausted(msg) ? '24h' : `${Math.round(EXA_KEY_DEAD_MS / 3600000)}h`
         console.warn(
-          `[EXA] Key ${keyIdx + 1}/${keys.length} ${tag} — trying next key: ${shortMsg(msg)}`,
+          `[EXA] Key ${keyIdx + 1}/${keys.length} ${tag} (dead ${deadHrs}) — trying next key: ${shortMsg(msg)}`,
         )
         continue
       }
 
       // Last key also failed
-      if (isQuota) markKeyDead(key)
+      if (isQuota) markKeyDead(key, msg)
 
       if (everyFailureQuotaLike) {
         console.warn(

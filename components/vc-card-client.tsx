@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge"
 import { Heart, Library, Send } from "lucide-react"
 import Link from "next/link"
 import InvestorProfileModal from '@/components/investor-profile-modal'
-import { parseJSON } from '@/lib/utils'
+import { parseJSON, fmtCheckRange } from '@/lib/utils'
 import { toast } from '@/components/ui/toast-simple'
 
 interface VCCardClientProps {
@@ -93,12 +93,8 @@ export function VCCardClient({
 
   const checkMin = investor?.checkMin ?? investor?.checkSizeMin
   const checkMax = investor?.checkMax ?? investor?.checkSizeMax
-  const checkLabel =
-    checkMin != null && checkMax != null
-      ? `$${checkMin >= 1000 ? `${Math.round(checkMin / 1000)}M` : `${checkMin}k`}–${
-          checkMax >= 1000 ? `${Math.round(checkMax / 1000)}M` : `${checkMax}k`
-        }`
-      : null
+  const raw = fmtCheckRange(checkMin, checkMax)
+  const checkLabel = raw !== 'N/A' ? raw : null
 
   const uniqueValueTags = safeValueAdd
     .filter((tag: string) => {

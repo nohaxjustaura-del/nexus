@@ -11,6 +11,7 @@ import Link from "next/link"
 import SmartMatchResults from '@/components/smart-match-results'
 import AnalysisDashboard from '@/components/analysis/AnalysisDashboard'
 import { toast } from '@/components/ui/toast-simple'
+import { fmtCheckRange } from '@/lib/utils'
 
 export function PitchIdeaAnalysisTab() {
   const [ideaText, setIdeaText] = useState('')
@@ -548,7 +549,7 @@ export function PitchIdeaAnalysisTab() {
                             )}
                           </div>
                           <p className="text-sm text-muted-foreground mb-1">
-                            {investor.fundType || 'VC'} • ${investor.checkMin || 0}K - ${investor.checkMax || 0}K
+                            {investor.fundType || 'VC'} • {fmtCheckRange(investor.checkMin, investor.checkMax)}
                           </p>
                           {investor.bio && (
                             <p className="text-xs text-muted-foreground mt-2 line-clamp-2">{investor.bio.substring(0, 120)}...</p>

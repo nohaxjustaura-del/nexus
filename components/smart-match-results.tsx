@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { buttonVariants } from '@/components/ui/button'
-import { cn } from '@/lib/utils'
+import { cn, fmtCheckSize, fmtCheckRange } from '@/lib/utils'
 import { Sparkles, Target, MapPin, DollarSign, ExternalLink, TrendingUp, ChevronDown, Building2 } from 'lucide-react'
 import Link from 'next/link'
 
@@ -85,16 +85,8 @@ function normalizeSmartMatchRow(raw: unknown): RankedVC | null {
           ? inv.checkMax
           : null
     if (cmin != null && cmax != null && (cmin > 0 || cmax > 0)) {
-      const fmtUsd = (n: number) => {
-        if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`
-        if (n >= 1_000) return `$${Math.round(n / 1_000)}k`
-        return `$${n}`
-      }
-      // Values ≥10k are treated as whole USD (avoids "$1000000k"); smaller values as $Nk (thousands).
-      const looksLikeWholeUsd = cmin >= 10_000 || cmax >= 10_000
-      checkSize = looksLikeWholeUsd
-        ? `${fmtUsd(cmin)}–${fmtUsd(cmax)}`
-        : `$${cmin}k–$${cmax}k`
+      const range = fmtCheckRange(cmin, cmax)
+      if (range !== 'N/A') checkSize = range
     }
   }
 

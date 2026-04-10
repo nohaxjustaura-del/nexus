@@ -1,4 +1,5 @@
 import type { ComprehensiveFounderContext } from '@/lib/founder-context'
+import { detectUniversityAffiliation } from '@/lib/founder-context'
 import type { VideoPitchFeatures } from '@/lib/ai'
 import { inferStudentFromText } from '@/lib/matching/founder-identity-signals'
 import type { StructuredQaAnswers } from './structured-qa'
@@ -88,9 +89,32 @@ export function buildUnifiedFounderContext(
   const revenue = fromQa.revenue !== undefined ? fromQa.revenue : base.revenue
   const users = fromQa.users !== undefined ? fromQa.users : base.users
 
-  const studentTextBlob = [videoTranscript, qaFlat].filter(Boolean).join('\n\n')
+  const pitchTextBlob = [videoTranscript, qaFlat].filter(Boolean).join('\n\n')
   const isStudent =
-    base.isStudent || (studentTextBlob.trim().length > 0 && inferStudentFromText(studentTextBlob))
+    base.isStudent || (pitchTextBlob.trim().length > 0 && inferStudentFromText(pitchTextBlob))
+
+  // Detect university from pitch text when profile has no affiliation
+  const universityAffiliation =
+    base.universityAffiliation ??
+    detectUniversityAffiliation(base.education, base.bio, pitchTextBlob) ??
+    undefined
+
+  // Detect immigrant/underrepresented signals from pitch when not already set
+  const tl = pitchTextBlob.toLowerCase()
+  const isImmigrant =
+    base.isImmigrant ||
+    /\b(i\s+)?immigrated\s+to\b/.test(tl) ||
+    /\bfirst-?generation\s+immigrant\b/.test(tl) ||
+    /\binternational\s+founder\b/.test(tl)
+  const isUnderrepresented =
+    base.isUnderrepresented ||
+    /\bunderrepresented\s+founder\b/.test(tl) ||
+    /\bfirst-?gen(eration)?\s+(college\s+)?student\b/.test(tl) ||
+    /\bfirst-?gen\s+founder\b/.test(tl)
+  const isVeteran =
+    base.isVeteran ||
+    /\b(i(?:'m|\s+am)\s+)?a\s+veteran\b/.test(tl) ||
+    /\bmilitary\s+veteran\b/.test(tl)
 
   return {
     ...base,
@@ -101,5 +125,9 @@ export function buildUnifiedFounderContext(
     revenue,
     users,
     isStudent,
+    universityAffiliation,
+    isImmigrant,
+    isUnderrepresented,
+    isVeteran,
   }
 }

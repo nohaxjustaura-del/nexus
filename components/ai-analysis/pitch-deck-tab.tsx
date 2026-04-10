@@ -20,6 +20,7 @@ import {
 } from "lucide-react"
 import Link from "next/link"
 import { toast } from '@/components/ui/toast-simple'
+import { fmtCheckRange } from '@/lib/utils'
 
 export function PitchDeckAnalysisTab() {
   const [file, setFile] = useState<File | null>(null)
@@ -455,7 +456,7 @@ export function PitchDeckAnalysisTab() {
                               </span>
                             )}
                           </div>
-                          <p className="text-sm text-muted-foreground">{investor.fundType} • ${investor.checkMin}K - ${investor.checkMax}K</p>
+                          <p className="text-sm text-muted-foreground">{investor.fundType} • {fmtCheckRange(investor.checkMin, investor.checkMax)}</p>
                         </div>
                         <div className="text-right">
                           <div className="text-3xl font-bold text-primary">{Math.round(match.score || 0)}</div>

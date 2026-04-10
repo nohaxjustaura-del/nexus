@@ -724,6 +724,7 @@ export async function POST(request: NextRequest) {
             priority: (m.combinedScore || m.score || 0) >= 85 ? 'high' : (m.combinedScore || m.score || 0) >= 70 ? 'medium' : 'low',
             livePulse: m.livePulse ? { summary: m.livePulse.summary, signalStrength: m.livePulse.signalStrength ?? 0 } : null,
           })),
+          universityPrograms: matchPipelineResult?.universityPrograms ?? [],
         }),
         smartMatchResults: JSON.stringify(matchedVCs.slice(0, 10)),
       },
