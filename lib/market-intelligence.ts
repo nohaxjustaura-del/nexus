@@ -15,21 +15,17 @@
  * ground its analysis in real market data rather than training-set knowledge.
  */
 
-import Exa from "exa-js"
+import { exaQuotaErrorMessage } from "./exa-global-cooldown"
+import { runExaWithKeyFailover } from "./exa-key-failover"
+import { hasExaApiKey } from "./exa-keys"
 import { logger } from "./logger"
 
-// ---------------------------------------------------------------------------
-// Exa client (reuses the same EXA_API_KEY as exa-service.ts)
-// ---------------------------------------------------------------------------
-
-function getExaClient(): Exa {
-  const apiKey = process.env.EXA_API_KEY
-  if (!apiKey) {
-    throw new Error(
-      "EXA_API_KEY is not set. Add it to your .env file to enable market intelligence."
-    )
+function settledReasonMessage(reason: unknown): string {
+  if (reason instanceof Error) return reason.message
+  if (typeof reason === "object" && reason !== null && "message" in reason) {
+    return String((reason as { message: unknown }).message)
   }
-  return new Exa(apiKey)
+  return String(reason)
 }
 
 // ---------------------------------------------------------------------------
@@ -145,7 +141,11 @@ export async function getDeepMarketContext(
   domain: string,
   problem: string,
 ): Promise<DeepMarketContext> {
-  const exa = getExaClient()
+  if (!hasExaApiKey()) {
+    throw new Error(
+      "Exa is not configured. Set EXA_API_KEYS (or EXA_API_KEY) in .env — see lib/exa-keys.ts.",
+    )
+  }
 
   const saturationQuery =
     `Startups in ${domain} that raised Seed or Series A in 2025-2026. Focus on funding amounts and lead investors.`
@@ -158,49 +158,80 @@ export async function getDeepMarketContext(
 
   logger.log(`[MARKET-INTEL] Launching 4 parallel Exa searches for domain="${domain}"`)
 
-  const searchOpts = (
-    query: string,
-    category: "company" | "news" | "research paper",
-  ) =>
-    exa.search(query, {
-      type: "auto",
-      numResults: 3,
-      category,
-      contents: { text: { maxCharacters: 800 } },
-    })
+  const failover = await runExaWithKeyFailover(async (exa) => {
+    const searchOpts = (
+      query: string,
+      category: "company" | "news" | "research paper",
+    ) =>
+      exa.search(query, {
+        type: "auto",
+        numResults: 3,
+        category,
+        contents: { text: { maxCharacters: 800 } },
+      })
 
-  const [saturationRes, catalystsRes, graveyardRes, incumbentsRes] = await Promise.allSettled([
-    searchOpts(saturationQuery, "company"),
-    searchOpts(catalystsQuery, "news"),
-    searchOpts(graveyardQuery, "research paper"),
-    searchOpts(incumbentsQuery, "company"),
-  ])
+    const [saturationRes, catalystsRes, graveyardRes, incumbentsRes] = await Promise.allSettled([
+      searchOpts(saturationQuery, "company"),
+      searchOpts(catalystsQuery, "news"),
+      searchOpts(graveyardQuery, "research paper"),
+      searchOpts(incumbentsQuery, "company"),
+    ])
 
-  const saturation = saturationRes.status === "fulfilled"
-    ? cleanResults(saturationRes.value.results)
-    : []
-  const catalysts = catalystsRes.status === "fulfilled"
-    ? cleanResults(catalystsRes.value.results)
-    : []
-  const graveyard = graveyardRes.status === "fulfilled"
-    ? cleanResults(graveyardRes.value.results)
-    : []
-  const incumbents = incumbentsRes.status === "fulfilled"
-    ? cleanResults(incumbentsRes.value.results)
-    : []
+    const saturation = saturationRes.status === "fulfilled"
+      ? cleanResults(saturationRes.value.results)
+      : []
+    const catalysts = catalystsRes.status === "fulfilled"
+      ? cleanResults(catalystsRes.value.results)
+      : []
+    const graveyard = graveyardRes.status === "fulfilled"
+      ? cleanResults(graveyardRes.value.results)
+      : []
+    const incumbents = incumbentsRes.status === "fulfilled"
+      ? cleanResults(incumbentsRes.value.results)
+      : []
 
-  if (saturationRes.status === "rejected") {
-    logger.warn("[MARKET-INTEL] Saturation search failed:", saturationRes.reason?.message)
+    if (saturationRes.status === "rejected") {
+      logger.warn("[MARKET-INTEL] Saturation search failed:", saturationRes.reason?.message)
+    }
+    if (catalystsRes.status === "rejected") {
+      logger.warn("[MARKET-INTEL] Catalysts search failed:", catalystsRes.reason?.message)
+    }
+    if (graveyardRes.status === "rejected") {
+      logger.warn("[MARKET-INTEL] Graveyard search failed:", graveyardRes.reason?.message)
+    }
+    if (incumbentsRes.status === "rejected") {
+      logger.warn("[MARKET-INTEL] Incumbents search failed:", incumbentsRes.reason?.message)
+    }
+
+    // Quota/rate-limit/auth on any parallel search must fail the whole key attempt so
+    // runExaWithKeyFailover can advance through EXA_API_KEYS (otherwise allSettled would
+    // return empty slices and we'd never try keys 2–7).
+    const parallel = [saturationRes, catalystsRes, graveyardRes, incumbentsRes] as const
+    for (const r of parallel) {
+      if (r.status !== "rejected") continue
+      const m = settledReasonMessage(r.reason)
+      if (exaQuotaErrorMessage(m)) {
+        throw new Error(m)
+      }
+    }
+
+    return { saturation, catalysts, graveyard, incumbents }
+  })
+
+  if (!failover.ok) {
+    if (failover.kind === "all_keys_quota") {
+      throw new Error(failover.message || "Exa quota exhausted for all keys")
+    }
+    if (failover.kind === "cooldown") {
+      throw new Error("Exa in cooldown")
+    }
+    if (failover.kind === "no_keys") {
+      throw new Error("No Exa API keys configured")
+    }
+    throw new Error(failover.message || "Exa market intelligence search failed")
   }
-  if (catalystsRes.status === "rejected") {
-    logger.warn("[MARKET-INTEL] Catalysts search failed:", catalystsRes.reason?.message)
-  }
-  if (graveyardRes.status === "rejected") {
-    logger.warn("[MARKET-INTEL] Graveyard search failed:", graveyardRes.reason?.message)
-  }
-  if (incumbentsRes.status === "rejected") {
-    logger.warn("[MARKET-INTEL] Incumbents search failed:", incumbentsRes.reason?.message)
-  }
+
+  const { saturation, catalysts, graveyard, incumbents } = failover.data
 
   logger.log(
     `[MARKET-INTEL] Results: saturation ${saturation.length}, catalysts ${catalysts.length}, graveyard ${graveyard.length}, incumbents ${incumbents.length}`,

@@ -15,7 +15,13 @@
 import { db } from '@/lib/db'
 import { openrouterGenerateJson, hasVcLlmConfigured } from '@/lib/openrouter'
 import { analyzeInvestorLinks } from '@/lib/vc-link-quality'
-import { exaSearchPass, getVcResearchPipelineEnvStatus } from '@/lib/vc-research-retrieval'
+import { hasExaApiKey } from '@/lib/exa-keys'
+import {
+  ExaResearchQuotaBlockedError,
+  exaPassesRequireWorkerStop,
+  exaSearchPass,
+  getVcResearchPipelineEnvStatus,
+} from '@/lib/vc-research-retrieval'
 import { syncInvestorEmbeddingById } from '@/lib/vc-embedding-sync'
 import { isInvestorEligibleForWorkers } from '@/lib/investor-worker-eligibility'
 
@@ -87,9 +93,8 @@ export async function gatherApplyContactRetrievalContext(firmName: string): Prom
   exaTotalResults: number
   exaPassesWithHits: number
 } | null> {
-  const key = process.env.EXA_API_KEY?.trim()
-  if (!key) {
-    console.error('[APPLY-CONTACT] EXA_API_KEY missing')
+  if (!hasExaApiKey()) {
+    console.error('[APPLY-CONTACT] Exa keys missing (EXA_API_KEYS or EXA_API_KEY; lib/exa-keys.ts)')
     return null
   }
   const n = exaNumResults()
@@ -105,6 +110,12 @@ export async function gatherApplyContactRetrievalContext(firmName: string): Prom
     exaSearchPass(qMain, n),
     exaSearchPass(qProfiles, Math.min(5, n)),
   ])
+
+  const { stop, reason } = exaPassesRequireWorkerStop([passMain, passProfiles])
+  if (stop && reason) {
+    console.warn(`[APPLY-CONTACT] Exa quota/cooldown — stopping contact retrieval for "${firmName}" (${reason}).`)
+    throw new ExaResearchQuotaBlockedError(reason)
+  }
 
   const urlSet = new Set<string>()
   for (const u of [...passMain.urls, ...passProfiles.urls]) {
@@ -282,7 +293,7 @@ export async function researchApplyContactAndUpdate(
   }
   const pipe = getVcResearchPipelineEnvStatus()
   if (!pipe.exa || !pipe.llm) {
-    console.error('[APPLY-CONTACT] Need EXA_API_KEY and LLM (OpenRouter or Ollama)')
+    console.error('[APPLY-CONTACT] Need Exa (EXA_API_KEYS or EXA_API_KEY) and LLM (OpenRouter or Ollama)')
     return { ok: false, updatedFields: [], rationale: null }
   }
 
@@ -394,21 +405,37 @@ export async function runApplyContactBatch(params: {
   let rowsUpdated = 0
   let errors = 0
 
-  for (let i = 0; i < names.length; i += maxConcurrent) {
+  outer: for (let i = 0; i < names.length; i += maxConcurrent) {
     const chunk = names.slice(i, i + maxConcurrent)
-    await Promise.all(
+    const batchResults = await Promise.all(
       chunk.map(async (firmName) => {
         try {
           const r = await researchApplyContactAndUpdate(firmName, { overwrite })
-          processed++
-          if (r.updatedFields.length > 0) rowsUpdated++
+          return {
+            exaBlocked: false as const,
+            err: false as const,
+            updatedCount: r.updatedFields.length,
+          }
         } catch (e) {
-          processed++
-          errors++
+          if (e instanceof ExaResearchQuotaBlockedError) {
+            return { exaBlocked: true as const, err: false as const, updatedCount: 0 }
+          }
           console.error(`[APPLY-CONTACT] Batch error ${firmName}:`, e)
+          return { exaBlocked: false as const, err: true as const, updatedCount: 0 }
         }
       }),
     )
+
+    for (const b of batchResults) {
+      processed++
+      if (b.exaBlocked) {
+        console.error('[APPLY-CONTACT] 🛑 Exa quota/cooldown — stopping batch (remaining firms skipped)')
+        break outer
+      }
+      if (b.err) errors++
+      if (b.updatedCount > 0) rowsUpdated++
+    }
+
     if (i + maxConcurrent < names.length) await new Promise((r) => setTimeout(r, delay))
   }
 

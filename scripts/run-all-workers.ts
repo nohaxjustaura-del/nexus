@@ -24,6 +24,7 @@
 
 import { spawn } from 'child_process'
 import 'dotenv/config'
+import { hasExaApiKey } from '../lib/exa-keys'
 import { hasVcLlmConfigured } from '../lib/openrouter'
 
 const children: ReturnType<typeof spawn>[] = []
@@ -93,7 +94,7 @@ const intervalSec = (intervalMs / 1000).toFixed(intervalMs % 1000 === 0 ? 0 : 1)
 
 function logPipelineAndEnv() {
   const hasDb = !!process.env.DATABASE_URL?.trim()
-  const hasExa = !!process.env.EXA_API_KEY?.trim()
+  const hasExa = hasExaApiKey()
   const hasLlm = hasVcLlmConfigured()
   const hasOr = !!process.env.OPENROUTER_API_KEY?.trim()
   const hasOllama =
@@ -115,7 +116,7 @@ function logPipelineAndEnv() {
   )
   console.log('[workers] Config check:')
   console.log(`  • DATABASE_URL: ${hasDb ? 'set' : 'MISSING — Prisma will fail'}`)
-  console.log(`  • EXA_API_KEY: ${hasExa ? 'set' : 'MISSING — discover + per-firm research retrieval need this'}`)
+  console.log(`  • Exa (EXA_API_KEYS or EXA_API_KEY): ${hasExa ? 'set' : 'MISSING — discover + per-firm research retrieval need this'}`)
   console.log(
     `  • Investor LLM: OpenRouter=${hasOr ? 'set' : '—'}  Ollama=${hasOllama ? 'set' : '—'}  (need one; VC_LLM_PROVIDER=ollama forces local)`,
   )

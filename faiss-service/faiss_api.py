@@ -4,6 +4,8 @@ Fast similarity search for matching pitches with VCs
 """
 import json
 import os
+import sys
+from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import List, Dict, Any
 import faiss
@@ -16,17 +18,6 @@ from pydantic import BaseModel
 BASE_DIR = Path(__file__).parent.parent
 VC_INDEX_PATH = BASE_DIR / "faiss-data" / "vc_index.faiss"
 VC_DATA_PATH = BASE_DIR / "faiss-data" / "vcs_embedding_inputs_trimmed.json"
-
-app = FastAPI(title="FAISS VC Ranking Service")
-
-# CORS middleware
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],  # In production, specify your Next.js domain
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
 
 # Global cache for loaded data
 vc_index = None
@@ -99,15 +90,26 @@ def load_data(force: bool = False):
     print(f"Loaded {len(vc_rows)} VC profiles and index with {vc_index.ntotal} vectors")
 
 
-@app.on_event("startup")
-async def startup_event():
-    """Load data on startup"""
+@asynccontextmanager
+async def lifespan(app: FastAPI):
     try:
         load_data()
         print("[OK] FAISS service ready")
     except Exception as e:
         print(f"[ERROR] Error loading FAISS data: {e}")
         raise
+    yield
+
+
+app = FastAPI(title="FAISS VC Ranking Service", lifespan=lifespan)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # In production, specify your Next.js domain
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 @app.get("/health")
@@ -238,33 +240,68 @@ async def get_vc_count():
     return {"count": len(vc_rows) if vc_rows else 0}
 
 
-def _ensure_tcp_port_available(host: str, port: int) -> None:
-    """Fail fast with a clear message if the port is already in use (e.g. Windows Errno 10048)."""
+_FALLBACK_BIND_PORTS = (8765, 18001, 8010, 8020, 8030, 8040, 8002, 8003)
+
+
+def _candidate_bind_ports(preferred: int) -> list[int]:
+    seen: set[int] = set()
+    order: list[int] = []
+    for p in (preferred, *_FALLBACK_BIND_PORTS):
+        if p not in seen:
+            seen.add(p)
+            order.append(p)
+    return order
+
+
+def _find_bindable_port(host: str, preferred: int) -> tuple[int, bool]:
+    """
+    Return (port, used_fallback). Tries *preferred* first, then alternates.
+    Windows often reserves low ephemeral ranges (Hyper-V); WinError 10013 is not always 'port in use'.
+    """
     import socket
 
-    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    try:
-        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        s.bind((host, port))
-    except OSError as e:
-        print(
-            f"[ERROR] Port {port} is already in use ({e}). "
-            "Stop the other process (often another FAISS / uvicorn on 8001), or run on a different port, e.g.:\n"
-            f"  PowerShell:  $env:FAISS_SERVICE_PORT=8002; python faiss_api.py\n"
-            f"  Then set in .env.local: FAISS_SERVICE_URL=http://localhost:8002"
+    last_err: OSError | None = None
+    for port in _candidate_bind_ports(preferred):
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        try:
+            s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            s.bind((host, port))
+            return (port, port != preferred)
+        except OSError as e:
+            last_err = e
+        finally:
+            s.close()
+
+    assert last_err is not None
+    e = last_err
+    win_extra = ""
+    if sys.platform == "win32" and getattr(e, "winerror", None) == 10013:
+        win_extra = (
+            "\n  Windows WinError 10013 often means the port is in an excluded range (Hyper-V / NAT). "
+            "Check:  netsh interface ipv4 show excludedportrange protocol=tcp\n"
         )
-        raise SystemExit(1) from e
-    finally:
-        s.close()
+    print(
+        f"[ERROR] Could not bind {host} on any tried port (first was {preferred}): {e}.{win_extra}\n"
+        "Stop other FAISS/uvicorn processes or pick a free port, e.g.:\n"
+        f"  PowerShell:  $env:FAISS_SERVICE_PORT=8765; python faiss_api.py\n"
+        f"  Then in .env.local:  FAISS_SERVICE_URL=http://localhost:8765"
+    )
+    raise SystemExit(1) from e
 
 
 if __name__ == "__main__":
     import uvicorn
 
     _host = os.environ.get("FAISS_SERVICE_HOST", "0.0.0.0").strip() or "0.0.0.0"
-    _port = int(os.environ.get("FAISS_SERVICE_PORT", "8001"))
+    _preferred = int(os.environ.get("FAISS_SERVICE_PORT", "8001"))
 
-    _ensure_tcp_port_available(_host, _port)
+    chosen, used_fallback = _find_bindable_port(_host, _preferred)
+    if used_fallback:
+        display = "localhost" if _host in ("0.0.0.0", "::") else _host
+        print(
+            f"[WARN] Port {_preferred} was not bindable; using {chosen}. "
+            f"Set FAISS_SERVICE_URL=http://{display}:{chosen} in .env.local (Next.js defaults to http://localhost:8001)."
+        )
 
-    print(f"[FAISS] Listening on http://{_host}:{_port} (set FAISS_SERVICE_PORT to change)")
-    uvicorn.run(app, host=_host, port=_port)
+    print(f"[FAISS] Listening on http://{_host}:{chosen} (set FAISS_SERVICE_PORT to pin a port)")
+    uvicorn.run(app, host=_host, port=chosen)

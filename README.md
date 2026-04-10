@@ -72,7 +72,7 @@ At minimum, set these in `.env.local`:
 | `DIRECT_DATABASE_URL` | Postgres direct connection (migrations) |
 | `ADMIN_EMAIL` | Comma-separated admin email addresses |
 
-For full AI analysis, also set: `OPENROUTER_API_KEY`, `VOYAGE_API_KEY`, `GEMINI_API_KEY` or `GOOGLE_API_KEY`, and `EXA_API_KEY`. See `.env.example` for detailed documentation on every variable.
+For full AI analysis, also set: `OPENROUTER_API_KEY`, `VOYAGE_API_KEY`, `GEMINI_API_KEY` or `GOOGLE_API_KEY`, and Exa keys (`EXA_API_KEYS` comma-separated, or `EXA_API_KEY` — see `lib/exa-keys.ts` and `.env.example`).
 
 ### Key scripts
 

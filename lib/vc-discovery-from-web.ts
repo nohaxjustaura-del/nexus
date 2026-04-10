@@ -3,8 +3,10 @@
  * then heuristic fund-name extraction. No Tavily, no OpenRouter.
  */
 
-import Exa from 'exa-js'
 import { db } from '@/lib/db'
+import { runExaWithKeyFailover } from '@/lib/exa-key-failover'
+import { getExaApiKeys, hasExaApiKey } from '@/lib/exa-keys'
+import { isExaGlobalCooldownActive, msUntilExaGlobalCooldownEnds } from '@/lib/exa-global-cooldown'
 import { isLikelyRealFirmName } from '@/lib/firm-name-quality'
 
 const SECTORS = [
@@ -321,7 +323,7 @@ export async function loadExistingFirmKeysFromDb(): Promise<Set<string>> {
 
 /** Discovery requires Exa only (two search passes per round). */
 export function isDiscoverySearchConfigured(): boolean {
-  return !!process.env.EXA_API_KEY?.trim()
+  return hasExaApiKey()
 }
 
 export type ExaScrapeResult = { urls: string[]; textBlock: string }
@@ -331,31 +333,22 @@ function discoveryExaMaxChars(): number {
   return Math.min(8000, Math.max(800, Number.isFinite(raw) ? raw : 2400))
 }
 
-const EXA_DISCOVERY_COOLDOWN_MS = (() => {
-  const raw = parseInt(process.env.EXA_DISCOVERY_COOLDOWN_MS || '', 10)
-  if (!Number.isFinite(raw) || raw <= 0) return 60 * 60 * 1000 // default 1h
-  return Math.min(raw, 24 * 60 * 60 * 1000) // cap at 24h
-})()
-
-let nextExaDiscoveryAllowedAt: number | null = null
-
 /** Exa: neural/autocomplete search + text snippets (scrape). */
 export async function exaScrapeQuery(query: string, numResults: number): Promise<ExaScrapeResult> {
-  const key = process.env.EXA_API_KEY?.trim()
-  if (!key) return { urls: [], textBlock: '' }
+  if (!hasExaApiKey()) return { urls: [], textBlock: '' }
   const maxC = discoveryExaMaxChars()
-  try {
-    if (nextExaDiscoveryAllowedAt && Date.now() < nextExaDiscoveryAllowedAt) {
-      const waitMs = nextExaDiscoveryAllowedAt - Date.now()
-      console.warn(
-        `[VC-DISCOVERY] Exa in cooldown window (~${Math.ceil(
-          waitMs / 1000,
-        )}s remaining); skipping discovery query: ${query}`,
-      )
-      return { urls: [], textBlock: '' }
-    }
 
-    const exa = new Exa(key)
+  if (isExaGlobalCooldownActive()) {
+    const waitMs = msUntilExaGlobalCooldownEnds()
+    console.warn(
+      `[VC-DISCOVERY] Exa in cooldown window (~${Math.ceil(
+        waitMs / 1000,
+      )}s remaining); skipping discovery query: ${query}`,
+    )
+    return { urls: [], textBlock: '' }
+  }
+
+  const failover = await runExaWithKeyFailover(async (exa) => {
     const res = await exa.search(query, {
       type: 'auto',
       numResults,
@@ -384,15 +377,17 @@ export async function exaScrapeQuery(query: string, numResults: number): Promise
       })
       .join('\n\n')
     return { urls, textBlock }
-  } catch (e) {
-    const msg = e instanceof Error ? e.message : String(e)
-    console.warn('[VC-DISCOVERY] Exa scrape failed:', msg)
-    if (/402|403|429|quota|credit|limit|exceeded|payment|unauthor/i.test(msg)) {
-      console.warn('[VC-DISCOVERY] Putting Exa discovery into cooldown; check EXA_API_KEY/quota (https://exa.ai).')
-      nextExaDiscoveryAllowedAt = Date.now() + EXA_DISCOVERY_COOLDOWN_MS
-    }
-    return { urls: [], textBlock: '' }
+  })
+
+  if (failover.ok) {
+    return { urls: failover.data.urls, textBlock: failover.data.textBlock }
   }
+  if (failover.kind === 'non_quota_error') {
+    console.warn('[VC-DISCOVERY] Exa scrape failed:', failover.message)
+  } else if (failover.kind === 'all_keys_quota') {
+    console.warn('[VC-DISCOVERY] All Exa keys quota/auth — stopping discovery rounds after cooldown.')
+  }
+  return { urls: [], textBlock: '' }
 }
 
 /**
@@ -402,8 +397,7 @@ export async function exaScrapeQuery(query: string, numResults: number): Promise
  * full research budget.
  */
 export async function hasDiscoveryWebPresence(name: string): Promise<boolean> {
-  const key = process.env.EXA_API_KEY?.trim()
-  if (!key) return false
+  if (!hasExaApiKey()) return false
 
   const q = `"${name}" official site`
   const { urls } = await exaScrapeQuery(q, 3)
@@ -499,7 +493,7 @@ export async function discoverCandidateFirmNames(
   options: DiscoverCandidatesOptions,
 ): Promise<string[]> {
   if (!isDiscoverySearchConfigured()) {
-    throw new Error('VC discovery requires EXA_API_KEY (dual Exa search per round).')
+    throw new Error('VC discovery requires Exa keys: EXA_API_KEYS or EXA_API_KEY (see lib/exa-keys.ts).')
   }
 
   const queries = buildRandomDiscoveryQueries(Math.max(1, options.searchRounds))
@@ -508,7 +502,7 @@ export async function discoverCandidateFirmNames(
   console.log(
     `[VC-DISCOVERY] Pipeline: dual Exa search/pass (parallel). Recency ≥ ${VC_DISCOVERY_CONTENT_SINCE}. No Tavily.`,
   )
-  console.log(`[VC-DISCOVERY] Exa key: ${!!process.env.EXA_API_KEY?.trim()}`)
+  console.log(`[VC-DISCOVERY] Exa keys configured: ${hasExaApiKey() ? getExaApiKeys().length : 0}`)
 
   const nResults = Math.max(3, options.resultsPerQuery)
 
@@ -524,6 +518,15 @@ export async function discoverCandidateFirmNames(
     console.log(
       `[VC-DISCOVERY] Exa dual: pass1 ${pass1.urls.length} URLs, ${pass1.textBlock.length} chars | pass2 ${pass2.urls.length} URLs, ${pass2.textBlock.length} chars`,
     )
+
+    if (
+      !pass1.textBlock.trim() &&
+      !pass2.textBlock.trim() &&
+      isExaGlobalCooldownActive()
+    ) {
+      console.warn('[VC-DISCOVERY] Exa quota/cooldown — stopping remaining discovery rounds (no credits / cooling down).')
+      break
+    }
 
     const merged = [
       pass1.textBlock && `--- Exa pass 1 ---\n${pass1.textBlock}`,

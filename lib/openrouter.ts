@@ -206,6 +206,102 @@ const VC_EXTRACTION_FALLBACK_MODEL = 'openai/gpt-4o-mini'
 
 const LLM_REQUEST_TIMEOUT_MS = 90_000
 
+/** Total HTTP attempts per completion (first try + retries after 429). Ollama uses 1. */
+function resolveOpenRouter429MaxAttempts(): number {
+  const raw = process.env.OPENROUTER_429_MAX_ATTEMPTS?.trim()
+  const n = raw ? parseInt(raw, 10) : NaN
+  if (Number.isFinite(n) && n >= 1 && n <= 10) return n
+  return 4
+}
+
+/** Base delay (ms) before the first post-429 retry; doubles each attempt (capped), plus jitter. */
+function resolveOpenRouter429BaseDelayMs(): number {
+  const raw = process.env.OPENROUTER_429_BASE_DELAY_MS?.trim()
+  const n = raw ? parseInt(raw, 10) : NaN
+  if (Number.isFinite(n) && n >= 250 && n <= 120_000) return n
+  return 2_000
+}
+
+function isOpenRouterRateLimitError(e: unknown): boolean {
+  const any = e as { status?: number; message?: string }
+  if (any?.status === 429) return true
+  const msg = String(any?.message ?? e ?? '')
+  return /\b429\b|rate[\s_-]?limit|too many requests|capacity|overload|throttl/i.test(msg)
+}
+
+/**
+ * Milliseconds to wait after a 429 before the next attempt.
+ * Uses exponential backoff from OPENROUTER_429_BASE_DELAY_MS (default 2000),
+ * capped (~60s calculated, ~120s if Retry-After demands longer).
+ * Honors `Retry-After` response header (seconds) when the SDK exposes it.
+ */
+function openRouter429WaitMs(attemptIndex: number, e: unknown): number {
+  const any = e as {
+    headers?: Record<string, string | undefined> | { get?: (name: string) => string | null }
+  }
+  let fromHeaderMs = NaN
+  const h = any?.headers
+  if (h && typeof (h as { get?: unknown }).get === 'function') {
+    const ra = (h as { get: (name: string) => string | null }).get('retry-after')
+    if (ra) {
+      const sec = parseInt(ra, 10)
+      if (Number.isFinite(sec) && sec > 0) fromHeaderMs = sec * 1000
+    }
+  } else if (h && typeof h === 'object') {
+    const rec = h as Record<string, string | undefined>
+    const ra = rec['retry-after'] ?? rec['Retry-After']
+    if (ra) {
+      const sec = parseInt(String(ra), 10)
+      if (Number.isFinite(sec) && sec > 0) fromHeaderMs = sec * 1000
+    }
+  }
+  const base = resolveOpenRouter429BaseDelayMs()
+  const exp = Math.min(60_000, base * 2 ** attemptIndex)
+  const jitter = Math.floor(Math.random() * 500)
+  const calculated = Math.min(90_000, exp + jitter)
+  if (Number.isFinite(fromHeaderMs) && fromHeaderMs > 0) {
+    return Math.min(120_000, Math.max(fromHeaderMs, calculated))
+  }
+  return calculated
+}
+
+async function withOpenRouter429Retries<T>(
+  backend: 'openrouter' | 'ollama',
+  label: string,
+  model: string,
+  fn: (signal: AbortSignal) => Promise<T>,
+): Promise<T> {
+  const max = backend === 'openrouter' ? resolveOpenRouter429MaxAttempts() : 1
+  let lastErr: unknown
+  for (let attempt = 0; attempt < max; attempt++) {
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), LLM_REQUEST_TIMEOUT_MS)
+    try {
+      const out = await fn(controller.signal)
+      clearTimeout(timeout)
+      return out
+    } catch (e: unknown) {
+      clearTimeout(timeout)
+      lastErr = e
+      const canRetry =
+        backend === 'openrouter' && isOpenRouterRateLimitError(e) && attempt < max - 1
+      if (!canRetry) throw e
+      const waitMs = openRouter429WaitMs(attempt, e)
+      console.warn(
+        `[${label}] Rate limited (429); waiting ${Math.round(waitMs / 1000)}s before retry ${attempt + 2}/${max} (model ${model})`,
+      )
+      logger.integration(`[${label}] chat.completions 429 backoff`, {
+        model,
+        attempt: attempt + 1,
+        max_attempts: max,
+        wait_ms: waitMs,
+      })
+      await new Promise<void>((r) => setTimeout(r, waitMs))
+    }
+  }
+  throw lastErr instanceof Error ? lastErr : new Error(String(lastErr))
+}
+
 function resolveMaxTokens(override?: number): number {
   if (override != null) return override
   const raw = process.env.VC_EXTRACTION_MAX_TOKENS?.trim()
@@ -234,18 +330,25 @@ export async function openrouterGenerateText(
 
   if (process.env.DEBUG) console.log(`[OPENROUTER] Using model: ${model}`)
 
-  const controller = new AbortController()
-  const timeout = setTimeout(() => controller.abort(), LLM_REQUEST_TIMEOUT_MS)
   const maxTok = resolveMaxTokens(options.maxTokens)
   const t0 = Date.now()
   logger.integration('[OPENROUTER] chat.completions (text) start', { model, max_tokens: maxTok })
   try {
-    const response = await client.chat.completions.create({
+    const response = await withOpenRouter429Retries(
+      'openrouter',
+      'OPENROUTER',
       model,
-      messages: [{ role: 'user', content: prompt }],
-      temperature: options.temperature ?? 0.7,
-      max_tokens: maxTok,
-    } as any, { signal: controller.signal })
+      (signal) =>
+        client.chat.completions.create(
+          {
+            model,
+            messages: [{ role: 'user', content: prompt }],
+            temperature: options.temperature ?? 0.7,
+            max_tokens: maxTok,
+          } as any,
+          { signal },
+        ),
+    )
 
     const out = response.choices[0]?.message?.content || ''
     logger.integration('[OPENROUTER] chat.completions (text) ok', {
@@ -261,8 +364,6 @@ export async function openrouterGenerateText(
       message: e?.message ?? String(e),
     })
     throw e
-  } finally {
-    clearTimeout(timeout)
   }
 }
 
@@ -410,11 +511,11 @@ export async function openrouterGenerateJson<T = any>(options: {
       ...(jsonObjectMode ? { response_format: { type: 'json_object' as const } } : {}),
     }
 
-    const controller = new AbortController()
-    const timeout = setTimeout(() => controller.abort(), LLM_REQUEST_TIMEOUT_MS)
     let content: string
     try {
-      const response = await llmClient.chat.completions.create(baseParams as any, { signal: controller.signal })
+      const response = await withOpenRouter429Retries(backend, label, model, (signal) =>
+        llmClient.chat.completions.create(baseParams as any, { signal }),
+      )
       const choice = response.choices[0]
       content = choice?.message?.content || '{}'
     } catch (e: any) {
@@ -424,8 +525,6 @@ export async function openrouterGenerateJson<T = any>(options: {
         message: e?.message ?? String(e),
       })
       throw e
-    } finally {
-      clearTimeout(timeout)
     }
 
     if (process.env.DEBUG) console.log(`[${label}] Response length: ${content.length}, starts: ${content.substring(0, 100)}`)

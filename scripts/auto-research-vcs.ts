@@ -3,6 +3,13 @@
  *
  * Researches VCs using web search and AI, then updates the database with
  * verified, structured data. Fills ALL investor fields, not just check size.
+ *
+ * External APIs (this pipeline + `npm run research-worker` / `research-vcs`):
+ *   - Exa — keys from lib/exa-keys.ts (EXA_API_KEYS, etc.); 3 `search` calls per firm in lib/vc-research-retrieval.ts
+ *   - LLM extraction — OpenRouter (OPENROUTER_API_KEY) and/or Ollama (OLLAMA_BASE_URL + model vars)
+ * Apply-contact batch adds 2 Exa searches per firm + same LLM stack (lib/vc-apply-contact-research.ts).
+ * Discover-only jobs (vc-supabase-ingest --discover) use Exa only (2 searches per round in lib/vc-discovery-from-web.ts).
+ * On Exa quota/payment/rate-limit errors, lib/exa-global-cooldown.ts pauses all Exa callers; workers stop the current batch.
  */
 
 import { db } from '../lib/db'
@@ -12,7 +19,11 @@ import { syncInvestorEmbeddingById } from '../lib/vc-embedding-sync'
 import { isLikelyRealFirmName } from '../lib/firm-name-quality'
 import { openrouterGenerateJson, hasVcLlmConfigured } from '../lib/openrouter'
 import { normalizeResearchForDb } from '../lib/vc-research-normalize'
-import { gatherVCFirmRetrievalContext, getVcResearchPipelineEnvStatus } from '../lib/vc-research-retrieval'
+import {
+  ExaResearchQuotaBlockedError,
+  gatherVCFirmRetrievalContext,
+  getVcResearchPipelineEnvStatus,
+} from '../lib/vc-research-retrieval'
 import {
   classifyVcEntityFromExaContext,
   entityGateIndicatesBogusPublicListing,
@@ -375,13 +386,16 @@ async function researchVC(
 
     const pipe = getVcResearchPipelineEnvStatus()
     if (!pipe.exa) {
-      console.warn(`   ⚠️ EXA_API_KEY missing — VC research retrieval will fail.`)
+      console.warn(`   ⚠️ Exa keys missing (EXA_API_KEYS or EXA_API_KEY) — VC research retrieval will fail.`)
     }
     console.log(`   🤖 Extraction LLM: ${pipe.vcLlmBackend} (OpenRouter=${pipe.openrouter}, Ollama=${pipe.ollama})`)
 
     const snapshot = await gatherVCFirmRetrievalContext(firmName)
+    if (snapshot?.exaQuotaBlocked && snapshot.exaBlockReason) {
+      throw new ExaResearchQuotaBlockedError(snapshot.exaBlockReason)
+    }
     if (!snapshot) {
-      console.log(`   ⚠️ No retrieval context (check EXA_API_KEY and quotas)`)
+      console.log(`   ⚠️ No retrieval context (check EXA_API_KEYS / quotas)`)
       return null
     }
 
@@ -698,12 +712,53 @@ async function updateVCInDatabase(
 export type ResearchVcBatchOptions = {
   delayBetweenSearches?: number
   maxConcurrent?: number
+  /** Stagger between each VC's start within a batch (ms). Spreads 3-query bursts so they don't all hit Exa at once. */
+  staggerMs?: number
   mode?: ResearchBatchMode
   /**
    * When true (default), only resolve rows with isPublic=true (Discover corpus). Skips Exa/LLM if none.
    * Set false only for internal jobs that must touch non-public rows.
    */
   discoverCorpusOnly?: boolean
+  /**
+   * When true, skip `researchApplyContactAndUpdate` after each successful full research (saves 2 Exa + 1 LLM per firm).
+   * Run `npm run worker:apply-contact-urls` later to backfill apply/contact URLs.
+   */
+  skipApplyContact?: boolean
+}
+
+export type ResearchVcBatchResult = {
+  updated: number
+  failed: number
+  /** Exa quota/cooldown stopped the batch before every firm in the list was attempted. */
+  abortedEarly: boolean
+}
+
+/** Same bounds as lib/background-worker.ts VC research jobs; drives CLI `research-vcs -- --all` defaults. */
+/** Stable ordering for “oldest first” backfills (resume-safe when rows bump `updatedAt` on success). */
+export const investorStalestFirstOrderBy = [{ updatedAt: 'asc' as const }, { id: 'asc' as const }]
+
+export function parseVcResearchBatchTuningFromEnv(): {
+  delayBetweenSearches: number
+  maxConcurrent: number
+  staggerMs: number
+} {
+  const delayBetweenSearches = Math.max(
+    500,
+    parseInt(process.env.WORKER_VC_RESEARCH_DELAY_MS || '2500', 10) || 2500,
+  )
+  const maxConcurrent = Math.min(
+    5,
+    Math.max(1, parseInt(process.env.WORKER_VC_RESEARCH_MAX_CONCURRENT || '2', 10) || 2),
+  )
+  // Spread each VC's 3-query burst across the batch so they don't all hit the API simultaneously.
+  // Default 400 ms: with maxConcurrent=5 the last VC starts at 1600 ms → peak load is always
+  // just one VC's 3 concurrent queries at a time, well within a single key's 10 QPS budget.
+  const staggerMs = Math.max(
+    0,
+    parseInt(process.env.WORKER_VC_RESEARCH_STAGGER_MS || '400', 10) || 400,
+  )
+  return { delayBetweenSearches, maxConcurrent, staggerMs }
 }
 
 /**
@@ -712,21 +767,30 @@ export type ResearchVcBatchOptions = {
 async function researchVCsBatch(
   firmNames: string[],
   options: ResearchVcBatchOptions = {},
-): Promise<void> {
+): Promise<ResearchVcBatchResult> {
   const {
     delayBetweenSearches = 2000,
     maxConcurrent = 3,
+    staggerMs = 400,
     mode = 'full',
     discoverCorpusOnly = true,
+    skipApplyContact = false,
   } = options
+
+  if (firmNames.length === 0) {
+    return { updated: 0, failed: 0, abortedEarly: false }
+  }
 
   console.log(`\n🚀 Starting batch research: ${firmNames.length} VCs (mode=${mode})`)
   console.log(
-    `   Delay: ${delayBetweenSearches}ms, Max concurrent: ${maxConcurrent}, discover corpus only: ${discoverCorpusOnly}\n`,
+    `   Delay: ${delayBetweenSearches}ms, Max concurrent: ${maxConcurrent}, stagger: ${staggerMs}ms/VC, discover corpus only: ${discoverCorpusOnly}` +
+      (mode === 'full' && skipApplyContact ? ', apply/contact pass: skipped' : '') +
+      `\n`,
   )
 
   let updated = 0
   let failed = 0
+  let abortedEarly = false
 
   const apply = async (research: VCResearchResult, rowId: string) => {
     const n = normalizeResearchForDb(research)
@@ -739,40 +803,67 @@ async function researchVCsBatch(
     const batch = firmNames.slice(i, i + maxConcurrent)
 
     const results = await Promise.all(
-      batch.map(async (firmName) => {
-        const inv = await db.investor.findFirst({
-          where: discoverCorpusOnly
-            ? { firmName: { equals: firmName, mode: 'insensitive' }, isPublic: true }
-            : { firmName: { equals: firmName, mode: 'insensitive' } },
-          select: { id: true },
-        })
-        if (discoverCorpusOnly && !inv) {
-          console.log(`   ⏭️ Skipping — no public (Discover) investor row for "${firmName}"`)
-          return { firmName, success: false }
+      batch.map(async (firmName, batchIdx) => {
+        // Stagger each VC's start so their 3 parallel Exa queries don't all burst at t=0.
+        // e.g. staggerMs=400: VC0 starts at 0ms, VC1 at 400ms, VC2 at 800ms …
+        if (batchIdx > 0 && staggerMs > 0) {
+          await new Promise<void>((r) => setTimeout(r, staggerMs * batchIdx))
         }
-        const research = await researchVC(firmName, mode, { investorId: inv?.id })
-        if (!research) {
-          return { firmName, success: false }
-        }
-
-        if (!inv?.id) {
-          console.log(`   ⏭️ Skipping apply — could not resolve investor row for "${firmName}"`)
-          return { firmName, success: false }
-        }
-
-        const ok = await apply(research, inv.id)
-
-        if (ok) {
-          try {
-            await researchApplyContactAndUpdate(firmName, { overwrite: false, investorId: inv.id })
-          } catch (err) {
-            console.error(`[VC-RESEARCH] Apply/contact enrichment failed for ${firmName}:`, err)
+        try {
+          const inv = await db.investor.findFirst({
+            where: discoverCorpusOnly
+              ? { firmName: { equals: firmName, mode: 'insensitive' }, isPublic: true }
+              : { firmName: { equals: firmName, mode: 'insensitive' } },
+            select: { id: true },
+          })
+          if (discoverCorpusOnly && !inv) {
+            console.log(`   ⏭️ Skipping — no public (Discover) investor row for "${firmName}"`)
+            return { firmName, success: false as const, exaBlocked: false as const }
           }
-        }
+          const research = await researchVC(firmName, mode, { investorId: inv?.id })
+          if (!research) {
+            return { firmName, success: false as const, exaBlocked: false as const }
+          }
 
-        return { firmName, success: ok }
+          if (!inv?.id) {
+            console.log(`   ⏭️ Skipping apply — could not resolve investor row for "${firmName}"`)
+            return { firmName, success: false as const, exaBlocked: false as const }
+          }
+
+          const ok = await apply(research, inv.id)
+
+          if (ok && mode === 'full' && !skipApplyContact) {
+            try {
+              await researchApplyContactAndUpdate(firmName, { overwrite: false, investorId: inv.id })
+            } catch (err) {
+              if (err instanceof ExaResearchQuotaBlockedError) {
+                return { firmName, success: false as const, exaBlocked: true as const }
+              }
+              console.error(`[VC-RESEARCH] Apply/contact enrichment failed for ${firmName}:`, err)
+            }
+          }
+
+          return { firmName, success: ok, exaBlocked: false as const }
+        } catch (e) {
+          if (e instanceof ExaResearchQuotaBlockedError) {
+            return { firmName, success: false as const, exaBlocked: true as const }
+          }
+          throw e
+        }
       })
     )
+
+    if (results.some((r) => r.exaBlocked)) {
+      abortedEarly = true
+      console.error(
+        '\n🛑 Exa quota/cooldown — aborting batch. Remaining firms were not researched (updatedAt unchanged).',
+      )
+      results.forEach(({ success }) => {
+        if (success) updated++
+        else failed++
+      })
+      break
+    }
 
     results.forEach(({ success }) => {
       if (success) updated++
@@ -791,6 +882,7 @@ async function researchVCsBatch(
   if (firmNames.length > 0) {
     console.log(`   📈 Success rate: ${((updated / firmNames.length) * 100).toFixed(1)}%`)
   }
+  return { updated, failed, abortedEarly }
 }
 
 /**
@@ -807,23 +899,78 @@ async function main() {
     ]
     await researchVCsBatch(topVCs, { delayBetweenSearches: 2000, maxConcurrent: 2 })
   } else if (args[0] === '--all') {
+    const tuning = parseVcResearchBatchTuningFromEnv()
+    const skipApply =
+      process.env.VC_RESEARCH_BATCH_SKIP_APPLY_CONTACT === '1' ||
+      process.env.VC_RESEARCH_BATCH_SKIP_APPLY_CONTACT === 'true'
+    const pageSize = Math.min(
+      2000,
+      Math.max(25, parseInt(process.env.VC_RESEARCH_ALL_PAGE_SIZE || '250', 10) || 250),
+    )
     console.log('⚠️ Researching public (Discover) investors only  -  this will take hours!')
-    const allVCs = await db.investor.findMany({
-      where: { isPublic: true },
-      select: { firmName: true },
-      orderBy: { updatedAt: 'asc' },
-    })
-    const eligibleNames = allVCs.map((vc) => vc.firmName).filter((n) => isInvestorEligibleForWorkers(n))
-    const skipped = allVCs.length - eligibleNames.length
-    if (skipped > 0) {
+    console.log(
+      `   Order: oldest updatedAt first (tie-break: id). Stopping and re-running continues with rows that still have the oldest timestamps.`,
+    )
       console.log(
-        `⏭️ Skipping ${skipped} investor(s) — firm name not eligible for worker spend (no Exa/LLM). Run worker:hide-low-quality to de-public junk still marked public.`,
+        `   Waves: ${pageSize} public row(s) per DB page (VC_RESEARCH_ALL_PAGE_SIZE). WORKER_VC_RESEARCH_DELAY_MS default ${tuning.delayBetweenSearches}ms; WORKER_VC_RESEARCH_MAX_CONCURRENT default ${tuning.maxConcurrent} (max 5); WORKER_VC_RESEARCH_STAGGER_MS default ${tuning.staggerMs}ms.`,
+      )
+    if (skipApply) {
+      console.log(
+        '   VC_RESEARCH_BATCH_SKIP_APPLY_CONTACT=1 — skipping apply/contact Exa+LLM per firm (run worker:apply-contact-urls later).',
       )
     }
-    await researchVCsBatch(eligibleNames, {
-      delayBetweenSearches: 3000,
-      maxConcurrent: 1,
-    })
+    let wave = 0
+    let totalUpdated = 0
+    let totalFailed = 0
+    let ineligiblePagesAdvanced = 0
+    for (;;) {
+      wave++
+      const page = await db.investor.findMany({
+        where: { isPublic: true },
+        select: { id: true, firmName: true },
+        orderBy: investorStalestFirstOrderBy,
+        take: pageSize,
+      })
+      if (page.length === 0) {
+        console.log(
+          `\n✅ --all finished: no remaining public investors (${wave - 1} wave(s); ${ineligiblePagesAdvanced} ineligible-only page(s) advanced).`,
+        )
+        console.log(`   Cumulative: ✅ ${totalUpdated} updated, ❌ ${totalFailed} failed`)
+        break
+      }
+      const eligible = page.filter((r) => isInvestorEligibleForWorkers(r.firmName))
+      if (eligible.length === 0) {
+        await db.investor.updateMany({
+          where: { id: { in: page.map((p) => p.id) } },
+          data: { updatedAt: new Date() },
+        })
+        clearInvestorCache()
+        ineligiblePagesAdvanced++
+        console.log(
+          `\n📄 Wave ${wave}: ${page.length} public row(s), 0 eligible — advanced page (bumped updatedAt). De-public junk with worker:hide-low-quality if this repeats.`,
+        )
+        continue
+      }
+      console.log(
+        `\n📄 Wave ${wave}: page ${page.length} row(s), ${eligible.length} eligible — batch research`,
+      )
+      const batchResult = await researchVCsBatch(
+        eligible.map((r) => r.firmName),
+        {
+          ...tuning,
+          skipApplyContact: skipApply,
+        },
+      )
+      totalUpdated += batchResult.updated
+      totalFailed += batchResult.failed
+      if (batchResult.abortedEarly) {
+        console.error(
+          '\n🛑 Exa quota/cooldown — stopping --all. Re-run later; processing resumes from the oldest remaining public rows.',
+        )
+        console.log(`   Progress this run: ✅ ${totalUpdated} updated, ❌ ${totalFailed} failed`)
+        break
+      }
+    }
   } else if (args[0]) {
     const inv = await db.investor.findFirst({
       where: { firmName: { equals: args[0], mode: 'insensitive' }, isPublic: true },
@@ -835,14 +982,26 @@ async function main() {
       )
       return
     }
-    const research = await researchVC(args[0], 'full', { investorId: inv.id })
-    if (research) {
-      await updateVCInDatabase(normalizeResearchForDb(research), inv.id)
-      try {
-        await researchApplyContactAndUpdate(args[0], { investorId: inv.id })
-      } catch (err) {
-        console.error(`[VC-RESEARCH] Apply/contact enrichment failed:`, err)
+    try {
+      const research = await researchVC(args[0], 'full', { investorId: inv.id })
+      if (research) {
+        await updateVCInDatabase(normalizeResearchForDb(research), inv.id)
+        try {
+          await researchApplyContactAndUpdate(args[0], { investorId: inv.id })
+        } catch (err) {
+          if (err instanceof ExaResearchQuotaBlockedError) {
+            console.error(`[VC-RESEARCH] 🛑 Exa quota/cooldown — apply/contact skipped (${err.reason})`)
+            return
+          }
+          console.error(`[VC-RESEARCH] Apply/contact enrichment failed:`, err)
+        }
       }
+    } catch (e) {
+      if (e instanceof ExaResearchQuotaBlockedError) {
+        console.error(`[VC-RESEARCH] 🛑 Exa quota/cooldown — no DB update (${e.reason})`)
+        return
+      }
+      throw e
     }
   } else {
     console.log(`
@@ -857,6 +1016,7 @@ Enrichment + auto-hide (entity classifier runs when gate not off or AUTO_HIDE_BO
 
 Continuous daemon: npm run research-worker
 Env: VC_RESEARCH_INTERVAL_MINUTES, VC_RESEARCH_BATCH_SIZE
+Bulk --all: oldest-first waves from DB (resume-safe); WORKER_VC_RESEARCH_DELAY_MS, WORKER_VC_RESEARCH_MAX_CONCURRENT; VC_RESEARCH_ALL_PAGE_SIZE (default 250); optional VC_RESEARCH_BATCH_SKIP_APPLY_CONTACT=1
     `)
   }
 }

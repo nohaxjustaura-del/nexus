@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { getCurrentUser } from '@/lib/auth'
+import { hasExaApiKey } from '@/lib/exa-keys'
 
 export const dynamic = 'force-dynamic'
 
@@ -16,7 +17,7 @@ export async function GET() {
   const voyage = !!process.env.VOYAGE_API_KEY?.trim()
   const openRouter = !!process.env.OPENROUTER_API_KEY?.trim()
   const gemini = !!(process.env.GEMINI_API_KEY?.trim() || process.env.GOOGLE_API_KEY?.trim())
-  const exa = !!process.env.EXA_API_KEY?.trim()
+  const exa = hasExaApiKey()
 
   const faissBase = (process.env.FAISS_SERVICE_URL || 'http://localhost:8001').replace(/\/$/, '')
   let faissReachable: boolean | null = null

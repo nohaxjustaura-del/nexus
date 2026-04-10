@@ -8,11 +8,12 @@
  *   npx tsx scripts/vc-apply-contact-worker.ts --firms "Sequoia Capital,Y Combinator"
  *   npx tsx scripts/vc-apply-contact-worker.ts --overwrite --limit 10
  *
- * Env: EXA_API_KEY, OPENROUTER_API_KEY or Ollama VC vars (same as VC research pipeline).
+ * Env: EXA_API_KEYS (or EXA_API_KEY), OPENROUTER_API_KEY or Ollama VC vars (same as VC research pipeline).
  * Optional: VC_APPLY_CONTACT_EXA_NUM_RESULTS, VC_APPLY_CONTACT_CONTEXT_CHARS
  */
 
 import { db } from '../lib/db'
+import { ExaResearchQuotaBlockedError } from '../lib/vc-research-retrieval'
 import {
   runApplyContactBatch,
   researchApplyContactAndUpdate,
@@ -44,8 +45,17 @@ async function main() {
   const args = parseArgs(process.argv.slice(2))
 
   if (args.firms.length === 1) {
-    const r = await researchApplyContactAndUpdate(args.firms[0], { overwrite: args.overwrite })
-    console.log(JSON.stringify(r, null, 2))
+    try {
+      const r = await researchApplyContactAndUpdate(args.firms[0], { overwrite: args.overwrite })
+      console.log(JSON.stringify(r, null, 2))
+    } catch (e) {
+      if (e instanceof ExaResearchQuotaBlockedError) {
+        console.error(`🛑 Exa quota/cooldown (${e.reason}) — no updates`)
+        process.exitCode = 1
+        return
+      }
+      throw e
+    }
     return
   }
 

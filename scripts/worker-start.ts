@@ -5,7 +5,8 @@
  *
  * Schedules thesis/profile refresh windows, Exa pre-warm, embeddings, validation,
  * and Prisma→Supabase vc_directory sync. Use `--loop` for continuous timers
- * (npm run worker:start). This process is separate from the Next.js in-process worker UI.
+ * (npm run worker:start). Use `--once` to run the immediate jobs once and exit when idle
+ * (npm run worker:start:once). This process is separate from the Next.js in-process worker UI.
  */
 
 import { startWorker } from '../lib/background-worker'
@@ -28,14 +29,24 @@ async function main() {
   if (args.includes('--loop')) {
     process.env.WORKER_CONTINUOUS = 'true'
   }
+  if (args.includes('--once')) {
+    process.env.WORKER_NO_RESCHEDULE = 'true'
+  }
 
   await startWorker(runImmediately)
 
   logger.info('SCRIPT', '✅ Worker started successfully')
-  logger.info(
-    'SCRIPT',
-    '💡 Jobs run on timers; VC research drains batches from the DB queue. Pair with npm run workers:all for discover ingest. Ctrl+C to stop.',
-  )
+  if (process.env.WORKER_NO_RESCHEDULE === 'true') {
+    logger.info(
+      'SCRIPT',
+      '⏹️ One-shot mode: no job timers — Node exits when work finishes. For a daemon use: npm run worker:start',
+    )
+  } else {
+    logger.info(
+      'SCRIPT',
+      '💡 Jobs run on timers; VC research drains batches from the DB queue. Pair with npm run workers:all for discover ingest. Ctrl+C to stop.',
+    )
+  }
 }
 
 main().catch((error) => {

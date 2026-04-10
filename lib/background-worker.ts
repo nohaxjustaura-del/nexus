@@ -17,6 +17,7 @@
  *    live Exa enrichment which actually stores and uses its output
  *
  * Env tuning (optional):
+ *  - WORKER_NO_RESCHEDULE=1 — with worker-start --once: run immediate jobs once, do not re-queue timers (process exits when idle)
  *  - WORKER_VC_RESEARCH_BATCH_SIZE, WORKER_VC_RESEARCH_DELAY_MS, WORKER_VC_RESEARCH_MAX_CONCURRENT
  *  - WORKER_EXA_UNCACHED_TAKE, WORKER_EXA_STALE_TAKE, WORKER_EXA_ENRICH_DELAY_MS
  *  - WORKER_THESIS_REFRESH_INTERVAL_MS, WORKER_PROFILE_REFRESH_INTERVAL_MS (default ~30d each)
@@ -29,13 +30,20 @@
  * Apply / contact URL refresh (on demand — lib/vc-apply-contact-research.ts):
  *  - npm run worker:apply-contact-urls -- --limit 20
  *  - POST /api/worker/trigger JSON: { "jobType": "vc-apply-contact-research", "params": { "limit": 20 } }
+ *
+ * Exa quota / rate limits: lib/exa-global-cooldown.ts (EXA_RESEARCH_COOLDOWN_MS, optional EXA_DISCOVERY_COOLDOWN_MS).
+ * When triggered, VC research batches abort mid-run; discovery stops rounds early; Exa enrichment (exa-service) no-ops until cooldown ends.
  */
 
 import { db } from './db'
 import { logger } from './logger'
 import { isLikelyRealFirmName } from './firm-name-quality'
 import { isInvestorEligibleForWorkers } from './investor-worker-eligibility'
-import { researchVCsBatch } from '../scripts/auto-research-vcs'
+import {
+  investorStalestFirstOrderBy,
+  parseVcResearchBatchTuningFromEnv,
+  researchVCsBatch,
+} from '../scripts/auto-research-vcs'
 import { getLiveInvestorPulse } from './exa-service'
 import {
   readWorkerVcRefreshState,
@@ -47,6 +55,7 @@ import {
   markProfileBatchRan,
 } from './worker-vc-refresh-state'
 import { syncRecentPublicDiscoverableToVcDirectory } from './vc-supabase-sync'
+import { hasExaApiKey } from './exa-keys'
 import { verifyInvestorAgainstExa } from './vc-db-exa-quality-check'
 import { hasVcLlmConfigured } from './openrouter'
 import { auditInvestorLocal, auditSeverityScore, type InvestorLocalAuditInput } from './investor-quality-audit'
@@ -203,6 +212,12 @@ let workerConfig: WorkerConfig = { ...DEFAULT_CONFIG }
 let isRunning = false
 let scheduledJobs: Map<string, NodeJS.Timeout> = new Map()
 
+/** When true, jobs run once and the process can exit (no setTimeout re-queue). Set by `worker-start --once` or WORKER_NO_RESCHEDULE=1. */
+function shouldRescheduleWorkerJobs(): boolean {
+  const v = process.env.WORKER_NO_RESCHEDULE?.trim()
+  return v !== 'true' && v !== '1'
+}
+
 // ============================================================================
 // JOB EXECUTORS
 // ============================================================================
@@ -227,14 +242,7 @@ async function executeVCThesisResearch(): Promise<void> {
       100,
       Math.max(5, parseInt(process.env.WORKER_VC_RESEARCH_BATCH_SIZE || '25', 10) || 25),
     )
-    const delayMs = Math.max(
-      500,
-      parseInt(process.env.WORKER_VC_RESEARCH_DELAY_MS || '2500', 10) || 2500,
-    )
-    const maxConcurrent = Math.min(
-      5,
-      Math.max(1, parseInt(process.env.WORKER_VC_RESEARCH_MAX_CONCURRENT || '2', 10) || 2),
-    )
+    const { delayBetweenSearches: delayMs, maxConcurrent } = parseVcResearchBatchTuningFromEnv()
 
     const vcsToUpdate = await db.investor.findMany({
       where: {
@@ -244,7 +252,7 @@ async function executeVCThesisResearch(): Promise<void> {
       },
       select: { firmName: true, thesis: true },
       take: batchTake,
-      orderBy: { updatedAt: 'asc' },
+      orderBy: investorStalestFirstOrderBy,
     })
 
     const needingThesis = vcsToUpdate.filter((v) => {
@@ -295,14 +303,7 @@ async function executeVCProfileResearch(): Promise<void> {
       100,
       Math.max(5, parseInt(process.env.WORKER_VC_RESEARCH_BATCH_SIZE || '25', 10) || 25),
     )
-    const delayMs = Math.max(
-      500,
-      parseInt(process.env.WORKER_VC_RESEARCH_DELAY_MS || '2500', 10) || 2500,
-    )
-    const maxConcurrent = Math.min(
-      5,
-      Math.max(1, parseInt(process.env.WORKER_VC_RESEARCH_MAX_CONCURRENT || '2', 10) || 2),
-    )
+    const { delayBetweenSearches: delayMs, maxConcurrent } = parseVcResearchBatchTuningFromEnv()
 
     const vcsToUpdate = await db.investor.findMany({
       where: {
@@ -320,7 +321,7 @@ async function executeVCProfileResearch(): Promise<void> {
       },
       select: { firmName: true },
       take: batchTake,
-      orderBy: { updatedAt: 'asc' },
+      orderBy: investorStalestFirstOrderBy,
     })
 
     if (vcsToUpdate.length === 0) {
@@ -616,8 +617,8 @@ async function executeDataValidation(): Promise<void> {
       Math.max(0, parseInt(process.env.WORKER_VALIDATION_EXA_SAMPLE || '0', 10) || 0),
     )
     if (exaSample > 0) {
-      if (!process.env.EXA_API_KEY?.trim()) {
-        logger.warn('WORKER', '⏭️ WORKER_VALIDATION_EXA_SAMPLE > 0 but EXA_API_KEY missing — skipping Exa+LLM checks')
+      if (!hasExaApiKey()) {
+        logger.warn('WORKER', '⏭️ WORKER_VALIDATION_EXA_SAMPLE > 0 but Exa keys missing (EXA_API_KEYS or EXA_API_KEY) — skipping Exa+LLM checks')
       } else if (!hasVcLlmConfigured()) {
         logger.warn(
           'WORKER',
@@ -743,7 +744,11 @@ async function executeJob(job: WorkerJob): Promise<void> {
     }
   }
 
-  scheduleJob(job)
+  if (shouldRescheduleWorkerJobs()) {
+    scheduleJob(job)
+  } else {
+    logger.info('WORKER', `⏹️ One-shot mode — not rescheduling "${job.name}"`)
+  }
 }
 
 function scheduleJob(job: WorkerJob): void {
@@ -771,6 +776,13 @@ async function startAllJobsImmediate(): Promise<void> {
     // Embeddings rebuild takes hours at 3 RPM  -  only run on the 24h schedule,
     // not on every worker startup. Use `npm run rebuild-faiss-index` for manual runs.
     if (job.type === 'embeddings' || job.type === 'vc-directory-sync') {
+      if (!shouldRescheduleWorkerJobs()) {
+        logger.info(
+          'WORKER',
+          `⏭️ Skipping ${job.name} (one-shot run — no timer; use worker:start with --loop for scheduled rebuilds)`,
+        )
+        continue
+      }
       logger.info(
         'WORKER',
         `⏭️ Skipping ${job.name} on startup (runs on timer only — avoids duplicate load right after deploy)`,
@@ -802,8 +814,13 @@ export async function startWorker(runImmediately = true): Promise<void> {
 
   if (runImmediately) {
     await startAllJobsImmediate()
+  } else if (shouldRescheduleWorkerJobs()) {
+    workerConfig.jobs.forEach((job) => scheduleJob(job))
   } else {
-    workerConfig.jobs.forEach(job => scheduleJob(job))
+    logger.info(
+      'WORKER',
+      '⏭️ One-shot + --no-immediate: no timers scheduled (nothing to run)',
+    )
   }
 
   logger.info('WORKER', '✅ Background worker started successfully')

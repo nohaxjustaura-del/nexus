@@ -11,7 +11,7 @@
  *   npx tsx scripts/audit-all-investors-quality.ts --exa --exa-scope problematic --exa-limit 100
  *   npx tsx scripts/audit-all-investors-quality.ts --exa --exa-scope all --exa-limit 500
  *
- * Env: DATABASE_URL, optional EXA_API_KEY + LLM for --exa
+ * Env: DATABASE_URL, optional Exa keys (EXA_API_KEYS or EXA_API_KEY, lib/exa-keys.ts) + LLM for --exa
  */
 
 import * as fs from 'fs'
@@ -24,6 +24,7 @@ import {
   type LocalInvestorAudit,
   type InvestorLocalAuditInput,
 } from '../lib/investor-quality-audit'
+import { hasExaApiKey } from '../lib/exa-keys'
 import { verifyInvestorAgainstExa } from '../lib/vc-db-exa-quality-check'
 import { hasVcLlmConfigured } from '../lib/openrouter'
 
@@ -143,8 +144,8 @@ async function main() {
   const exaResults: ExaRow[] = []
 
   if (exa) {
-    if (!process.env.EXA_API_KEY?.trim()) {
-      console.error('\n--exa requires EXA_API_KEY')
+    if (!hasExaApiKey()) {
+      console.error('\n--exa requires Exa keys (EXA_API_KEYS or EXA_API_KEY)')
       process.exitCode = 1
     } else if (!hasVcLlmConfigured()) {
       console.error('\n--exa requires OPENROUTER_API_KEY')

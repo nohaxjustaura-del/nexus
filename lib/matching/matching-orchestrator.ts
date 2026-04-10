@@ -33,7 +33,7 @@ import type { ComprehensiveFounderContext } from '@/lib/founder-context'
 import type { Investor } from '@prisma/client'
 
 import { matchUniversityPrograms, filterOutUniversityPrograms } from './university-matcher'
-import { fetchVCExaBundle, createExaClient } from './exa-enrichment'
+import { fetchVCExaBundle } from './exa-enrichment'
 import { reasonGates } from './gate-reasoner'
 import { computeInvestmentLikelihood, type PitchStrengthSignal } from './investment-likelihood'
 import { generateMatchNarrative } from './narrative-generator'
@@ -483,7 +483,6 @@ export async function runMatchingPipeline(
   // We do not wait for the full batch to finish before starting Gemini.
   // MAX_CONCURRENT_GEMINI caps simultaneous gate reasoning calls.
 
-  const exaClient = createExaClient()
   const MAX_CONCURRENT_GEMINI = 5
   logger.integration(
     `[EXA] Step 6 — ${candidatePool.length} VCs (3 Exa searches each, batched) + Gemini gates (max ${MAX_CONCURRENT_GEMINI} concurrent)`,
@@ -498,7 +497,7 @@ export async function runMatchingPipeline(
 
   async function processVC(vc: VCProfile): Promise<void> {
     // 1. Fetch Exa bundle
-    const bundle = await fetchVCExaBundle(vc, founderSignal, exaClient)
+    const bundle = await fetchVCExaBundle(vc, founderSignal)
 
     // 2. Wait if the Gemini concurrency ceiling is hit
     while (activeGeminiCalls >= MAX_CONCURRENT_GEMINI) {

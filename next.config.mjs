@@ -6,6 +6,12 @@ const withBundleAnalyzer = bundleAnalyzer({
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // ESM Radix primitives: avoids occasional client chunk `options.factory` undefined (RSC ↔ webpack).
+  transpilePackages: [
+    '@radix-ui/react-accordion',
+    '@radix-ui/react-collapsible',
+  ],
+
   // Performance optimizations
   compress: true,
   poweredByHeader: false,
@@ -35,6 +41,8 @@ const nextConfig = {
     optimizePackageImports: [
       '@radix-ui/react-select',
       '@radix-ui/react-checkbox',
+      '@radix-ui/react-accordion',
+      '@radix-ui/react-collapsible',
       'framer-motion',
       'react-markdown',
     ],

@@ -8,7 +8,7 @@
  *
  * Exports:
  *   ExaClient           — re-exported type alias for Exa instance
- *   createExaClient()   — factory (called once by the orchestrator)
+ *   createExaClient()   — first resolved key from getExaApiKeys() (optional; bundles use failover internally)
  *   fetchAllVCBundles() — batch fetcher with 10 QPS rate-limit enforcement
  *
  * Rate-limit contract:
@@ -18,6 +18,8 @@
  */
 
 import Exa from 'exa-js'
+import { runExaWithKeyFailover } from '@/lib/exa-key-failover'
+import { getExaApiKeys } from '@/lib/exa-keys'
 import { logger } from '@/lib/logger'
 import type { EnrichedExaSnippet, FounderMatchSignal, VCExaBundle, VCProfile } from './types'
 
@@ -29,13 +31,13 @@ import type { EnrichedExaSnippet, FounderMatchSignal, VCExaBundle, VCProfile } f
 export type ExaClient = Exa
 
 export function createExaClient(): ExaClient {
-  const apiKey = process.env.EXA_API_KEY
-  if (!apiKey) {
+  const keys = getExaApiKeys()
+  if (!keys.length) {
     throw new Error(
-      'EXA_API_KEY is not set. Add it to your .env.local to enable VC enrichment.',
+      'Exa is not configured. Set EXA_API_KEYS (or EXA_API_KEY) in .env.local — see lib/exa-keys.ts.',
     )
   }
-  return new Exa(apiKey)
+  return new Exa(keys[0]!)
 }
 
 // ---------------------------------------------------------------------------
@@ -206,7 +208,6 @@ function emptyBundle(vc: VCProfile): VCExaBundle {
 export async function fetchVCExaBundle(
   vc: VCProfile,
   founder: FounderMatchSignal,
-  exaClient: ExaClient,
 ): Promise<VCExaBundle> {
   const t0 = Date.now()
   const { q1, q2, q3 } = buildVCQueries(vc, founder)
@@ -214,40 +215,41 @@ export async function fetchVCExaBundle(
   const sixMonthsAgo = monthsAgoISO(6)
   const twelveMonthsAgo = monthsAgoISO(12)
 
-  // Fire all 3 queries in parallel; wrap each in its own try/catch so a
-  // single query failure degrades gracefully instead of poisoning the batch.
-  const [r1, r2, r3] = await Promise.all([
-    exaClient
-      .search(q1, {
-        type: 'auto',
-        numResults: EXA_NUM_RESULTS,
-        startPublishedDate: sixMonthsAgo,
-        contents: { text: { maxCharacters: EXA_MAX_CHARS } },
-      })
-      .then((res) => cleanToSnippets(res.results as RawExaResult[], 'revealed_thesis'))
-      .catch((): EnrichedExaSnippet[] => []),
+  const failover = await runExaWithKeyFailover(async (exaClient) => {
+    const [r1, r2, r3] = await Promise.all([
+      exaClient
+        .search(q1, {
+          type: 'auto',
+          numResults: EXA_NUM_RESULTS,
+          startPublishedDate: sixMonthsAgo,
+          contents: { text: { maxCharacters: EXA_MAX_CHARS } },
+        })
+        .then((res) => cleanToSnippets(res.results as RawExaResult[], 'revealed_thesis')),
+      exaClient
+        .search(q2, {
+          type: 'auto',
+          numResults: EXA_NUM_RESULTS,
+          startPublishedDate: twelveMonthsAgo,
+          contents: { text: { maxCharacters: EXA_MAX_CHARS } },
+        })
+        .then((res) => cleanToSnippets(res.results as RawExaResult[], 'stated_conviction')),
+      exaClient
+        .search(q3, {
+          type: 'auto',
+          numResults: EXA_NUM_RESULTS,
+          startPublishedDate: sixMonthsAgo,
+          contents: { text: { maxCharacters: EXA_MAX_CHARS } },
+        })
+        .then((res) => cleanToSnippets(res.results as RawExaResult[], 'founder_specific')),
+    ])
+    return { r1, r2, r3 }
+  })
 
-    exaClient
-      .search(q2, {
-        type: 'auto',
-        numResults: EXA_NUM_RESULTS,
-        startPublishedDate: twelveMonthsAgo,
-        contents: { text: { maxCharacters: EXA_MAX_CHARS } },
-      })
-      .then((res) => cleanToSnippets(res.results as RawExaResult[], 'stated_conviction'))
-      .catch((): EnrichedExaSnippet[] => []),
+  if (!failover.ok) {
+    return emptyBundle(vc)
+  }
 
-    exaClient
-      .search(q3, {
-        type: 'auto',
-        numResults: EXA_NUM_RESULTS,
-        startPublishedDate: sixMonthsAgo,
-        contents: { text: { maxCharacters: EXA_MAX_CHARS } },
-      })
-      .then((res) => cleanToSnippets(res.results as RawExaResult[], 'founder_specific'))
-      .catch((): EnrichedExaSnippet[] => []),
-  ])
-
+  const { r1, r2, r3 } = failover.data
   const totalSnippets = r1.length + r2.length + r3.length
   const ms = Date.now() - t0
   logger.integration('[EXA] bundle ok', {
@@ -289,7 +291,6 @@ export async function fetchVCExaBundle(
 export async function fetchAllVCBundles(
   vcs: VCProfile[],
   founder: FounderMatchSignal,
-  exaClient: ExaClient,
   onVCComplete?: (vcId: string, bundle: VCExaBundle) => void,
 ): Promise<Map<string, VCExaBundle>> {
   const results = new Map<string, VCExaBundle>()
@@ -303,7 +304,7 @@ export async function fetchAllVCBundles(
     // orchestrator can start Gemini work immediately for that VC.
     await Promise.all(
       batch.map((vc) =>
-        fetchVCExaBundle(vc, founder, exaClient)
+        fetchVCExaBundle(vc, founder)
           .catch((): VCExaBundle => emptyBundle(vc))   // safety net — fetchVCExaBundle never throws but belt+suspenders
           .then((bundle) => {
             results.set(vc.id, bundle)

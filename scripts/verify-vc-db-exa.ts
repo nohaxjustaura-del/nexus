@@ -2,7 +2,7 @@
 /**
  * Spot-check Investor rows: fresh Exa retrieval + configured LLM judges consistency with DB.
  *
- * Prereqs: DATABASE_URL, EXA_API_KEY, and OPENROUTER_API_KEY.
+ * Prereqs: DATABASE_URL, Exa keys (EXA_API_KEYS or EXA_API_KEY), and OPENROUTER_API_KEY.
  *
  * Usage:
  *   npx tsx scripts/verify-vc-db-exa.ts --limit 5

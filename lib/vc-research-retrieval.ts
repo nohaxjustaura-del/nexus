@@ -4,7 +4,24 @@
  */
 
 import Exa from 'exa-js'
+import { runExaWithKeyFailover } from '@/lib/exa-key-failover'
+import { hasExaApiKey } from '@/lib/exa-keys'
+import {
+  isExaGlobalCooldownActive,
+  msUntilExaGlobalCooldownEnds,
+} from '@/lib/exa-global-cooldown'
 import { hasOpenRouterKey, hasVcLlmConfigured, getVcLlmBackend, isOllamaVcConfigured } from '@/lib/openrouter'
+
+/** Thrown when Exa quota/rate-limit/cooldown means workers must stop the batch (no DB touch). */
+export class ExaResearchQuotaBlockedError extends Error {
+  readonly reason: 'quota_or_rate_limit' | 'cooldown'
+
+  constructor(reason: 'quota_or_rate_limit' | 'cooldown') {
+    super(`Exa blocked (${reason}) — stop batch; credits/cooldown active`)
+    this.name = 'ExaResearchQuotaBlockedError'
+    this.reason = reason
+  }
+}
 
 export type VcResearchRetrievalSnapshot = {
   mergedContext: string
@@ -13,18 +30,18 @@ export type VcResearchRetrievalSnapshot = {
   exaTotalResults: number
   /** How many passes returned at least one hit (0–3) */
   exaPassesWithHits: number
+  /** Set when workers must abort — do not run LLM or update investors. */
+  exaQuotaBlocked?: boolean
+  exaBlockReason?: 'quota_or_rate_limit' | 'cooldown'
 }
 
-// Global Exa cooldown for research pipelines. When Exa returns quota/credit/rate
-// errors, we avoid hammering the API and instead pause Exa calls for a window,
-// then try again later.
-const EXA_RESEARCH_COOLDOWN_MS = (() => {
-  const raw = parseInt(process.env.EXA_RESEARCH_COOLDOWN_MS || '', 10)
-  if (!Number.isFinite(raw) || raw <= 0) return 60 * 60 * 1000 // default 1h
-  return Math.min(raw, 24 * 60 * 60 * 1000) // cap at 24h
-})()
-
-let nextExaResearchAllowedAt: number | null = null
+export type ExaSearchPassResult = {
+  textBlock: string
+  urls: string[]
+  resultCount: number
+  skippedDueToCooldown: boolean
+  quotaOrAuthError: boolean
+}
 
 export function getVcResearchPipelineEnvStatus(): {
   exa: boolean
@@ -37,7 +54,7 @@ export function getVcResearchPipelineEnvStatus(): {
   /** Active backend for `useVcPipeline` JSON (openrouter if key unless forced ollama) */
   vcLlmBackend: 'openrouter' | 'ollama' | 'none'
 } {
-  const exa = !!process.env.EXA_API_KEY?.trim()
+  const exa = hasExaApiKey()
   const or = hasOpenRouterKey()
   const om = isOllamaVcConfigured()
   const llm = hasVcLlmConfigured()
@@ -80,26 +97,28 @@ export function getVcResearchStartPublishedDate(): string | undefined {
   return d.toISOString().slice(0, 10)
 }
 
+const emptyPass = (skippedDueToCooldown: boolean, quotaOrAuthError: boolean): ExaSearchPassResult => ({
+  textBlock: '',
+  urls: [],
+  resultCount: 0,
+  skippedDueToCooldown,
+  quotaOrAuthError,
+})
+
 /** Single Exa search for VC pipelines (exported for apply/contact-focused retrieval). */
-export async function exaSearchPass(query: string, numResults: number): Promise<{
-  textBlock: string
-  urls: string[]
-  resultCount: number
-}> {
-  const key = process.env.EXA_API_KEY?.trim()
-  if (!key) {
-    return { textBlock: '', urls: [], resultCount: 0 }
+export async function exaSearchPass(query: string, numResults: number): Promise<ExaSearchPassResult> {
+  if (!hasExaApiKey()) {
+    return emptyPass(false, false)
   }
 
-  if (nextExaResearchAllowedAt && Date.now() < nextExaResearchAllowedAt) {
-    const waitMs = nextExaResearchAllowedAt - Date.now()
+  if (isExaGlobalCooldownActive()) {
+    const waitMs = msUntilExaGlobalCooldownEnds()
     console.warn(
       `[VC-RETRIEVAL] Exa in cooldown window (~${Math.ceil(waitMs / 1000)}s remaining); skipping query: ${query}`,
     )
-    return { textBlock: '', urls: [], resultCount: 0 }
+    return emptyPass(true, false)
   }
 
-  const exa = new Exa(key)
   const since = getVcResearchStartPublishedDate()
   const maxC = researchExaMaxChars()
   const searchOpts = {
@@ -109,7 +128,7 @@ export async function exaSearchPass(query: string, numResults: number): Promise<
     ...(since ? { startPublishedDate: since } : {}),
   }
 
-  try {
+  const failover = await runExaWithKeyFailover(async (exa) => {
     const res = await exa.search(query, searchOpts as Parameters<Exa['search']>[1])
     const results = res.results ?? []
     const urls = results
@@ -123,15 +142,47 @@ export async function exaSearchPass(query: string, numResults: number): Promise<
       })
       .join('\n\n')
     return { textBlock, urls, resultCount: results.length }
-  } catch (e) {
-    const msg = e instanceof Error ? e.message : String(e)
-    console.warn('[VC-RETRIEVAL] Exa search failed:', msg)
-    if (/402|403|429|quota|credit|limit|exceeded|payment|unauthor/i.test(msg)) {
-      console.warn('[VC-RETRIEVAL] Putting Exa research into cooldown; check EXA_API_KEY/quota (https://exa.ai).')
-      nextExaResearchAllowedAt = Date.now() + EXA_RESEARCH_COOLDOWN_MS
+  })
+
+  if (failover.ok) {
+    return {
+      textBlock: failover.data.textBlock,
+      urls: failover.data.urls,
+      resultCount: failover.data.resultCount,
+      skippedDueToCooldown: false,
+      quotaOrAuthError: false,
     }
-    return { textBlock: '', urls: [], resultCount: 0 }
   }
+  if (failover.kind === 'cooldown') {
+    const waitMs = msUntilExaGlobalCooldownEnds()
+    console.warn(
+      `[VC-RETRIEVAL] Exa in cooldown window (~${Math.ceil(waitMs / 1000)}s remaining); skipping query: ${query}`,
+    )
+    return emptyPass(true, false)
+  }
+  if (failover.kind === 'all_keys_quota') {
+    console.warn('[VC-RETRIEVAL] All Exa keys quota/auth — stop batch (https://exa.ai).')
+    return emptyPass(false, true)
+  }
+  if (failover.kind === 'non_quota_error') {
+    console.warn('[VC-RETRIEVAL] Exa search failed:', failover.message)
+  }
+  return emptyPass(false, false)
+}
+
+/** Exported for apply-contact dual-pass (same stop semantics as VC research). */
+export function exaPassesRequireWorkerStop(passes: ExaSearchPassResult[]): {
+  stop: boolean
+  reason?: 'quota_or_rate_limit' | 'cooldown'
+} {
+  if (passes.some((p) => p.quotaOrAuthError)) {
+    return { stop: true, reason: 'quota_or_rate_limit' }
+  }
+  const totalHits = passes.reduce((s, p) => s + p.resultCount, 0)
+  if (totalHits === 0 && passes.length > 0 && passes.every((p) => p.skippedDueToCooldown)) {
+    return { stop: true, reason: 'cooldown' }
+  }
+  return { stop: false }
 }
 
 /**
@@ -140,8 +191,8 @@ export async function exaSearchPass(query: string, numResults: number): Promise<
 export async function gatherVCFirmRetrievalContext(
   firmName: string,
 ): Promise<VcResearchRetrievalSnapshot | null> {
-  if (!process.env.EXA_API_KEY?.trim()) {
-    console.error('[VC-RETRIEVAL] Set EXA_API_KEY (Tavily disabled for VC research).')
+  if (!hasExaApiKey()) {
+    console.error('[VC-RETRIEVAL] Set EXA_API_KEYS (or EXA_API_KEY) — see lib/exa-keys.ts (Tavily disabled for VC research).')
     return null
   }
 
@@ -163,6 +214,19 @@ export async function gatherVCFirmRetrievalContext(
     exaSearchPass(q2, perPass),
     exaSearchPass(q3, perPass),
   ])
+
+  const { stop, reason } = exaPassesRequireWorkerStop([pass1, pass2, pass3])
+  if (stop && reason) {
+    console.warn(`[VC-RETRIEVAL] Exa quota/cooldown — stopping retrieval for "${firmName}" (${reason}).`)
+    return {
+      mergedContext: '',
+      sources: [],
+      exaTotalResults: 0,
+      exaPassesWithHits: 0,
+      exaQuotaBlocked: true,
+      exaBlockReason: reason,
+    }
+  }
 
   const recency = getVcResearchStartPublishedDate()
   console.log(

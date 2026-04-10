@@ -1,17 +1,8 @@
-import Exa from "exa-js";
 import { db } from "./db";
+import { runExaWithKeyFailover } from "./exa-key-failover";
+import { isExaGlobalCooldownActive } from "./exa-global-cooldown";
 
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
-
-function getExaClient(): Exa {
-  const apiKey = process.env.EXA_API_KEY;
-  if (!apiKey) {
-    throw new Error(
-      "EXA_API_KEY is not set. Add it to your .env file to enable live VC enrichment."
-    );
-  }
-  return new Exa(apiKey);
-}
 
 export interface ExaSnippet {
   title: string;
@@ -107,7 +98,9 @@ async function fetchFromExa(
   domain: string,
   fundType: string = 'Venture Capital'
 ): Promise<{ deals: ExaSnippet[]; leadership: ExaSnippet[] }> {
-  const exa = getExaClient();
+  if (isExaGlobalCooldownActive()) {
+    return { deals: [], leadership: [] };
+  }
 
   const threeMonthsAgo = new Date();
   threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
@@ -115,25 +108,31 @@ async function fetchFromExa(
 
   const { activityQuery, convictionQuery } = buildQueries(vcName, domain, fundType)
 
-  const [dealsResponse, leadershipResponse] = await Promise.all([
-    exa.search(activityQuery, {
-      type: "auto",
-      numResults: 3,
-      startPublishedDate: startDate,
-      contents: { text: { maxCharacters: 500 } },
-    }),
-    exa.search(convictionQuery, {
-      type: "auto",
-      numResults: 3,
-      startPublishedDate: startDate,
-      contents: { text: { maxCharacters: 500 } },
-    }),
-  ]);
+  const failover = await runExaWithKeyFailover(async (exa) => {
+    const [dealsResponse, leadershipResponse] = await Promise.all([
+      exa.search(activityQuery, {
+        type: "auto",
+        numResults: 3,
+        startPublishedDate: startDate,
+        contents: { text: { maxCharacters: 500 } },
+      }),
+      exa.search(convictionQuery, {
+        type: "auto",
+        numResults: 3,
+        startPublishedDate: startDate,
+        contents: { text: { maxCharacters: 500 } },
+      }),
+    ]);
+    return {
+      deals: cleanResults(dealsResponse.results),
+      leadership: cleanResults(leadershipResponse.results),
+    };
+  });
 
-  return {
-    deals: cleanResults(dealsResponse.results),
-    leadership: cleanResults(leadershipResponse.results),
-  };
+  if (failover.ok) {
+    return failover.data;
+  }
+  return { deals: [], leadership: [] };
 }
 
 /**

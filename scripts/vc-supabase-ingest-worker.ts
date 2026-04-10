@@ -25,7 +25,7 @@
  *   DATABASE_URL (Prisma)
  *   LLM: OPENROUTER_API_KEY and/or Ollama (OLLAMA_BASE_URL + OLLAMA_MODEL / OLLAMA_VC_MODEL); VC_LLM_PROVIDER=ollama to force local
  *   VC_RESEARCH_CONTEXT_CHARS, VC_RESEARCH_EXA_NUM_RESULTS
- *   --discover requires EXA_API_KEY only: two parallel Exa searches per round (lib/vc-discovery-from-web.ts; no Tavily/OpenRouter in discovery)
+ *   --discover requires Exa keys (EXA_API_KEYS or EXA_API_KEY): two parallel Exa searches per round (lib/vc-discovery-from-web.ts)
  *   Discover uses VC_DISCOVERY_CONTENT_SINCE (default 2026-01-01) for Exa startPublishedDate.
  */
 
@@ -39,6 +39,7 @@ import {
   hasDiscoveryWebPresence,
 } from '../lib/vc-discovery-from-web'
 import { ingestFirmToPrisma } from '../lib/vc-prisma-ingest'
+import { ExaResearchQuotaBlockedError } from '../lib/vc-research-retrieval'
 import { upsertInvestorToVcDirectory } from '../lib/vc-supabase-sync'
 
 function sleep(ms: number) {
@@ -234,10 +235,18 @@ async function main() {
           console.log(`   ⏭️  Skipping ${name} — no strong web presence detected`)
           continue
         }
-        const { ok, isNew, resolvedKey } = await ingestOneFirm(name, delayMs)
-        if (!ok) continue
-        if (resolvedKey) keys.add(resolvedKey)
-        if (isNew) newCount++
+        try {
+          const { ok, isNew, resolvedKey } = await ingestOneFirm(name, delayMs)
+          if (!ok) continue
+          if (resolvedKey) keys.add(resolvedKey)
+          if (isNew) newCount++
+        } catch (e) {
+          if (e instanceof ExaResearchQuotaBlockedError) {
+            console.error('\n🛑 Exa quota/cooldown — stopping discover ingest (remaining candidates untouched).')
+            break
+          }
+          throw e
+        }
       }
       console.log(`\n✅ Discover pass finished: ${newCount} new investor(s) (cap ${maxNew}).`)
       return

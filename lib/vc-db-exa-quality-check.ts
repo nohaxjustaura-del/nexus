@@ -4,6 +4,7 @@
  * Used by the data-validation worker when WORKER_VALIDATION_EXA_SAMPLE > 0.
  */
 
+import { hasExaApiKey } from './exa-keys'
 import { gatherVCFirmRetrievalContext } from './vc-research-retrieval'
 import { openrouterGenerateJson, hasVcLlmConfigured } from './openrouter'
 import { isLikelyRealFirmName } from './firm-name-quality'
@@ -62,14 +63,14 @@ export async function verifyInvestorAgainstExa(
 ): Promise<VcDbExaQualityResult | null> {
   if (!isLikelyRealFirmName(inv.firmName)) return null
 
-  if (!process.env.EXA_API_KEY?.trim()) {
+  if (!hasExaApiKey()) {
     return {
       firmName: inv.firmName,
       exaTotalResults: 0,
       exaPassesWithHits: 0,
       score: 0,
       aligned: false,
-      issues: ['EXA_API_KEY not set'],
+      issues: ['Exa not configured (set EXA_API_KEYS or EXA_API_KEY; lib/exa-keys.ts)'],
       skippedReason: 'no_exa',
     }
   }
@@ -87,6 +88,17 @@ export async function verifyInvestorAgainstExa(
   }
 
   const snap = await gatherVCFirmRetrievalContext(inv.firmName)
+  if (snap?.exaQuotaBlocked) {
+    return {
+      firmName: inv.firmName,
+      exaTotalResults: 0,
+      exaPassesWithHits: 0,
+      score: 0,
+      aligned: false,
+      issues: ['Exa quota/cooldown active — validation skipped'],
+      skippedReason: 'exa_quota_cooldown',
+    }
+  }
   if (!snap) {
     return {
       firmName: inv.firmName,

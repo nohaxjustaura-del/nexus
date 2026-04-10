@@ -7,11 +7,18 @@
  *
  * Note: does not run apply-contact URL pass (researchApplyContactAndUpdate) — that stays on the
  * research-vcs batch path only, to keep this daemon lighter per firm.
+ *
+ * External APIs used:
+ *   - Exa (lib/exa-keys.ts) — web retrieval for each firm (3 searches per firm in lib/vc-research-retrieval)
+ *   - OpenRouter and/or Ollama — LLM extraction (same env as rest of VC pipeline)
+ * When Exa returns quota/payment/rate-limit errors, a global cooldown applies and this worker
+ * stops the current batch without writing rows (updatedAt unchanged for skipped firms).
  */
 
 import { db } from '../lib/db'
 import { isInvestorEligibleForWorkers } from '../lib/investor-worker-eligibility'
-import { researchVC, updateVCInDatabase } from './auto-research-vcs'
+import { ExaResearchQuotaBlockedError } from '../lib/vc-research-retrieval'
+import { investorStalestFirstOrderBy, researchVC, updateVCInDatabase } from './auto-research-vcs'
 
 interface WorkerConfig {
   intervalMinutes: number // How often to run
@@ -105,10 +112,16 @@ class VCResearchWorker {
           } else {
             failed++
           }
-          
+
           // Rate limiting - wait between searches
           await new Promise(resolve => setTimeout(resolve, 2000))
         } catch (error: any) {
+          if (error instanceof ExaResearchQuotaBlockedError) {
+            console.error(
+              `   🛑 Exa quota/cooldown (${error.reason}) — stopping batch. Remaining VCs in this run were not updated.`,
+            )
+            break
+          }
           console.error(`   ❌ Error processing ${vc.firmName}:`, error.message)
           failed++
         }
@@ -154,7 +167,7 @@ class VCResearchWorker {
       where: { verified: false, isPublic: true },
       select: { id: true, firmName: true },
       take: overFetch,
-      orderBy: { updatedAt: 'asc' },
+      orderBy: investorStalestFirstOrderBy,
     })
 
     const eligibleUnverified = takeEligible(unverified)
@@ -167,7 +180,7 @@ class VCResearchWorker {
       where: { verified: true, isPublic: true },
       select: { id: true, firmName: true },
       take: overFetch,
-      orderBy: { updatedAt: 'asc' },
+      orderBy: investorStalestFirstOrderBy,
     })
 
     return takeEligible(verified)
