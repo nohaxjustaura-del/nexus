@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname, useRouter } from 'next/navigation'
+import { usePathname } from 'next/navigation'
 import { useEffect, useMemo, useState } from 'react'
 import { NexusWordmark } from '@/components/nexus-wordmark'
 import { NavAuth } from '@/components/nav-auth'
@@ -59,8 +59,7 @@ function DesktopNavLink({
 
 export function SiteHeader() {
   const pathname = usePathname()
-  const router = useRouter()
-  const { chrome, setPreferredChrome } = useChromeMode()
+  const { chrome } = useChromeMode()
   const { authenticated } = useAuthSession()
   const [caps, setCaps] = useState<Caps>(null)
 
@@ -88,16 +87,6 @@ export function SiteHeader() {
     }
   }, [authenticated])
 
-  const canSwitchToFounderWorkspace =
-    caps != null &&
-    (Boolean(caps.hasFounderProfile) || caps.userType === 'mentor')
-
-  const canSwitchToInvestorWorkspace =
-    caps != null && Boolean(caps.hasInvestorProfile)
-
-  const showFounderSwitch = canSwitchToFounderWorkspace
-  const showInvestorSwitch = authenticated && chrome !== 'guest' && canSwitchToInvestorWorkspace
-
   const guestMobileLinks: MobileNavItem[] = useMemo(
     () => [
       { section: 'Explore', href: `/signup?next=${encodeURIComponent('/founder/dashboard')}`, label: 'Hub' },
@@ -120,16 +109,8 @@ export function SiteHeader() {
     if (authenticated) {
       base.push({ href: '/account', label: 'Account' })
     }
-    if (showInvestorSwitch) {
-      base.push({
-        section: 'Switch',
-        href: '/vc/profile',
-        label: 'Investor workspace',
-        onNavigate: () => setPreferredChrome('investor'),
-      })
-    }
     return base
-  }, [authenticated, showInvestorSwitch, setPreferredChrome, caps?.canAccessFounderResources])
+  }, [authenticated, caps?.canAccessFounderResources])
 
   const investorMobileLinks: MobileNavItem[] = useMemo(() => {
     const base: MobileNavItem[] = [
@@ -141,16 +122,8 @@ export function SiteHeader() {
     if (authenticated) {
       base.push({ section: 'Account', href: '/account', label: 'Account' })
     }
-    if (showFounderSwitch) {
-      base.push({
-        section: 'Switch',
-        href: '/founder/dashboard',
-        label: 'Founder workspace',
-        onNavigate: () => setPreferredChrome('founder'),
-      })
-    }
     return base
-  }, [authenticated, showFounderSwitch, setPreferredChrome, caps?.canAccessFounderResources])
+  }, [authenticated, caps?.canAccessFounderResources])
 
   const mobileLinks =
     chrome === 'guest' ? guestMobileLinks : chrome === 'investor' ? investorMobileLinks : founderMobileLinks
@@ -251,34 +224,6 @@ export function SiteHeader() {
           <div className="lg:hidden">
             <MobileNav links={mobileLinks} />
           </div>
-          {showInvestorSwitch && chrome === 'founder' && (
-            <button
-              type="button"
-              title="Open investor workspace"
-              aria-label="Switch to investor workspace"
-              onClick={() => {
-                setPreferredChrome('investor')
-                router.push('/vc/profile')
-              }}
-              className="hidden h-8 shrink-0 rounded-full border border-border/80 bg-muted/20 px-3 text-sm font-medium text-foreground transition-colors hover:bg-muted/45 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background lg:inline-flex lg:items-center lg:justify-center"
-            >
-              Investor
-            </button>
-          )}
-          {authenticated && showFounderSwitch && chrome === 'investor' && (
-            <button
-              type="button"
-              title="Open founder workspace"
-              aria-label="Switch to founder workspace"
-              onClick={() => {
-                setPreferredChrome('founder')
-                router.push('/founder/dashboard')
-              }}
-              className="hidden h-8 shrink-0 rounded-full border border-border/80 bg-muted/20 px-3 text-sm font-medium text-foreground transition-colors hover:bg-muted/45 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background lg:inline-flex lg:items-center lg:justify-center"
-            >
-              Founder
-            </button>
-          )}
           <div className="hidden h-5 w-px bg-border/60 lg:block" aria-hidden />
           <NavAuth />
         </div>

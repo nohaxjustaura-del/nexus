@@ -10,7 +10,12 @@ const SAFE_AUTH_NEXT = new Set([
   '/vc/claim',
   '/founder/dashboard',
   '/vc/dashboard',
+  '/vc/profile',
+  '/founder/resources',
 ])
+
+const FOUNDER_AUTH_NEXT_EXACT = new Set(['/founder/onboarding', '/founder/dashboard'])
+const INVESTOR_AUTH_NEXT_EXACT = new Set(['/vc/claim', '/vc/dashboard', '/vc/profile'])
 
 /** Limit optional `next` from the client (e.g. verify resend). */
 export function safeAuthNextPath(candidate: string | undefined, fallback: string): string {
@@ -22,5 +27,34 @@ export function safeAuthNextPath(candidate: string | undefined, fallback: string
   ) {
     return candidate
   }
+  return fallback
+}
+
+function isInvestorUserType(userType: string | undefined): boolean {
+  const t = (userType || '').toLowerCase()
+  return t === 'vc' || t === 'investor'
+}
+
+/**
+ * Restrict post-auth `next` / `redirect` to paths allowed for this account portal
+ * (founder/mentor vs investor).
+ */
+export function sanitizeAuthNextPathForUserType(
+  candidate: string | undefined,
+  userType: string | undefined,
+  fallback: string
+): string {
+  if (!candidate?.trim()) return fallback
+  const p = candidate.trim()
+  if (!p.startsWith('/') || p.startsWith('//')) return fallback
+
+  if (isInvestorUserType(userType)) {
+    if (INVESTOR_AUTH_NEXT_EXACT.has(p)) return p
+    if (p === '/founder/resources' || p.startsWith('/founder/resources/')) return p
+    return fallback
+  }
+
+  if (p.startsWith('/vc/')) return fallback
+  if (FOUNDER_AUTH_NEXT_EXACT.has(p)) return p
   return fallback
 }

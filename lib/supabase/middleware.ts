@@ -1,5 +1,6 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
+import { portalRedirectIfNeeded } from '@/lib/portal-middleware'
 
 /** Skip `getUser()` when no Supabase session cookies are present — avoids a network round-trip for anonymous traffic. */
 function hasSupabaseSessionCookies(request: NextRequest): boolean {
@@ -72,7 +73,14 @@ export async function updateSupabaseSession(request: NextRequest) {
   })
 
   // Refreshes auth session when needed and writes updated cookies.
-  await supabase.auth.getUser()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (user) {
+    const redirected = portalRedirectIfNeeded(request, user, response)
+    if (redirected) return redirected
+  }
 
   return response
 }

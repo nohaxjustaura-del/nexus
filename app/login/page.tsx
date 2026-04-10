@@ -10,12 +10,13 @@ import { Mail, Loader2, ArrowLeft, Clock, X, UserRound } from 'lucide-react'
 import { CLIENT_STORAGE } from '@/lib/client-storage-keys'
 import { useAuthSession } from '@/components/auth-session-provider'
 import { AUTH_EMAIL_SPAM_DELIVERABILITY_LINE } from '@/lib/resend-user-messages'
+import { sanitizeAuthNextPathForUserType } from '@/lib/auth-flow-paths'
 
 type ApprovalModalVariant = 'pending' | 'rejected'
 
 export default function LoginPage() {
   const router = useRouter()
-  const { loading: authLoading, authenticated, verified } = useAuthSession()
+  const { loading: authLoading, authenticated, verified, user } = useAuthSession()
   const searchParams = useSearchParams()
   const redirectUrl = searchParams.get('redirect') || searchParams.get('next') || ''
   const [email, setEmail] = useState('')
@@ -49,10 +50,17 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (authLoading || !authenticated) return
-    const defaultVerified = '/founder/dashboard'
-    const target = redirectUrl || (verified ? defaultVerified : '/founder/onboarding')
+    const isVc = user?.userType === 'vc' || user?.userType === 'investor'
+    const defaultVerified = isVc ? '/vc/dashboard' : '/founder/dashboard'
+    const defaultUnverified = isVc ? '/vc/claim' : '/founder/onboarding'
+    const fallback = verified ? defaultVerified : defaultUnverified
+    const target = sanitizeAuthNextPathForUserType(
+      redirectUrl ? redirectUrl : undefined,
+      user?.userType,
+      fallback
+    )
     window.location.replace(target)
-  }, [authLoading, authenticated, verified, redirectUrl])
+  }, [authLoading, authenticated, verified, redirectUrl, user?.userType])
 
   useEffect(() => {
     if (!approvalModal.open && !accountExistsModalOpen) return
