@@ -1,7 +1,7 @@
 'use client'
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Sparkles, AlertCircle, CheckCircle, Lightbulb, TrendingUp, Target } from 'lucide-react'
+import { Sparkles, AlertCircle, CheckCircle, Lightbulb, TrendingUp, Target, GraduationCap } from 'lucide-react'
 import SmartMatchResults from '@/components/smart-match-results'
 import AnalysisDashboard from '@/components/analysis/AnalysisDashboard'
 import { pickMatchesArray, resolveRubricForDashboard } from '@/lib/analysis/is-safe-rubric-for-dashboard'
@@ -9,6 +9,27 @@ import { pickMatchesArray, resolveRubricForDashboard } from '@/lib/analysis/is-s
 export type PitchAnalysisReportProps = {
   result: Record<string, unknown>
   showMatches?: boolean
+}
+
+type UniversityProgramPayload = {
+  program?: {
+    id?: string
+    name?: string
+    university?: string
+    applicationUrl?: string
+    description?: string
+  }
+  qualificationReason?: string
+  urgency?: string
+}
+
+function pickUniversityPrograms(result: Record<string, unknown>): UniversityProgramPayload[] {
+  const raw = result.universityPrograms
+  if (!Array.isArray(raw)) return []
+  return raw.filter(
+    (x): x is UniversityProgramPayload =>
+      x !== null && typeof x === 'object' && typeof (x as UniversityProgramPayload).program?.name === 'string',
+  )
 }
 
 function getScoreColor(score: number): string {
@@ -31,6 +52,7 @@ export function PitchAnalysisReport({ result, showMatches = true }: PitchAnalysi
     (typeof result.finalScore === 'number' ? result.finalScore : undefined) ??
     (typeof result.overallScore === 'number' ? result.overallScore : undefined)
   const matches = pickMatchesArray(result)
+  const universityPrograms = pickUniversityPrograms(result)
 
   const strengths = (result.strengths as string[]) || []
   const weaknesses = (result.weaknesses as string[]) || []
@@ -146,6 +168,55 @@ export function PitchAnalysisReport({ result, showMatches = true }: PitchAnalysi
             </pre>
           </CardContent>
         </Card>
+      )}
+
+      {universityPrograms.length > 0 && (
+        <div className="space-y-3">
+          <div className="flex items-center gap-2.5 px-1">
+            <GraduationCap className="h-5 w-5 text-primary" />
+            <div>
+              <h3 className="text-base font-semibold text-foreground">Campus and accelerator programs</h3>
+              <p className="text-sm text-muted-foreground">
+                Based on your school and stage — separate from the institutional investor list below.
+              </p>
+            </div>
+          </div>
+          <div className="grid gap-3 md:grid-cols-2">
+            {universityPrograms.map((m, i) => {
+              const p = m.program!
+              const key = p.id ?? `${p.name}-${i}`
+              const url = typeof p.applicationUrl === 'string' ? p.applicationUrl : ''
+              return (
+                <Card key={key} className="border-border/80">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-base leading-snug">{p.name}</CardTitle>
+                    {p.university ? (
+                      <p className="text-xs font-medium text-muted-foreground">{p.university}</p>
+                    ) : null}
+                  </CardHeader>
+                  <CardContent className="space-y-2 pt-0 text-sm text-muted-foreground">
+                    {typeof m.qualificationReason === 'string' && m.qualificationReason.trim() ? (
+                      <p>{m.qualificationReason}</p>
+                    ) : null}
+                    {typeof p.description === 'string' && p.description.trim() ? (
+                      <p className="text-xs leading-relaxed">{p.description}</p>
+                    ) : null}
+                    {url ? (
+                      <a
+                        href={url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex text-xs font-medium text-primary underline-offset-4 hover:underline"
+                      >
+                        Apply / learn more
+                      </a>
+                    ) : null}
+                  </CardContent>
+                </Card>
+              )
+            })}
+          </div>
+        </div>
       )}
 
       {/* Why these investors matched */}

@@ -71,6 +71,15 @@ function buildGatePrompt(
   bundle: VCExaBundle,
   founder: FounderMatchSignal,
 ): string {
+  const focusAreas = [...new Set([founder.primarySector, ...founder.sectorFocusPhrases])].filter(Boolean)
+  const focusLine = focusAreas.join(', ')
+  const identityLine =
+    founder.identityTags.length > 0 || founder.thesisAffinityPhrases.length > 0
+      ? `Founder identity signals (for thesis fit — use when evidence supports): tags=${founder.identityTags.join(', ') || 'none'}; thesis phrases=${founder.thesisAffinityPhrases.join(', ') || 'none'}`
+      : ''
+  const thesisBlock =
+    founder.companyThesisSummary?.trim() ||
+    '(No consolidated company summary — use focus areas and profile only.)'
   return `You are evaluating whether ${vc.firmName} is likely to invest in a specific founder.
 You have real-time evidence from web searches conducted today.
 
@@ -80,16 +89,23 @@ RULES:
 3. If the evidence does not clearly answer a question: answer UNCLEAR
 4. For evidence citations: name the specific snippet title or quote a short phrase — never fabricate
 5. Be skeptical — UNCLEAR is better than a confident wrong answer
+6. For thesis questions (Q1–Q3, Q10–Q12): treat ANY of the founder focus areas below as a match when evidence clearly supports that theme (e.g. "video editing" matches "Media" or "creator tools")
+7. [R] snippets are ordered newest-first (last ~6 months). Prefer R1, R2, … when judging recent portfolio behavior.
+
+────────────────────────────────────────────────────────────────
+COMPANY THESIS — align Q1–Q3 to this product/story (not sector labels alone):
+${thesisBlock}
 
 ────────────────────────────────────────────────────────────────
 FOUNDER PROFILE:
 Stage: ${founder.stage}
-Primary sector: ${founder.primarySector}
-All sectors: ${founder.sectors.join(', ')}
+Primary sector (for ordering): ${founder.primarySector}
+Founder focus areas (use ANY that apply to thesis questions): ${focusLine}
+Profile sectors (may be incomplete vs pitch): ${founder.sectors.join(', ')}
 Founder archetype: ${founder.founderArchetype}
 Traction: ${founder.tractionTier}
 Location: ${founder.location}
-Key strengths: ${founder.keyStrengths.length > 0 ? founder.keyStrengths.join(', ') : 'none listed'}
+${identityLine ? `${identityLine}\n` : ''}Key strengths: ${founder.keyStrengths.length > 0 ? founder.keyStrengths.join(', ') : 'none listed'}
 
 ────────────────────────────────────────────────────────────────
 EVIDENCE — RECENT INVESTMENT ACTIVITY (last 6 months):
@@ -106,9 +122,9 @@ Answer each question with YES, NO, or UNCLEAR.
 For each answer provide one sentence of evidence citing a specific snippet by its tag (e.g. [R1], [T2]) or explaining what evidence is missing.
 
 THESIS ALIGNMENT:
-Q1: Does their revealed portfolio (Evidence R1-R5) contain at least one company in ${founder.primarySector} within the last 6 months?
-Q2: Does their stated thesis (Evidence T1-T5) explicitly mention ${founder.primarySector} or a directly adjacent sector?
-Q3: Is ${founder.stage} stage represented in their recent deals?
+Q1: Does [R] evidence name a specific portfolio company or financing round that clearly fits the COMPANY THESIS above or ANY founder focus area (${focusLine})? Answer YES only if an [R*] snippet names the company/deal and the link to that thesis is explicit; if the snippet is only generic fund news with no named company tied to those themes, answer NO or UNCLEAR.
+Q2: Does stated thesis evidence [T] explicitly mention ANY of: ${focusLine} — or an obvious adjacent theme (e.g. "creator tools" / "video" / "media") consistent with the COMPANY THESIS?
+Q3: Is ${founder.stage} stage (or adjacent pre-seed/seed for idea-stage founders) represented in their recent deals per [R] or [S] evidence?
 
 FOUNDER ARCHETYPE FIT:
 Q4: Have they backed a ${founder.founderArchetype} founder before, based on available evidence?
@@ -121,8 +137,8 @@ Q8: Is there evidence of a new fund announcement in the last 12 months?
 Q9: Is there any signal of reduced activity (no deals in 6+ months, sabbatical, fund winding down)?
 
 PORTFOLIO GAP ANALYSIS:
-Q10: Is there a direct competitor to this founder (${founder.primarySector} + ${founder.stage}) already in their portfolio?
-Q11: Is there an adjacent company in their portfolio suggesting they want more exposure to ${founder.primarySector}?
+Q10: Is there a direct competitor in the same product category as ANY of: ${focusLine} (same ${founder.stage} stage) already in their portfolio?
+Q11: Is there an adjacent company in their portfolio suggesting they want more exposure to ANY of: ${focusLine}?
 Q12: Does their portfolio show a clear gap that this founder would fill?
 
 For each answer, also provide a confidence score from 0-100 indicating how strongly the evidence supports your answer:

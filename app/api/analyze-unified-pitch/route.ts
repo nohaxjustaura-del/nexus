@@ -366,7 +366,15 @@ export async function POST(request: NextRequest) {
     let matchedVCs: any[] = []
     let matchPipelineResult: any = null
     const [matchRes, marketContext] = await Promise.all([
-      runMatchingPipeline(unifiedCtx, mergedAnalysis, combinedRawPitch).catch((e: unknown) => {
+      runMatchingPipeline(
+        unifiedCtx,
+        mergedAnalysis,
+        videoTranscriptNormalized && videoTranscriptNormalized.trim().length > 50
+          ? videoTranscriptNormalized.trim()
+          : null,
+        undefined,
+        { rawPitchText: combinedRawPitch },
+      ).catch((e: unknown) => {
         logger.error('[UNIFIED-PITCH] matching pipeline', e)
         return null
       }),

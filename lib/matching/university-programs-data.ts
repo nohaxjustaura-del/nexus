@@ -142,6 +142,59 @@ export const UNIVERSITY_PROGRAMS: UniversityProgram[] = [
     isOpenAccelerator: false,
   },
 
+  // ── Brown University ───────────────────────────────────────────────────────
+
+  {
+    id: 'brown-nelson-center',
+    name: 'Brown Nelson Center for Entrepreneurship',
+    university: 'Brown University',
+    aliases: ['Brown', 'Brown University', 'Brown U', 'Nelson Center', 'Brown Nelson'],
+    eligibility: 'alumni_included',
+    type: 'accelerator',
+    checkSize: { min: null, max: null },
+    applicationUrl: 'https://entrepreneurship.brown.edu',
+    deadline: 'rolling',
+    description:
+      'Brown\'s entrepreneurship hub (Nelson Center): programs, mentorship, and venture support for Brown students and alumni founders across stages — strong fit for on-campus builders and recent grads.',
+    stageFocus: ['pre-seed', 'seed'],
+    sectorFocus: [],
+    isOpenAccelerator: false,
+  },
+
+  {
+    id: 'brown-breakthrough-lab',
+    name: 'Brown Breakthrough Lab (B-Lab)',
+    university: 'Brown University',
+    aliases: ['Brown', 'Brown University', 'Brown U', 'B-Lab', 'Breakthrough Lab'],
+    eligibility: 'students_only',
+    type: 'accelerator',
+    checkSize: { min: null, max: null },
+    applicationUrl: 'https://entrepreneurship.brown.edu',
+    deadline: 'rolling',
+    description:
+      'Intensive summer venture program for enrolled Brown founders — coaching, community, and runway to validate ideas (including software/media) before raising institutional capital.',
+    stageFocus: ['pre-seed'],
+    sectorFocus: [],
+    isOpenAccelerator: false,
+  },
+
+  {
+    id: 'brown-social-innovation',
+    name: 'Brown Swearer Center Social Innovation Initiative',
+    university: 'Brown University',
+    aliases: ['Brown', 'Brown University', 'Brown U', 'Swearer Center'],
+    eligibility: 'students_only',
+    type: 'accelerator',
+    checkSize: { min: null, max: null },
+    applicationUrl: 'https://swearer.brown.edu',
+    deadline: 'rolling',
+    description:
+      'Social innovation and venture programming for Brown students; relevant when the startup has impact, education, or community angles alongside the core product.',
+    stageFocus: ['pre-seed'],
+    sectorFocus: [],
+    isOpenAccelerator: false,
+  },
+
   // ── CMU ────────────────────────────────────────────────────────────────────
 
   {

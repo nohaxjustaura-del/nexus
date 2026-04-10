@@ -138,6 +138,24 @@ function blendWithConfidence(
   return Math.round(labelScore * 0.6 + confidenceScore * 0.4)
 }
 
+/** Confidence blend for thesis gates: recent portfolio (Q1) weighs more than stated thesis (Q2). */
+function blendWithConfidenceWeighted(
+  labelScore: number,
+  weightedGates: { gate: GateResult; weight: number }[],
+  invertNegative: boolean = false,
+): number {
+  const parts = weightedGates
+    .map(({ gate, weight }) =>
+      gate.confidence !== undefined ? { c: gate.confidence, w: weight } : null,
+    )
+    .filter(Boolean) as { c: number; w: number }[]
+  if (parts.length === 0) return labelScore
+  const wSum = parts.reduce((a, p) => a + p.w, 0)
+  const avgConfidence = parts.reduce((a, p) => a + p.c * p.w, 0) / wSum
+  const confidenceScore = invertNegative ? 100 - avgConfidence : avgConfidence
+  return Math.round(labelScore * 0.6 + confidenceScore * 0.4)
+}
+
 // ---------------------------------------------------------------------------
 // PART 4 — Confidence Computer
 // ---------------------------------------------------------------------------
@@ -169,6 +187,8 @@ export interface PitchStrengthSignal {
   tier?: string
   conviction?: string
   marketScore?: number
+  /** Rich pitch summary in matching — shift weights toward thesis vs generic LLM match. */
+  preferThesisFromPitch?: boolean
 }
 
 /**
@@ -235,22 +255,25 @@ export function computeInvestmentLikelihood(
 
   // ── Weighted synthesis with confidence blending ──────────────────────────
   const scores: DimensionScores = {
-    thesisAlignment:      blendWithConfidence(LABEL_TO_SCORE[labels.thesisAlignment], [g.Q1, g.Q2, g.Q3]),
+    thesisAlignment: blendWithConfidenceWeighted(LABEL_TO_SCORE[labels.thesisAlignment], [
+      { gate: g.Q1, weight: 0.5 },
+      { gate: g.Q2, weight: 0.3 },
+      { gate: g.Q3, weight: 0.2 },
+    ]),
     founderArchetype:     blendWithConfidence(LABEL_TO_SCORE[labels.founderArchetype], [g.Q4, g.Q5]),
     deploymentLikelihood: blendWithConfidence(LABEL_TO_SCORE[labels.deploymentLikelihood], [g.Q7, g.Q8]),
     portfolioGap:         blendWithConfidence(LABEL_TO_SCORE[labels.portfolioGap], [g.Q11, g.Q12]),
   }
 
-  // Adjust weights based on pitch quality signal: validated high-conviction pitches
-  // shift weight toward thesis alignment (the pitch's market fit is confirmed, so
-  // finding VCs whose thesis matches that validated market matters more).
+  // Emphasize thesis+recent portfolio when scoring pipeline or matching has a strong pitch story.
   const highConviction = pitchStrength?.conviction === 'HIGH'
   const strongMarket = (pitchStrength?.marketScore ?? 0) >= 70
-  const boostThesis = highConviction && strongMarket
+  const boostThesis =
+    (highConviction && strongMarket) || pitchStrength?.preferThesisFromPitch === true
 
-  const wThesis     = boostThesis ? 0.45 : 0.35
-  const wArchetype  = boostThesis ? 0.20 : 0.25
-  const wDeployment = boostThesis ? 0.20 : 0.25
+  const wThesis     = boostThesis ? 0.48 : 0.43
+  const wArchetype  = boostThesis ? 0.18 : 0.22
+  const wDeployment = boostThesis ? 0.19 : 0.20
   const wPortfolio  = boostThesis ? 0.15 : 0.15
 
   const raw =

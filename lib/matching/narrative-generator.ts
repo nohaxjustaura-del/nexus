@@ -98,7 +98,8 @@ STRICT RULES:
 3. If fit is weak, say so directly; do not sugarcoat
 4. Be specific: name actual companies, quote actual thesis language, reference actual dates from the evidence
 5. Maximum 3 sentences per section
-6. If you cannot cite specific evidence for a claim, do not make it`
+6. If you cannot cite specific evidence for a claim, do not make it
+7. whyApply must follow this logic in order: (a) what this investor backs per stated thesis or recent deals [T]/[R], (b) the single closest portfolio or deal proof with company name or quote + snippet tag, (c) one sentence bridging the founder's COMPANY THESIS to that evidence. If fit is weak, use (a) then say explicitly what is missing.`
 
 function buildUserPrompt(
   vc: VCProfile,
@@ -124,17 +125,21 @@ ${renderGateAnswers(likelihood.gateAnswers)}
 TOP 3 MOST RECENT EVIDENCE SNIPPETS:
 ${renderRecentSnippets(recent)}
 
-FOUNDER PROFILE:
+FOUNDER PROFILE (onboarding + pitch-derived — use for stage/thesis fit):
+  Company thesis (match investor evidence to THIS): ${founder.companyThesisSummary || '(none)'}
   Stage:      ${founder.stage}
-  Sector:     ${founder.primarySector} (also: ${founder.sectors.join(', ')})
+  Sector focus: ${[founder.primarySector, ...founder.sectorFocusPhrases].filter((x, i, a) => a.indexOf(x) === i).join('; ')} (profile sectors: ${founder.sectors.join(', ')})
+  Pitch themes: ${founder.pitchKeywords.slice(0, 18).join(', ') || '(none)'}
   Archetype:  ${founder.founderArchetype}
-  Traction:   ${founder.tractionTier}
+  Traction:   ${founder.tractionTier} (if "none" or "early", favor investors whose evidence shows pre-seed / first-check / pre-revenue appetite)
+  University: ${founder.university ?? 'not specified'}${founder.isStudent ? ' — current student' : ''}
+  Raise ask:  ~$${founder.checkNeeded}K
   Location:   ${founder.location}
 
 Based on the gate evidence and dimension labels above, write a briefing memo in this exact JSON format:
 {
-  "whyApply": "2-3 sentences citing specific deals or thesis quotes from the gate evidence. If likelihood is LOW or LOW-MEDIUM, lead with the honest reason why it is a weak match.",
-  "bestApproach": "2-3 sentences referencing their actual stated thesis language. Tell the founder specifically what angle to use in outreach based on the evidence.",
+  "whyApply": "Exactly 3 sentences in order: (1) What they invest in per [T]/[R] evidence. (2) Named portfolio company or deal + tag [R1]/[T2] that is closest to the company thesis. (3) How the founder's thesis maps to that proof — or why it does not. Cite tags. If LOW/LOW-MEDIUM likelihood, sentence (3) must state the gap honestly.",
+  "bestApproach": "2-3 sentences: quote or paraphrase their thesis from [T] evidence, then give a concrete outreach angle tied to that language and the founder's company thesis (not generic praise).",
   "timing": "1-2 sentences based on the deployment label and most recent snippet date. Be specific about recency.",
   "redFlag": ${likelihood.hardVeto || dl.deploymentLikelihood === 'LOW' || likelihood.confidence === 'LOW'
     ? '"One direct sentence about the biggest risk or data gap. Never soften it."'

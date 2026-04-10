@@ -391,6 +391,8 @@ Return valid JSON:
           founderContext ?? (enhancedFounder as unknown as import('@/lib/founder-context').ComprehensiveFounderContext),
           analysis,
           null, // idea route has no transcript
+          undefined,
+          { rawPitchText: idea },
         )
 
         // Adapter: expose m.investor so all downstream response code works unchanged

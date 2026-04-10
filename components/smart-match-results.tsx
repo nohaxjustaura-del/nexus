@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { buttonVariants } from '@/components/ui/button'
@@ -67,6 +67,10 @@ function normalizeSmartMatchRow(raw: unknown): RankedVC | null {
 
   let checkSize: string | undefined =
     typeof meta.checkSize === 'string' ? meta.checkSize : undefined
+  // API sometimes passes preformatted strings like "$1000000k" (already whole USD + erroneous k).
+  if (checkSize && /\$\d{4,}k/i.test(checkSize)) {
+    checkSize = undefined
+  }
   if (!checkSize) {
     const cmin =
       typeof inv.checkSizeMin === 'number'
@@ -81,7 +85,16 @@ function normalizeSmartMatchRow(raw: unknown): RankedVC | null {
           ? inv.checkMax
           : null
     if (cmin != null && cmax != null && (cmin > 0 || cmax > 0)) {
-      checkSize = `$${cmin}k–$${cmax}k`
+      const fmtUsd = (n: number) => {
+        if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`
+        if (n >= 1_000) return `$${Math.round(n / 1_000)}k`
+        return `$${n}`
+      }
+      // Values ≥10k are treated as whole USD (avoids "$1000000k"); smaller values as $Nk (thousands).
+      const looksLikeWholeUsd = cmin >= 10_000 || cmax >= 10_000
+      checkSize = looksLikeWholeUsd
+        ? `${fmtUsd(cmin)}–${fmtUsd(cmax)}`
+        : `$${cmin}k–$${cmax}k`
     }
   }
 
@@ -195,6 +208,41 @@ export function SmartMatchResults({ matches, showAll = false }: SmartMatchResult
     () => Math.random() * 100_000 + (typeof performance !== 'undefined' ? performance.now() % 10_000 : 0),
     [matches],
   )
+
+  // #region agent log
+  useEffect(() => {
+    if (!matches || matches.length === 0) return
+    const normalizedRows = matches
+      .map((row) => normalizeSmartMatchRow(row))
+      .filter((row): row is RankedVC => row != null && row.id !== '' && !isJunkVCName(row.firmName))
+    const rawPeek = matches.slice(0, 8).map((raw) => {
+      if (raw == null || typeof raw !== 'object') return {}
+      const r = raw as Record<string, unknown>
+      return {
+        combinedScore: r.combinedScore,
+        score: r.score,
+        similarity: r.similarity,
+      }
+    })
+    void fetch('http://127.0.0.1:7464/ingest/8942f439-d0f1-43ea-9e6d-5d7995eef824', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '368bf4' },
+      body: JSON.stringify({
+        sessionId: '368bf4',
+        hypothesisId: 'H3-H5',
+        location: 'smart-match-results.tsx:useEffect',
+        message: 'SmartMatchResults raw vs computed fit %',
+        data: {
+          n: normalizedRows.length,
+          distinctUiScores: new Set(normalizedRows.map((m) => m.score)).size,
+          uiScoresHead: normalizedRows.slice(0, 12).map((m) => m.score),
+          rawPeek,
+        },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {})
+  }, [matches])
+  // #endregion
 
   if (!matches || matches.length === 0) {
     return null

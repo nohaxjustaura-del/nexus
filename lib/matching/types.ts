@@ -265,8 +265,17 @@ export interface MatchingPipelineResult {
 export interface FounderMatchSignal {
   stage: string
   sectors: string[]
-  /** First element of sectors, used as the primary query dimension. */
+  /**
+   * Primary sector for Exa Q3 / gate thesis questions — ordered with
+   * pitch-derived labels first (e.g. Media before profile "AI") when available.
+   */
   primarySector: string
+  /**
+   * Profile sectors plus pitch-derived themes (Media, video, SaaS, …).
+   * Used in Gemini gates and overlap injection so thesis questions are not
+   * anchored only to the first DB sector.
+   */
+  sectorFocusPhrases: string[]
   founderArchetype:
     | 'technical'
     | 'domain-expert'
@@ -294,4 +303,19 @@ export interface FounderMatchSignal {
   redFlags: string[]
   /** Key terms from the pitch for thesis keyword overlap in narratives. */
   pitchKeywords: string[]
+  /**
+   * Compact story: what the company builds + problem/solution + themes.
+   * Used in Exa queries, Gemini gates, and narratives so thesis Q1–Q3 match product reality.
+   */
+  companyThesisSummary: string
+  /**
+   * Stable lowercase tags for logging / gates (e.g. woman_founder, immigrant, student).
+   * Not used as primary sector labels — see thesisAffinityPhrases for VC thesis overlap.
+   */
+  identityTags: string[]
+  /**
+   * Phrases scored against VC thesis/sectors (Step 5c injection, ranker overlap, Exa tail).
+   * Kept separate from sectorFocusPhrases so primary sector ordering stays product-first.
+   */
+  thesisAffinityPhrases: string[]
 }

@@ -231,6 +231,7 @@ export function UnifiedPitchTab() {
         setResult({
           ...analysis,
           videoPitchId: typeof payload.videoPitchId === 'string' ? payload.videoPitchId : undefined,
+          universityPrograms: Array.isArray(payload.universityPrograms) ? payload.universityPrograms : [],
         })
         setWarnings((payload.warnings as string[]) || [])
       }

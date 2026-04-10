@@ -283,6 +283,8 @@ export async function POST(request: NextRequest) {
         founderContext ?? (enhancedFounder as unknown as import('@/lib/founder-context').ComprehensiveFounderContext),
         features,
         null, // deck route has no transcript
+        undefined,
+        { rawPitchText: deckText },
       )
 
       // Adapter: expose m.investor so all downstream response code works unchanged

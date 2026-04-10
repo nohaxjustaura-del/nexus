@@ -1,7 +1,30 @@
 import type { ComprehensiveFounderContext } from '@/lib/founder-context'
 import type { VideoPitchFeatures } from '@/lib/ai'
+import { inferStudentFromText } from '@/lib/matching/founder-identity-signals'
 import type { StructuredQaAnswers } from './structured-qa'
 import { flattenStructuredQaForValidation } from './structured-qa'
+
+/** Pull numeric traction from structured Q&A (overrides stale profile when present). */
+function parseTractionFromQa(tractionRaw: string | undefined): { revenue?: number; users?: number } {
+  if (!tractionRaw?.trim()) return {}
+  const t = tractionRaw
+  const out: { revenue?: number; users?: number } = {}
+  const moneyMatches = t.match(/\$[\d,]+(?:\.\d+)?\s*[kKmM]?/gi)
+  if (moneyMatches?.length) {
+    const s = moneyMatches[moneyMatches.length - 1]!.trim().toLowerCase()
+    const mult = s.includes('k') ? 1000 : s.includes('m') ? 1_000_000 : 1
+    const n = parseFloat(s.replace(/[$,kKmM\s]/gi, ''))
+    if (Number.isFinite(n) && n > 0) out.revenue = Math.round(n * mult)
+  }
+  const paying = t.match(/(\d[\d,]*)\s+paying\s+customers?/i)
+  if (paying) {
+    out.users = parseInt(paying[1]!.replace(/,/g, ''), 10)
+    return out
+  }
+  const signups = t.match(/(\d[\d,]*)\s+signups?/i)
+  if (signups) out.users = parseInt(signups[1]!.replace(/,/g, ''), 10)
+  return out
+}
 
 type DeckFeatures = {
   strengths?: string[]
@@ -61,11 +84,22 @@ export function buildUnifiedFounderContext(
     bio = qaFlat.slice(0, 500)
   }
 
+  const fromQa = parseTractionFromQa(qaAnswers.traction)
+  const revenue = fromQa.revenue !== undefined ? fromQa.revenue : base.revenue
+  const users = fromQa.users !== undefined ? fromQa.users : base.users
+
+  const studentTextBlob = [videoTranscript, qaFlat].filter(Boolean).join('\n\n')
+  const isStudent =
+    base.isStudent || (studentTextBlob.trim().length > 0 && inferStudentFromText(studentTextBlob))
+
   return {
     ...base,
     startupName,
     bio,
     sectors,
     stage,
+    revenue,
+    users,
+    isStudent,
   }
 }

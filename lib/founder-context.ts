@@ -16,6 +16,7 @@ import { Founder } from '@prisma/client'
 import { parseJSON } from './utils'
 import { db } from './db' // Use singleton instance instead of creating new PrismaClient
 import { computeFounderProfileCompletenessPercentAnalytical } from './founder-profile-completeness'
+import { detectUniversityFromRegistry } from './matching/university-detection-registry'
 
 export interface ComprehensiveFounderContext {
   // Core identity
@@ -92,6 +93,21 @@ export interface ComprehensiveFounderContext {
 const founderContextCache = new Map<string, { data: ComprehensiveFounderContext; timestamp: number }>()
 const CACHE_TTL = 5 * 60 * 1000 // 5 minutes
 
+/**
+ * Infer canonical school name from education + bio (onboarding often only fills education).
+ * Order: more specific patterns first. Used for university-affiliated accelerators (e.g. Brown B-Lab).
+ */
+export function detectUniversityAffiliation(
+  education?: string | null,
+  bio?: string | null,
+  /** Deck, transcript, or idea text — same detection as profile so matching sees school from pitch. */
+  extraPitchText?: string | null,
+): string | undefined {
+  const t = `${education ?? ''}\n${bio ?? ''}\n${extraPitchText ?? ''}`.toLowerCase()
+  if (!t.trim()) return undefined
+  return detectUniversityFromRegistry(t)
+}
+
 export async function getComprehensiveFounderContext(
   email: string
 ): Promise<ComprehensiveFounderContext | null> {
@@ -128,13 +144,16 @@ export async function getComprehensiveFounderContext(
     if (founder.teamSize && founder.teamSize > 10) experienceLevel = 'experienced'
     
     // 🆕 ENHANCE: Detect student status from prefs + education text (Founder has no isStudent column)
+    const eduLow = (founder.education ?? '').toLowerCase()
+    const bioLow = (founder.bio ?? '').toLowerCase()
     const isStudentFromEducation =
       !!(founder.education && (
-        founder.education.toLowerCase().includes('student') ||
-        founder.education.toLowerCase().includes('studying') ||
-        founder.education.toLowerCase().includes('enrolled') ||
-        (founder.education.toLowerCase().includes('berkeley') &&
-          !founder.education.toLowerCase().includes('alumni'))
+        eduLow.includes('student') ||
+        eduLow.includes('studying') ||
+        eduLow.includes('enrolled') ||
+        (eduLow.includes('berkeley') && !eduLow.includes('alumni')) ||
+        (eduLow.includes('brown') && !eduLow.includes('alumni') && /(student|undergraduate|graduate|class of)/.test(eduLow)) ||
+        (bioLow.includes('brown') && /(student|undergraduate|class of)/.test(bioLow))
       ))
     const isStudent = prefs?.isStudent || isStudentFromEducation
     
@@ -153,18 +172,10 @@ export async function getComprehensiveFounderContext(
       ) ||
       false
     
-    // 🆕 ENHANCE: Detect university hint from education string
-    const university =
-      (founder.education && (
-        founder.education.toLowerCase().includes('berkeley') ||
-        founder.education.toLowerCase().includes('uc berkeley') ||
-        founder.education.toLowerCase().includes('stanford') ||
-        founder.education.toLowerCase().includes('mit') ||
-        founder.education.toLowerCase().includes('harvard')
-      )
-        ? founder.education
-        : '') || ''
-    
+    // Canonical school for accelerators / incubators (never use LinkedIn URL here).
+    const universityAffiliationResolved =
+      detectUniversityAffiliation(founder.education, founder.bio) ?? undefined
+
     // Detect strong traction
     const hasStrongTraction = 
       (founder.revenue && founder.revenue > 10000) ||
@@ -188,7 +199,7 @@ export async function getComprehensiveFounderContext(
       isImmigrant: prefs?.isImmigrant || false,
       isUnderrepresented: prefs?.isUnderrepresented || false,
       isVeteran: prefs?.isVeteran || false,
-      universityAffiliation: university || contact?.linkedin || undefined, // Use detected university
+      universityAffiliation: universityAffiliationResolved,
       
       // Startup
       startupName: founder.startupName || undefined,

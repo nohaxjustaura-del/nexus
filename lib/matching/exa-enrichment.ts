@@ -53,6 +53,38 @@ const EXA_MAX_CHARS = 600          // slightly more than the 500 in getLiveInves
 // PART 1 — Query Builder
 // ---------------------------------------------------------------------------
 
+const EXA_GENERIC_TOKEN = /^(idea|mvp|seed|pre-seed|preseed|usa|us|uk|ai|ml)$/i
+
+/** Up to 6 product/theme tokens so Q1/Q3 skew toward deals relevant to this pitch. */
+function exaPitchTokenTail(founder: FounderMatchSignal): string {
+  const seen = new Set<string>()
+  const out: string[] = []
+  for (const x of [
+    ...founder.pitchKeywords,
+    ...founder.sectorFocusPhrases,
+    ...founder.thesisAffinityPhrases,
+    founder.primarySector,
+  ]) {
+    const k = String(x).trim()
+    if (k.length < 3 || EXA_GENERIC_TOKEN.test(k)) continue
+    const low = k.toLowerCase()
+    if (seen.has(low)) continue
+    seen.add(low)
+    out.push(k.includes(' ') ? `"${k}"` : k)
+    if (out.length >= 6) break
+  }
+  return out.length ? ` ${out.join(' ')}` : ''
+}
+
+function sortSnippetsByRecency(snippets: EnrichedExaSnippet[]): EnrichedExaSnippet[] {
+  return [...snippets].sort((a, b) => {
+    if (a.monthsAgo === null && b.monthsAgo === null) return 0
+    if (a.monthsAgo === null) return 1
+    if (b.monthsAgo === null) return -1
+    return a.monthsAgo - b.monthsAgo
+  })
+}
+
 /**
  * Builds the 3 complementary Exa search queries for a single VC.
  *
@@ -66,6 +98,7 @@ function buildVCQueries(
 ): { q1: string; q2: string; q3: string } {
   const firmName = vc.firmName
   const fundType = (vc.fundType ?? '').toLowerCase()
+  const pitchTail = exaPitchTokenTail(founder)
 
   // Q1 — revealed thesis
   let q1: string
@@ -76,12 +109,20 @@ function buildVCQueries(
   } else {
     q1 = `"${firmName}" (investment OR "led the round" OR "portfolio company" OR "backed" OR "seed round" OR "Series A")`
   }
+  q1 += pitchTail
 
   // Q2 — stated conviction
   const q2 = `"${firmName}" (thesis OR "why we invest" OR "what we look for" OR "investment memo" OR "our focus" OR "we believe")`
 
-  // Q3 — founder-specific (sector + stage activity)
-  const q3 = `"${firmName}" ${founder.primarySector} ${founder.stage} (investment OR portfolio OR thesis OR "looking for")`
+  // Q3 — founder-specific: use multiple focus phrases so Exa is not anchored to a single generic sector token
+  const focusTokens = [
+    founder.primarySector,
+    ...founder.sectorFocusPhrases.slice(0, 6),
+    founder.stage,
+  ]
+    .filter(Boolean)
+    .join(' ')
+  const q3 = `"${firmName}" ${focusTokens}${pitchTail} (investment OR portfolio OR thesis OR "looking for")`
 
   return { q1, q2, q3 }
 }
@@ -250,23 +291,26 @@ export async function fetchVCExaBundle(
   }
 
   const { r1, r2, r3 } = failover.data
-  const totalSnippets = r1.length + r2.length + r3.length
+  const revealedThesis = sortSnippetsByRecency(r1)
+  const statedConviction = sortSnippetsByRecency(r2)
+  const founderSpecific = sortSnippetsByRecency(r3)
+  const totalSnippets = revealedThesis.length + statedConviction.length + founderSpecific.length
   const ms = Date.now() - t0
   logger.integration('[EXA] bundle ok', {
     firm: vc.firmName,
     ms,
-    thesis: r1.length,
-    stated: r2.length,
-    founder_specific: r3.length,
+    thesis: revealedThesis.length,
+    stated: statedConviction.length,
+    founder_specific: founderSpecific.length,
     total: totalSnippets,
   })
 
   return {
     vcId: vc.id,
     vcName: vc.firmName,
-    revealedThesis: r1,
-    statedConviction: r2,
-    founderSpecific: r3,
+    revealedThesis,
+    statedConviction,
+    founderSpecific,
     fetchedAt: new Date(),
     totalSnippets,
   }

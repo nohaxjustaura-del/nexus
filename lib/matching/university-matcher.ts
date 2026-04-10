@@ -58,17 +58,41 @@ function isPanUniversityProgram(program: UniversityProgram): boolean {
 function stageMatches(program: UniversityProgram, founderStage: string): boolean {
   if (program.stageFocus.length === 0) return true
   const needle = founderStage.toLowerCase().trim()
-  return program.stageFocus.some((s) => s.toLowerCase() === needle)
+  const focus = program.stageFocus.map((s) => s.toLowerCase())
+  if (focus.some((s) => s === needle)) return true
+  // Onboarding often uses "idea" / "mvp" while programs list pre-seed — still eligible.
+  if (needle === 'idea' || needle === 'mvp') {
+    return focus.some((s) => s === 'pre-seed' || s === 'seed')
+  }
+  return false
 }
 
 /**
  * Sector filter — true when at least one founder sector overlaps with the
  * program's sectorFocus. An empty sectorFocus array means all sectors.
  */
-function sectorMatches(program: UniversityProgram, founderSectors: string[]): boolean {
+/** Profile sectors + pitch-derived themes + keywords so Media/video decks match open programs. */
+function founderSectorTokensForPrograms(founder: FounderMatchSignal): string[] {
+  const out: string[] = []
+  const seen = new Set<string>()
+  for (const s of [
+    ...founder.sectors,
+    ...founder.sectorFocusPhrases,
+    ...founder.pitchKeywords,
+  ]) {
+    const k = String(s).toLowerCase().trim()
+    if (k.length < 2 || seen.has(k)) continue
+    seen.add(k)
+    out.push(k)
+  }
+  return out
+}
+
+function sectorMatches(program: UniversityProgram, founder: FounderMatchSignal): boolean {
   if (program.sectorFocus.length === 0) return true
   const programSectors = program.sectorFocus.map((s) => s.toLowerCase())
-  return founderSectors.some((fs) => programSectors.includes(fs.toLowerCase()))
+  const founderTokens = founderSectorTokensForPrograms(founder)
+  return founderTokens.some((fs) => programSectors.includes(fs))
 }
 
 /**
@@ -140,7 +164,7 @@ export function matchUniversityPrograms(
   for (const program of UNIVERSITY_PROGRAMS) {
     // ── Stage & sector filters (apply to every program) ──────────────────
     if (!stageMatches(program, founder.stage)) continue
-    if (!sectorMatches(program, founder.sectors)) continue
+    if (!sectorMatches(program, founder)) continue
 
     // ── Open accelerators — no university requirement ─────────────────────
     if (program.isOpenAccelerator) {

@@ -88,12 +88,47 @@ export function mergePitchAnalysesForMatching(params: {
   const productFit =
     differentiators.length > 0 ? { differentiators } : videoAnalysis?.productFit || deckFeatures?.productFit
 
+  const sectorFitMerged: Record<string, number> = {}
+  for (const o of [deckFeatures?.sectorFit, videoAnalysis?.sectorFit]) {
+    if (!o || typeof o !== 'object') continue
+    for (const [k, v] of Object.entries(o)) {
+      const n = Number(v)
+      if (!Number.isFinite(n)) continue
+      sectorFitMerged[k] = Math.max(sectorFitMerged[k] ?? 0, n)
+    }
+  }
+
+  // #region agent log
+  if (typeof fetch !== 'undefined') {
+    void fetch('http://127.0.0.1:7464/ingest/8942f439-d0f1-43ea-9e6d-5d7995eef824', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '368bf4' },
+      body: JSON.stringify({
+        sessionId: '368bf4',
+        hypothesisId: 'H-sectorFit-merge',
+        runId: 'pre-verify',
+        location: 'merge-pitch-analysis.ts:mergePitchAnalysesForMatching',
+        message: 'merged_sector_fit',
+        data: {
+          keyCount: Object.keys(sectorFitMerged).length,
+          topKeys: Object.entries(sectorFitMerged)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 6)
+            .map(([k, v]) => `${k}:${v}`),
+        },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {})
+  }
+  // #endregion
+
   return {
     oneLineSummary,
     problemStatement,
     solutionDescription,
     businessModel,
     targetCustomer,
+    sectorFit: Object.keys(sectorFitMerged).length ? sectorFitMerged : undefined,
     tractionMetrics: Object.keys(tractionMetrics || {}).length ? tractionMetrics : undefined,
     productFit,
     uniqueness: qaAnswers.defensibility,

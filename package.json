@@ -11,6 +11,7 @@
     "start": "next start",
     "lint": "next lint",
     "type-check": "tsc --noEmit",
+    "test:matching": "tsx lib/matching/__tests__/matching-signals.test-runner.ts",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
     "db:push": "prisma db push",
     "db:vc-directory": "prisma db execute --file supabase/vc_directory.sql --schema prisma/schema.prisma",
