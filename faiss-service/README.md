@@ -35,11 +35,28 @@ $env:FAISS_SERVICE_PORT=8002; python faiss_api.py
 
 Then set `FAISS_SERVICE_URL=http://localhost:8002` in `.env.local` (Next.js).
 
+## Who is in the index (`FAISS_INDEX_FILTER`)
+
+Set in **`.env` / `.env.local` on the machine that runs** `npm run build-faiss-index` or `npm run rebuild-faiss-index` (not the Railway Python container).
+
+| Value | Meaning |
+|-------|---------|
+| `public_discoverable` | **Default.** `verified` + `isPublic` + `discoverable` + has `embedding` (build) / same without requiring embedding (rebuild). |
+| `pristine` | Same DB prefilter as `public_discoverable`, then **only rows that pass** `evaluateInvestorPristine()` in `lib/investor-pristine-gate.ts` (strict quality bar; typically a few hundred). Rebuild skips the embedding check until vectors are generated. |
+| `legacy_verified_embedded` | Old behavior: `verified` + stored embedding only. |
+| `legacy_verified_all` | Old rebuild: all `verified` investors (large). |
+
+Example (PowerShell) before building the bundle for Railway:
+
+```powershell
+$env:FAISS_INDEX_FILTER='pristine'; npm run build-faiss-index; npm run faiss:build
+```
+
 ## Railway / Docker
 
 `faiss-data/*` is **gitignored** (large binaries). The image from `Dockerfile.faiss` only includes whatever is in the repo, so **`vc_index.faiss` is missing** unless you supply it at runtime.
 
-1. Build artifacts locally: `npm run build-faiss-index` (requires DB + Voyage; see repo root scripts).
+1. Build artifacts locally: `npm run build-faiss-index` then `npm run faiss:build` (requires DB; set `FAISS_INDEX_FILTER` if you want a subset — see table above).
 2. Create an archive (paths inside the tar can be nested; bootstrap finds the files by name):
 
 ```bash

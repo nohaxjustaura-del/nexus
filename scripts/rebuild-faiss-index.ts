@@ -9,16 +9,46 @@
  * default spacing is ~21s (free tier 3 RPM). See lib/embeddings.ts.
  */
 
+import type { Prisma } from '@prisma/client'
 import { db } from '../lib/db'
 import {
   generateVCEmbedding,
   buildVCEmbeddingText,
   VOYAGE_EMBEDDINGS_MIN_INTERVAL_MS,
 } from '../lib/embeddings'
+import {
+  filterToPristineOk,
+  getFaissIndexFilterMode,
+  investorSelectForPristine,
+  logFaissIndexCohort,
+  prismaWhereForFaissIndexRebuild,
+  type InvestorRowForPristine,
+} from '../lib/faiss-index-filter'
 import { parseJSON } from '../lib/utils'
 import { writeFileSync } from 'fs'
 import { join } from 'path'
 import { execSync } from 'child_process'
+
+const selectRebuild = {
+  id: true,
+  firmName: true,
+  fundType: true,
+  stages: true,
+  sectors: true,
+  geography: true,
+  geoFocus: true,
+  checkSizeMin: true,
+  checkSizeMax: true,
+  leadFollow: true,
+  thesis: true,
+  valueAddTags: true,
+  portfolio: true,
+  notableInvestments: true,
+} as const
+
+type RebuildInvestorRow =
+  | Prisma.InvestorGetPayload<{ select: typeof selectRebuild }>
+  | InvestorRowForPristine
 
 async function main() {
   console.log('🚀 Rebuilding FAISS index with 1024-dimensional embeddings (Voyage AI)...\n')
@@ -34,33 +64,29 @@ async function main() {
     )
   }
 
-  // Get all verified VCs
-  const investors = await db.investor.findMany({
-    where: {
-      verified: true,
-    },
-    select: {
-      id: true,
-      firmName: true,
-      fundType: true,
-      stages: true,
-      sectors: true,
-      geography: true,
-      geoFocus: true,
-      checkSizeMin: true,
-      checkSizeMax: true,
-      leadFollow: true,
-      thesis: true,
-      valueAddTags: true,
-      portfolio: true,
-      notableInvestments: true,
-    },
-  })
+  const mode = getFaissIndexFilterMode()
+  const where = prismaWhereForFaissIndexRebuild(mode)
+
+  let investors: RebuildInvestorRow[]
+
+  if (mode === 'pristine') {
+    const raw = await db.investor.findMany({ where, select: investorSelectForPristine })
+    const filtered = filterToPristineOk(raw, { ignoreEmbedding: true })
+    logFaissIndexCohort(mode, raw.length, filtered.length)
+    if (filtered.length === 0) {
+      console.log('❌ No investors pass pristine gate. Fix data or use FAISS_INDEX_FILTER=public_discoverable.\n')
+      return
+    }
+    investors = filtered
+  } else {
+    investors = await db.investor.findMany({ where, select: selectRebuild })
+    logFaissIndexCohort(mode, investors.length)
+  }
 
   console.log(`Found ${investors.length} investors\n`)
 
   if (investors.length === 0) {
-    console.log('❌ No investors found')
+    console.log('❌ No investors found for this FAISS_INDEX_FILTER')
     return
   }
 

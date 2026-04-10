@@ -29,10 +29,18 @@ export type PristineEval = {
   reasons: string[]
 }
 
+export type EvaluatePristineOptions = {
+  /** When re-embedding from DB (rebuild-faiss-index), rows may not have vectors yet — skip embedding_missing. */
+  ignoreEmbedding?: boolean
+}
+
 /**
  * Returns whether this row should remain public discoverable for founders.
  */
-export function evaluateInvestorPristine(inv: PristineInvestorInput): PristineEval {
+export function evaluateInvestorPristine(
+  inv: PristineInvestorInput,
+  options?: EvaluatePristineOptions,
+): PristineEval {
   const reasons: string[] = []
   const audit = auditInvestorLocal(inv)
 
@@ -70,9 +78,11 @@ export function evaluateInvestorPristine(inv: PristineInvestorInput): PristineEv
     reasons.push('no_verified_web_presence')
   }
 
-  const emb = (inv.embedding || '').trim()
-  if (!emb || emb === '[]') {
-    reasons.push('embedding_missing')
+  if (!options?.ignoreEmbedding) {
+    const emb = (inv.embedding || '').trim()
+    if (!emb || emb === '[]') {
+      reasons.push('embedding_missing')
+    }
   }
 
   const unique = [...new Set(reasons)]
