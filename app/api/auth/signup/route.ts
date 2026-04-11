@@ -12,6 +12,7 @@ import { signupCallbackPath } from '@/lib/auth-flow-paths'
 import { isExistingUserAuthError } from '@/lib/auth-user-exists-error'
 import { sendSignupInviteViaSupabase } from '@/lib/supabase/auth-email-delivery'
 import { AUTH_EMAIL_SPAM_DELIVERABILITY_HINT } from '@/lib/resend-user-messages'
+import { isDisposableSignupEmail } from '@/lib/disposable-email'
 
 export const dynamic = 'force-dynamic'
 
@@ -28,6 +29,16 @@ export async function POST(request: NextRequest) {
     }
 
     const normalizedEmail = email.toLowerCase().trim()
+
+    if (isDisposableSignupEmail(normalizedEmail)) {
+      return NextResponse.json(
+        {
+          error: 'Disposable or temporary email addresses cannot be used to sign up. Please use a permanent work or personal address.',
+          code: 'DISPOSABLE_EMAIL',
+        },
+        { status: 400 }
+      )
+    }
 
     const rawType = typeof userType === 'string' ? userType : 'founder'
     const supabaseUserType =

@@ -9,13 +9,12 @@ import { CreditCounter } from '@/components/credit-counter'
 import { NotificationBell } from '@/components/notification-bell'
 import { User } from 'lucide-react'
 import { useAuthSession } from '@/components/auth-session-provider'
-import { useChromeMode } from '@/components/chrome-mode-provider'
 import { cn } from '@/lib/utils'
 
 export const NavAuth = memo(function NavAuth() {
   const pathname = usePathname()
-  const { loading, authenticated, verified, isAdmin } = useAuthSession()
-  const { chrome } = useChromeMode()
+  const { loading, authenticated, verified, isAdmin, user } = useAuthSession()
+  const isInvestorPortal = user?.userType === 'vc' || user?.userType === 'investor'
   const onAdminPage = Boolean(isAdmin && pathname?.startsWith('/admin'))
   const [mounted, setMounted] = useState(false)
 
@@ -53,25 +52,25 @@ export const NavAuth = memo(function NavAuth() {
                     Admin
                   </Link>
                   <Link
-                    href={chrome === 'investor' ? '/vc/profile' : '/founder/dashboard'}
+                    href={isInvestorPortal ? '/vc/profile' : '/founder/dashboard'}
                     className={cn(
                       'hidden sm:inline-flex',
                       buttonVariants({ size: 'sm', variant: 'outline' }),
                       'h-8 rounded-full border-border/80 px-3 text-sm font-medium shadow-none'
                     )}
                   >
-                    {chrome === 'investor' ? 'Listing' : 'Hub'}
+                    {isInvestorPortal ? 'Listing' : 'Hub'}
                   </Link>
                 </>
               ) : (
                 <Link
-                  href={chrome === 'investor' ? '/vc/profile' : '/founder/dashboard'}
+                  href={isInvestorPortal ? '/vc/profile' : '/founder/dashboard'}
                   className={cn(
                     buttonVariants({ size: 'sm', variant: 'outline' }),
                     'h-8 rounded-full border-border/80 px-3 text-sm font-medium shadow-none'
                   )}
                 >
-                  {chrome === 'investor' ? 'Listing' : 'Hub'}
+                  {isInvestorPortal ? 'Listing' : 'Hub'}
                 </Link>
               )}
             </>

@@ -33,6 +33,26 @@ export function VCCardClient({
 }: VCCardClientProps) {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isBookmarked, setIsBookmarked] = useState(isBookmarkedProp || false)
+  const [networkHref, setNetworkHref] = useState('/pricing?from=network')
+
+  useEffect(() => {
+    if (!isYC) return
+    let cancelled = false
+    fetch('/api/account/capabilities', { credentials: 'include' })
+      .then((r) => r.json())
+      .then((data) => {
+        if (cancelled) return
+        if (data?.authenticated && data.canAccessFounderNetwork) {
+          setNetworkHref('/founder/network')
+        } else {
+          setNetworkHref('/pricing?from=network')
+        }
+      })
+      .catch(() => {})
+    return () => {
+      cancelled = true
+    }
+  }, [isYC])
 
   // Update local state when prop changes
   useEffect(() => {
@@ -178,12 +198,12 @@ export function VCCardClient({
 
           {isYC && (
             <Link
-              href="/founder/resources"
+              href={networkHref}
               onClick={(e) => e.stopPropagation()}
               className="mt-auto flex items-center gap-1.5 rounded-md border border-border px-2 py-1.5 text-xs text-foreground hover:bg-muted/50"
             >
               <Library className="h-3.5 w-3.5 text-muted-foreground" />
-              Resources
+              Network
             </Link>
           )}
         </CardContent>

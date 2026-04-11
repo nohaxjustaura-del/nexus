@@ -35,6 +35,9 @@ interface Step3PreferencesProps {
   setStep: (step: number) => void
   toggleArrayItem: (key: keyof FormData, value: string) => void
   hideNavigation?: boolean
+  /** When set, the primary action finishes onboarding instead of advancing a step. */
+  onFinish?: () => void | Promise<void>
+  saving?: boolean
 }
 
 export function Step3Preferences({
@@ -43,6 +46,8 @@ export function Step3Preferences({
   setStep,
   toggleArrayItem,
   hideNavigation = false,
+  onFinish,
+  saving = false,
 }: Step3PreferencesProps) {
   return (
     <Card>
@@ -213,13 +218,20 @@ export function Step3Preferences({
 
         {!hideNavigation && (
         <div className="flex gap-4">
-          <Button onClick={() => setStep(2)} variant="outline" className="flex-1 gap-2">
+          <Button onClick={() => setStep(2)} variant="outline" className="flex-1 gap-2" disabled={saving}>
             <ArrowLeft className="h-4 w-4" />
             Back
           </Button>
-          <Button onClick={() => setStep(4)} className="flex-1">
-            Continue
-            <ArrowRight className="ml-2 h-4 w-4" />
+          <Button
+            onClick={() => {
+              if (onFinish) void onFinish()
+              else setStep(4)
+            }}
+            className="flex-1"
+            disabled={saving}
+          >
+            {saving ? 'Saving…' : onFinish ? 'Finish' : 'Continue'}
+            {!saving && <ArrowRight className="ml-2 h-4 w-4" />}
           </Button>
         </div>
         )}

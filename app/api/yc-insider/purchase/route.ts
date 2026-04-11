@@ -3,6 +3,7 @@ import { db } from '@/lib/db'
 import { getCurrentUser } from '@/lib/auth'
 import { bypassesAiCredits } from '@/lib/dev-ai-analysis-bypass'
 import { logger } from '@/lib/logger'
+import { canAccessFounderNetwork } from '@/lib/founder-network-access'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -31,10 +32,22 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid request' }, { status: 400 })
     }
 
-    let userCredits = await db.userCredits.findUnique({
-      where: { userId: user.id },
-      select: { credits: true, purchases: true, isPremium: true },
-    })
+    const [creditsRow, approvalRow, investorRow] = await Promise.all([
+      db.userCredits.findUnique({
+        where: { userId: user.id },
+        select: { credits: true, purchases: true, isPremium: true },
+      }),
+      db.userApproval.findUnique({
+        where: { email: user.email },
+        select: { status: true },
+      }),
+      db.investor.findUnique({
+        where: { email: user.email },
+        select: { verified: true },
+      }),
+    ])
+
+    let userCredits = creditsRow
 
     if (!userCredits) {
       userCredits = await db.userCredits.create({
@@ -46,6 +59,24 @@ export async function POST(request: NextRequest) {
         },
         select: { credits: true, purchases: true, isPremium: true },
       })
+    }
+
+    if (
+      !canAccessFounderNetwork({
+        isPremium: Boolean(userCredits.isPremium),
+        purchasesJson: userCredits.purchases,
+        email: user.email,
+        userApprovalStatus: approvalRow?.status ?? null,
+        investorVerified: Boolean(investorRow?.verified),
+      })
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            'Partner hub purchases are available to approved network members, verified investors, Premium subscribers, or accounts with a prior module purchase.',
+        },
+        { status: 403 }
+      )
     }
 
     let currentPurchases: string[] = []

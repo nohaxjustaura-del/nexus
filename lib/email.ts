@@ -536,7 +536,7 @@ export type YcInsiderFounderRequestAlertPayload = {
   message: string
 }
 
-/** Notifies configured admins when a premium user submits Ask / Book on partner resources. */
+/** Notifies configured admins when a premium user submits Ask / Book on partner network hubs. */
 export async function sendYcInsiderFounderRequestAdminAlert(payload: YcInsiderFounderRequestAlertPayload) {
   const recipients = [...ADMIN_EMAILS_ORDERED]
   if (recipients.length === 0) {

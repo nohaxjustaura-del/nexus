@@ -10,7 +10,7 @@ import {
 } from '@/lib/email'
 import { db } from '@/lib/db'
 import { resolveUserApprovalAccess } from '@/lib/user-approval-access'
-import { safeAuthNextPath } from '@/lib/auth-flow-paths'
+import { safeAuthNextPath, sanitizeAuthNextPathForUserType } from '@/lib/auth-flow-paths'
 import { sendMagicLinkViaSupabaseOtp, sendSignupInviteViaSupabase } from '@/lib/supabase/auth-email-delivery'
 import { AUTH_EMAIL_SPAM_DELIVERABILITY_HINT } from '@/lib/resend-user-messages'
 
@@ -29,10 +29,23 @@ export async function POST(request: NextRequest) {
     }
 
     const normalizedEmail = email.toLowerCase().trim()
-    const afterAuthPath = safeAuthNextPath(
-      typeof nextFromBody === 'string' ? nextFromBody : undefined,
-      '/founder/onboarding'
-    )
+
+    // Determine whether the user already exists in Supabase so we pick the
+    // correct link type. Use the Prisma User table as a fast proxy.
+    const existingUser = await db.user.findUnique({ where: { email: normalizedEmail } })
+
+    const afterAuthPath = existingUser
+      ? sanitizeAuthNextPathForUserType(
+          typeof nextFromBody === 'string' ? nextFromBody : undefined,
+          existingUser.userType,
+          existingUser.userType === 'vc' || existingUser.userType === 'investor'
+            ? '/vc/claim'
+            : '/founder/onboarding'
+        )
+      : safeAuthNextPath(
+          typeof nextFromBody === 'string' ? nextFromBody : undefined,
+          '/founder/onboarding'
+        )
 
     const siteUrl = getSiteUrl(request)
     const callbackUrl = `${siteUrl}/api/auth/callback?next=${encodeURIComponent(afterAuthPath)}`
@@ -40,10 +53,6 @@ export async function POST(request: NextRequest) {
     const adminClient = createSupabaseAdminClient()
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
     const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-
-    // Determine whether the user already exists in Supabase so we pick the
-    // correct link type. Use the Prisma User table as a fast proxy.
-    const existingUser = await db.user.findUnique({ where: { email: normalizedEmail } })
 
     if (existingUser) {
       const { approved, status } = await resolveUserApprovalAccess(normalizedEmail)

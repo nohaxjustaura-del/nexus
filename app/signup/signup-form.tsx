@@ -12,7 +12,7 @@ import { Mail, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { CLIENT_STORAGE } from '@/lib/client-storage-keys'
 import { useAuthSession } from '@/components/auth-session-provider'
-import { signupCallbackPath } from '@/lib/auth-flow-paths'
+import { sanitizeAuthNextPathForUserType, signupCallbackPath } from '@/lib/auth-flow-paths'
 import { BRAND_NAME } from '@/lib/brand'
 import { AUTH_EMAIL_SPAM_DELIVERABILITY_LINE } from '@/lib/resend-user-messages'
 
@@ -46,15 +46,18 @@ export function SignUpForm() {
   useEffect(() => {
     if (authLoading || !authenticated) return
     const isVc = user?.userType === 'vc' || user?.userType === 'investor'
-    const target =
-      redirectUrl ||
-      (isVc
-        ? verified
-          ? '/vc/dashboard'
-          : '/vc/claim'
-        : verified
-          ? '/founder/dashboard'
-          : '/founder/onboarding')
+    const fallback = isVc
+      ? verified
+        ? '/vc/dashboard'
+        : '/vc/claim'
+      : verified
+        ? '/founder/dashboard'
+        : '/founder/onboarding'
+    const target = sanitizeAuthNextPathForUserType(
+      redirectUrl ? redirectUrl : undefined,
+      user?.userType,
+      fallback
+    )
     window.location.replace(target)
   }, [authLoading, authenticated, verified, redirectUrl, user?.userType])
 

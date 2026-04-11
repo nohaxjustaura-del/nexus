@@ -1,6 +1,7 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { NextRequest, NextResponse } from 'next/server'
 import { syncPrismaUserFromAuth } from '@/lib/auth'
+import { sanitizeAuthNextPathForUserType } from '@/lib/auth-flow-paths'
 import { resolveUserApprovalAccess } from '@/lib/user-approval-access'
 import { sendCursorDebugIngest } from '@/lib/cursor-debug-ingest'
 
@@ -33,7 +34,8 @@ export async function GET(request: NextRequest) {
     const tokenType = requestUrl.searchParams.get('type') || 'email'
     const confirm = requestUrl.searchParams.get('confirm') || ''
     const nextPath = requestUrl.searchParams.get('next') || '/founder/dashboard'
-    const safeNext = nextPath.startsWith('/') ? nextPath : '/'
+    let safeNext =
+      nextPath.startsWith('/') && !nextPath.startsWith('//') ? nextPath : '/founder/dashboard'
   // #region agent log
   sendCursorDebugIngest({
     runId: 'callback-domain-debug',
@@ -161,6 +163,12 @@ export async function GET(request: NextRequest) {
           return res
         }
       }
+
+      const meta = (user.user_metadata?.user_type as string | undefined)?.toLowerCase()
+      const ut =
+        meta === 'vc' || meta === 'investor' ? 'vc' : meta === 'mentor' ? 'mentor' : 'founder'
+      const fallback = ut === 'vc' ? '/vc/dashboard' : '/founder/dashboard'
+      safeNext = sanitizeAuthNextPathForUserType(safeNext, ut, fallback)
     }
 
     const res = NextResponse.redirect(new URL(safeNext, request.url))

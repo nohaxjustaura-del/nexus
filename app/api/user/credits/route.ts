@@ -4,6 +4,7 @@ import { getCurrentUserIncludingDevBypass } from '@/lib/auth'
 import { CREDIT_COSTS } from '@/lib/constants'
 import { grantsUnlimitedCreditsDisplay } from '@/lib/dev-ai-analysis-bypass'
 import { logger } from '@/lib/logger'
+import { getPitchIdeaWeeklyQuotaInfo } from '@/lib/pitch-idea-weekly-quota'
 
 export const dynamic = 'force-dynamic'
 
@@ -34,6 +35,12 @@ export async function GET(request: NextRequest) {
       })
     }
 
+    const founder = await db.founder.findUnique({
+      where: { email: user.email },
+      select: { id: true },
+    })
+    const pitchIdeaWeeklyFree = await getPitchIdeaWeeklyQuotaInfo(founder?.id ?? null)
+
     // Grant admin unlimited credits and premium
     if (grantsUnlimitedCreditsDisplay(user.email)) {
       // Parse purchases for admin too
@@ -50,6 +57,7 @@ export async function GET(request: NextRequest) {
         isPremium: true,
         premiumExpiresAt: null,
         purchases,
+        pitchIdeaWeeklyFree,
       })
     }
 
@@ -68,6 +76,7 @@ export async function GET(request: NextRequest) {
       isPremium: credits.isPremium || false,
       premiumExpiresAt: credits.premiumExpiresAt || null,
       purchases,
+      pitchIdeaWeeklyFree,
     })
   } catch (error: any) {
     logger.error('[USER-CREDITS] Error fetching credits:', error)

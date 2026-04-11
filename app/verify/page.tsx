@@ -15,6 +15,7 @@ import {
 import { CLIENT_STORAGE } from '@/lib/client-storage-keys'
 import { toast } from '@/components/ui/toast-simple'
 import { useAuthSession } from '@/components/auth-session-provider'
+import { sanitizeAuthNextPathForUserType } from '@/lib/auth-flow-paths'
 
 const VERIFY_EMAIL_KEY = CLIENT_STORAGE.PENDING_VERIFY_EMAIL
 const USER_EMAIL_KEY = CLIENT_STORAGE.USER_EMAIL
@@ -55,7 +56,12 @@ export default function VerifyPage() {
     const isVc = user?.userType === 'vc' || user?.userType === 'investor'
     const defaultVerified = isVc ? '/vc/dashboard' : '/founder/dashboard'
     const defaultUnverified = isVc ? '/vc/claim' : '/founder/onboarding'
-    const target = redirectUrl || (verified ? defaultVerified : defaultUnverified)
+    const fallback = verified ? defaultVerified : defaultUnverified
+    const target = sanitizeAuthNextPathForUserType(
+      redirectUrl ? redirectUrl : undefined,
+      user?.userType,
+      fallback
+    )
     window.location.replace(target)
   }, [authLoading, authenticated, verified, redirectUrl, user?.userType])
 

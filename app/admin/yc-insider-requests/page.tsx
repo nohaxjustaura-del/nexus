@@ -58,8 +58,8 @@ export default async function YcInsiderRequestsAdminPage() {
           <p className="mt-1 text-sm text-muted-foreground">
             Historical Ask and Book submissions from the retired partner flow (previously{' '}
             <code className="rounded bg-muted px-1">/founder/yc-insider</code>, now{' '}
-            <Link href="/founder/resources" className="text-primary hover:underline">
-              /founder/resources
+            <Link href="/founder/network" className="text-primary hover:underline">
+              /founder/network
             </Link>
             ). Update pipeline status here when you follow up.
           </p>

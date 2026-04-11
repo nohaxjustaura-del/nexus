@@ -29,7 +29,7 @@ export type ResourcePartner = {
   foundersPreview: PartnerFounderPreview[]
 }
 
-/** Directory + detail pages for /founder/resources and /founder/resources/[slug] */
+/** Directory + detail pages for /founder/network and /founder/network/[slug] */
 export const RESOURCE_PARTNERS: ResourcePartner[] = [
   {
     slug: 'luel',

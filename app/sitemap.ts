@@ -16,9 +16,9 @@ export default function sitemap(): MetadataRoute.Sitemap {
   const staticPages: Array<{ path: string; priority: number; changeFrequency: MetadataRoute.Sitemap[number]['changeFrequency'] }> = [
     { path: '/about', priority: 0.8, changeFrequency: 'monthly' },
     { path: '/company', priority: 0.8, changeFrequency: 'monthly' },
-    { path: '/founder/resources', priority: 0.7, changeFrequency: 'weekly' },
+    { path: '/founder/network', priority: 0.7, changeFrequency: 'weekly' },
     ...RESOURCE_PARTNERS.map((p) => ({
-      path: `/founder/resources/${p.slug}` as const,
+      path: `/founder/network/${p.slug}` as const,
       priority: 0.65,
       changeFrequency: 'weekly' as const,
     })),

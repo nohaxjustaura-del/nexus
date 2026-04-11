@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname, useRouter } from 'next/navigation'
+import { usePathname } from 'next/navigation'
 import { useEffect, useMemo, useState } from 'react'
 import { NexusWordmark } from '@/components/nexus-wordmark'
 import { NavAuth } from '@/components/nav-auth'
@@ -15,14 +15,19 @@ type Caps = {
   hasFounderProfile?: boolean
   hasInvestorProfile?: boolean
   userType?: string
+  canAccessFounderNetwork?: boolean
 } | null
+
+function guestExploreHref(next: string): string {
+  return next.startsWith('/pricing') ? next : `/signup?next=${encodeURIComponent(next)}`
+}
 
 /** Logged-out marketing nav: same labels as the founder workspace, gated through signup. */
 const GUEST_EXPLORE_TABS = [
   { next: '/founder/dashboard', label: 'Hub' },
   { next: '/founder/discover', label: 'Investors' },
   { next: '/founder/ai-analysis', label: 'Analyze' },
-  { next: '/founder/resources', label: 'Resources' },
+  { next: '/pricing?from=network', label: 'Network' },
   { next: '/pricing', label: 'Pricing' },
 ] as const
 
@@ -54,8 +59,7 @@ function DesktopNavLink({
 
 export function SiteHeader() {
   const pathname = usePathname()
-  const router = useRouter()
-  const { chrome, setPreferredChrome } = useChromeMode()
+  const { chrome } = useChromeMode()
   const { authenticated } = useAuthSession()
   const [caps, setCaps] = useState<Caps>(null)
 
@@ -73,6 +77,7 @@ export function SiteHeader() {
             hasFounderProfile: data.hasFounderProfile,
             hasInvestorProfile: data.hasInvestorProfile,
             userType: data.userType,
+            canAccessFounderNetwork: data.canAccessFounderNetwork,
           })
         }
       })
@@ -82,22 +87,12 @@ export function SiteHeader() {
     }
   }, [authenticated])
 
-  const canSwitchToFounderWorkspace =
-    caps != null &&
-    (Boolean(caps.hasFounderProfile) || caps.userType === 'mentor')
-
-  const canSwitchToInvestorWorkspace =
-    caps != null && Boolean(caps.hasInvestorProfile)
-
-  const showFounderSwitch = canSwitchToFounderWorkspace
-  const showInvestorSwitch = authenticated && chrome !== 'guest' && canSwitchToInvestorWorkspace
-
   const guestMobileLinks: MobileNavItem[] = useMemo(
     () => [
       { section: 'Explore', href: `/signup?next=${encodeURIComponent('/founder/dashboard')}`, label: 'Hub' },
       { href: `/signup?next=${encodeURIComponent('/founder/discover')}`, label: 'Investors' },
       { href: `/signup?next=${encodeURIComponent('/founder/ai-analysis')}`, label: 'Analyze' },
-      { href: `/signup?next=${encodeURIComponent('/founder/resources')}`, label: 'Resources' },
+      { href: '/pricing?from=network', label: 'Network' },
       { section: 'More', href: `/signup?next=${encodeURIComponent('/pricing')}`, label: 'Pricing' },
     ],
     []
@@ -108,43 +103,27 @@ export function SiteHeader() {
       { section: 'Workspace', href: '/founder/dashboard', label: 'Hub' },
       { href: '/founder/discover', label: 'Investors' },
       { href: '/founder/ai-analysis', label: 'Analyze' },
-      { href: '/founder/resources', label: 'Resources' },
+      ...(caps?.canAccessFounderNetwork ? [{ href: '/founder/network', label: 'Network' as const }] : []),
       { section: 'More', href: '/pricing', label: 'Pricing' },
     ]
     if (authenticated) {
       base.push({ href: '/account', label: 'Account' })
     }
-    if (showInvestorSwitch) {
-      base.push({
-        section: 'Switch',
-        href: '/vc/profile',
-        label: 'Investor workspace',
-        onNavigate: () => setPreferredChrome('investor'),
-      })
-    }
     return base
-  }, [authenticated, showInvestorSwitch, setPreferredChrome])
+  }, [authenticated, caps?.canAccessFounderNetwork])
 
   const investorMobileLinks: MobileNavItem[] = useMemo(() => {
     const base: MobileNavItem[] = [
       { section: 'Workspace', href: '/vc/extract', label: 'Extract' },
       { href: '/vc/profile', label: 'Your listing' },
       { href: '/vc/dashboard', label: 'Matches' },
-      { href: '/founder/resources', label: 'Resources' },
+      ...(caps?.canAccessFounderNetwork ? [{ href: '/founder/network', label: 'Network' as const }] : []),
     ]
     if (authenticated) {
       base.push({ section: 'Account', href: '/account', label: 'Account' })
     }
-    if (showFounderSwitch) {
-      base.push({
-        section: 'Switch',
-        href: '/founder/dashboard',
-        label: 'Founder workspace',
-        onNavigate: () => setPreferredChrome('founder'),
-      })
-    }
     return base
-  }, [authenticated, showFounderSwitch, setPreferredChrome])
+  }, [authenticated, caps?.canAccessFounderNetwork])
 
   const mobileLinks =
     chrome === 'guest' ? guestMobileLinks : chrome === 'investor' ? investorMobileLinks : founderMobileLinks
@@ -201,7 +180,7 @@ export function SiteHeader() {
                 {GUEST_EXPLORE_TABS.map(({ next, label }) => (
                   <Link
                     key={next}
-                    href={`/signup?next=${encodeURIComponent(next)}`}
+                    href={guestExploreHref(next)}
                     className="rounded-full px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted/55 hover:text-foreground"
                   >
                     {label}
@@ -216,7 +195,9 @@ export function SiteHeader() {
                   <ProtectedNavLink href="/founder/dashboard">Hub</ProtectedNavLink>
                   <ProtectedNavLink href="/founder/discover">Investors</ProtectedNavLink>
                   <ProtectedNavLink href="/founder/ai-analysis">Analyze</ProtectedNavLink>
-                  <ProtectedNavLink href="/founder/resources">Resources</ProtectedNavLink>
+                  {caps?.canAccessFounderNetwork ? (
+                    <ProtectedNavLink href="/founder/network">Network</ProtectedNavLink>
+                  ) : null}
                   <ProtectedNavLink href="/pricing">Pricing</ProtectedNavLink>
                 </div>
               </div>
@@ -228,7 +209,9 @@ export function SiteHeader() {
                   <DesktopNavLink href="/vc/extract" label="Extract" pathname={pathname} />
                   <DesktopNavLink href="/vc/profile" label="Your listing" pathname={pathname} />
                   <DesktopNavLink href="/vc/dashboard" label="Matches" pathname={pathname} />
-                  <DesktopNavLink href="/founder/resources" label="Resources" pathname={pathname} />
+                  {caps?.canAccessFounderNetwork ? (
+                    <DesktopNavLink href="/founder/network" label="Network" pathname={pathname} />
+                  ) : null}
                 </div>
               </div>
             )}
@@ -241,34 +224,6 @@ export function SiteHeader() {
           <div className="lg:hidden">
             <MobileNav links={mobileLinks} />
           </div>
-          {showInvestorSwitch && chrome === 'founder' && (
-            <button
-              type="button"
-              title="Open investor workspace"
-              aria-label="Switch to investor workspace"
-              onClick={() => {
-                setPreferredChrome('investor')
-                router.push('/vc/profile')
-              }}
-              className="hidden h-8 shrink-0 rounded-full border border-border/80 bg-muted/20 px-3 text-sm font-medium text-foreground transition-colors hover:bg-muted/45 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background lg:inline-flex lg:items-center lg:justify-center"
-            >
-              Investor
-            </button>
-          )}
-          {authenticated && showFounderSwitch && chrome === 'investor' && (
-            <button
-              type="button"
-              title="Open founder workspace"
-              aria-label="Switch to founder workspace"
-              onClick={() => {
-                setPreferredChrome('founder')
-                router.push('/founder/dashboard')
-              }}
-              className="hidden h-8 shrink-0 rounded-full border border-border/80 bg-muted/20 px-3 text-sm font-medium text-foreground transition-colors hover:bg-muted/45 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background lg:inline-flex lg:items-center lg:justify-center"
-            >
-              Founder
-            </button>
-          )}
           <div className="hidden h-5 w-px bg-border/60 lg:block" aria-hidden />
           <NavAuth />
         </div>

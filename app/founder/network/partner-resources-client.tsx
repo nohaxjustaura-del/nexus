@@ -179,7 +179,7 @@ export default function PartnerResourcesClient({ partnerSlug }: { partnerSlug: s
               <Link href="/founder/dashboard" className="text-zinc-500 hover:text-zinc-300">
                 ← Back to hub
               </Link>
-              <Link href="/founder/resources" className="text-zinc-500 hover:text-zinc-300">
+              <Link href="/founder/network" className="text-zinc-500 hover:text-zinc-300">
                 ← All partners
               </Link>
             </div>
@@ -203,7 +203,7 @@ export default function PartnerResourcesClient({ partnerSlug }: { partnerSlug: s
                     'bg-amber-500 text-zinc-950 hover:bg-amber-400'
                   )}
                 >
-                  Get access to resources &amp; mentorship
+                  Upgrade for mentorship &amp; playbooks
                 </Link>
               ) : null}
             </div>
@@ -234,7 +234,7 @@ export default function PartnerResourcesClient({ partnerSlug }: { partnerSlug: s
             <CardContent>
               <div className="flex flex-col gap-4 border-t border-zinc-700 pt-4 sm:flex-row sm:items-center sm:justify-between">
                 <p className="text-sm text-zinc-400">
-                  Use credits for individual modules, or upgrade for unlimited access to partner resources and founder
+                  Use credits for individual modules, or upgrade for unlimited access to partner playbooks and founder
                   requests.
                 </p>
                 <Link
@@ -244,7 +244,7 @@ export default function PartnerResourcesClient({ partnerSlug }: { partnerSlug: s
                     'shrink-0 bg-amber-500 text-zinc-950 hover:bg-amber-400'
                   )}
                 >
-                  Get access to resources &amp; mentorship
+                  Upgrade for mentorship &amp; playbooks
                 </Link>
               </div>
             </CardContent>
@@ -353,7 +353,7 @@ export default function PartnerResourcesClient({ partnerSlug }: { partnerSlug: s
                         'bg-amber-500 text-zinc-950 hover:bg-amber-400'
                       )}
                     >
-                      Get access to resources &amp; mentorship
+                      Upgrade for mentorship &amp; playbooks
                     </Link>
                   </div>
                 ) : null}
