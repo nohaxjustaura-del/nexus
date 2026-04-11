@@ -139,6 +139,9 @@ model Investor {
   personalityType String? // hands-on, hands-off, mentor
   decisionSpeed   String? // e.g., "2 weeks typical"
 
+  // Demographic focus — which founder groups this VC explicitly supports
+  founderFocus String @default("[]") // JSON array: ["women","immigrant","veteran","lgbtq","underrepresented"]
+
   // Smart Match - Embedding for semantic search
   embedding       String? // JSON array of embedding vector (1536 dimensions)
 
@@ -525,10 +528,14 @@ model FounderPrefs {
   targetOwnershipMax String?
   fundTypePreference String?
   leadPreference     String?
-  isImmigrant        Boolean @default(false)
-  isUnderrepresented Boolean @default(false)
-  isStudent          Boolean @default(false)
-  isVeteran          Boolean @default(false)
+  isImmigrant             Boolean @default(false)
+  isUnderrepresented      Boolean @default(false)
+  isStudent               Boolean @default(false)
+  isVeteran               Boolean @default(false)
+  isWoman                 Boolean @default(false)
+  isLgbtq                 Boolean @default(false)
+  isBipoc                 Boolean @default(false)
+  needsImmigrationSupport Boolean @default(false)
 
   updatedAt DateTime @default(now()) @updatedAt
 }
@@ -1000,6 +1007,25 @@ model Analysis {
   createdAt DateTime @default(now())
   
   @@index([profileId])
+  @@index([createdAt])
+}
+
+// Staged VC discovery candidates (decouples cheap name discovery from expensive full research)
+model VCDiscoveryCandidate {
+  id            String   @id @default(cuid())
+  firmName      String
+  normalizedKey String
+  source        String   // exa_discovery, exa_portfolio_backtrack, exa_directory
+  sourceQuery   String?
+  status        String   @default("pending") // pending, validated, researching, ingested, rejected, duplicate
+  rejectReason  String?
+  webPresenceOk Boolean?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  processedAt   DateTime?
+
+  @@unique([normalizedKey])
+  @@index([status])
   @@index([createdAt])
 }
 

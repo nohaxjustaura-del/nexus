@@ -18,6 +18,8 @@ import {
   Video,
   GraduationCap,
   ArrowUpRight,
+  Globe,
+  Shield,
 } from "lucide-react"
 import Link from "next/link"
 import { db } from "@/lib/db"
@@ -47,6 +49,7 @@ export default async function MatchesPage({
   let latestAnalysis: any = null
   let topMatches: any[] = []
   let universityPrograms: any[] = []
+  let nichePrograms: any[] = []
   let analysisType: 'resume' | 'video' | 'other' = 'resume'
 
   if (user?.email) {
@@ -106,6 +109,9 @@ export default async function MatchesPage({
             }
             if (Array.isArray(r.universityPrograms)) {
               universityPrograms = r.universityPrograms
+            }
+            if (Array.isArray(r.nichePrograms)) {
+              nichePrograms = r.nichePrograms
             }
           }
         }
@@ -175,6 +181,9 @@ export default async function MatchesPage({
           }
           if (Array.isArray(result.universityPrograms)) {
             universityPrograms = result.universityPrograms
+          }
+          if (Array.isArray(result.nichePrograms)) {
+            nichePrograms = result.nichePrograms
           }
         }
 
@@ -431,6 +440,106 @@ export default async function MatchesPage({
             Ranked by fit with your pitch -- thesis alignment, stage, sector, and recent activity
           </p>
         </div>
+
+        {/* Niche-focused programs — displayed above university and general investor matches */}
+        {nichePrograms.length > 0 && (() => {
+          const NICHE_META: Record<string, { label: string; icon: React.ReactNode; gradient: string; border: string }> = {
+            women:           { label: 'Programs for women founders',           icon: <Heart className="h-5 w-5" />,          gradient: 'from-pink-500/[0.06] via-card to-card',   border: 'border-pink-500/20 ring-pink-500/10' },
+            immigrant:       { label: 'Programs for immigrant founders',       icon: <Globe className="h-5 w-5" />,          gradient: 'from-blue-500/[0.06] via-card to-card',   border: 'border-blue-500/20 ring-blue-500/10' },
+            veteran:         { label: 'Programs for veteran founders',         icon: <Shield className="h-5 w-5" />,         gradient: 'from-emerald-500/[0.06] via-card to-card', border: 'border-emerald-500/20 ring-emerald-500/10' },
+            lgbtq:           { label: 'Programs for LGBTQ+ founders',          icon: <Heart className="h-5 w-5" />,          gradient: 'from-violet-500/[0.06] via-card to-card',  border: 'border-violet-500/20 ring-violet-500/10' },
+            underrepresented:{ label: 'Programs for underrepresented founders', icon: <Sparkles className="h-5 w-5" />,      gradient: 'from-amber-500/[0.06] via-card to-card',   border: 'border-amber-500/20 ring-amber-500/10' },
+          }
+
+          const grouped = new Map<string, any[]>()
+          for (const m of nichePrograms) {
+            const tags: string[] = Array.isArray(m.matchedTags) ? m.matchedTags : (m.program?.focusTags ?? [])
+            const primaryTag = tags[0] ?? 'underrepresented'
+            if (!grouped.has(primaryTag)) grouped.set(primaryTag, [])
+            grouped.get(primaryTag)!.push(m)
+          }
+
+          return [...grouped.entries()].map(([tag, matches]) => {
+            const meta = NICHE_META[tag] ?? NICHE_META.underrepresented
+            return (
+              <Card key={tag} className={`mb-6 overflow-hidden rounded-2xl border-2 bg-gradient-to-br shadow-sm ring-1 ${meta.border} ${meta.gradient}`}>
+                <CardHeader className="pb-3">
+                  <div className="flex items-start gap-3">
+                    <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary ring-1 ring-primary/15`}>
+                      {meta.icon}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <CardTitle className="flex flex-wrap items-center gap-2 text-lg text-foreground">
+                        {meta.label}
+                        <Badge variant="secondary" className="font-normal text-muted-foreground">
+                          {matches.length} matched
+                        </Badge>
+                      </CardTitle>
+                      <CardDescription>
+                        Investors and programs that specifically support founders like you — separate from the general investor list.
+                      </CardDescription>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="pt-0">
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    {matches.map((match: any, i: number) => {
+                      const p = match.program || match
+                      const key = p.id || `${p.name}-${i}`
+                      const url = typeof p.applicationUrl === 'string' ? p.applicationUrl : ''
+                      const urgency = match.urgency
+                      return (
+                        <div
+                          key={key}
+                          className="flex flex-col justify-between rounded-xl border border-border/60 bg-card/80 p-4 transition-colors hover:border-primary/25 hover:bg-accent/30"
+                        >
+                          <div className="space-y-2">
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="min-w-0">
+                                <h3 className="font-semibold leading-snug text-foreground">{p.name}</h3>
+                                {p.type && (
+                                  <p className="text-xs font-medium capitalize text-muted-foreground">{p.type.replace(/_/g, ' ')}</p>
+                                )}
+                              </div>
+                              {urgency === 'apply_now' && (
+                                <Badge variant="destructive" className="shrink-0 text-xs">Apply now</Badge>
+                              )}
+                              {urgency === 'upcoming_deadline' && (
+                                <Badge variant="secondary" className="shrink-0 text-xs">Upcoming</Badge>
+                              )}
+                            </div>
+
+                            {typeof match.qualificationReason === 'string' && match.qualificationReason.trim() && (
+                              <p className="text-sm leading-relaxed text-foreground/80">{match.qualificationReason}</p>
+                            )}
+                            {p.checkSize && (p.checkSize.min || p.checkSize.max) && (
+                              <p className="text-xs text-muted-foreground">
+                                <span className="font-medium text-foreground/80">Check size:</span>{' '}
+                                {fmtCheckRange(p.checkSize.min, p.checkSize.max)}
+                              </p>
+                            )}
+                          </div>
+
+                          {url && (
+                            <a
+                              href={url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold text-primary underline-offset-4 hover:underline"
+                            >
+                              Apply / learn more
+                              <ArrowUpRight className="h-3 w-3" />
+                            </a>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                </CardContent>
+              </Card>
+            )
+          })
+        })()}
 
         {/* School-specific programs — displayed above general investor matches */}
         {universityPrograms.length > 0 && (

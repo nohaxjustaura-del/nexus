@@ -33,6 +33,10 @@ export interface ComprehensiveFounderContext {
   isImmigrant: boolean
   isUnderrepresented: boolean
   isVeteran: boolean
+  isWoman: boolean
+  isLgbtq: boolean
+  isBipoc: boolean
+  needsImmigrationSupport: boolean
   universityAffiliation?: string
   
   // Startup basics
@@ -143,7 +147,22 @@ export async function getComprehensiveFounderContext(
     if (founder.revenue && founder.revenue > 50000) experienceLevel = 'experienced'
     if (founder.teamSize && founder.teamSize > 10) experienceLevel = 'experienced'
     
-    // 🆕 ENHANCE: Detect student status from prefs + education text (Founder has no isStudent column)
+    // Fallback: parse User.founderProfile demographics when FounderPrefs doesn't exist
+    const userDemographics = new Set<string>()
+    if (user?.founderProfile) {
+      try {
+        const fp = typeof user.founderProfile === 'string'
+          ? JSON.parse(user.founderProfile)
+          : user.founderProfile
+        if (Array.isArray(fp?.demographics)) {
+          for (const d of fp.demographics) {
+            if (typeof d === 'string') userDemographics.add(d.toLowerCase().trim())
+          }
+        }
+      } catch { /* malformed JSON — ignore */ }
+    }
+
+    // Detect student status from prefs + education text + demographics fallback
     const eduLow = (founder.education ?? '').toLowerCase()
     const bioLow = (founder.bio ?? '').toLowerCase()
     const isStudentFromEducation =
@@ -155,7 +174,37 @@ export async function getComprehensiveFounderContext(
         (eduLow.includes('brown') && !eduLow.includes('alumni') && /(student|undergraduate|graduate|class of)/.test(eduLow)) ||
         (bioLow.includes('brown') && /(student|undergraduate|class of)/.test(bioLow))
       ))
-    const isStudent = prefs?.isStudent || isStudentFromEducation
+    const isStudent =
+      prefs?.isStudent ||
+      isStudentFromEducation ||
+      userDemographics.has('international student')
+
+    // Resolve gender → isWoman (merge Founder.gender + FounderPrefs.isWoman + demographics fallback)
+    const genderLow = (founder.gender ?? '').toLowerCase().trim()
+    const isWoman =
+      prefs?.isWoman ||
+      genderLow === 'female' ||
+      genderLow === 'woman' ||
+      userDemographics.has('woman founder')
+
+    const isLgbtq = prefs?.isLgbtq || userDemographics.has('lgbtq+ founder')
+
+    const isBipoc =
+      prefs?.isBipoc || userDemographics.has('bipoc founder')
+
+    const isImmigrant =
+      prefs?.isImmigrant ||
+      userDemographics.has('immigrant founder') ||
+      userDemographics.has('international student')
+
+    const isUnderrepresented =
+      prefs?.isUnderrepresented ||
+      isBipoc ||
+      userDemographics.has('first-gen')
+
+    const isVeteran = prefs?.isVeteran || false
+
+    const needsImmigrationSupport = prefs?.needsImmigrationSupport || false
     
     // Detect tech background
     const techBackground = 
@@ -193,12 +242,16 @@ export async function getComprehensiveFounderContext(
       gender: founder.gender || undefined,
       education: founder.education || undefined,
       
-      // Background
+      // Background & demographics
       isStudent,
       willingToDropOut: founder.willingToDropOut,
-      isImmigrant: prefs?.isImmigrant || false,
-      isUnderrepresented: prefs?.isUnderrepresented || false,
-      isVeteran: prefs?.isVeteran || false,
+      isImmigrant,
+      isUnderrepresented,
+      isVeteran,
+      isWoman,
+      isLgbtq,
+      isBipoc,
+      needsImmigrationSupport,
       universityAffiliation: universityAffiliationResolved,
       
       // Startup
@@ -301,8 +354,11 @@ export function buildAIPromptContext(context: ComprehensiveFounderContext): stri
   const signals: string[] = []
   if (context.isStudent) signals.push('Current student')
   if (context.willingToDropOut) signals.push('Willing to drop out')
+  if (context.isWoman) signals.push('Woman founder')
   if (context.isImmigrant) signals.push('Immigrant founder')
   if (context.isUnderrepresented) signals.push('Underrepresented background')
+  if (context.isBipoc) signals.push('BIPOC founder')
+  if (context.isLgbtq) signals.push('LGBTQ+ founder')
   if (context.isVeteran) signals.push('Veteran')
   if (context.techBackground) signals.push('Technical background')
   if (signals.length > 0) {
@@ -371,7 +427,7 @@ export function buildMatchContext(context: ComprehensiveFounderContext) {
   return {
     isTechnical: context.techBackground,
     isStudent: context.isStudent,
-    hasOpenSource: false, // Could parse from LinkedIn/GitHub
+    hasOpenSource: false,
     hasTraction: context.hasStrongTraction,
     experienceLevel: context.experienceLevel,
     primarySector: context.sectors[0] || 'Technology',
@@ -380,6 +436,10 @@ export function buildMatchContext(context: ComprehensiveFounderContext) {
     isImmigrant: context.isImmigrant,
     isUnderrepresented: context.isUnderrepresented,
     isVeteran: context.isVeteran,
+    isWoman: context.isWoman,
+    isLgbtq: context.isLgbtq,
+    isBipoc: context.isBipoc,
+    needsImmigrationSupport: context.needsImmigrationSupport,
     willingToDropOut: context.willingToDropOut,
   }
 }

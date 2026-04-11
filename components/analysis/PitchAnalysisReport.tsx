@@ -1,7 +1,7 @@
 'use client'
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Sparkles, AlertCircle, CheckCircle, Lightbulb, TrendingUp, Target, GraduationCap } from 'lucide-react'
+import { Sparkles, AlertCircle, CheckCircle, Lightbulb, TrendingUp, Target, GraduationCap, Heart, Globe, Shield } from 'lucide-react'
 import SmartMatchResults from '@/components/smart-match-results'
 import AnalysisDashboard from '@/components/analysis/AnalysisDashboard'
 import { pickMatchesArray, resolveRubricForDashboard } from '@/lib/analysis/is-safe-rubric-for-dashboard'
@@ -32,6 +32,38 @@ function pickUniversityPrograms(result: Record<string, unknown>): UniversityProg
   )
 }
 
+type NicheProgramPayload = {
+  program?: {
+    id?: string
+    name?: string
+    focusTags?: string[]
+    type?: string
+    applicationUrl?: string
+    description?: string
+    checkSize?: { min?: number | null; max?: number | null }
+  }
+  matchedTags?: string[]
+  qualificationReason?: string
+  urgency?: string
+}
+
+function pickNichePrograms(result: Record<string, unknown>): NicheProgramPayload[] {
+  const raw = result.nichePrograms
+  if (!Array.isArray(raw)) return []
+  return raw.filter(
+    (x): x is NicheProgramPayload =>
+      x !== null && typeof x === 'object' && typeof (x as NicheProgramPayload).program?.name === 'string',
+  )
+}
+
+const NICHE_SECTION_META: Record<string, { label: string; icon: React.ReactNode }> = {
+  women:            { label: 'Programs for women founders',           icon: <Heart className="h-5 w-5 text-pink-500" /> },
+  immigrant:        { label: 'Programs for immigrant founders',       icon: <Globe className="h-5 w-5 text-blue-500" /> },
+  veteran:          { label: 'Programs for veteran founders',         icon: <Shield className="h-5 w-5 text-emerald-500" /> },
+  lgbtq:            { label: 'Programs for LGBTQ+ founders',          icon: <Heart className="h-5 w-5 text-violet-500" /> },
+  underrepresented: { label: 'Programs for underrepresented founders', icon: <Sparkles className="h-5 w-5 text-amber-500" /> },
+}
+
 function getScoreColor(score: number): string {
   if (score >= 75) return 'text-emerald-600 dark:text-emerald-400'
   if (score >= 50) return 'text-amber-600 dark:text-amber-400'
@@ -53,6 +85,7 @@ export function PitchAnalysisReport({ result, showMatches = true }: PitchAnalysi
     (typeof result.overallScore === 'number' ? result.overallScore : undefined)
   const matches = pickMatchesArray(result)
   const universityPrograms = pickUniversityPrograms(result)
+  const nichePrograms = pickNichePrograms(result)
 
   const strengths = (result.strengths as string[]) || []
   const weaknesses = (result.weaknesses as string[]) || []
@@ -169,6 +202,68 @@ export function PitchAnalysisReport({ result, showMatches = true }: PitchAnalysi
           </CardContent>
         </Card>
       )}
+
+      {nichePrograms.length > 0 && (() => {
+        const grouped = new Map<string, NicheProgramPayload[]>()
+        for (const m of nichePrograms) {
+          const tags = m.matchedTags ?? m.program?.focusTags ?? []
+          const primaryTag = tags[0] ?? 'underrepresented'
+          if (!grouped.has(primaryTag)) grouped.set(primaryTag, [])
+          grouped.get(primaryTag)!.push(m)
+        }
+
+        return [...grouped.entries()].map(([tag, matches]) => {
+          const meta = NICHE_SECTION_META[tag] ?? NICHE_SECTION_META.underrepresented
+          return (
+            <div key={tag} className="space-y-3">
+              <div className="flex items-center gap-2.5 px-1">
+                {meta.icon}
+                <div>
+                  <h3 className="text-base font-semibold text-foreground">{meta.label}</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Investors and programs that specifically support founders like you.
+                  </p>
+                </div>
+              </div>
+              <div className="grid gap-3 md:grid-cols-2">
+                {matches.map((m, i) => {
+                  const p = m.program!
+                  const key = p.id ?? `${p.name}-${i}`
+                  const url = typeof p.applicationUrl === 'string' ? p.applicationUrl : ''
+                  return (
+                    <Card key={key} className="border-border/80">
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-base leading-snug">{p.name}</CardTitle>
+                        {p.type && (
+                          <p className="text-xs font-medium capitalize text-muted-foreground">{p.type.replace(/_/g, ' ')}</p>
+                        )}
+                      </CardHeader>
+                      <CardContent className="space-y-2 pt-0 text-sm text-muted-foreground">
+                        {typeof m.qualificationReason === 'string' && m.qualificationReason.trim() ? (
+                          <p>{m.qualificationReason}</p>
+                        ) : null}
+                        {typeof p.description === 'string' && p.description.trim() ? (
+                          <p className="text-xs leading-relaxed">{p.description}</p>
+                        ) : null}
+                        {url ? (
+                          <a
+                            href={url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex text-xs font-medium text-primary underline-offset-4 hover:underline"
+                          >
+                            Apply / learn more
+                          </a>
+                        ) : null}
+                      </CardContent>
+                    </Card>
+                  )
+                })}
+              </div>
+            </div>
+          )
+        })
+      })()}
 
       {universityPrograms.length > 0 && (
         <div className="space-y-3">

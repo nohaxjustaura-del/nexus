@@ -190,6 +190,38 @@ export interface UniversityProgramMatch {
 }
 
 // ---------------------------------------------------------------------------
+// Niche Programs (women, immigrant, veteran, LGBTQ+, underrepresented)
+// ---------------------------------------------------------------------------
+
+export type NicheFocusTag = 'women' | 'immigrant' | 'veteran' | 'lgbtq' | 'underrepresented'
+
+export interface NicheProgram {
+  id: string
+  name: string
+  /** Which founder demographics this program explicitly supports. */
+  focusTags: NicheFocusTag[]
+  type: 'fund' | 'accelerator' | 'grant' | 'fellowship' | 'angel_network'
+  checkSize: { min: number | null; max: number | null }
+  applicationUrl: string
+  /** ISO date string "YYYY-MM-DD" or the literal string "rolling". */
+  deadline: string
+  /** One-sentence description of the program. */
+  description: string
+  stageFocus: string[]
+  sectorFocus: string[]
+  /** When true, this VC also competes in the main ranking pool. */
+  alsoInMainPool?: boolean
+}
+
+export interface NicheProgramMatch {
+  program: NicheProgram
+  /** Which of the founder's identity tags matched this program. */
+  matchedTags: NicheFocusTag[]
+  qualificationReason: string
+  urgency: 'apply_now' | 'upcoming_deadline' | 'rolling'
+}
+
+// ---------------------------------------------------------------------------
 // Narrative
 // ---------------------------------------------------------------------------
 
@@ -251,6 +283,8 @@ export interface MatchingPipelineResult {
   rankedInvestors: RankedInvestorResult[]
   /** University-affiliated programs — separate track, never in rankedInvestors. */
   universityPrograms: UniversityProgramMatch[]
+  /** Niche-focused programs for women, immigrant, veteran, LGBTQ+, underrepresented founders. */
+  nichePrograms: NicheProgramMatch[]
   pipelineVersion: '3.0'
   durationMs: number
   vcsScoredCount: number

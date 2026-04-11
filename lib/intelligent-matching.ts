@@ -453,31 +453,31 @@ export async function intelligentMatchVCs(
     }
   })
   
-  // 🆕 DEMOGRAPHIC FILTERING: Remove incompatible VCs based on hard requirements
+  // DEMOGRAPHIC FILTERING: Use Investor.founderFocus (structured) + legacy heuristics
   matches = matches.filter(match => {
     const firmName = match.investor.firmName.toLowerCase()
+    const founderFocus = parseJSON<string[]>((match.investor as any).founderFocus ?? '[]', [])
     const ethicsTags = parseJSON<string[]>(match.investor.ethicsTags, []).map(t => t.toLowerCase())
     const thesis = (match.investor.thesis || '').toLowerCase()
     const bio = (match.investor.bio || '').toLowerCase()
     
-    // Check for women-only funds
-    const isWomenOnly = 
+    // Use structured founderFocus when available, fall back to heuristics
+    const isWomenOnly =
+      founderFocus.includes('women') ||
       firmName.includes('female founders fund') ||
       firmName.includes('bbg ventures') ||
-      firmName.includes('backstage capital') || // Women/POC/LGBTQ+ only
-      firmName.includes('fearless fund') || // Women of color only
+      firmName.includes('fearless fund') ||
       firmName.includes('cartier women') ||
       firmName.includes('tory burch') ||
       firmName.includes('xfactor ventures') ||
       ethicsTags.some(tag => tag.includes('women-led') || tag.includes('female founders')) ||
       thesis.includes('women-led') || thesis.includes('female founder') ||
-      bio.includes('investing only in') && bio.includes('women')
+      (bio.includes('investing only in') && bio.includes('women'))
     
     if (isWomenOnly && founderIsMale) {
-      return false // Filter out women-only funds for male founders
+      return false
     }
     
-    // Check for student-only funds
     const isStudentOnly = 
       firmName.includes('dorm room fund') ||
       firmName.includes('rough draft ventures') ||
@@ -485,13 +485,12 @@ export async function intelligentMatchVCs(
       firmName.includes('hillside ventures') ||
       ethicsTags.some(tag => tag.includes('student founders') || tag.includes('student only')) ||
       thesis.includes('student founders only') ||
-      bio.includes('student founders') && bio.includes('only')
+      (bio.includes('student founders') && bio.includes('only'))
     
     if (isStudentOnly && !founderIsStudent) {
-      return false // Filter out student-only funds for non-students
+      return false
     }
     
-    // Check for university-specific funds
     const universitySpecificFunds: Record<string, string[]> = {
       'stanford': ['startx', 'stanford', 'cardinal ventures'],
       'berkeley': ['house fund', 'skydeck', 'berkeley'],
@@ -504,14 +503,13 @@ export async function intelligentMatchVCs(
     for (const [uni, fundNames] of Object.entries(universitySpecificFunds)) {
       const isUniversityFund = fundNames.some(name => firmName.includes(name))
       if (isUniversityFund && !founderUniversity.toLowerCase().includes(uni)) {
-        // Check if fund explicitly requires affiliation
         if (bio.includes('-only') || bio.includes('exclusively') || thesis.includes('alumni only')) {
-          return false // Filter out university-specific funds for non-alumni
+          return false
         }
       }
     }
     
-    return true // Keep all other VCs
+    return true
   })
 
   // Apply intelligent boosting based on resume analysis

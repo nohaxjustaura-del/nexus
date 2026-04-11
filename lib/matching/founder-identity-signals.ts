@@ -38,7 +38,11 @@ function addPhrases(set: Set<string>, ...phrases: string[]) {
 
 /**
  * Derives identity tags and short thesis phrases for overlap with VC thesis text
- * (Step 5c, ranker, Exa tail, gates).
+ * (Step 5c, ranker, Exa tail, gates, niche matcher).
+ *
+ * Sources (in priority order):
+ *   1. Structured booleans from FounderPrefs / ComprehensiveFounderContext
+ *   2. Conservative first-person regex from pitch text
  */
 export function buildFounderIdentitySignals(
   founder: ComprehensiveFounderContext,
@@ -48,6 +52,12 @@ export function buildFounderIdentitySignals(
   const phrases = new Set<string>()
   const t = pitchBlob.toLowerCase()
 
+  // ── Structured DB flags (highest confidence) ──────────────────────────
+
+  if (founder.isWoman) {
+    tags.add(TAG.woman_founder)
+    addPhrases(phrases, 'women founders', 'female founders', 'women-led', 'female founder')
+  }
   if (founder.isImmigrant) {
     tags.add(TAG.immigrant)
     addPhrases(phrases, 'immigrant founders', 'international founders', 'immigrant founder')
@@ -56,24 +66,33 @@ export function buildFounderIdentitySignals(
     tags.add(TAG.underrepresented)
     addPhrases(phrases, 'underrepresented founders', 'diverse founders', 'minority founders')
   }
+  if (founder.isBipoc) {
+    tags.add(TAG.underrepresented)
+    addPhrases(phrases, 'bipoc founders', 'underrepresented founders', 'diverse founders')
+  }
   if (founder.isVeteran) {
     tags.add(TAG.veteran)
     addPhrases(phrases, 'veteran founders', 'military veterans')
+  }
+  if (founder.isLgbtq) {
+    tags.add(TAG.lgbtq)
+    addPhrases(phrases, 'lgbtq founders', 'lgbt founders')
   }
   if (founder.isStudent || inferStudentFromText(pitchBlob)) {
     tags.add(TAG.student)
     addPhrases(phrases, 'student founders', 'student founder', 'university founders')
   }
 
-  const g = (founder.gender ?? '').toLowerCase().trim()
-  if (g === 'female' || g === 'woman') {
-    tags.add(TAG.woman_founder)
-    addPhrases(phrases, 'women founders', 'female founders', 'women-led', 'female founder')
+  // Gender fallback (for founders who set Founder.gender but not FounderPrefs.isWoman)
+  if (!founder.isWoman) {
+    const g = (founder.gender ?? '').toLowerCase().trim()
+    if (g === 'female' || g === 'woman') {
+      tags.add(TAG.woman_founder)
+      addPhrases(phrases, 'women founders', 'female founders', 'women-led', 'female founder')
+    }
   }
-  /**
-   * Non-binary / prefer-not-to-say: do not assume diversity thesis fit from gender alone.
-   * Rely on isUnderrepresented + pitch text instead.
-   */
+
+  // ── Pitch text inference (conservative first-person patterns) ─────────
 
   if (/\b(i(?:'m|\s+am)\s+)?a\s+woman\s+founder\b/.test(t) || /\bfemale\s+founder\b/.test(t)) {
     tags.add(TAG.woman_founder)

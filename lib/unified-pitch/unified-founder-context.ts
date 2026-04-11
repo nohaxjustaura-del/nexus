@@ -99,7 +99,7 @@ export function buildUnifiedFounderContext(
     detectUniversityAffiliation(base.education, base.bio, pitchTextBlob) ??
     undefined
 
-  // Detect immigrant/underrepresented signals from pitch when not already set
+  // Detect demographic signals from pitch when not already set via onboarding
   const tl = pitchTextBlob.toLowerCase()
   const isImmigrant =
     base.isImmigrant ||
@@ -115,6 +115,14 @@ export function buildUnifiedFounderContext(
     base.isVeteran ||
     /\b(i(?:'m|\s+am)\s+)?a\s+veteran\b/.test(tl) ||
     /\bmilitary\s+veteran\b/.test(tl)
+  const isWoman =
+    base.isWoman ||
+    /\b(i(?:'m|\s+am)\s+)?a\s+woman\s+founder\b/.test(tl) ||
+    /\bfemale\s+founder\b/.test(tl)
+  const isLgbtq =
+    base.isLgbtq ||
+    /\blgbtq\+?\s+founder\b/.test(tl) ||
+    /\b(i(?:'m|\s+am)\s+)?(a\s+)?(gay|lesbian|transgender|queer)\s+founder\b/.test(tl)
 
   return {
     ...base,
@@ -129,5 +137,9 @@ export function buildUnifiedFounderContext(
     isImmigrant,
     isUnderrepresented,
     isVeteran,
+    isWoman,
+    isLgbtq,
+    isBipoc: base.isBipoc,
+    needsImmigrationSupport: base.needsImmigrationSupport,
   }
 }

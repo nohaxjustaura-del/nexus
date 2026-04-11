@@ -9,7 +9,7 @@ import { getExaApiKeys, hasExaApiKey } from '@/lib/exa-keys'
 import { isExaGlobalCooldownActive, msUntilExaGlobalCooldownEnds } from '@/lib/exa-global-cooldown'
 import { isLikelyRealFirmName } from '@/lib/firm-name-quality'
 
-const SECTORS = [
+export const DISCOVERY_SECTORS = [
   'SaaS',
   'fintech',
   'AI',
@@ -26,9 +26,9 @@ const SECTORS = [
   'biotech',
   'hardware',
   'cybersecurity',
-]
+] as const
 
-const REGIONS = [
+export const DISCOVERY_REGIONS = [
   'United States',
   'Europe',
   'UK',
@@ -44,9 +44,20 @@ const REGIONS = [
   'Australia',
   'Canada',
   'Global',
-]
+] as const
 
-const STAGES = ['pre-seed', 'seed', 'Series A', 'early-stage', 'micro VC', 'first-time fund']
+export const DISCOVERY_STAGES = [
+  'pre-seed',
+  'seed',
+  'Series A',
+  'early-stage',
+  'micro VC',
+  'first-time fund',
+] as const
+
+const SECTORS = DISCOVERY_SECTORS as readonly string[]
+const REGIONS = DISCOVERY_REGIONS as readonly string[]
+const STAGES = DISCOVERY_STAGES as readonly string[]
 
 const ANGLES = [
   'first close 2026',
@@ -140,7 +151,7 @@ function shuffleInPlace<T>(arr: T[]): void {
   }
 }
 
-function pick<T>(arr: T[]): T {
+function pick<T>(arr: readonly T[]): T {
   return arr[Math.floor(Math.random() * arr.length)]!
 }
 
@@ -160,6 +171,7 @@ const JUNK_SUBSTRINGS = [
   'best vc',
   'how to',
   'what is',
+  'how does',
   'ultimate guide',
   'podcast',
   'newsletter',
@@ -171,6 +183,45 @@ const JUNK_SUBSTRINGS = [
   'list of',
   'ranking',
   'according to',
+  'learn more',
+  'who we are',
+  'at a glance',
+  'read more',
+  'sign up',
+  'click here',
+  'fund structure',
+  'fund size',
+  'fund management',
+  'takes questions',
+  'intentionally',
+  'debuting our',
+  'investing in foundational',
+  'supports companies',
+  'support startups',
+  'in three ways',
+  'outlook',
+  'pipeline',
+  'principals',
+  'private equity',
+  'and private equity',
+  'fund thesis',
+  'vc pipeline',
+  'general partners',
+  'end fund',
+  'commitments ',
+  '.com/',
+  'securing a',
+  'who raised',
+  'computer &',
+  'network security',
+  'raised capital',
+  'urban infrastructure',
+  'all countries',
+  'key trends',
+  'driving investments',
+  'investor type',
+  'flagship fund',
+  'portfolio investments',
 ]
 
 const SUSPICIOUS_NAME_PHRASES = [
@@ -179,7 +230,34 @@ const SUSPICIOUS_NAME_PHRASES = [
   'top venture capital',
   'list of venture',
   'best venture capital',
+  'closes debut fund',
+  'focused thesis',
+  'investment thesis',
+  'stage marketplaces',
+  'platform pricing',
+  'collaborative ai venture',
+  'billion startup',
+  'startup investment fund',
+  'innovation accelerator',
+  'corporate venture capital',
+  'emerging manager venture',
+  'us venture capital',
+  'venture capital outlook',
+  'venture capital and',
+  'technology companies',
+  'traditional vc',
+  'traditional venture',
+  'growth startups fund',
+  'ai crossover fund',
+  'crossover fund',
+  'industry computer',
+  'early stage saas',
+  'second flagship',
+  'inside nextladder',
 ]
+
+/** Sentence-like patterns that indicate a headline, not a fund name. */
+const SENTENCE_INDICATORS = /\b(the \$\d|is |are |was |were |has |have |takes |from |about |with |our |their |this |that |these |those |does |companies in)\b/i
 
 const GENERIC_ONLY_WORDS = new Set([
   'africa',
@@ -229,6 +307,9 @@ function sanitizeExtractedName(raw: string): string {
     .replace(/\s+/g, ' ')
     .trim()
 
+  // Strip numbered list prefixes: "1. ", "2. ", "3) ", etc.
+  t = t.replace(/^\d+[.)]\s*/, '')
+
   // Some headlines arrive as "Source - Candidate Fund Name"; keep RHS only.
   if (/[|:\-]/.test(t)) {
     const parts = t
@@ -260,9 +341,9 @@ function looksTooGenericName(name: string): boolean {
 function isPlausibleFundName(raw: string): boolean {
   const t = sanitizeExtractedName(raw)
   if (!isLikelyRealFirmName(t)) return false
-  if (t.length < 3 || t.length > 120) return false
+  if (t.length < 3 || t.length > 80) return false
   const words = t.split(/\s+/).filter(Boolean)
-  if (words.length > 10) return false
+  if (words.length > 6) return false
   if (words.length === 1 && t.length < 5) return false
   const lower = t.toLowerCase()
   for (const j of JUNK_SUBSTRINGS) {
@@ -273,6 +354,55 @@ function isPlausibleFundName(raw: string): boolean {
   }
   if (looksTooGenericName(t)) return false
   if (/^\d+$/.test(t.replace(/\s/g, ''))) return false
+  if (SENTENCE_INDICATORS.test(t)) return false
+  if (/^(at |a |the |on |in |for |related |unique |end |how |who |securing |financed |share |potential |traditional |all |inside |about |key |early stage )/i.test(t)) return false
+  if (/\$\d/.test(t)) return false
+  if (/\.\w{2,}\//i.test(t)) return false
+  if (t.length > 10 && t === t.toUpperCase()) return false
+  if (words.length >= 4) {
+    const half = Math.floor(words.length / 2)
+    const first = words.slice(0, half).join(' ').toLowerCase()
+    const second = words.slice(half, half * 2).join(' ').toLowerCase()
+    if (first === second) return false
+  }
+  if (/^\d{4}\s/.test(t)) return false
+
+  if (t.includes(',')) return false
+  if (/\.\w{2,4}$/i.test(t) && !t.includes(' ')) return false
+  if (/[/=?]/.test(t)) return false
+
+  // Reject names where first word is all-lowercase (sentence fragments)
+  if (words.length >= 2 && words[0] === words[0]!.toLowerCase() && /^[a-z]/.test(words[0]!)) return false
+
+  // Reject industry categories with "&"
+  if (/&\s*(network|security|technology|software|systems|services|solutions)/i.test(t)) return false
+
+  // Reject parentheses (form labels like "Investor Type (VC or CVC)")
+  if (/[()]/.test(t)) return false
+
+  // Reject concatenated words from bad parsing: "CroatiaVesna", "SloveniaSouth"
+  // Only flag camelCase words longer than 10 chars (avoids hitting legitimate brands like "NextLadder")
+  {
+    const parts = t.split(/\s+/)
+    if (parts.some((w) => /[a-z][A-Z]/.test(w) && w.length > 10)) return false
+  }
+
+  // Reject "Portfolio Investments", "Driving Investments", "Flagship Fund" — descriptive phrases
+  if (/\b(portfolio investments|driving investments|flagship fund|investor type)\b/i.test(t)) return false
+
+  // Reject 2-word names where BOTH words are generic/category terms
+  if (words.length === 2) {
+    const CATEGORY_WORDS = new Set([
+      ...GENERIC_ONLY_WORDS,
+      'saas', 'institute', 'traditional', 'ukrainian', 'european', 'american',
+      'asian', 'african', 'beast', 'type', 'second', 'third', 'early', 'late',
+      'stage', 'micro', 'nano', 'mega', 'super', 'open', 'general', 'standard',
+    ])
+    const w0 = words[0]!.toLowerCase().replace(/[^a-z0-9]/g, '')
+    const w1 = words[1]!.toLowerCase().replace(/[^a-z0-9]/g, '')
+    if (CATEGORY_WORDS.has(w0) && CATEGORY_WORDS.has(w1)) return false
+  }
+
   return true
 }
 
@@ -390,42 +520,93 @@ export async function exaScrapeQuery(query: string, numResults: number): Promise
   return { urls: [], textBlock: '' }
 }
 
+/** Hosts that should never count as "web presence" for a VC firm. */
+const PRESENCE_BLOCKED_HOSTS = [
+  ...EXA_BLOCKED_HOST_SUBSTRINGS,
+  'wikipedia.org',
+  'reddit.com',
+  'twitter.com',
+  'x.com',
+  'facebook.com',
+  'youtube.com',
+  'medium.com',
+  'substack.com',
+  'tiktok.com',
+]
+
+export type WebPresenceResult = 'confirmed' | 'rejected' | 'inconclusive'
+
 /**
  * Lightweight web presence check for a candidate firm name.
- * Uses a small Exa query and domain heuristics to ensure the name
- * maps to a real investment entity homepage/profile before we spend
- * full research budget.
+ *
+ * IMPORTANT: This calls Exa directly WITHOUT the discovery allowlist filter.
+ * The allowlist is for discovery search (to avoid noisy news sites when extracting
+ * fund names), but the presence check needs to see ALL results — including the
+ * firm's own .com website.
  */
-export async function hasDiscoveryWebPresence(name: string): Promise<boolean> {
-  if (!hasExaApiKey()) return false
+export async function checkDiscoveryWebPresence(name: string): Promise<WebPresenceResult> {
+  if (!hasExaApiKey()) return 'inconclusive'
+  if (isExaGlobalCooldownActive()) return 'inconclusive'
 
-  const q = `"${name}" official site`
-  const { urls } = await exaScrapeQuery(q, 3)
-  if (!urls.length) return false
+  const q = `"${name}" venture capital investor`
 
-  try {
-    const u = new URL(urls[0]!)
-    const host = u.hostname.toLowerCase()
-    const path = u.pathname.toLowerCase()
+  type PresenceHit = { url: string; text: string; title: string }
+  const failover = await runExaWithKeyFailover(async (exa) => {
+    const res = await exa.search(q, {
+      type: 'auto',
+      numResults: 5,
+      contents: { text: { maxCharacters: 400 } },
+    })
+    return (res.results ?? [])
+      .filter((r) => typeof r.url === 'string' && /^https?:\/\//i.test(r.url))
+      .map((r) => ({
+        url: r.url!,
+        text: (typeof r.text === 'string' ? r.text : '') || '',
+        title: (typeof r.title === 'string' ? r.title : '') || '',
+      }))
+  })
 
-    // Reject obvious news / generic content hosts
-    if (EXA_BLOCKED_HOST_SUBSTRINGS.some((b) => host.includes(b))) return false
-
-    // Accept common firm / directory patterns
-    if (/\.(vc|fund|capital)$/.test(host)) return true
-    if (/linkedin\.com$/.test(host) && path.includes('/company/')) return true
-    if (/crunchbase\.com$/.test(host) && path.includes('/organization/')) return true
-
-    // If we have an allowlist, require membership
-    if (EXA_DOMAIN_ALLOWLIST.length > 0) {
-      const allowed = EXA_DOMAIN_ALLOWLIST.some((a) => host === a || host.endsWith(`.${a}`))
-      return allowed
-    }
-
-    return false
-  } catch {
-    return false
+  if (!failover.ok) {
+    if (failover.kind === 'all_keys_quota') return 'inconclusive'
+    if (isExaGlobalCooldownActive()) return 'inconclusive'
+    return 'rejected'
   }
+
+  const hits: PresenceHit[] = failover.data
+  if (!hits.length) return 'rejected'
+
+  // Build name variants for matching: full name + significant words
+  const nameLower = name.toLowerCase()
+  const nameWords = nameLower.replace(/[^a-z0-9\s]/g, ' ').split(/\s+/).filter((w) => w.length >= 3)
+  // Require at least 2 significant words to match, or the full name
+  const significantWords = nameWords.filter((w) => !GENERIC_ONLY_WORDS.has(w))
+
+  for (const hit of hits) {
+    try {
+      const host = new URL(hit.url).hostname.toLowerCase()
+      if (PRESENCE_BLOCKED_HOSTS.some((b) => host.includes(b))) continue
+
+      const haystack = `${host} ${hit.title} ${hit.text}`.toLowerCase()
+
+      // Strong signal: full name appears in the result
+      if (haystack.includes(nameLower)) return 'confirmed'
+
+      // Medium signal: the distinctive part of the name appears in host or text
+      if (significantWords.length > 0 && significantWords.every((w) => haystack.includes(w))) {
+        return 'confirmed'
+      }
+    } catch {
+      continue
+    }
+  }
+
+  return 'rejected'
+}
+
+/** Legacy wrapper for backward compatibility */
+export async function hasDiscoveryWebPresence(name: string): Promise<boolean> {
+  const result = await checkDiscoveryWebPresence(name)
+  return result === 'confirmed'
 }
 
 const EXA_SECOND_PASS_SUFFIXES = [
@@ -575,4 +756,187 @@ export async function discoverNewFirmNamesNotInDatabase(
 ): Promise<string[]> {
   const existingKeys = await loadExistingFirmKeysFromDb()
   return discoverCandidateFirmNames(existingKeys, options)
+}
+
+// ---------------------------------------------------------------------------
+// New query strategies: portfolio-backtrack and directory-style
+// ---------------------------------------------------------------------------
+
+const PORTFOLIO_BACKTRACK_TEMPLATES = [
+  '{sector} startup funded {stage} round {year} led by',
+  '{sector} company raises {stage} funding {year} investor {region}',
+  '{sector} {region} startup {year} venture backed {stage} round investors',
+  'startup {sector} closes {stage} round {year} {region} venture capital',
+  '{sector} funding round announced {year} {region} lead investor',
+  'startup funding {sector} {stage} deal {year} VC firm backed',
+]
+
+const DIRECTORY_STYLE_TEMPLATES = [
+  'venture capital firms investing in {sector} {region}',
+  '{sector} VC investors {region} active {year}',
+  'top {stage} investors {sector} {region} {year}',
+  'list of {sector} venture capital funds {region}',
+  '{region} VC firms {sector} focus portfolio',
+  'active {stage} venture funds {sector} {region} {year}',
+]
+
+export type DiscoveryQueryStrategy = 'blueprint' | 'portfolio_backtrack' | 'directory'
+
+/**
+ * Build queries using the portfolio-backtrack strategy: surfaces VC names
+ * from funded company announcements rather than fund-close news.
+ */
+export function buildPortfolioBacktrackQueries(
+  combos: Array<{ sector: string; region: string; stage: string }>,
+): string[] {
+  const out: string[] = []
+  for (const { sector, region, stage } of combos) {
+    const tpl = pick(PORTFOLIO_BACKTRACK_TEMPLATES)
+    const year = pickDiscoveryVintageYear()
+    out.push(
+      tpl
+        .replace(/\{sector\}/g, sector)
+        .replace(/\{region\}/g, region)
+        .replace(/\{stage\}/g, stage)
+        .replace(/\{year\}/g, String(year)),
+    )
+  }
+  return out
+}
+
+/**
+ * Build queries using the directory strategy: targets VC listing pages
+ * on Crunchbase, AngelList, PitchBook, etc.
+ */
+export function buildDirectoryQueries(
+  combos: Array<{ sector: string; region: string; stage: string }>,
+): string[] {
+  const out: string[] = []
+  for (const { sector, region, stage } of combos) {
+    const tpl = pick(DIRECTORY_STYLE_TEMPLATES)
+    const year = pickDiscoveryVintageYear()
+    out.push(
+      tpl
+        .replace(/\{sector\}/g, sector)
+        .replace(/\{region\}/g, region)
+        .replace(/\{stage\}/g, stage)
+        .replace(/\{year\}/g, String(year)),
+    )
+  }
+  return out
+}
+
+/**
+ * Build targeted queries for specific (sector, region, stage) combos
+ * from the coverage tracker instead of random selection.
+ */
+export function buildSystematicDiscoveryQueries(
+  combos: Array<{ sector: string; region: string; stage: string }>,
+): string[] {
+  const out: string[] = []
+  for (const { sector, region, stage } of combos) {
+    const tpl = pick([...BLUEPRINTS])
+    const year = pickDiscoveryVintageYear()
+    const period = pickReportingPeriod()
+    out.push(
+      tpl
+        .replace(/\{sector\}/g, sector)
+        .replace(/\{region\}/g, region)
+        .replace(/\{stage\}/g, stage)
+        .replace(/\{year\}/g, String(year))
+        .replace(/\{period\}/g, period)
+        .replace(/\{angle\}/g, pick(ANGLES)),
+    )
+  }
+  return out
+}
+
+export type SystematicDiscoveryResult = {
+  candidates: string[]
+  queriesRun: number
+  strategy: DiscoveryQueryStrategy
+}
+
+/**
+ * Run a single discovery round for one strategy and a set of combos.
+ * Returns extracted candidate names (already deduped against existingKeys).
+ */
+export async function runDiscoveryRound(
+  strategy: DiscoveryQueryStrategy,
+  combos: Array<{ sector: string; region: string; stage: string }>,
+  existingKeys: Set<string>,
+  options: { resultsPerQuery: number; delayBetweenQueriesMs: number; maxNames: number },
+): Promise<SystematicDiscoveryResult> {
+  if (!isDiscoverySearchConfigured()) {
+    return { candidates: [], queriesRun: 0, strategy }
+  }
+
+  let queries: string[]
+  switch (strategy) {
+    case 'portfolio_backtrack':
+      queries = buildPortfolioBacktrackQueries(combos)
+      break
+    case 'directory':
+      queries = buildDirectoryQueries(combos)
+      break
+    default:
+      queries = buildSystematicDiscoveryQueries(combos)
+  }
+
+  const textChunks: string[] = []
+  const nResults = Math.max(3, options.resultsPerQuery)
+  let queriesRun = 0
+
+  for (let i = 0; i < queries.length; i++) {
+    const q = queries[i]!
+    console.log(`[VC-DISCOVERY:${strategy}] Query ${i + 1}/${queries.length}: ${q}`)
+
+    const q2 = complementaryDiscoveryQuery(q)
+    const [pass1, pass2] = await Promise.all([
+      exaScrapeQuery(q, nResults),
+      exaScrapeQuery(q2, nResults),
+    ])
+    queriesRun++
+
+    if (!pass1.textBlock.trim() && !pass2.textBlock.trim() && isExaGlobalCooldownActive()) {
+      console.warn(`[VC-DISCOVERY:${strategy}] Exa quota/cooldown — stopping.`)
+      break
+    }
+
+    const merged = [
+      pass1.textBlock && `--- Exa pass 1 ---\n${pass1.textBlock}`,
+      pass2.textBlock && `--- Exa pass 2 ---\n${pass2.textBlock}`,
+    ]
+      .filter(Boolean)
+      .join('\n\n')
+
+    if (merged.trim()) textChunks.push(merged)
+
+    if (options.delayBetweenQueriesMs > 0 && i < queries.length - 1) {
+      await new Promise((r) => setTimeout(r, options.delayBetweenQueriesMs))
+    }
+  }
+
+  const corpus = textChunks.join('\n\n').slice(0, 120_000)
+  if (corpus.length < 100) {
+    return { candidates: [], queriesRun, strategy }
+  }
+
+  const heuristicNames = extractFundNamesHeuristic(corpus)
+  const seen = new Set<string>()
+  const candidates: string[] = []
+  for (const name of heuristicNames) {
+    const key = normalizeFirmKey(name)
+    if (!key || key.length < 3) continue
+    if (existingKeys.has(key) || seen.has(key)) continue
+    seen.add(key)
+    candidates.push(name)
+  }
+
+  shuffleInPlace(candidates)
+  return {
+    candidates: candidates.slice(0, Math.max(1, options.maxNames)),
+    queriesRun,
+    strategy,
+  }
 }

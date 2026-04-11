@@ -7,15 +7,16 @@
  * Wires together all lib/matching/ modules into a single async pipeline.
  *
  * Pipeline summary:
- *   Step 1 — Build FounderMatchSignal (pure TS, no I/O)
- *   Step 2 — University program matching (pure TS, sync)
- *   Step 3 — Hard filter: Prisma WHERE clause (unchanged from v2)
- *   Step 4 — Pattern detection from transcript (Gemini, keywords only)
- *   Step 5 — FAISS vector search (top 20, up from 15)
- *   Step 6 — Rolling Exa + Gemini gate reasoning (max 5 concurrent Gemini)
- *   Step 7 — Narrative generation (OpenRouter matching/scoring model, e.g. DeepSeek; all VCs in parallel)
- *   Step 8 — Rank and cut (top 12, pure TS)
- *   Step 9 — Return MatchingPipelineResult
+ *   Step 1  — Build FounderMatchSignal (pure TS, no I/O)
+ *   Step 2  — University program matching (pure TS, sync)
+ *   Step 2b — Niche program matching: women, immigrant, veteran, LGBTQ+, underrepresented (pure TS, sync)
+ *   Step 3  — Hard filter: Prisma WHERE clause (unchanged from v2)
+ *   Step 4  — Pattern detection from transcript (Gemini, keywords only)
+ *   Step 5  — FAISS vector search (top 20, up from 15)
+ *   Step 6  — Rolling Exa + Gemini gate reasoning (max 5 concurrent Gemini)
+ *   Step 7  — Narrative generation (OpenRouter matching/scoring model, e.g. DeepSeek; all VCs in parallel)
+ *   Step 8  — Rank and cut (top 12, pure TS)
+ *   Step 9  — Return MatchingPipelineResult
  */
 
 import { db } from '@/lib/db'
@@ -34,6 +35,7 @@ import type { ComprehensiveFounderContext } from '@/lib/founder-context'
 import type { Investor } from '@prisma/client'
 
 import { matchUniversityPrograms, filterOutUniversityPrograms } from './university-matcher'
+import { matchNichePrograms, filterOutNicheExclusivePrograms } from './niche-matcher'
 import { fetchVCExaBundle } from './exa-enrichment'
 import { reasonGates } from './gate-reasoner'
 import { computeInvestmentLikelihood, type PitchStrengthSignal } from './investment-likelihood'
@@ -673,6 +675,15 @@ export async function runMatchingPipeline(
       : ' — no university detected or no matching programs'),
   )
 
+  // ── STEP 2b — Niche program matching (sync, no await) ─────────────────────
+  const nichePrograms = matchNichePrograms(founderSignal)
+  logger.integration(
+    `[ORCHESTRATOR] Step 2b — Niche programs: ${nichePrograms.length} matches` +
+    (nichePrograms.length > 0
+      ? '\n  ' + nichePrograms.map((m) => `${m.program.name} [${m.matchedTags.join(',')}] [${m.urgency}]`).join('\n  ')
+      : ' — no identity tags or no matching niche programs'),
+  )
+
   // ── STEP 3 — Hard filter Prisma query (unchanged from v2) ─────────────────
   const founderStage = founder.stage.toLowerCase()
   const fundingNeed = founder.fundingNeed ?? 0
@@ -732,9 +743,10 @@ export async function runMatchingPipeline(
   })
   logger.integration(`[ORCHESTRATOR] Step 3 — After name quality filter: ${stageFiltered.length} VCs`)
 
-  // Split out university-exclusive programs so they never appear in the VC pool
-  const { mainstream } = filterOutUniversityPrograms(stageFiltered as VCProfile[])
-  logger.integration(`[ORCHESTRATOR] Step 3 — After university filter: ${mainstream.length} mainstream VCs`)
+  // Split out university-exclusive and niche-exclusive programs from the VC pool
+  const { mainstream: afterUni } = filterOutUniversityPrograms(stageFiltered as VCProfile[])
+  const { mainstream } = filterOutNicheExclusivePrograms(afterUni)
+  logger.integration(`[ORCHESTRATOR] Step 3 — After university+niche filter: ${mainstream.length} mainstream VCs`)
 
   // ── STEP 4 — Pattern detection (keywords only, no score boosts) ────────────
   // Use transcript when available; fall back to rawPitchText for text-only pitches
@@ -1214,6 +1226,7 @@ export async function runMatchingPipeline(
   return {
     rankedInvestors: ranked,
     universityPrograms,
+    nichePrograms,
     pipelineVersion: '3.0',
     durationMs: Date.now() - startTime,
     vcsScoredCount: results.size,

@@ -658,6 +658,7 @@ Return valid JSON:
 
       // Persist university programs so they are available from stored analysis
       ;(analysis as any).universityPrograms = matchPipelineResult?.universityPrograms ?? []
+      ;(analysis as any).nichePrograms = matchPipelineResult?.nichePrograms ?? []
 
       // Save pitch idea analysis to database for training data
       let pitchIdeaRecord: any = null
@@ -725,6 +726,7 @@ Return valid JSON:
             usedFullFounderContext: !!founderContext,
           },
           universityPrograms: matchPipelineResult?.universityPrograms ?? [],
+          nichePrograms: matchPipelineResult?.nichePrograms ?? [],
           pipelineVersion: matchPipelineResult?.pipelineVersion ?? '3.0',
           matchingDurationMs: matchPipelineResult?.durationMs ?? 0,
           matchingError: matchPipelineResult === null,

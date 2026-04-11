@@ -17,22 +17,27 @@ export type UpsertVcDirectoryOptions = {
 
 export type UpsertVcDirectoryResult = { ok: true } | { ok: false; error: string }
 
+let _supabaseTableMissing = false
+let _supabaseTableMissingWarned = false
+
 /**
  * Upsert a Prisma Investor row into Supabase `vc_directory` via PostgREST (service role).
+ * Automatically suppresses repeated attempts if the table doesn't exist.
  */
 export async function upsertInvestorToVcDirectory(
   investor: Investor,
   options?: UpsertVcDirectoryOptions,
 ): Promise<UpsertVcDirectoryResult> {
+  if (_supabaseTableMissing) {
+    return { ok: true }
+  }
+
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(/\/$/, '')
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim()
   const table = (process.env.SUPABASE_VC_TABLE || 'vc_directory').trim()
 
   if (!url || !key) {
-    return {
-      ok: false,
-      error: 'Missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY.',
-    }
+    return { ok: true }
   }
 
   const row = {
@@ -75,11 +80,18 @@ export async function upsertInvestorToVcDirectory(
 
     if (!res.ok) {
       const text = await res.text()
-      let msg = text || res.statusText
-      if (res.status === 404 || /schema cache/i.test(text)) {
-        msg += ` For default table vc_directory: npm run db:vc-directory (DATABASE_URL must point at this Supabase Postgres), or run supabase/vc_directory.sql in the Supabase SQL editor, then reload the API schema if needed.`
+      if (res.status === 404 || /schema cache/i.test(text) || /PGRST205/i.test(text)) {
+        _supabaseTableMissing = true
+        if (!_supabaseTableMissingWarned) {
+          _supabaseTableMissingWarned = true
+          console.warn(
+            `   ⚠️  Supabase table '${table}' not found — skipping Supabase sync for this session.\n` +
+            `      To enable: run supabase/vc_directory.sql in the Supabase SQL editor, then reload the API schema.`,
+          )
+        }
+        return { ok: true }
       }
-      return { ok: false, error: msg }
+      return { ok: false, error: text || res.statusText }
     }
     return { ok: true }
   } catch (e: unknown) {

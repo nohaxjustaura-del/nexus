@@ -351,6 +351,7 @@ export async function POST(request: NextRequest) {
       teamAnalysis: features.teamAnalysis,
       productFit: features.productFit,
       universityPrograms: matchPipelineResult?.universityPrograms ?? [],
+      nichePrograms: matchPipelineResult?.nichePrograms ?? [],
       matches: top20Matches.map((m, idx) => ({
         rank: idx + 1,
         investorId: m.investor.id,
@@ -468,6 +469,7 @@ export async function POST(request: NextRequest) {
         usedFullFounderContext: !!founderContext,
       },
       universityPrograms: matchPipelineResult?.universityPrograms ?? [],
+      nichePrograms: matchPipelineResult?.nichePrograms ?? [],
       pipelineVersion: matchPipelineResult?.pipelineVersion ?? '3.0',
       matchingDurationMs: matchPipelineResult?.durationMs ?? 0,
       matchingError: matchPipelineResult === null,

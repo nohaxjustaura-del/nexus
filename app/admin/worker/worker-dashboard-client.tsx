@@ -20,6 +20,27 @@ type WorkerStatusPayload = {
   jobs: JobRow[]
 }
 
+type DiscoveryStats = {
+  investors: {
+    total: number
+    verified: number
+    discoverable: number
+    withEmbedding: number
+    added7d: number
+    added30d: number
+  }
+  pipeline: Record<string, number>
+  coverage: {
+    totalCells: number
+    coveredCells: number
+    uncoveredCells: number
+    totalCandidatesFound: number
+    totalSearches: number
+    topUncoveredSectors: string[]
+    topUncoveredRegions: string[]
+  }
+}
+
 function jobIdToTriggerType(
   id: string,
 ): 'exa-enrichment' | 'vc-thesis-research' | 'vc-profile-research' | 'embeddings' | 'data-validation' | 'vc-directory-sync' | null {
@@ -44,13 +65,21 @@ export function WorkerDashboardClient() {
   const [triggering, setTriggering] = useState<string | null>(null)
   const [applyContactLimit, setApplyContactLimit] = useState(15)
   const [applyContactOverwrite, setApplyContactOverwrite] = useState(false)
+  const [discoveryStats, setDiscoveryStats] = useState<DiscoveryStats | null>(null)
 
   const refresh = useCallback(async () => {
     try {
-      const res = await fetch('/api/worker/status')
-      if (!res.ok) throw new Error('Failed to fetch status')
-      const data = (await res.json()) as { status: WorkerStatusPayload }
+      const [statusRes, statsRes] = await Promise.all([
+        fetch('/api/worker/status'),
+        fetch('/api/admin/discovery-stats'),
+      ])
+      if (!statusRes.ok) throw new Error('Failed to fetch status')
+      const data = (await statusRes.json()) as { status: WorkerStatusPayload }
       setStatus(data.status)
+      if (statsRes.ok) {
+        const stats = (await statsRes.json()) as DiscoveryStats
+        setDiscoveryStats(stats)
+      }
       setError(null)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Unknown error')
@@ -215,6 +244,75 @@ export function WorkerDashboardClient() {
             )
           })}
         </ul>
+
+        {discoveryStats && (
+          <div className="mt-10">
+            <h2 className="mb-4 text-lg font-semibold">Database Growth</h2>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="rounded-lg border bg-card p-4">
+                <p className="text-sm text-muted-foreground">Total investors</p>
+                <p className="text-2xl font-bold">{discoveryStats.investors.total.toLocaleString()}</p>
+                <div className="mt-2 space-y-1 text-xs text-muted-foreground">
+                  <p>Verified: {discoveryStats.investors.verified.toLocaleString()}</p>
+                  <p>Discoverable: {discoveryStats.investors.discoverable.toLocaleString()}</p>
+                  <p>With embedding: {discoveryStats.investors.withEmbedding.toLocaleString()}</p>
+                </div>
+              </div>
+              <div className="rounded-lg border bg-card p-4">
+                <p className="text-sm text-muted-foreground">Recent growth</p>
+                <p className="text-2xl font-bold">+{discoveryStats.investors.added7d}</p>
+                <p className="text-xs text-muted-foreground">last 7 days</p>
+                <p className="mt-2 text-lg font-semibold">+{discoveryStats.investors.added30d}</p>
+                <p className="text-xs text-muted-foreground">last 30 days</p>
+              </div>
+              <div className="rounded-lg border bg-card p-4">
+                <p className="text-sm text-muted-foreground">Discovery coverage</p>
+                <p className="text-2xl font-bold">
+                  {discoveryStats.coverage.coveredCells}/{discoveryStats.coverage.totalCells}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  sector/region/stage combos searched
+                </p>
+                <p className="mt-2 text-sm">
+                  {discoveryStats.coverage.totalSearches.toLocaleString()} total searches
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {discoveryStats.coverage.totalCandidatesFound.toLocaleString()} candidates found
+                </p>
+              </div>
+            </div>
+
+            {Object.keys(discoveryStats.pipeline).length > 0 && (
+              <div className="mt-4 rounded-lg border bg-card p-4">
+                <p className="mb-2 text-sm font-medium">Candidate pipeline</p>
+                <div className="flex flex-wrap gap-3">
+                  {Object.entries(discoveryStats.pipeline).map(([status, count]) => (
+                    <div key={status} className="rounded-md bg-muted px-3 py-1.5 text-sm">
+                      <span className="font-medium">{count}</span>
+                      <span className="ml-1 text-muted-foreground">{status}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {discoveryStats.coverage.topUncoveredSectors.length > 0 && (
+              <div className="mt-4 rounded-lg border bg-card p-4">
+                <p className="mb-2 text-sm font-medium">Top uncovered areas</p>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground">Sectors</p>
+                    <p className="text-sm">{discoveryStats.coverage.topUncoveredSectors.join(', ')}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground">Regions</p>
+                    <p className="text-sm">{discoveryStats.coverage.topUncoveredRegions.join(', ')}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         <div className="mt-10 space-y-8">
           <div className="rounded-lg border border-dashed bg-muted/30 p-6">
