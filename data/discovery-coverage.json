@@ -164,49 +164,49 @@
       "sector": "SaaS",
       "region": "Southeast Asia",
       "stage": "Series A",
-      "lastSearchedAt": null,
-      "candidatesFound": 0,
-      "totalSearches": 0
+      "lastSearchedAt": "2026-04-12T17:32:15.562Z",
+      "candidatesFound": 16,
+      "totalSearches": 1
     },
     "SaaS|Southeast Asia|early-stage": {
       "sector": "SaaS",
       "region": "Southeast Asia",
       "stage": "early-stage",
-      "lastSearchedAt": null,
-      "candidatesFound": 0,
-      "totalSearches": 0
+      "lastSearchedAt": "2026-04-12T17:32:15.581Z",
+      "candidatesFound": 16,
+      "totalSearches": 1
     },
     "SaaS|Southeast Asia|micro VC": {
       "sector": "SaaS",
       "region": "Southeast Asia",
       "stage": "micro VC",
-      "lastSearchedAt": null,
-      "candidatesFound": 0,
-      "totalSearches": 0
+      "lastSearchedAt": "2026-04-12T17:32:22.264Z",
+      "candidatesFound": 27,
+      "totalSearches": 1
     },
     "SaaS|Southeast Asia|first-time fund": {
       "sector": "SaaS",
       "region": "Southeast Asia",
       "stage": "first-time fund",
-      "lastSearchedAt": null,
-      "candidatesFound": 0,
-      "totalSearches": 0
+      "lastSearchedAt": "2026-04-12T17:32:22.275Z",
+      "candidatesFound": 27,
+      "totalSearches": 1
     },
     "SaaS|India|pre-seed": {
       "sector": "SaaS",
       "region": "India",
       "stage": "pre-seed",
-      "lastSearchedAt": null,
-      "candidatesFound": 0,
-      "totalSearches": 0
+      "lastSearchedAt": "2026-04-12T17:32:27.368Z",
+      "candidatesFound": 40,
+      "totalSearches": 1
     },
     "SaaS|India|seed": {
       "sector": "SaaS",
       "region": "India",
       "stage": "seed",
-      "lastSearchedAt": null,
-      "candidatesFound": 0,
-      "totalSearches": 0
+      "lastSearchedAt": "2026-04-12T17:32:27.377Z",
+      "candidatesFound": 40,
+      "totalSearches": 1
     },
     "SaaS|India|Series A": {
       "sector": "SaaS",
@@ -11521,5 +11521,5 @@
       "totalSearches": 0
     }
   },
-  "lastUpdated": "2026-04-11T00:35:22.959Z"
+  "lastUpdated": "2026-04-12T17:32:27.377Z"
 }
