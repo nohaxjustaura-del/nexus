@@ -134,7 +134,7 @@ export function Step1BasicInfo({
               <option value="Not in school" />
               <option value="Self-taught" />
               <option value="Other" />
-              {SUGGESTED_UNIVERSITIES.slice(0, 100).map(u => (
+              {SUGGESTED_UNIVERSITIES.map(u => (
                 <option key={u} value={u} />
               ))}
             </datalist>

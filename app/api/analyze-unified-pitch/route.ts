@@ -30,7 +30,10 @@ import { mergePitchAnalysesForMatching } from '@/lib/unified-pitch/merge-pitch-a
 import { buildUnifiedFounderContext } from '@/lib/unified-pitch/unified-founder-context'
 import { reviewerAssignableWhere } from '@/lib/reviewer-filters'
 import { analyzeFounderNotFoundResponse, analyzeUnauthorizedResponse } from '@/lib/analyze-routes/responses'
-import { upsertFounderAnalysisSummary } from '@/lib/analysis/upsert-founder-analysis-summary'
+import {
+  upsertFounderAnalysisSummary,
+  ventureNameOverrideFromFormData,
+} from '@/lib/analysis/upsert-founder-analysis-summary'
 import { adaptRankedInvestorForApi } from '@/lib/pipelines/adapt-ranked-investor-for-api'
 
 export const runtime = 'nodejs'
@@ -515,6 +518,7 @@ export async function POST(request: NextRequest) {
       },
     })
 
+    const ventureNameOverride = ventureNameOverrideFromFormData(formData)
     upsertFounderAnalysisSummary(
       founder.id,
       {
@@ -529,6 +533,7 @@ export async function POST(request: NextRequest) {
       scoringResult,
       'UNIFIED',
       videoPitch.id,
+      ventureNameOverride ? { ventureNameOverride } : undefined,
     ).catch(e => logger.error('[UNIFIED-PITCH] upsertFounderAnalysisSummary failed', e))
 
     if (shouldEnforceAiCredits(user.email)) {

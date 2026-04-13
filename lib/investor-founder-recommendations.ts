@@ -8,7 +8,10 @@ import {
 } from '@/lib/investor-geo-match'
 
 export interface FounderCandidate {
+  /** Stable row id for this recommendation (venture summary id, or founder id if no summary). */
   id: string
+  /** Underlying founder account (bookmarks, etc.). */
+  founderId: string
   name: string
   email: string
   startupName: string | null
@@ -112,32 +115,105 @@ const STAGE_ADJACENCY: Record<string, string[]> = {
   'idea': ['mvp'],
   'mvp': ['idea', 'pre-seed', 'seed'],
   'pre-seed': ['idea', 'mvp', 'seed'],
+  'preseed': ['idea', 'mvp', 'seed'],
   'seed': ['mvp', 'pre-seed', 'revenue'],
   'revenue': ['seed', 'series a'],
   'series a': ['revenue', 'seed', 'series b'],
+  'seriesa': ['revenue', 'seed', 'series b'],
   'series b': ['series a'],
+  'seriesb': ['series a'],
 }
 
 function normalizeStage(s: string): string {
   return s.toLowerCase().trim().replace(/[-_\s]+/g, ' ')
 }
 
+/** Resolve config keyed by stage labels (hyphen/space variants map to the same normalized key). */
+function resolveStageTableRow<T>(fsNorm: string, table: Record<string, T>): T | undefined {
+  if (!fsNorm) return undefined
+  for (const key of Object.keys(table)) {
+    if (normalizeStage(key) === fsNorm) return table[key]
+  }
+  return undefined
+}
+
+/** Discrete tokens from investor stage JSON (no substring matching — avoids false "exact" hits). */
+function investorStageTokens(investorStages: string[]): string[] {
+  const out: string[] = []
+  for (const raw of investorStages) {
+    if (!raw?.trim()) continue
+    const n = normalizeStage(raw)
+    if (!n) continue
+    const parts = n.split(/\s*(?:,|;|\/|\||\band\b|\&)\s*/i)
+    for (const p of parts) {
+      const t = normalizeStage(p)
+      if (t) out.push(t)
+    }
+  }
+  return out
+}
+
+function founderStageExpansionSet(fsNorm: string): Set<string> {
+  if (!fsNorm) return new Set()
+  const rawList = resolveStageTableRow(fsNorm, STAGE_EXPANSION)
+  const list = rawList ?? [fsNorm]
+  const set = new Set<string>()
+  for (const x of list) {
+    const nx = normalizeStage(String(x))
+    if (nx) set.add(nx)
+  }
+  set.add(fsNorm)
+  return set
+}
+
+function founderStageAdjacentSet(fsNorm: string): Set<string> {
+  if (!fsNorm) return new Set()
+  const rawList = resolveStageTableRow(fsNorm, STAGE_ADJACENCY)
+  const set = new Set<string>()
+  for (const x of rawList ?? []) {
+    const nx = normalizeStage(String(x))
+    if (nx) set.add(nx)
+  }
+  return set
+}
+
 function stageMatches(founderStage: string, investorStages: string[]): boolean {
   const fs = normalizeStage(founderStage)
-  const expanded = STAGE_EXPANSION[fs] || [fs]
-  return investorStages.some(is => {
-    const nis = normalizeStage(is)
-    return expanded.some(e => e === nis || nis.includes(e) || e.includes(nis))
-  })
+  if (!fs) return false
+  const fSet = founderStageExpansionSet(fs)
+  const inv = investorStageTokens(investorStages)
+  if (inv.length === 0) return false
+  return inv.some(t => fSet.has(t))
 }
 
 function stageIsAdjacent(founderStage: string, investorStages: string[]): boolean {
   const fs = normalizeStage(founderStage)
-  const adjacent = STAGE_ADJACENCY[fs] || []
-  return investorStages.some(is => {
-    const nis = normalizeStage(is)
-    return adjacent.some(a => a === nis || nis.includes(a) || a.includes(nis))
-  })
+  if (!fs) return false
+  const adj = founderStageAdjacentSet(fs)
+  if (adj.size === 0) return false
+  const inv = investorStageTokens(investorStages)
+  return inv.some(t => adj.has(t))
+}
+
+/** First investor token that matches founder expansion (for UI copy). */
+function firstStageOverlapToken(founderStage: string, investorStages: string[]): string | null {
+  const fs = normalizeStage(founderStage)
+  if (!fs) return null
+  const fSet = founderStageExpansionSet(fs)
+  for (const t of investorStageTokens(investorStages)) {
+    if (fSet.has(t)) return t
+  }
+  return null
+}
+
+function firstAdjacentOverlapToken(founderStage: string, investorStages: string[]): string | null {
+  const fs = normalizeStage(founderStage)
+  if (!fs) return null
+  const adj = founderStageAdjacentSet(fs)
+  for (const t of investorStageTokens(investorStages)) {
+    if (adj.has(t)) return t
+  }
+  return null
 }
 
 function jaccardSimilarity(a: string[], b: string[]): number {
@@ -233,6 +309,11 @@ function scoreD3StageCheckFit(
   const exactMatch = stageMatches(founderStage, investorStages)
   const adjacent = !exactMatch && stageIsAdjacent(founderStage, investorStages)
   const stageScore = exactMatch ? 8 : adjacent ? 4 : 0
+  const overlapTok = exactMatch
+    ? firstStageOverlapToken(founderStage, investorStages)
+    : adjacent
+      ? firstAdjacentOverlapToken(founderStage, investorStages)
+      : null
 
   let checkFit = 0
   if (checkMin > 0 && checkMax > 0 && fundingNeed > 0) {
@@ -246,8 +327,16 @@ function scoreD3StageCheckFit(
 
   const score = stageScore + checkFit
   const parts: string[] = []
-  if (exactMatch) parts.push(`Exact stage match (${founderStage})`)
-  else if (adjacent) parts.push(`Adjacent stage (${founderStage})`)
+  const fsDisp = (founderStage || '').trim() || 'unknown stage'
+  if (exactMatch && overlapTok) {
+    parts.push(`Exact stage match (${fsDisp} ↔ ${overlapTok})`)
+  } else if (exactMatch) {
+    parts.push(`Exact stage match (${fsDisp})`)
+  } else if (adjacent && overlapTok) {
+    parts.push(`Adjacent stage (${fsDisp} ↔ ${overlapTok})`)
+  } else if (adjacent) {
+    parts.push(`Adjacent stage (${fsDisp})`)
+  }
   if (fundingNeed > 0) parts.push(`$${fundingNeed}K funding need`)
   const reason = parts.join(', ') || 'Stage/check fit assessed'
 
@@ -429,14 +518,14 @@ function scoreD7ValuesAlignment(
 
 /**
  * Founder eligibility for investor ranking (keep in sync with
- * `app/api/investor/recommended-founders` findMany where-clause):
+ * `app/api/investor/recommended-founders` eligibility (keep in sync):
  * - Never stealth.
- * - Must have either a completed profile OR an AI analysis summary (denormalized row).
+ * - Must have either a completed profile OR at least one AI analysis summary row.
  */
 function founderIsEligibleForInvestorRanking(founder: FounderCandidate): boolean {
   if (founder.isStealth) return false
-  if (founder.profileComplete) return true
-  return founder.analysisSummary != null
+  if (founder.analysisSummary != null) return true
+  return founder.profileComplete
 }
 
 export function scoreFounderForInvestor(
@@ -462,18 +551,20 @@ export function scoreFounderForInvestor(
   const checkMin = investor.checkMin || investor.checkSizeMin || 0
   const checkMax = investor.checkMax || investor.checkSizeMax || 0
 
-  if (investorStages.length > 0) {
+  // Profile-only founders: keep thesis alignment as a hard gate.
+  // Founders with AI analysis always stay visible; stage/check fit still flows into scores (d3).
+  const hasAnalysis = founder.analysisSummary != null
+  if (investorStages.length > 0 && !hasAnalysis) {
     const stageTrimmed = (founder.stage || '').trim()
     const stageOk =
       stageTrimmed.length > 0 &&
       (stageMatches(founder.stage, investorStages) || stageIsAdjacent(founder.stage, investorStages))
-    const unknownStageWithAnalysis = stageTrimmed.length === 0 && founder.analysisSummary != null
-    if (!stageOk && !unknownStageWithAnalysis) {
+    if (!stageOk) {
       return null
     }
   }
 
-  if (checkMin > 0 && checkMax > 0 && founder.fundingNeed > 0) {
+  if (!hasAnalysis && checkMin > 0 && checkMax > 0 && founder.fundingNeed > 0) {
     if (founder.fundingNeed < checkMin * 0.5 || founder.fundingNeed > checkMax * 2.0) {
       return null
     }

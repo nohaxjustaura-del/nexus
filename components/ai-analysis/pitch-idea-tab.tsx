@@ -12,6 +12,7 @@ import SmartMatchResults from '@/components/smart-match-results'
 import AnalysisDashboard from '@/components/analysis/AnalysisDashboard'
 import { toast } from '@/components/ui/toast-simple'
 import { fmtCheckRange } from '@/lib/utils'
+import { appendVentureNameToAnalysisFormData } from '@/lib/client/analysis-venture-name'
 import { normalizeUserCreditsApiPayload } from '@/lib/client/normalize-user-credits-api'
 
 type PitchIdeaCreditsState = ReturnType<typeof normalizeUserCreditsApiPayload>
@@ -254,6 +255,7 @@ export function PitchIdeaAnalysisTab() {
       if (voiceRecordingId) {
         formData.append('voiceRecordingId', voiceRecordingId)
       }
+      await appendVentureNameToAnalysisFormData(formData)
       
       const response = await fetch('/api/analyze-pitch-idea', {
         method: 'POST',

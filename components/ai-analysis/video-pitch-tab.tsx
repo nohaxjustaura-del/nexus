@@ -11,6 +11,7 @@ import Link from "next/link"
 import AnalysisDashboard from '@/components/analysis/AnalysisDashboard'
 import { resolveRubricForDashboard } from '@/lib/analysis/is-safe-rubric-for-dashboard'
 import { toast } from '@/components/ui/toast-simple'
+import { appendVentureNameToAnalysisFormData } from '@/lib/client/analysis-venture-name'
 
 export function VideoPitchAnalysisTab() {
   const [file, setFile] = useState<File | null>(null)
@@ -122,6 +123,7 @@ export function VideoPitchAnalysisTab() {
       if (reviewType === 'reviewer' && selectedReviewer) {
         formData.append('reviewerId', selectedReviewer)
       }
+      await appendVentureNameToAnalysisFormData(formData)
 
       const response = await fetch('/api/analyze-video-pitch', {
         method: 'POST',

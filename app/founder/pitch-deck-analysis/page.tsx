@@ -34,6 +34,7 @@ import { loadStripe } from '@stripe/stripe-js'
 import SmartMatchResults from '@/components/smart-match-results'
 import { toast } from '@/components/ui/toast-simple'
 import { CREDIT_COSTS } from '@/lib/constants'
+import { appendVentureNameToAnalysisFormData } from '@/lib/client/analysis-venture-name'
 
 interface PitchAnalysisResult {
   pitchDeckId: string
@@ -191,6 +192,7 @@ export default function PitchDeckAnalysisPage() {
       formData.append('file', file)
       formData.append('paymentVerified', paymentVerified ? 'true' : 'false')
       formData.append('sessionId', checkoutSessionId)
+      await appendVentureNameToAnalysisFormData(formData)
 
       const response = await fetch('/api/analyze-pitch-deck', {
         method: 'POST',

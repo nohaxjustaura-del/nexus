@@ -93,7 +93,7 @@ model Founder {
   achievements         Achievement[] // userId matches Founder id
   savedSearches        SavedSearch[] // userId matches Founder id
   firmDeals            VCFirmDeal[] // founderId matches Founder id
-  analysisSummary      FounderAnalysisSummary?
+  analysisSummaries    FounderAnalysisSummary[]
   investorBookmarkedBy InvestorFounderBookmark[]
 
   createdAt DateTime @default(now())
@@ -1049,9 +1049,12 @@ model VCDiscoveryCandidate {
 }
 
 model FounderAnalysisSummary {
-  id                 String  @id @default(cuid())
-  founderId          String  @unique
-  founder            Founder @relation(fields: [founderId], references: [id], onDelete: Cascade)
+  id        String  @id @default(cuid())
+  founderId String
+  founder   Founder @relation(fields: [founderId], references: [id], onDelete: Cascade)
+
+  /// Saved startup name this row belongs to (trimmed); "" = unnamed venture. One summary row per (founder, name).
+  summaryStartupName String @default("")
 
   overallScore       Float   @default(0)
   tier               String?
@@ -1091,6 +1094,8 @@ model FounderAnalysisSummary {
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
 
+  @@unique([founderId, summaryStartupName])
+  @@index([founderId])
   @@index([overallScore])
   @@index([tier])
   @@index([updatedAt])

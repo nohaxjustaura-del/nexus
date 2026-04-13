@@ -69,12 +69,35 @@ function buildExecutiveSummary(
   return parts.join(' ').slice(0, 500) || 'Analysis available.'
 }
 
+/** Venture key: trimmed founder startup name; empty string = unnamed (single such row per founder). */
+export function ventureKeyFromFounderStartupName(name: string | null | undefined): string {
+  return (name ?? '').trim()
+}
+
+/** Non-empty startup name from multipart `ventureName` field (client sends current saved profile name). */
+export function ventureNameOverrideFromFormData(formData: FormData): string | undefined {
+  const raw = formData.get('ventureName')
+  if (typeof raw !== 'string') return undefined
+  const t = raw.trim()
+  return t.length > 0 ? t : undefined
+}
+
+export type UpsertFounderAnalysisSummaryOptions = {
+  /**
+   * Startup/company name for this analysis run (usually from the client at submit time).
+   * When set, this wins over a second `Founder.startupName` read inside the upsert so
+   * renames create a new `(founderId, summaryStartupName)` row instead of collapsing into one bucket.
+   */
+  ventureNameOverride?: string | null
+}
+
 export async function upsertFounderAnalysisSummary(
   founderId: string,
   analysisData: AnalysisData,
   scoringResult: ScoringResult | null,
   analysisType: string,
   sourceAnalysisId: string,
+  options?: UpsertFounderAnalysisSummaryOptions,
 ) {
   const overallScore = scoringResult?.finalScore ?? 0
   const cs = scoringResult?.categoryScores
@@ -82,19 +105,21 @@ export async function upsertFounderAnalysisSummary(
   const marketText = toSummaryText(analysisData.marketAnalysis)
   const teamText = toSummaryText(analysisData.teamAnalysis)
 
-  let founder: { stage?: string; fundingNeed?: number } | null = null
+  let founder: { stage?: string | null; fundingNeed?: number | null; startupName?: string | null } | null = null
   try {
     founder = await db.founder.findUnique({
       where: { id: founderId },
-      select: { stage: true, fundingNeed: true },
+      select: { stage: true, fundingNeed: true, startupName: true },
     })
-  } catch { /* proceed without */ }
+  } catch {
+    /* proceed without */
+  }
 
   const executiveSummary = buildExecutiveSummary(
     analysisData.strengths,
     marketText,
-    founder?.stage,
-    founder?.fundingNeed,
+    founder?.stage ?? undefined,
+    founder?.fundingNeed ?? undefined,
   )
 
   const data = {
@@ -128,25 +153,62 @@ export async function upsertFounderAnalysisSummary(
     scoreBreakdown: scoringResult?.scoreBreakdown ? JSON.stringify(scoringResult.scoreBreakdown) : null,
   }
 
+  const overrideTrimmed =
+    typeof options?.ventureNameOverride === 'string' ? options.ventureNameOverride.trim() : ''
+  const nameForBucket =
+    overrideTrimmed.length > 0 ? overrideTrimmed : founder?.startupName ?? null
+  const ventureKey = ventureKeyFromFounderStartupName(nameForBucket)
+
   try {
-    const existing = await (db as any).founderAnalysisSummary.findUnique({
-      where: { founderId },
-      select: { overallScore: true, analysisCount: true },
+    const existing = await db.founderAnalysisSummary.findUnique({
+      where: {
+        founderId_summaryStartupName: {
+          founderId,
+          summaryStartupName: ventureKey,
+        },
+      },
+      select: { id: true, overallScore: true, analysisCount: true },
     })
 
-    if (existing) {
-      const keepExisting = existing.overallScore > overallScore
-      await (db as any).founderAnalysisSummary.update({
-        where: { founderId },
-        data: keepExisting
-          ? { analysisCount: existing.analysisCount + 1 }
-          : { ...data, analysisCount: existing.analysisCount + 1 },
+    if (!existing) {
+      await db.founderAnalysisSummary.create({
+        data: {
+          founderId,
+          summaryStartupName: ventureKey,
+          ...data,
+        },
       })
-    } else {
-      await (db as any).founderAnalysisSummary.create({
-        data: { founderId, ...data },
-      })
+      return
     }
+
+    const keepExisting = existing.overallScore > overallScore
+    if (keepExisting) {
+      await db.founderAnalysisSummary.update({
+        where: {
+          founderId_summaryStartupName: {
+            founderId,
+            summaryStartupName: ventureKey,
+          },
+        },
+        data: {
+          analysisCount: { increment: 1 },
+        },
+      })
+      return
+    }
+
+    await db.founderAnalysisSummary.update({
+      where: {
+        founderId_summaryStartupName: {
+          founderId,
+          summaryStartupName: ventureKey,
+        },
+      },
+      data: {
+        ...data,
+        analysisCount: { increment: 1 },
+      },
+    })
   } catch (err) {
     console.error('[upsertFounderAnalysisSummary] Failed:', err)
   }

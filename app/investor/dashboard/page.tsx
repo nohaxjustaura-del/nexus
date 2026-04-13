@@ -46,7 +46,10 @@ interface DimensionBreakdown {
 }
 
 interface FounderRecommendation {
+  /** Unique row (venture summary id or founder id). */
   id: string
+  /** Account id for bookmarks. */
+  founderId: string
   name: string
   startupName: string | null
   stage: string
@@ -243,7 +246,7 @@ function FounderCard({ rec, bookmarked, onToggleBookmark }: {
           <div className="flex shrink-0 flex-col items-center gap-1.5">
             <button
               type="button"
-              onClick={() => onToggleBookmark(rec.id)}
+              onClick={() => onToggleBookmark(rec.founderId)}
               className={cn(
                 'rounded-lg p-2 transition-colors',
                 bookmarked
@@ -478,6 +481,9 @@ export default function InvestorDashboard() {
         if (recsRes.ok) {
           const recsData = await recsRes.json()
           if (alive) setRecommendations(recsData.recommendations || [])
+        } else if (alive) {
+          const errText = recsRes.status === 403 ? 'Complete onboarding to see matches.' : `Matches could not be loaded (${recsRes.status}).`
+          toast.error(errText)
         }
 
         if (bmRes.ok) {
@@ -524,7 +530,7 @@ export default function InvestorDashboard() {
     switch (filter) {
       case 'analyzed': return recommendations.filter(r => r.analysisSummary != null)
       case 'top':      return recommendations.filter(r => r.matchScore >= 50)
-      case 'bookmarked': return recommendations.filter(r => bookmarkedIds.has(r.id))
+      case 'bookmarked': return recommendations.filter(r => bookmarkedIds.has(r.founderId))
       default:         return recommendations
     }
   })()
@@ -632,7 +638,7 @@ export default function InvestorDashboard() {
               <div key={rec.id} style={{ animationDelay: `${i * 50}ms` }}>
                 <FounderCard
                   rec={rec}
-                  bookmarked={bookmarkedIds.has(rec.id)}
+                  bookmarked={bookmarkedIds.has(rec.founderId)}
                   onToggleBookmark={toggleBookmark}
                 />
               </div>

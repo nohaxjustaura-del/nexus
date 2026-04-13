@@ -65,6 +65,7 @@ export default function OnboardingPage() {
     age?: string
     education?: string
     phone?: string
+    startupName?: string
     stage?: string
     location?: string
     countryCode?: string
@@ -278,6 +279,7 @@ export default function OnboardingPage() {
       if (!formData.age || Number.isNaN(ageNum) || ageNum < 16 || ageNum > 100) preErrors.age = 'Please enter a valid age (16–100).'
       if (!formData.phone || (formData.phone.replace(/\D/g, '').length < 7)) preErrors.phone = 'Please enter a valid phone number.'
       if (!formData.education || !isKnownUniversity(formData.education)) preErrors.education = 'Please enter a recognized university.'
+      if (!formData.startupName?.trim()) preErrors.startupName = 'Please enter your startup name.'
       if (!formData.stage) preErrors.stage = 'Please choose a stage.'
       if (!formData.location?.trim()) preErrors.location = 'Please enter your city or town.'
       if (!formData.countryCode?.trim()) preErrors.countryCode = 'Please select your country.'
@@ -294,7 +296,7 @@ export default function OnboardingPage() {
           const focusOrder =
             missingStep === 1
               ? ['name', 'email', 'age', 'education', 'phone']
-              : ['stage-select', 'location', 'country-select', 'region-select', 'sectors-select']
+              : ['startupName', 'stage-select', 'location', 'country-select', 'region-select', 'sectors-select']
           for (const id of focusOrder) {
             const el = document.getElementById(id) as HTMLElement | null
             if (el) {

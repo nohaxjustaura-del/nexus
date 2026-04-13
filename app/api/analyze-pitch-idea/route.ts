@@ -18,7 +18,10 @@ import { getDeepMarketContext } from '@/lib/market-intelligence'
 import { runScoringPipeline } from '@/lib/scoring/scoring-pipeline'
 import { analyzeFounderNotFoundResponse, analyzeUnauthorizedResponse } from '@/lib/analyze-routes/responses'
 import { getPitchIdeaWeeklyQuotaInfo } from '@/lib/pitch-idea-weekly-quota'
-import { upsertFounderAnalysisSummary } from '@/lib/analysis/upsert-founder-analysis-summary'
+import {
+  upsertFounderAnalysisSummary,
+  ventureNameOverrideFromFormData,
+} from '@/lib/analysis/upsert-founder-analysis-summary'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -68,6 +71,9 @@ export async function POST(request: NextRequest) {
       return analyzeFounderNotFoundResponse()
     }
 
+    /** Buckets `FounderAnalysisSummary` per saved startup name at submit time (see FormData / JSON `ventureName`). */
+    let ventureNameForSummary: string | undefined
+
     /** Set during credit / free-tier gate; read again after successful AI for deduction. */
     let pitchIdeaUsesFreeWeeklySlot = false
     let pitchIdeaIsPremium = false
@@ -82,6 +88,7 @@ export async function POST(request: NextRequest) {
       // FormData - could be file upload or text field
       try {
         const formData = await request.formData()
+        ventureNameForSummary = ventureNameOverrideFromFormData(formData)
         const file = formData.get('file') as File | null
         const ideaField = formData.get('idea') as string | null
         voiceRecordingId = (formData.get('voiceRecordingId') as string) || null
@@ -123,6 +130,9 @@ export async function POST(request: NextRequest) {
       try {
         const body = await request.json()
         idea = body.idea || ''
+        if (typeof body.ventureName === 'string' && body.ventureName.trim().length > 0) {
+          ventureNameForSummary = body.ventureName.trim()
+        }
         logger.log(`[ANALYZE-PITCH-IDEA] Text via JSON (${idea.length} chars)`)
       } catch (jsonError: any) {
         logger.error('[ANALYZE-PITCH-IDEA] JSON parse error:', jsonError)
@@ -713,6 +723,7 @@ Return valid JSON:
           scoringResult,
           'IDEA',
           pitchIdeaRecord.id,
+          ventureNameForSummary ? { ventureNameOverride: ventureNameForSummary } : undefined,
         ).catch(e => logger.error('[ANALYZE-PITCH-IDEA] upsertFounderAnalysisSummary failed', e))
 
         // Link voice recording to this pitch idea analysis if one was used

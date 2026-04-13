@@ -15,7 +15,10 @@ import { getDeepMarketContext } from '@/lib/market-intelligence'
 import { runScoringPipeline } from '@/lib/scoring/scoring-pipeline'
 import { extractDeckTextFromFile, validateDeckFile } from '@/lib/unified-pitch/extract-deck-text'
 import { analyzeFounderNotFoundResponse, analyzeUnauthorizedResponse } from '@/lib/analyze-routes/responses'
-import { upsertFounderAnalysisSummary } from '@/lib/analysis/upsert-founder-analysis-summary'
+import {
+  upsertFounderAnalysisSummary,
+  ventureNameOverrideFromFormData,
+} from '@/lib/analysis/upsert-founder-analysis-summary'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -73,6 +76,7 @@ export async function POST(request: NextRequest) {
     }
 
     const file = formData.get('file') as File
+    const ventureNameOverride = ventureNameOverrideFromFormData(formData)
     
     if (!file) {
       return NextResponse.json(
@@ -417,6 +421,7 @@ export async function POST(request: NextRequest) {
         scoringResult,
         'DECK',
         pitchDeckAnalysis.id,
+        ventureNameOverride ? { ventureNameOverride } : undefined,
       ).catch(e => logger.error('[ANALYZE-PITCH-DECK] upsertFounderAnalysisSummary failed', e))
     } catch (saveError: any) {
       logger.error('[ANALYZE-PITCH-DECK] Failed to save analysis to database:', saveError.message)

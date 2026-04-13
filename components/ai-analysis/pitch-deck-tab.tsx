@@ -21,6 +21,7 @@ import {
 import Link from "next/link"
 import { toast } from '@/components/ui/toast-simple'
 import { fmtCheckRange } from '@/lib/utils'
+import { appendVentureNameToAnalysisFormData } from '@/lib/client/analysis-venture-name'
 
 export function PitchDeckAnalysisTab() {
   const [file, setFile] = useState<File | null>(null)
@@ -85,6 +86,7 @@ export function PitchDeckAnalysisTab() {
     try {
       const formData = new FormData()
       formData.append('file', file)
+      await appendVentureNameToAnalysisFormData(formData)
 
       const response = await fetch('/api/analyze-pitch-deck', {
         method: 'POST',

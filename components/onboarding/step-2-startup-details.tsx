@@ -38,6 +38,7 @@ export interface Step2FormSlice {
 }
 
 export type Step2Errors = {
+  startupName?: string
   stage?: string
   sectors?: string
   location?: string
@@ -88,7 +89,9 @@ export function Step2StartupDetails({
             value={formData.startupName}
             onChange={(e) => setFormData({ ...formData, startupName: e.target.value })}
             placeholder="Acme Corp"
+            aria-invalid={!!errors.startupName}
           />
+          {errors.startupName && <p className="text-xs text-red-600">{errors.startupName}</p>}
         </div>
 
         <div className="space-y-2">
@@ -261,6 +264,9 @@ export function Step2StartupDetails({
             <Button
               onClick={() => {
                 const nextErrors: Step2Errors = {}
+                if (!formData.startupName?.trim()) {
+                  nextErrors.startupName = 'Please enter your startup name.'
+                }
                 if (!formData.stage) {
                   nextErrors.stage = 'Please choose a stage.'
                 }

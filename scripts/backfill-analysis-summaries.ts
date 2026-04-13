@@ -30,7 +30,7 @@ async function main() {
   console.log('Backfilling FounderAnalysisSummary from existing analyses...\n')
 
   const founders = await db.founder.findMany({
-    select: { id: true, name: true, email: true, stage: true, fundingNeed: true },
+    select: { id: true, name: true, email: true, stage: true, fundingNeed: true, startupName: true },
   })
   console.log(`Found ${founders.length} founders total.\n`)
 
@@ -39,7 +39,7 @@ async function main() {
 
   for (const founder of founders) {
     // Check if already has a summary
-    const existing = await (db as any).founderAnalysisSummary.findUnique({
+    const existing = await (db as any).founderAnalysisSummary.findFirst({
       where: { founderId: founder.id },
     })
     if (existing) {
@@ -140,6 +140,7 @@ async function main() {
       await (db as any).founderAnalysisSummary.create({
         data: {
           founderId: founder.id,
+          summaryStartupName: founder.startupName?.trim() || null,
           overallScore: bestScore,
           tier,
           conviction: bestAnalysis.conviction || null,

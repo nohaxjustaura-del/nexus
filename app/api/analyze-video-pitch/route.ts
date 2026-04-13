@@ -15,7 +15,10 @@ import { runScoringPipeline } from '@/lib/scoring/scoring-pipeline'
 import { getComprehensiveFounderContext } from '@/lib/founder-context'
 import { reviewerAssignableWhere } from '@/lib/reviewer-filters'
 import { analyzeFounderNotFoundResponse, analyzeUnauthorizedResponse } from '@/lib/analyze-routes/responses'
-import { upsertFounderAnalysisSummary } from '@/lib/analysis/upsert-founder-analysis-summary'
+import {
+  upsertFounderAnalysisSummary,
+  ventureNameOverrideFromFormData,
+} from '@/lib/analysis/upsert-founder-analysis-summary'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -80,6 +83,7 @@ export async function POST(request: NextRequest) {
     }
 
     const file = formData.get('file') as File
+    const ventureNameOverride = ventureNameOverrideFromFormData(formData)
     const paymentVerified = formData.get('paymentVerified') === 'true'
     const sessionId = (formData.get('sessionId') as string) || null
     const reviewType = (formData.get('reviewType') as string) || 'ai'
@@ -747,6 +751,7 @@ export async function POST(request: NextRequest) {
       scoringResult,
       'VIDEO',
       videoPitch.id,
+      ventureNameOverride ? { ventureNameOverride } : undefined,
     ).catch(e => logger.error('[ANALYZE-VIDEO-PITCH] upsertFounderAnalysisSummary failed', e))
 
     // Deduct credits AFTER successful analysis (admin bypass)

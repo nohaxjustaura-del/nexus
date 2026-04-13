@@ -3,8 +3,87 @@ import { db } from '@/lib/db'
 import { getCurrentUser } from '@/lib/auth'
 import { formatFounderLocationLine } from '@/lib/geo/format-founder-location'
 import { rankFoundersForInvestor, type FounderCandidate, type InvestorProfile } from '@/lib/investor-founder-recommendations'
+import type { Founder, FounderAnalysisSummary, FounderPrefs } from '@prisma/client'
 
 export const dynamic = 'force-dynamic'
+
+function mapSummaryToAnalysisBlock(s: FounderAnalysisSummary) {
+  return {
+    overallScore: s.overallScore,
+    tier: s.tier,
+    conviction: s.conviction,
+    marketScore: s.marketScore,
+    teamScore: s.teamScore,
+    tractionScore: s.tractionScore,
+    productScore: s.productScore,
+    strengths: s.strengths,
+    weaknesses: s.weaknesses,
+    executiveSummary: s.executiveSummary,
+    sectorFit: s.sectorFit,
+    tractionMetrics: s.tractionMetrics,
+    marketAnalysis: s.marketAnalysis,
+    teamAnalysis: s.teamAnalysis,
+    redFlags: s.redFlags,
+    bullCase: s.bullCase,
+    bearCase: s.bearCase,
+    analysisType: s.analysisType,
+    analysisCount: s.analysisCount,
+  }
+}
+
+function buildCandidate(
+  f: Founder,
+  summary: FounderAnalysisSummary | null,
+  prefs: FounderPrefs | undefined,
+): FounderCandidate {
+  const ventureLabel = (summary?.summaryStartupName ?? '').trim()
+  // Never substitute live `Founder.startupName` for a stored summary row — that made renames look like one "moving" venture.
+  const displayStartup =
+    summary == null
+      ? f.startupName ?? null
+      : ventureLabel.length > 0
+        ? ventureLabel
+        : 'Unnamed venture'
+
+  return {
+    id: summary?.id ?? f.id,
+    founderId: f.id,
+    name: f.name ?? '',
+    email: f.email,
+    startupName: displayStartup,
+    stage: f.stage ?? '',
+    sectors: f.sectors,
+    businessModel: f.businessModel,
+    location: f.location ?? '',
+    countryCode: f.countryCode,
+    regionCode: f.regionCode,
+    fundingNeed: f.fundingNeed,
+    revenue: f.revenue,
+    users: f.users,
+    growthRate: f.growthRate,
+    teamSize: f.teamSize,
+    ethicsTags: f.ethicsTags,
+    personalityTags: f.personalityTags,
+    valueAddNeeds: f.valueAddNeeds,
+    profileComplete: f.profileComplete,
+    isStealth: f.isStealth,
+    bio: f.bio,
+    linkedinUrl: f.linkedinUrl,
+    websiteUrl: f.websiteUrl,
+    analysisSummary: summary ? mapSummaryToAnalysisBlock(summary) : null,
+    prefs: prefs
+      ? {
+          isImmigrant: prefs.isImmigrant,
+          isUnderrepresented: prefs.isUnderrepresented,
+          isStudent: prefs.isStudent,
+          isVeteran: prefs.isVeteran,
+          isWoman: prefs.isWoman,
+          isLgbtq: prefs.isLgbtq,
+          isBipoc: prefs.isBipoc,
+        }
+      : null,
+  }
+}
 
 export async function GET() {
   try {
@@ -17,81 +96,49 @@ export async function GET() {
       return NextResponse.json({ error: 'Complete onboarding first' }, { status: 403 })
     }
 
-    // Eligibility must match `founderIsEligibleForInvestorRanking` in lib/investor-founder-recommendations.ts
+    // Resolve "has analysis" via explicit ids so we never depend on nested-relation filters
+    // (avoids empty results if relation filters behave differently across DB/client states).
+    const summaryRows = await db.founderAnalysisSummary.findMany({
+      select: { founderId: true },
+      distinct: ['founderId'],
+    })
+    const founderIdsWithAnySummary = summaryRows.map((r) => r.founderId)
+
     const founders = await db.founder.findMany({
       where: {
         isStealth: false,
         OR: [
           { profileComplete: true },
-          { analysisSummary: { isNot: null } },
+          ...(founderIdsWithAnySummary.length > 0
+            ? [{ id: { in: founderIdsWithAnySummary } }]
+            : []),
         ],
       },
       include: {
-        analysisSummary: true,
+        analysisSummaries: {
+          orderBy: { updatedAt: 'desc' },
+        },
       },
     })
 
-    const founderEmails = founders.map(f => f.email)
+    const founderEmails = founders.map((f) => f.email)
     const allPrefs = await db.founderPrefs.findMany({
       where: { email: { in: founderEmails } },
     })
-    const prefsMap = new Map(allPrefs.map(p => [p.email, p]))
+    const prefsMap = new Map(allPrefs.map((p) => [p.email, p]))
 
-    const candidates: FounderCandidate[] = founders.map(f => ({
-      id: f.id,
-      name: f.name ?? '',
-      email: f.email,
-      startupName: f.startupName,
-      stage: f.stage ?? '',
-      sectors: f.sectors,
-      businessModel: f.businessModel,
-      location: f.location ?? '',
-      countryCode: f.countryCode,
-      regionCode: f.regionCode,
-      fundingNeed: f.fundingNeed,
-      revenue: f.revenue,
-      users: f.users,
-      growthRate: f.growthRate,
-      teamSize: f.teamSize,
-      ethicsTags: f.ethicsTags,
-      personalityTags: f.personalityTags,
-      valueAddNeeds: f.valueAddNeeds,
-      profileComplete: f.profileComplete,
-      isStealth: f.isStealth,
-      bio: f.bio,
-      linkedinUrl: f.linkedinUrl,
-      websiteUrl: f.websiteUrl,
-      analysisSummary: f.analysisSummary ? {
-        overallScore: f.analysisSummary.overallScore,
-        tier: f.analysisSummary.tier,
-        conviction: f.analysisSummary.conviction,
-        marketScore: f.analysisSummary.marketScore,
-        teamScore: f.analysisSummary.teamScore,
-        tractionScore: f.analysisSummary.tractionScore,
-        productScore: f.analysisSummary.productScore,
-        strengths: f.analysisSummary.strengths,
-        weaknesses: f.analysisSummary.weaknesses,
-        executiveSummary: f.analysisSummary.executiveSummary,
-        sectorFit: f.analysisSummary.sectorFit,
-        tractionMetrics: f.analysisSummary.tractionMetrics,
-        marketAnalysis: f.analysisSummary.marketAnalysis,
-        teamAnalysis: f.analysisSummary.teamAnalysis,
-        redFlags: f.analysisSummary.redFlags,
-        bullCase: f.analysisSummary.bullCase,
-        bearCase: f.analysisSummary.bearCase,
-        analysisType: f.analysisSummary.analysisType,
-        analysisCount: f.analysisSummary.analysisCount,
-      } : null,
-      prefs: prefsMap.has(f.email) ? {
-        isImmigrant: prefsMap.get(f.email)!.isImmigrant,
-        isUnderrepresented: prefsMap.get(f.email)!.isUnderrepresented,
-        isStudent: prefsMap.get(f.email)!.isStudent,
-        isVeteran: prefsMap.get(f.email)!.isVeteran,
-        isWoman: prefsMap.get(f.email)!.isWoman,
-        isLgbtq: prefsMap.get(f.email)!.isLgbtq,
-        isBipoc: prefsMap.get(f.email)!.isBipoc,
-      } : null,
-    }))
+    const candidates: FounderCandidate[] = []
+    for (const f of founders) {
+      const prefs = prefsMap.get(f.email)
+      const summaries = f.analysisSummaries ?? []
+      if (summaries.length > 0) {
+        for (const summary of summaries) {
+          candidates.push(buildCandidate(f, summary, prefs))
+        }
+      } else if (f.profileComplete) {
+        candidates.push(buildCandidate(f, null, prefs))
+      }
+    }
 
     const investorProfile: InvestorProfile = {
       stages: investor.stages,
@@ -112,8 +159,9 @@ export async function GET() {
 
     const recommendations = rankFoundersForInvestor(candidates, investorProfile, 15)
 
-    const results = recommendations.map(r => ({
+    const results = recommendations.map((r) => ({
       id: r.founder.id,
+      founderId: r.founder.founderId,
       name: r.founder.name ?? '',
       startupName: r.founder.startupName,
       stage: r.founder.stage ?? '',
@@ -143,27 +191,47 @@ export async function GET() {
       matchScore: r.matchScore,
       matchReasons: r.matchReasons,
       dimensionBreakdown: r.dimensionBreakdown,
-      analysisSummary: r.founder.analysisSummary ? {
-        overallScore: r.founder.analysisSummary.overallScore,
-        tier: r.founder.analysisSummary.tier,
-        strengths: (() => { try { return JSON.parse(r.founder.analysisSummary.strengths || '[]') } catch { return [] } })(),
-        weaknesses: (() => { try { return JSON.parse(r.founder.analysisSummary.weaknesses || '[]') } catch { return [] } })(),
-        executiveSummary: r.founder.analysisSummary.executiveSummary,
-        marketScore: r.founder.analysisSummary.marketScore,
-        teamScore: r.founder.analysisSummary.teamScore,
-        tractionScore: r.founder.analysisSummary.tractionScore,
-        productScore: r.founder.analysisSummary.productScore,
-        marketAnalysis: r.founder.analysisSummary.marketAnalysis,
-        teamAnalysis: r.founder.analysisSummary.teamAnalysis,
-        redFlags: (() => { try { return JSON.parse(r.founder.analysisSummary.redFlags || '[]') } catch { return [] } })(),
-        bullCase: r.founder.analysisSummary.bullCase,
-        bearCase: r.founder.analysisSummary.bearCase,
-        analysisCount: r.founder.analysisSummary.analysisCount,
-      } : null,
+      analysisSummary: r.founder.analysisSummary
+        ? {
+            overallScore: r.founder.analysisSummary.overallScore,
+            tier: r.founder.analysisSummary.tier,
+            strengths: (() => {
+              try {
+                return JSON.parse(r.founder.analysisSummary.strengths || '[]')
+              } catch {
+                return []
+              }
+            })(),
+            weaknesses: (() => {
+              try {
+                return JSON.parse(r.founder.analysisSummary.weaknesses || '[]')
+              } catch {
+                return []
+              }
+            })(),
+            executiveSummary: r.founder.analysisSummary.executiveSummary,
+            marketScore: r.founder.analysisSummary.marketScore,
+            teamScore: r.founder.analysisSummary.teamScore,
+            tractionScore: r.founder.analysisSummary.tractionScore,
+            productScore: r.founder.analysisSummary.productScore,
+            marketAnalysis: r.founder.analysisSummary.marketAnalysis,
+            teamAnalysis: r.founder.analysisSummary.teamAnalysis,
+            redFlags: (() => {
+              try {
+                return JSON.parse(r.founder.analysisSummary.redFlags || '[]')
+              } catch {
+                return []
+              }
+            })(),
+            bullCase: r.founder.analysisSummary.bullCase,
+            bearCase: r.founder.analysisSummary.bearCase,
+            analysisCount: r.founder.analysisSummary.analysisCount,
+          }
+        : null,
     }))
 
     return NextResponse.json({ recommendations: results, total: results.length })
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('[RECOMMENDED-FOUNDERS] Error:', err)
     return NextResponse.json({ error: 'Internal error' }, { status: 500 })
   }

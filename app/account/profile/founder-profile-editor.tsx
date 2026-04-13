@@ -126,6 +126,7 @@ export function FounderProfileEditor({
     phone?: string
     stage?: string
     sectors?: string
+    startupName?: string
     location?: string
     countryCode?: string
     regionCode?: string
@@ -232,7 +233,12 @@ export function FounderProfileEditor({
       next.education = 'Please enter a recognized university.'
     }
     if (!formData.stage) next.stage = 'Please choose a stage.'
-    if (!formData.location) next.location = 'Please enter your location.'
+    if (!formData.startupName?.trim()) next.startupName = 'Please enter your startup name.'
+    if (!formData.location?.trim()) next.location = 'Please enter your city or town.'
+    if (!formData.countryCode?.trim()) next.countryCode = 'Please select your country.'
+    if (countryHasSubdivisionList(formData.countryCode) && !formData.regionCode?.trim()) {
+      next.regionCode = 'Please select your state or province.'
+    }
     if (formData.sectors.length === 0 || formData.sectors.length > 3) {
       next.sectors = 'Select 1–3 sectors.'
     }

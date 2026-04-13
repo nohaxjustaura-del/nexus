@@ -20,6 +20,7 @@ import {
   invalidateUserCreditsClientCache,
 } from '@/lib/client/user-credits-client'
 import { cn } from '@/lib/utils'
+import { appendVentureNameToAnalysisFormData } from '@/lib/client/analysis-venture-name'
 
 const UNIFIED_CREDITS = CREDIT_COSTS.UNIFIED_PITCH
 const REVIEWER_CREDITS = CREDIT_COSTS.VIDEO_PITCH.REVIEWER
@@ -188,6 +189,7 @@ export function UnifiedPitchTab() {
       if (videoFile) formData.append('video', videoFile)
       formData.append('reviewType', reviewType)
       if (reviewType === 'reviewer' && selectedReviewer) formData.append('reviewerId', selectedReviewer)
+      await appendVentureNameToAnalysisFormData(formData)
 
       const { ok, status, data } = await postFormDataWithUploadProgress(
         '/api/analyze-unified-pitch',
