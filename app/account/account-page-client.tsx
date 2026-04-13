@@ -52,7 +52,7 @@ export function AccountPageClient({
 
   const canUseFounderWorkspace = Boolean(caps?.hasFounderProfile) || userType === 'mentor'
 
-  const investorHomeHref = caps?.hasInvestorProfile ? '/vc/profile' : '/vc/claim'
+  const investorHomeHref = caps?.hasInvestorProfile ? '/investor/dashboard' : '/investor/onboarding'
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-muted/30 to-background">
@@ -84,8 +84,8 @@ export function AccountPageClient({
                   </Button>
                   {!caps?.hasInvestorProfile && (
                     <p className="text-sm text-muted-foreground">
-                      <Link href="/vc/claim" className="text-primary underline-offset-4 hover:underline">
-                        Claim your listing
+                      <Link href="/investor/onboarding" className="text-primary underline-offset-4 hover:underline">
+                        Complete your investor onboarding
                       </Link>{' '}
                       if you have not yet.
                     </p>
@@ -191,28 +191,16 @@ export function AccountPageClient({
             <CardContent className="space-y-2 pt-2">
               {isVc ? (
                 <>
-                  <Link href="/vc/extract" className="block">
-                    <Button variant="outline" className="w-full justify-between border-border shadow-none">
-                      Extract listing from text
-                      <ArrowRight className="h-4 w-4" />
-                    </Button>
-                  </Link>
-                  <Link href="/vc/profile" className="block">
-                    <Button variant="outline" className="w-full justify-between border-border shadow-none">
-                      Your listing & thesis
-                      <ArrowRight className="h-4 w-4" />
-                    </Button>
-                  </Link>
-                  <Link href="/vc/dashboard" className="block">
+                  <Link href="/investor/dashboard" className="block">
                     <Button variant="outline" className="w-full justify-between border-border shadow-none">
                       Matched founders
                       <ArrowRight className="h-4 w-4" />
                     </Button>
                   </Link>
                   {!caps?.hasInvestorProfile && (
-                    <Link href="/vc/claim" className="block">
+                    <Link href="/investor/onboarding" className="block">
                       <Button variant="outline" className="w-full justify-between border-border shadow-none">
-                        Claim investor profile
+                        Complete investor onboarding
                         <ArrowRight className="h-4 w-4" />
                       </Button>
                     </Link>

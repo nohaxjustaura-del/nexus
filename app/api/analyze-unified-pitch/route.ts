@@ -30,6 +30,7 @@ import { mergePitchAnalysesForMatching } from '@/lib/unified-pitch/merge-pitch-a
 import { buildUnifiedFounderContext } from '@/lib/unified-pitch/unified-founder-context'
 import { reviewerAssignableWhere } from '@/lib/reviewer-filters'
 import { analyzeFounderNotFoundResponse, analyzeUnauthorizedResponse } from '@/lib/analyze-routes/responses'
+import { upsertFounderAnalysisSummary } from '@/lib/analysis/upsert-founder-analysis-summary'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -51,7 +52,8 @@ export async function POST(request: NextRequest) {
       return analyzeUnauthorizedResponse()
     }
 
-    const founder = await db.founder.findUnique({ where: { email: user.email } }).catch(() => null)
+    const sessionEmail = user.email.toLowerCase().trim()
+    const founder = await db.founder.findUnique({ where: { email: sessionEmail } }).catch(() => null)
     if (!founder) {
       return analyzeFounderNotFoundResponse({ redirectTo: '/founder/onboarding' })
     }
@@ -527,6 +529,22 @@ export async function POST(request: NextRequest) {
         smartMatchResults: JSON.stringify(matchedVCs.slice(0, 10)),
       },
     })
+
+    upsertFounderAnalysisSummary(
+      founder.id,
+      {
+        strengths: pitchAnalysisDisplay.strengths,
+        weaknesses: pitchAnalysisDisplay.weaknesses,
+        sectorFit: pitchAnalysisDisplay.sectorFit as Record<string, number> | undefined,
+        tractionMetrics: pitchAnalysisDisplay.tractionMetrics as any,
+        marketAnalysis: pitchAnalysisDisplay.marketAnalysis as any,
+        teamAnalysis: pitchAnalysisDisplay.teamAnalysis as any,
+        productFit: pitchAnalysisDisplay.productFit as any,
+      },
+      scoringResult,
+      'UNIFIED',
+      videoPitch.id,
+    ).catch(e => logger.error('[UNIFIED-PITCH] upsertFounderAnalysisSummary failed', e))
 
     if (shouldEnforceAiCredits(user.email)) {
       try {

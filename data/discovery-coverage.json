@@ -212,33 +212,33 @@
       "sector": "SaaS",
       "region": "India",
       "stage": "Series A",
-      "lastSearchedAt": null,
-      "candidatesFound": 0,
-      "totalSearches": 0
+      "lastSearchedAt": "2026-04-12T21:19:43.585Z",
+      "candidatesFound": 31,
+      "totalSearches": 1
     },
     "SaaS|India|early-stage": {
       "sector": "SaaS",
       "region": "India",
       "stage": "early-stage",
-      "lastSearchedAt": null,
-      "candidatesFound": 0,
-      "totalSearches": 0
+      "lastSearchedAt": "2026-04-12T21:19:43.596Z",
+      "candidatesFound": 31,
+      "totalSearches": 1
     },
     "SaaS|India|micro VC": {
       "sector": "SaaS",
       "region": "India",
       "stage": "micro VC",
-      "lastSearchedAt": null,
-      "candidatesFound": 0,
-      "totalSearches": 0
+      "lastSearchedAt": "2026-04-12T21:19:49.082Z",
+      "candidatesFound": 40,
+      "totalSearches": 1
     },
     "SaaS|India|first-time fund": {
       "sector": "SaaS",
       "region": "India",
       "stage": "first-time fund",
-      "lastSearchedAt": null,
-      "candidatesFound": 0,
-      "totalSearches": 0
+      "lastSearchedAt": "2026-04-12T21:19:49.086Z",
+      "candidatesFound": 40,
+      "totalSearches": 1
     },
     "SaaS|Latin America|pre-seed": {
       "sector": "SaaS",
@@ -11521,5 +11521,5 @@
       "totalSearches": 0
     }
   },
-  "lastUpdated": "2026-04-12T17:32:27.377Z"
+  "lastUpdated": "2026-04-12T21:19:49.086Z"
 }

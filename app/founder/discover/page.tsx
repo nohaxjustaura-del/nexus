@@ -20,6 +20,7 @@ function parseJSONStringArray(value: unknown): string[] {
 }
 import DiscoverClient from "./discover-client"
 import { investorCheckRangeThousands, investorHasUnknownCheckSize } from "@/lib/investor-check-range"
+import { isFounderCoreProfileComplete } from '@/lib/founder-profile-completeness'
 
 function searchableSlice(v: unknown): string {
   if (v == null) return ''
@@ -135,6 +136,8 @@ export default async function DiscoverPage({
               stage: true,
               sectors: true,
               location: true,
+              countryCode: true,
+              regionCode: true,
               gender: true,
               willingToDropOut: true,
               resumeAnalyses: { select: { id: true }, take: 1 },
@@ -165,7 +168,14 @@ export default async function DiscoverPage({
       } catch (e) {
         sectors = []
       }
-      profileComplete = !!founder?.name && !!founder?.stage && !!founder?.location && Array.isArray(sectors) && sectors.length > 0
+      profileComplete = isFounderCoreProfileComplete({
+        name: founder?.name,
+        stage: founder?.stage,
+        location: founder?.location,
+        countryCode: founder?.countryCode,
+        regionCode: founder?.regionCode,
+        sectors,
+      })
       
       // CRITICAL: Redirect to onboarding if profile is not complete
       if (!profileComplete) {
@@ -183,20 +193,27 @@ export default async function DiscoverPage({
         if (p?.targetOwnershipMax) prefDefaults.targetOwnershipMax = String(p.targetOwnershipMax)
         if (p?.leadPreference) prefDefaults.willLead = String(p.leadPreference) as "never" | "sometimes" | "usually" | undefined
         
-        // Set background reasons from same query
+        const genderLow = (founder?.gender ?? '').toLowerCase().trim()
+        const derivedIsWoman = p?.isWoman || genderLow === 'female' || genderLow === 'woman'
+
         if (p?.isStudent || founder?.willingToDropOut) {
           backgroundReasons.push('Student-focused funds (Rough Draft, Neo, The House Fund, etc.)')
         }
         if (p?.isImmigrant) {
           backgroundReasons.push('Immigrant founder support (Unshackled Ventures, etc.)')
         }
-        if (p?.isUnderrepresented || founder?.gender === 'female') {
-          backgroundReasons.push('Diversity-focused funds (Backstage Capital, Harlem Capital, BBG Ventures, etc.)')
+        if (derivedIsWoman) {
+          backgroundReasons.push('Women-focused funds (Female Founders Fund, BBG Ventures, The Artemis Fund, etc.)')
+        }
+        if (p?.isUnderrepresented || p?.isBipoc) {
+          backgroundReasons.push('Diversity-focused funds (Backstage Capital, Harlem Capital, Kapor Capital, etc.)')
         }
         if (p?.isVeteran) {
           backgroundReasons.push('Veteran-focused funds (Scout Ventures, etc.)')
         }
-        // University affiliation check removed - column doesn't exist yet
+        if (p?.isLgbtq) {
+          backgroundReasons.push('LGBTQ+-focused funds (Gaingels, Pride Fund, etc.)')
+        }
       } else {
         if (sectors?.length > 0) prefDefaults.sector = sectors[0]
         if (founder?.stage) prefDefaults.stage = String(founder.stage)

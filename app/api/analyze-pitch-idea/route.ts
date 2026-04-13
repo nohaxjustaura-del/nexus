@@ -18,6 +18,7 @@ import { getDeepMarketContext } from '@/lib/market-intelligence'
 import { runScoringPipeline } from '@/lib/scoring/scoring-pipeline'
 import { analyzeFounderNotFoundResponse, analyzeUnauthorizedResponse } from '@/lib/analyze-routes/responses'
 import { getPitchIdeaWeeklyQuotaInfo } from '@/lib/pitch-idea-weekly-quota'
+import { upsertFounderAnalysisSummary } from '@/lib/analysis/upsert-founder-analysis-summary'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -58,8 +59,9 @@ export async function POST(request: NextRequest) {
     }
 
     // 🚀 OPTIMIZED: Simpler error handling
+    const sessionEmail = user.email.toLowerCase().trim()
     const founder = await db.founder.findUnique({
-      where: { email: user.email },
+      where: { email: sessionEmail },
     })
 
     if (!founder) {
@@ -696,6 +698,22 @@ Return valid JSON:
           },
         })
         logger.log(`[ANALYZE-PITCH-IDEA] Saved analysis to database: ${pitchIdeaRecord.id}`)
+
+        upsertFounderAnalysisSummary(
+          founder.id,
+          {
+            strengths: analysis.strengths,
+            weaknesses: analysis.weaknesses,
+            sectorFit: analysis.sectorFit as Record<string, number> | undefined,
+            tractionMetrics: analysis.tractionMetrics as any,
+            marketAnalysis: analysis.marketAnalysis as any,
+            teamAnalysis: analysis.teamAnalysis as any,
+            productFit: analysis.productFit as any,
+          },
+          scoringResult,
+          'IDEA',
+          pitchIdeaRecord.id,
+        ).catch(e => logger.error('[ANALYZE-PITCH-IDEA] upsertFounderAnalysisSummary failed', e))
 
         // Link voice recording to this pitch idea analysis if one was used
         if (voiceRecordingId) {

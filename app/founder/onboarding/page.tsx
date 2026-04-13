@@ -5,7 +5,8 @@ import { useRouter } from 'next/navigation'
 import { Loader2 } from "lucide-react"
 import { isKnownUniversity } from "@/lib/universities"
 import { Step1BasicInfo } from "@/components/onboarding/step-1-basic-info"
-import { Step2StartupDetails } from "@/components/onboarding/step-2-startup-details"
+import { Step2StartupDetails } from '@/components/onboarding/step-2-startup-details'
+import { countryHasSubdivisionList } from '@/lib/geo/subdivisions'
 import { Step3Preferences } from "@/components/onboarding/step-3-preferences"
 import { CLIENT_STORAGE } from '@/lib/client-storage-keys'
 import { toast } from '@/components/ui/toast-simple'
@@ -25,6 +26,8 @@ type OnboardingFormData = {
   sectors: string[]
   businessModel: string
   location: string
+  countryCode: string
+  regionCode: string
   website: string
   linkedin: string
   ethicsTags: string[]
@@ -54,7 +57,18 @@ export default function OnboardingPage() {
   const [step, setStep] = useState(1)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
-  const [errors, setErrors] = useState<{ name?: string; email?: string; age?: string; education?: string; phone?: string; stage?: string; location?: string; sectors?: string }>({})
+  const [errors, setErrors] = useState<{
+    name?: string
+    email?: string
+    age?: string
+    education?: string
+    phone?: string
+    stage?: string
+    location?: string
+    countryCode?: string
+    regionCode?: string
+    sectors?: string
+  }>({})
   const [formData, setFormData] = useState<OnboardingFormData>({
     name: '',
     email: '',
@@ -70,6 +84,8 @@ export default function OnboardingPage() {
     sectors: [],
     businessModel: '',
     location: '',
+    countryCode: '',
+    regionCode: '',
     website: '',
     linkedin: '',
     ethicsTags: [],
@@ -130,6 +146,8 @@ export default function OnboardingPage() {
               sectors: p.sectors || [],
               businessModel: p.businessModel || '',
               location: p.location || '',
+              countryCode: (p.countryCode as string) || '',
+              regionCode: (p.regionCode as string) || '',
               website: p.website || '',
               linkedin: p.linkedin || '',
               marketingOptIn: Boolean(p.marketingOptIn),
@@ -250,7 +268,11 @@ export default function OnboardingPage() {
       if (!formData.phone || (formData.phone.replace(/\D/g, '').length < 7)) preErrors.phone = 'Please enter a valid phone number.'
       if (!formData.education || !isKnownUniversity(formData.education)) preErrors.education = 'Please enter a recognized university.'
       if (!formData.stage) preErrors.stage = 'Please choose a stage.'
-      if (!formData.location) preErrors.location = 'Please enter your location.'
+      if (!formData.location?.trim()) preErrors.location = 'Please enter your city or town.'
+      if (!formData.countryCode?.trim()) preErrors.countryCode = 'Please select your country.'
+      if (countryHasSubdivisionList(formData.countryCode) && !formData.regionCode?.trim()) {
+        preErrors.regionCode = 'Please select your state or province.'
+      }
       if (formData.sectors.length === 0 || formData.sectors.length > 3) preErrors.sectors = 'Select 1–3 sectors.'
       
       if (Object.keys(preErrors).length > 0) {
@@ -258,10 +280,16 @@ export default function OnboardingPage() {
         const missingStep = preErrors.name || preErrors.email || preErrors.age || preErrors.education || preErrors.phone ? 1 : 2
         setStep(missingStep)
         setTimeout(() => {
-          const focusOrder = missingStep === 1 ? ['name', 'email', 'age', 'education', 'phone'] : ['stage-select', 'location', 'sectors-select']
+          const focusOrder =
+            missingStep === 1
+              ? ['name', 'email', 'age', 'education', 'phone']
+              : ['stage-select', 'location', 'country-select', 'region-select', 'sectors-select']
           for (const id of focusOrder) {
-            const el = document.getElementById(id) as HTMLInputElement | null
-            if (el) { el.focus(); break }
+            const el = document.getElementById(id) as HTMLElement | null
+            if (el) {
+              el.focus()
+              break
+            }
           }
         }, 0)
         throw new Error('Please complete required profile fields before continuing.')
@@ -286,6 +314,8 @@ export default function OnboardingPage() {
           sectors: formData.sectors,
           businessModel: formData.businessModel,
           location: formData.location,
+          countryCode: formData.countryCode,
+          regionCode: formData.regionCode,
           website: formData.website,
           linkedin: formData.linkedin,
           ethicsTags: formData.ethicsTags,
@@ -309,7 +339,7 @@ export default function OnboardingPage() {
       if (!response.ok) {
         throw new Error(data?.message || data?.error || 'Failed to save profile')
       }
-  }, [formData, errors])
+  }, [formData])
 
   const handleSubmit = async () => {
     setSaving(true)

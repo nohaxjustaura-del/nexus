@@ -1,7 +1,7 @@
 /** Where invite / first magic-link should land after Supabase auth. */
 export function signupCallbackPath(userType: string | undefined): string {
   const t = (userType || 'founder').toLowerCase()
-  if (t === 'investor') return '/vc/claim'
+  if (t === 'investor') return '/investor/onboarding'
   return '/founder/onboarding'
 }
 
@@ -12,10 +12,12 @@ const SAFE_AUTH_NEXT = new Set([
   '/vc/dashboard',
   '/vc/profile',
   '/founder/network',
+  '/investor/onboarding',
+  '/investor/dashboard',
 ])
 
 const FOUNDER_AUTH_NEXT_EXACT = new Set(['/founder/onboarding', '/founder/dashboard'])
-const INVESTOR_AUTH_NEXT_EXACT = new Set(['/vc/claim', '/vc/dashboard', '/vc/profile'])
+const INVESTOR_AUTH_NEXT_EXACT = new Set(['/vc/claim', '/vc/dashboard', '/vc/profile', '/investor/onboarding', '/investor/dashboard'])
 
 /** Limit optional `next` from the client (e.g. verify resend). */
 export function safeAuthNextPath(candidate: string | undefined, fallback: string): string {

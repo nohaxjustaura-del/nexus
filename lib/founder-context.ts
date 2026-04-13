@@ -97,6 +97,12 @@ export interface ComprehensiveFounderContext {
 const founderContextCache = new Map<string, { data: ComprehensiveFounderContext; timestamp: number }>()
 const CACHE_TTL = 5 * 60 * 1000 // 5 minutes
 
+/** Call after Founder / FounderPrefs updates so the next analysis sees fresh flags. */
+export function invalidateFounderContextCache(email: string): void {
+  const key = email.toLowerCase().trim()
+  if (key) founderContextCache.delete(key)
+}
+
 /**
  * Infer canonical school name from education + bio (onboarding often only fills education).
  * Order: more specific patterns first. Used for university-affiliated accelerators (e.g. Brown B-Lab).
@@ -116,18 +122,21 @@ export async function getComprehensiveFounderContext(
   email: string
 ): Promise<ComprehensiveFounderContext | null> {
   try {
-    // Check cache first
-    const cached = founderContextCache.get(email)
+    const normalizedEmail = email.toLowerCase().trim()
+    if (!normalizedEmail) return null
+
+    // Check cache first (keys always normalized — matches profile + auth lookups)
+    const cached = founderContextCache.get(normalizedEmail)
     if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
       return cached.data
     }
     
     // 🚀 OPTIMIZED: Parallel queries instead of sequential
     const [founder, contact, prefs, user] = await Promise.all([
-      db.founder.findUnique({ where: { email } }),
-      db.founderContact.findUnique({ where: { email } }),
-      db.founderPrefs.findUnique({ where: { email } }),
-      db.user.findUnique({ where: { email } }),
+      db.founder.findUnique({ where: { email: normalizedEmail } }),
+      db.founderContact.findUnique({ where: { email: normalizedEmail } }),
+      db.founderPrefs.findUnique({ where: { email: normalizedEmail } }),
+      db.user.findUnique({ where: { email: normalizedEmail } }),
     ])
     
     if (!founder) {
@@ -305,6 +314,8 @@ export async function getComprehensiveFounderContext(
         stage: founder.stage,
         sectors,
         location: founder.location,
+        countryCode: founder.countryCode,
+        regionCode: founder.regionCode,
         fundingNeed: founder.fundingNeed,
         pitchDeck: founder.pitchDeck,
         videoPitchUrl: founder.videoPitchUrl,
@@ -317,7 +328,7 @@ export async function getComprehensiveFounderContext(
     }
     
     // 🚀 OPTIMIZED: Cache the result
-    founderContextCache.set(email, { data: result, timestamp: Date.now() })
+    founderContextCache.set(normalizedEmail, { data: result, timestamp: Date.now() })
     
     // Clean old cache entries (prevent memory leaks)
     if (founderContextCache.size > 100) {

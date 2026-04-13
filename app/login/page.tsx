@@ -51,8 +51,8 @@ export default function LoginPage() {
   useEffect(() => {
     if (authLoading || !authenticated) return
     const isVc = user?.userType === 'vc' || user?.userType === 'investor'
-    const defaultVerified = isVc ? '/vc/dashboard' : '/founder/dashboard'
-    const defaultUnverified = isVc ? '/vc/claim' : '/founder/onboarding'
+    const defaultVerified = isVc ? '/investor/dashboard' : '/founder/dashboard'
+    const defaultUnverified = isVc ? '/investor/onboarding' : '/founder/onboarding'
     const fallback = verified ? defaultVerified : defaultUnverified
     const target = sanitizeAuthNextPathForUserType(
       redirectUrl ? redirectUrl : undefined,
@@ -135,7 +135,7 @@ export default function LoginPage() {
         let targetUrl = redirectUrl
         if (!targetUrl) {
           const t = data.user?.userType
-          if (t === 'investor' || t === 'vc') targetUrl = '/vc/dashboard'
+          if (t === 'investor' || t === 'vc') targetUrl = '/investor/dashboard'
           else if (t === 'mentor') targetUrl = '/'
           else targetUrl = '/founder/dashboard'
         }

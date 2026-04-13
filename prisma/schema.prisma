@@ -38,6 +38,10 @@ model Founder {
   sectors       String // JSON array of sectors
   businessModel String? // B2B, B2C, marketplace, etc.
   location      String
+  /// ISO 3166-1 alpha-2 (optional for legacy rows)
+  countryCode String?
+  /// ISO-style subdivision when applicable (e.g. US state CA, CA province ON, GB nation ENG)
+  regionCode  String?
   fundingNeed   Int // in thousands
   pitchDeck     String? // URL to deck
 
@@ -86,6 +90,8 @@ model Founder {
   achievements         Achievement[] // userId matches Founder id
   savedSearches        SavedSearch[] // userId matches Founder id
   firmDeals            VCFirmDeal[] // founderId matches Founder id
+  analysisSummary      FounderAnalysisSummary?
+  investorBookmarkedBy InvestorFounderBookmark[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -173,6 +179,15 @@ model Investor {
   achievements         Achievement[] // userId matches Investor id
   savedSearches        SavedSearch[] // userId matches Investor id
   enrichmentCache      VCEnrichmentCache?
+  investorBookmarks    InvestorFounderBookmark[]
+
+  // Investor onboarding fields
+  onboardingCompleted Boolean @default(false)
+  totalInvestments    Int?
+  capitalDeployed     String?
+  investmentApproach  String?
+  coInvestPreference  String?
+  yearsInvesting      Int?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -183,6 +198,7 @@ model Investor {
   @@index([fundType])
   @@index([firmName])
   @@index([createdAt])
+  @@index([onboardingCompleted])
 }
 
 model Mentor {
@@ -1027,6 +1043,67 @@ model VCDiscoveryCandidate {
   @@unique([normalizedKey])
   @@index([status])
   @@index([createdAt])
+}
+
+model FounderAnalysisSummary {
+  id                 String  @id @default(cuid())
+  founderId          String  @unique
+  founder            Founder @relation(fields: [founderId], references: [id], onDelete: Cascade)
+
+  overallScore       Float   @default(0)
+  tier               String?
+  conviction         String?
+
+  marketScore        Float?
+  teamScore          Float?
+  tractionScore      Float?
+  productScore       Float?
+  businessModelScore Float?
+  visionScore        Float?
+  crossSectionScore  Float?
+
+  rubricMarketHeat   Float?
+  rubricMoat         Float?
+  rubricFounderFit   Float?
+  rubricMomentum     Float?
+
+  strengths          String?
+  weaknesses         String?
+  marketAnalysis     String?
+  teamAnalysis       String?
+  productFit         String?
+  sectorFit          String?
+  tractionMetrics    String?
+  executiveSummary   String?
+
+  redFlags           String?
+  bullCase           String?
+  bearCase           String?
+
+  analysisType       String
+  sourceAnalysisId   String
+  analysisCount      Int      @default(1)
+  scoreBreakdown     String?
+
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@index([overallScore])
+  @@index([tier])
+  @@index([updatedAt])
+}
+
+model InvestorFounderBookmark {
+  id         String   @id @default(cuid())
+  investorId String
+  founderId  String
+  investor   Investor @relation(fields: [investorId], references: [id], onDelete: Cascade)
+  founder    Founder  @relation(fields: [founderId], references: [id], onDelete: Cascade)
+  notes      String?
+  createdAt  DateTime @default(now())
+
+  @@unique([investorId, founderId])
+  @@index([investorId])
 }
 
 // Cached enrichment data from Exa web search for VC scoring

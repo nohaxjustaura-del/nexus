@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { Loader2, ArrowLeft, Save } from 'lucide-react'
 import { Step1BasicInfo } from '@/components/onboarding/step-1-basic-info'
 import { Step2StartupDetails } from '@/components/onboarding/step-2-startup-details'
+import { countryHasSubdivisionList } from '@/lib/geo/subdivisions'
 import { Step3Preferences } from '@/components/onboarding/step-3-preferences'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
@@ -29,6 +30,8 @@ type ProfileFormData = {
   sectors: string[]
   businessModel: string
   location: string
+  countryCode: string
+  regionCode: string
   website: string
   linkedin: string
   ethicsTags: string[]
@@ -62,6 +65,8 @@ const emptyForm = (email: string): ProfileFormData => ({
   sectors: [],
   businessModel: '',
   location: '',
+  countryCode: '',
+  regionCode: '',
   website: '',
   linkedin: '',
   ethicsTags: [],
@@ -95,6 +100,8 @@ export function FounderProfileEditor({ sessionEmail }: { sessionEmail: string })
     stage?: string
     sectors?: string
     location?: string
+    countryCode?: string
+    regionCode?: string
   }>({})
 
   const noopSetStep = useCallback(() => {}, [])
@@ -136,6 +143,8 @@ export function FounderProfileEditor({ sessionEmail }: { sessionEmail: string })
           sectors: Array.isArray(p.sectors) ? p.sectors : [],
           businessModel: p.businessModel || '',
           location: p.location || '',
+          countryCode: (p.countryCode as string) || '',
+          regionCode: (p.regionCode as string) || '',
           website: p.website || '',
           linkedin: p.linkedin || '',
           ethicsTags: Array.isArray(p.ethicsTags) ? p.ethicsTags : [],
@@ -214,6 +223,8 @@ export function FounderProfileEditor({ sessionEmail }: { sessionEmail: string })
           sectors: formData.sectors,
           businessModel: formData.businessModel,
           location: formData.location,
+          countryCode: formData.countryCode,
+          regionCode: formData.regionCode,
           website: formData.website,
           linkedin: formData.linkedin,
           ethicsTags: formData.ethicsTags,

@@ -38,13 +38,36 @@ import {
   isDealAnnouncementThesis,
 } from '../lib/thesis-sanitize'
 
-/** True if research may write thesis: empty/short slot, or replacing a deal-headline mistaken for thesis. */
+/**
+ * True if research may write thesis.
+ *
+ * Policy:
+ *  - Always replace empty/tiny slots (< 25 chars).
+ *  - Always replace deal-headline text.
+ *  - Replace thin taglines (< 200 chars) when incoming is at least 1.5x longer,
+ *    so a one-line blurb gets upgraded to a multi-sentence mandate but a decent
+ *    short thesis doesn't get replaced by something barely longer.
+ *  - Replace single-sentence theses (any length) when incoming has 2+ sentences
+ *    and is materially longer.
+ *  - Protect solid multi-sentence theses (200+ chars) from lateral rewrites.
+ */
 export function shouldReplaceStoredThesis(existing: string | null | undefined, incoming?: string | null): boolean {
   const inc = (incoming || '').trim()
-  if (!inc || inc.length < 20) return false
+  if (!inc || inc.length < 25) return false
   const cur = (existing || '').trim()
-  if (!cur || cur.length < 20) return true
+  if (!cur || cur.length < 25) return true
   if (isDealAnnouncementThesis(cur)) return true
+
+  const countSentences = (s: string) => s.split(/(?<=[.!?])\s+/).filter((x) => x.length > 10).length
+  const curSentences = countSentences(cur)
+  const incSentences = countSentences(inc)
+
+  // Thin tagline (< 200 chars): replace if incoming is meaningfully richer
+  if (cur.length < 200 && inc.length >= cur.length * 1.5) return true
+
+  // Single-sentence thesis of any length: replace if incoming is multi-sentence and longer
+  if (curSentences <= 1 && incSentences >= 2 && inc.length > cur.length) return true
+
   return false
 }
 

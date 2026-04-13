@@ -15,6 +15,7 @@ import { runScoringPipeline } from '@/lib/scoring/scoring-pipeline'
 import { getComprehensiveFounderContext } from '@/lib/founder-context'
 import { reviewerAssignableWhere } from '@/lib/reviewer-filters'
 import { analyzeFounderNotFoundResponse, analyzeUnauthorizedResponse } from '@/lib/analyze-routes/responses'
+import { upsertFounderAnalysisSummary } from '@/lib/analysis/upsert-founder-analysis-summary'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -53,8 +54,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Get founder profile - REQUIRED, no auto-creation
+    const sessionEmail = user.email.toLowerCase().trim()
     const founder = await db.founder.findUnique({
-      where: { email: user.email },
+      where: { email: sessionEmail },
     }).catch((err) => {
       logger.error('[ANALYZE-VIDEO-PITCH] Error fetching founder:', err)
       return null
@@ -730,6 +732,22 @@ export async function POST(request: NextRequest) {
         smartMatchResults: JSON.stringify(matchedVCs.slice(0, 10)),
       },
     })
+
+    upsertFounderAnalysisSummary(
+      founder.id,
+      {
+        strengths: pitchAnalysis.strengths || [],
+        weaknesses: pitchAnalysis.weaknesses || [],
+        sectorFit: pitchAnalysis.sectorFit as Record<string, number> | undefined,
+        tractionMetrics: pitchAnalysis.tractionMetrics as any,
+        marketAnalysis: pitchAnalysis.marketAnalysis as any,
+        teamAnalysis: pitchAnalysis.teamAnalysis as any,
+        productFit: pitchAnalysis.productFit as any,
+      },
+      scoringResult,
+      'VIDEO',
+      videoPitch.id,
+    ).catch(e => logger.error('[ANALYZE-VIDEO-PITCH] upsertFounderAnalysisSummary failed', e))
 
     // Deduct credits AFTER successful analysis (admin bypass)
     if (shouldEnforceAiCredits(user.email)) {

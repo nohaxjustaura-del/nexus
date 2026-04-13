@@ -42,7 +42,7 @@ export function ChromeModeProvider({ children }: { children: React.ReactNode }) 
 
   const chrome = useMemo((): ChromeMode => {
     if (!authenticated) return 'guest'
-    if (pathname.startsWith('/vc')) return 'investor'
+    if (pathname.startsWith('/vc') || pathname.startsWith('/investor')) return 'investor'
     if (pathname.startsWith('/founder')) return 'founder'
     if (loading && !user?.userType) return 'founder'
     return neutralChromeFromUserType(user?.userType)

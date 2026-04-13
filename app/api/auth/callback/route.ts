@@ -167,7 +167,7 @@ export async function GET(request: NextRequest) {
       const meta = (user.user_metadata?.user_type as string | undefined)?.toLowerCase()
       const ut =
         meta === 'vc' || meta === 'investor' ? 'vc' : meta === 'mentor' ? 'mentor' : 'founder'
-      const fallback = ut === 'vc' ? '/vc/dashboard' : '/founder/dashboard'
+      const fallback = ut === 'vc' ? '/investor/dashboard' : '/founder/dashboard'
       safeNext = sanitizeAuthNextPathForUserType(safeNext, ut, fallback)
     }
 
