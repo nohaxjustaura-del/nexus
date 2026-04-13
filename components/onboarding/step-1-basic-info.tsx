@@ -4,9 +4,11 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { ArrowRight } from "lucide-react"
+import { ArrowRight, FileText, Loader2, X } from "lucide-react"
 import { isKnownUniversity, SUGGESTED_UNIVERSITIES } from "@/lib/universities"
 import { track } from "@/lib/analytics"
+import { toast } from '@/components/ui/toast-simple'
+import { useState } from 'react'
 
 interface FormData {
   name: string
@@ -24,6 +26,8 @@ interface FormData {
   isVeteran: boolean
   needsImmigrationSupport: boolean
   universityAffiliation: string
+  resumeUrl?: string
+  resumeFileName?: string
   [key: string]: any
 }
 
@@ -37,6 +41,9 @@ interface Step1BasicInfoProps {
   hideNavigation?: boolean
   /** Lock primary email to the signed-in account */
   readOnlyEmail?: boolean
+  /** Override card heading (e.g. account profile settings) */
+  sectionTitle?: string
+  sectionDescription?: string
 }
 
 export function Step1BasicInfo({
@@ -47,12 +54,16 @@ export function Step1BasicInfo({
   setStep,
   hideNavigation = false,
   readOnlyEmail = false,
+  sectionTitle = "Let's Get Started",
+  sectionDescription = 'Tell us about yourself',
 }: Step1BasicInfoProps) {
+  const [resumeBusy, setResumeBusy] = useState(false)
+
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Let's Get Started</CardTitle>
-        <CardDescription>Tell us about yourself</CardDescription>
+        <CardTitle>{sectionTitle}</CardTitle>
+        <CardDescription>{sectionDescription}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
         <div className="space-y-2">
@@ -266,6 +277,76 @@ export function Step1BasicInfo({
               Optional: For backup communication
             </p>
           </div>
+        </div>
+
+        <div className="space-y-2 rounded-lg border border-dashed border-muted-foreground/25 p-4 bg-muted/20">
+          <Label htmlFor="resume-upload">Resume (optional)</Label>
+          <p className="text-xs text-muted-foreground">
+            PDF only, up to 10MB. You can add or replace your resume anytime from your account profile.
+          </p>
+          <div className="flex flex-wrap items-center gap-3">
+            <Input
+              id="resume-upload"
+              type="file"
+              accept="application/pdf,.pdf"
+              className="max-w-xs cursor-pointer"
+              disabled={resumeBusy}
+              onChange={async (e) => {
+                const file = e.target.files?.[0]
+                e.target.value = ''
+                if (!file) return
+                if (file.type !== 'application/pdf') {
+                  toast.error('Please choose a PDF file.')
+                  return
+                }
+                setResumeBusy(true)
+                try {
+                  const body = new FormData()
+                  body.append('file', file)
+                  const res = await fetch('/api/founder/resume-upload', {
+                    method: 'POST',
+                    body,
+                    credentials: 'include',
+                  })
+                  const data = await res.json().catch(() => ({}))
+                  if (!res.ok) {
+                    throw new Error(data?.error || data?.message || 'Upload failed')
+                  }
+                  setFormData({
+                    ...formData,
+                    resumeUrl: data.resumeUrl as string,
+                    resumeFileName: (data.fileName as string) || file.name,
+                  })
+                  toast.success('Resume uploaded.')
+                } catch (err) {
+                  toast.error(err instanceof Error ? err.message : 'Could not upload resume.')
+                } finally {
+                  setResumeBusy(false)
+                }
+              }}
+            />
+            {resumeBusy ? <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" aria-hidden /> : null}
+            {(formData.resumeUrl || formData.resumeFileName) && !resumeBusy ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="text-destructive hover:text-destructive"
+                onClick={() =>
+                  setFormData({ ...formData, resumeUrl: '', resumeFileName: '' })
+                }
+              >
+                <X className="mr-1 h-4 w-4" />
+                Remove
+              </Button>
+            ) : null}
+          </div>
+          {(formData.resumeUrl || formData.resumeFileName) && (
+            <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+              <FileText className="h-3.5 w-3.5 shrink-0" aria-hidden />
+              <span className="truncate">{formData.resumeFileName || 'Resume attached'}</span>
+            </p>
+          )}
         </div>
 
         <div className="flex items-start gap-3 rounded-md border p-3">

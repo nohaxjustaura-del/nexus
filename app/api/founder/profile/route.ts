@@ -9,6 +9,22 @@ import { PrismaClientValidationError } from '@prisma/client/runtime/library'
 
 export const dynamic = 'force-dynamic'
 
+function parseResumeUrlField(
+  raw: unknown,
+  userId: string,
+): { kind: 'skip' } | { kind: 'set'; resumeUrl: string | null } | { kind: 'bad' } {
+  if (raw === undefined) return { kind: 'skip' }
+  if (raw === null || (typeof raw === 'string' && raw.trim() === '')) {
+    return { kind: 'set', resumeUrl: null }
+  }
+  const s = String(raw).trim()
+  const prefix = `founder-resumes/${userId}/`
+  if (!s.startsWith(prefix) || s.includes('..')) {
+    return { kind: 'bad' }
+  }
+  return { kind: 'set', resumeUrl: s }
+}
+
 /** Stale `node_modules/.prisma` after schema adds `countryCode` / `regionCode` — regenerate client. */
 function responseIfStaleFounderGeoPrisma(e: unknown): NextResponse | null {
   if (!(e instanceof PrismaClientValidationError)) return null
@@ -73,6 +89,7 @@ function founderRowToPublicFields(founder: Founder, contact: FounderContact | nu
     fundingNeed: founder.fundingNeed,
     bio: founder.bio,
     pitchDeck: founder.pitchDeck,
+    resumeUrl: founder.resumeUrl,
     videoPitchUrl: founder.videoPitchUrl,
     linkedinUrl: founder.linkedinUrl,
     ethicsTags,
@@ -131,6 +148,12 @@ export async function GET(request: NextRequest) {
       where: { email: sessionEmail },
     }).catch(() => null)
 
+    const idStatusRaw = founderVerification?.status ?? null
+    const verificationPayload = {
+      uploaded: Boolean(founderVerification?.url),
+      status: idStatusRaw === 'rejected' ? 'rejected' : ('approved' as const),
+    }
+
     const contact = await db.founderContact.findUnique({
       where: { email: sessionEmail },
     }).catch(() => null)
@@ -143,9 +166,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       exists: true,
-      verification: founderVerification
-        ? { uploaded: true, status: founderVerification.status }
-        : { uploaded: false, status: null },
+      verification: verificationPayload,
       founder: publicFields,
       profile: publicFields,
     })
@@ -171,6 +192,11 @@ export async function POST(request: NextRequest) {
     }
 
     const data = await request.json()
+    const resumeParsed = parseResumeUrlField(data.resumeUrl, user.id)
+    if (resumeParsed.kind === 'bad') {
+      return NextResponse.json({ error: 'Invalid resume reference' }, { status: 400 })
+    }
+
     const {
       name,
       email,
@@ -286,6 +312,7 @@ export async function POST(request: NextRequest) {
       ethicsTags: JSON.stringify(ethicsTags || []),
       personalityTags: JSON.stringify(personalityTags || []),
       valueAddNeeds: JSON.stringify(valueAddNeeds || []),
+      ...(resumeParsed.kind === 'set' ? { resumeUrl: resumeParsed.resumeUrl } : {}),
     }
 
     let founder
@@ -315,6 +342,7 @@ export async function POST(request: NextRequest) {
           ethicsTags: JSON.stringify(ethicsTags || []),
           personalityTags: JSON.stringify(personalityTags || []),
           valueAddNeeds: JSON.stringify(valueAddNeeds || []),
+          ...(resumeParsed.kind === 'set' ? { resumeUrl: resumeParsed.resumeUrl } : {}),
         }
         try {
           founder = await (db as any).founder.create({
@@ -480,6 +508,11 @@ export async function PATCH(request: NextRequest) {
     }
 
     const data = await request.json()
+    const resumeParsedPatch = parseResumeUrlField(data.resumeUrl, user.id)
+    if (resumeParsedPatch.kind === 'bad') {
+      return NextResponse.json({ error: 'Invalid resume reference' }, { status: 400 })
+    }
+
     const {
       name,
       email,
@@ -569,6 +602,7 @@ export async function PATCH(request: NextRequest) {
       ethicsTags: JSON.stringify(ethicsTags || []),
       personalityTags: JSON.stringify(personalityTags || []),
       valueAddNeeds: JSON.stringify(valueAddNeeds || []),
+      ...(resumeParsedPatch.kind === 'set' ? { resumeUrl: resumeParsedPatch.resumeUrl } : {}),
     }
 
     const founder = await db.founder.update({

@@ -1,13 +1,11 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { Bell, Check, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
 import Link from 'next/link'
-// Toast temporarily removed to fix webpack errors
-// import { toast } from '@/components/ui/toast'
 
 interface Notification {
   id: string
@@ -18,24 +16,60 @@ interface Notification {
   read: boolean
   readAt: string | null
   createdAt: string
-  metadata: any
+  metadata: unknown
 }
+
+const POLL_MS_WHEN_OPEN = 90_000
 
 export function NotificationBell() {
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [unreadCount, setUnreadCount] = useState(0)
   const [isOpen, setIsOpen] = useState(false)
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
 
-  useEffect(() => {
-    loadNotifications()
-    
-    // Poll for new notifications every 30 seconds
-    const interval = setInterval(loadNotifications, 30000)
-    
-    return () => clearInterval(interval)
+  const loadNotifications = useCallback(async () => {
+    if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return
+    try {
+      const response = await fetch('/api/notifications', {
+        credentials: 'include',
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        setNotifications(data.notifications || [])
+        setUnreadCount(data.unreadCount || 0)
+      }
+    } catch (error) {
+      console.error('Error loading notifications:', error)
+    } finally {
+      setLoading(false)
+    }
   }, [])
+
+  // First fetch only when the user opens the panel; poll only while open + tab visible.
+  useEffect(() => {
+    if (!isOpen) return
+
+    setLoading(true)
+    void loadNotifications()
+
+    const interval = setInterval(() => {
+      void loadNotifications()
+    }, POLL_MS_WHEN_OPEN)
+
+    return () => clearInterval(interval)
+  }, [isOpen, loadNotifications])
+
+  useEffect(() => {
+    const onVis = () => {
+      if (document.visibilityState === 'visible' && isOpen) {
+        void loadNotifications()
+      }
+    }
+    document.addEventListener('visibilitychange', onVis)
+    return () => document.removeEventListener('visibilitychange', onVis)
+  }, [isOpen, loadNotifications])
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -53,24 +87,6 @@ export function NotificationBell() {
       document.removeEventListener('mousedown', handleClickOutside)
     }
   }, [isOpen])
-
-  const loadNotifications = async () => {
-    try {
-      const response = await fetch('/api/notifications', {
-        credentials: 'include',
-      })
-
-      if (response.ok) {
-        const data = await response.json()
-        setNotifications(data.notifications || [])
-        setUnreadCount(data.unreadCount || 0)
-      }
-    } catch (error) {
-      console.error('Error loading notifications:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
 
   const markAsRead = async (notificationId: string) => {
     try {
@@ -106,13 +122,9 @@ export function NotificationBell() {
       if (response.ok) {
         setNotifications(prev => prev.map(n => ({ ...n, read: true, readAt: new Date().toISOString() })))
         setUnreadCount(0)
-        // Toast temporarily disabled to fix webpack errors
-        // toast.success('All notifications marked as read')
       }
     } catch (error) {
       console.error('Error marking all as read:', error)
-      // Toast temporarily disabled to fix webpack errors
-      // toast.error('Failed to mark all as read')
     }
   }
 
@@ -256,10 +268,3 @@ export function NotificationBell() {
     </div>
   )
 }
-
-
-
-
-
-
-

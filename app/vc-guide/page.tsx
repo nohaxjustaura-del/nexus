@@ -9,6 +9,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { TrendingUp, Building2, Target, Zap, Globe, CheckCircle, AlertCircle, ChevronDown, Layers } from 'lucide-react'
 import Link from 'next/link'
 import { BRAND_NAME } from '@/lib/brand'
+import { legacyNexusExtrasEnabled } from '@/lib/nexus-surface-flags'
 
 type TabId = 'stage' | 'sector' | 'structure' | 'next'
 
@@ -534,9 +535,9 @@ export default function VCGuidePage() {
                   to tighten before you reach out.
                 </p>
                 <div className="flex flex-col gap-3 pt-2 sm:flex-row sm:justify-center">
-                  <Link href="/founder/resume-analysis">
+                  <Link href={legacyNexusExtrasEnabled() ? '/founder/resume-analysis' : '/founder/ai-analysis'}>
                     <Button size="lg" className="w-full sm:w-auto">
-                      Analyze my resume
+                      {legacyNexusExtrasEnabled() ? 'Analyze my resume' : 'Analyze my pitch'}
                     </Button>
                   </Link>
                   <Link href="/founder/discover">

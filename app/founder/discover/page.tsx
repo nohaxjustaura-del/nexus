@@ -91,7 +91,6 @@ export default async function DiscoverPage({
     [key: string]: string | undefined // Allow advanced filter params
   }
 }) {
-  let verificationBanner: { status: string } | null = null
   let profileComplete = true
   let prefDefaults: {
     fundType?: string
@@ -117,18 +116,11 @@ export default async function DiscoverPage({
   
   try {
     if (user?.email) {
-      let verificationRow: { status: string } | null = null
       let founder = null
       let prefsRow: Awaited<ReturnType<typeof db.founderPrefs.findUnique>> = null
 
       try {
         const results = await Promise.allSettled([
-          db.founderVerification
-            .findUnique({
-              where: { email: user.email },
-              select: { status: true },
-            })
-            .catch(() => null),
           db.founder.findUnique({
             where: { email: user.email },
             select: {
@@ -148,20 +140,13 @@ export default async function DiscoverPage({
           db.founderPrefs.findUnique({ where: { email: user.email } }).catch(() => null),
         ])
 
-        verificationRow =
-          results[0].status === 'fulfilled' ? results[0].value : null
-        founder = results[1].status === 'fulfilled' ? results[1].value : null
-        prefsRow = results[2].status === 'fulfilled' ? results[2].value : null
+        founder = results[0].status === 'fulfilled' ? results[0].value : null
+        prefsRow = results[1].status === 'fulfilled' ? results[1].value : null
       } catch {
-        verificationRow = null
         founder = null
         prefsRow = null
       }
 
-      if (verificationRow?.status && verificationRow.status !== 'approved') {
-        verificationBanner = { status: verificationRow.status }
-      }
-      
       let sectors: string[] = []
       try {
         sectors = founder?.sectors ? parseJSONStringArray(founder.sectors) : []
@@ -538,7 +523,6 @@ export default async function DiscoverPage({
   // Show good tailored matches based on profile preferences, not necessarily the absolute best
   let showLimitedTailored = false
   if (!viewAll && !hasSearch && !hasResumeAnalysis && filteredInvestors.length > FREE_TAILORED_LIMIT) {
-    // Take top 5 based on verification status
     filteredInvestors = filteredInvestors.slice(0, FREE_TAILORED_LIMIT)
     showLimitedTailored = true
   }
@@ -613,12 +597,6 @@ export default async function DiscoverPage({
             </Link>
           </div>
         </div>
-
-        {verificationBanner && (
-          <div className="mb-4 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2.5 text-sm text-amber-950 dark:text-amber-100">
-            Verification is <strong className="font-medium">{verificationBanner.status}</strong>. You can still browse; some actions may need approval.
-          </div>
-        )}
 
         <p className="mb-4 text-sm text-muted-foreground">
           {filteredInvestors.length} {filteredInvestors.length === 1 ? 'result' : 'results'}

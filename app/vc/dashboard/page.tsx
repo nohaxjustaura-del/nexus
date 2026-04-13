@@ -147,10 +147,10 @@ export default function VCDashboard() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="container mx-auto max-w-7xl px-4 py-8 sm:px-6">
+      <div className="page-shell-narrow">
         <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
+            <h1 className="font-heading text-2xl font-semibold tracking-tight sm:text-3xl">
               {vcProfile?.firmName || 'Your firm'}
             </h1>
             <p className="mt-1 max-w-xl text-sm text-muted-foreground">
@@ -176,7 +176,7 @@ export default function VCDashboard() {
           </Button>
         </div>
 
-        <div className="mb-6 grid grid-cols-3 gap-3 sm:gap-4">
+        <div className="mb-6 grid grid-cols-3 gap-4 md:gap-6">
           <div className="rounded-xl border border-border/80 bg-card px-4 py-3 text-center">
             <div className="text-2xl font-semibold tabular-nums">{applicants.length}</div>
             <div className="text-xs text-muted-foreground">Thesis matches</div>

@@ -4,7 +4,6 @@ import React from 'react'
 import Link from 'next/link'
 import { ArrowRight, Menu, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { AnimatedGroup } from '@/components/ui/animated-group'
 import { cn } from '@/lib/utils'
 import { NexusWordmark } from '@/components/nexus-wordmark'
 import { BRAND_NAME, BRAND_HERO_EYEBROW, BRAND_TAGLINE } from '@/lib/brand'
@@ -19,32 +18,13 @@ const track = (event: string, props?: Record<string, unknown>) => {
   }
 }
 
-const transitionVariants = {
-  item: {
-    hidden: {
-      opacity: 0,
-      filter: 'blur(12px)',
-      y: 12,
-    },
-    visible: {
-      opacity: 1,
-      filter: 'blur(0px)',
-      y: 0,
-      transition: {
-        type: 'spring' as const,
-        bounce: 0.3,
-        duration: 1.5,
-      },
-    },
-  },
-}
-
 const SIGNUP_DISCOVER = `/signup?next=${encodeURIComponent('/founder/discover')}`
+const SIGNUP_PRICING = `/signup?next=${encodeURIComponent('/pricing')}`
 
 const menuItems = [
   { name: 'How it works', href: '/#home-how-heading' },
   { name: 'Investors', href: SIGNUP_DISCOVER },
-  { name: 'Pricing', href: '/pricing' },
+  { name: 'Pricing', href: SIGNUP_PRICING },
   { name: 'About', href: '/about' },
 ]
 
@@ -73,72 +53,53 @@ export function HeroSection({ showHeader = true, verifiedInvestorCountLabel }: H
     <>
       {showHeader ? <HeroHeader /> : null}
       <main className="overflow-hidden">
-        <section>
-          <div className={cn('relative pb-10 md:pb-14', showHeader ? 'pt-24 md:pt-36' : 'pt-10 md:pt-14')}>
+        <section className="relative">
+          <div
+            className={cn(
+              'relative pb-10 md:pb-14',
+              showHeader ? 'pt-24 md:pt-36' : 'pt-10 md:pt-14'
+            )}
+          >
+            <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden" aria-hidden>
+              <div className="absolute left-1/2 top-[-18%] h-[min(28rem,48vh)] w-[min(100%,48rem)] -translate-x-1/2 rounded-[100%] bg-primary/[0.1] blur-[72px] dark:bg-primary/[0.14]" />
+              <div className="absolute right-[-8%] top-[8%] h-56 w-56 rounded-full bg-[hsl(265_42%_52%/0.07)] blur-3xl dark:bg-[hsl(265_38%_48%/0.09)]" />
+              <div className="absolute bottom-[10%] left-[-6%] h-48 w-48 rounded-full bg-[hsl(200_45%_45%/0.05)] blur-3xl dark:bg-[hsl(200_42%_42%/0.07)]" />
+            </div>
             <div className="mx-auto max-w-7xl px-6">
               <div className="text-center sm:mx-auto lg:mr-auto lg:mt-0">
-                <AnimatedGroup variants={transitionVariants}>
+                <div className="hero-stagger mx-auto max-w-4xl">
                   <Link
                     href={secondaryHref}
-                    className="group mx-auto flex w-fit items-center gap-4 rounded-full border border-border/60 bg-muted p-1 pl-4 shadow-md shadow-black/5 transition-all duration-300 hover:bg-background dark:border-t-white/5 dark:shadow-zinc-950 dark:hover:border-t-border"
+                    className="hero-reveal-item mx-auto flex w-fit items-center gap-2 rounded-full border border-border/45 bg-muted/20 px-4 py-2 text-sm text-foreground shadow-sm shadow-black/10 backdrop-blur-sm transition-[border-color,background-color,box-shadow] duration-200 hover:border-primary/30 hover:bg-muted/35 dark:border-white/[0.08] dark:bg-white/[0.04] dark:shadow-black/30"
                   >
-                    <span className="text-sm text-foreground">
-                      {verifiedInvestorCountLabel}+ verified investors in the network
-                    </span>
-                    <span
-                      aria-hidden
-                      className="flex max-w-0 shrink-0 items-center gap-4 overflow-hidden opacity-0 transition-[max-width,opacity] duration-300 ease-out group-hover:max-w-[5.5rem] group-hover:opacity-100"
-                    >
-                      <span className="block h-4 w-0.5 shrink-0 border-l border-border bg-white dark:border-background dark:bg-zinc-700" />
-                      <span className="flex size-6 shrink-0 items-center justify-center overflow-hidden rounded-full bg-background duration-500 group-hover:bg-muted">
-                        <ArrowRight className="size-3" />
-                      </span>
-                    </span>
+                    <span>{verifiedInvestorCountLabel}+ verified investors in the network</span>
+                    <ArrowRight className="size-3.5 shrink-0 text-muted-foreground" aria-hidden />
                   </Link>
 
-                  <p className="mt-6 text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+                  <p className="hero-reveal-item mt-6 font-mono text-[10px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
                     {BRAND_HERO_EYEBROW}
                   </p>
-                  <h1 className="mx-auto mt-3 max-w-4xl text-balance font-heading text-4xl font-semibold tracking-tight text-foreground md:text-6xl md:leading-[1.08] lg:mt-6 xl:text-[5.25rem] xl:leading-[1.05]">
+                  <h1 className="hero-reveal-item mx-auto mt-3 max-w-4xl text-balance font-heading text-4xl font-semibold tracking-tight text-foreground md:text-5xl md:leading-[1.1] lg:mt-6 lg:text-[3.25rem] lg:leading-[1.08]">
                     Find the investors most likely to fund your startup
                   </h1>
-                  <p className="mx-auto mt-8 max-w-2xl text-balance text-lg text-muted-foreground">
+                  <p className="hero-reveal-item mx-auto mt-8 max-w-2xl text-balance text-lg text-muted-foreground">
                     {BRAND_TAGLINE}. {BRAND_NAME} scores your pitch in an allocator-style lens and ranks best-fit names
                     from verified mandates, not a generic chat summary.
                   </p>
-                </AnimatedGroup>
+                </div>
 
-                <AnimatedGroup
-                  variants={{
-                    container: {
-                      visible: {
-                        transition: {
-                          staggerChildren: 0.05,
-                          delayChildren: 0.75,
-                        },
-                      },
-                    },
-                    ...transitionVariants,
-                  }}
-                  className="mt-12 flex flex-col items-center justify-center gap-2 md:flex-row"
-                >
-                  <div className="rounded-[14px] border border-border/50 bg-foreground/10 p-0.5">
-                    <Button
-                      asChild
-                      size="lg"
-                      className="rounded-xl px-5 text-base"
+                <div className="hero-stagger-delayed mt-12 flex flex-col items-center justify-center gap-3 md:flex-row">
+                  <Button asChild size="lg" className="hero-reveal-item rounded-xl px-6 text-base">
+                    <Link
+                      href={primaryHref}
+                      onClick={() => track('cta_clicked', { name: 'hero_primary', page: 'home' })}
                     >
-                      <Link
-                        href={primaryHref}
-                        onClick={() => track('cta_clicked', { name: 'hero_primary', page: 'home' })}
-                      >
-                        <span className="text-nowrap">
-                          {mounted && isVerifiedUser ? 'Open founder hub' : 'Try it with your pitch'}
-                        </span>
-                      </Link>
-                    </Button>
-                  </div>
-                  <Button asChild size="lg" variant="ghost" className="h-11 rounded-xl px-5">
+                      <span className="text-nowrap">
+                        {mounted && isVerifiedUser ? 'Open founder hub' : 'Try it with your pitch'}
+                      </span>
+                    </Link>
+                  </Button>
+                  <Button asChild size="lg" variant="outline" className="hero-reveal-item h-12 rounded-xl px-6">
                     <Link
                       href={secondaryHref}
                       onClick={() => track('cta_clicked', { name: 'hero_secondary', page: 'home' })}
@@ -146,7 +107,7 @@ export function HeroSection({ showHeader = true, verifiedInvestorCountLabel }: H
                       <span className="text-nowrap">Search the network</span>
                     </Link>
                   </Button>
-                </AnimatedGroup>
+                </div>
               </div>
             </div>
           </div>
@@ -159,6 +120,12 @@ export function HeroSection({ showHeader = true, verifiedInvestorCountLabel }: H
 const HeroHeader = () => {
   const [menuState, setMenuState] = React.useState(false)
   const [isScrolled, setIsScrolled] = React.useState(false)
+  const { loading: authLoading, authenticated, verified } = useAuthSession()
+  const [headerMounted, setHeaderMounted] = React.useState(false)
+
+  React.useEffect(() => {
+    setHeaderMounted(true)
+  }, [])
 
   React.useEffect(() => {
     const handleScroll = () => {
@@ -167,6 +134,16 @@ const HeroHeader = () => {
     window.addEventListener('scroll', handleScroll)
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
+
+  const canViewPricing = headerMounted && !authLoading && authenticated && verified
+  const navMenuItems = React.useMemo(
+    () =>
+      menuItems.map((item) =>
+        item.name === 'Pricing' ? { ...item, href: canViewPricing ? '/pricing' : SIGNUP_PRICING } : item
+      ),
+    [canViewPricing]
+  )
+
   return (
     <header>
       <nav
@@ -199,7 +176,7 @@ const HeroHeader = () => {
 
             <div className="absolute inset-0 m-auto hidden size-fit lg:block">
               <ul className="flex gap-8 text-sm">
-                {menuItems.map((item) => (
+                {navMenuItems.map((item) => (
                   <li key={item.name}>
                     <Link
                       href={item.href}
@@ -215,7 +192,7 @@ const HeroHeader = () => {
             <div className="mb-6 hidden w-full flex-wrap items-center justify-end space-y-8 rounded-3xl border border-border/50 bg-background p-6 shadow-2xl shadow-zinc-300/20 group-data-[state=active]:block dark:shadow-none md:flex-nowrap lg:m-0 lg:flex lg:w-fit lg:gap-6 lg:space-y-0 lg:border-transparent lg:bg-transparent lg:p-0 lg:shadow-none dark:lg:bg-transparent">
               <div className="lg:hidden">
                 <ul className="space-y-6 text-base">
-                  {menuItems.map((item) => (
+                  {navMenuItems.map((item) => (
                     <li key={item.name}>
                       <Link
                         href={item.href}

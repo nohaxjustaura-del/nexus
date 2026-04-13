@@ -9,6 +9,9 @@ import Link from "next/link"
 import InvestorProfileModal from '@/components/investor-profile-modal'
 import { parseJSON, fmtCheckRange } from '@/lib/utils'
 import { toast } from '@/components/ui/toast-simple'
+import { legacyNexusExtrasEnabled } from '@/lib/nexus-surface-flags'
+
+const SIGNUP_NETWORK_PRICING = `/signup?next=${encodeURIComponent('/pricing?from=network')}`
 
 interface VCCardClientProps {
   investor: any
@@ -42,10 +45,12 @@ export function VCCardClient({
       .then((r) => r.json())
       .then((data) => {
         if (cancelled) return
-        if (data?.authenticated && data.canAccessFounderNetwork) {
+        if (legacyNexusExtrasEnabled() && data?.authenticated && data.canAccessFounderNetwork) {
           setNetworkHref('/founder/network')
-        } else {
+        } else if (data?.authenticated) {
           setNetworkHref('/pricing?from=network')
+        } else {
+          setNetworkHref(SIGNUP_NETWORK_PRICING)
         }
       })
       .catch(() => {})

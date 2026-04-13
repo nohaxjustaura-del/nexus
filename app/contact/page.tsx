@@ -51,10 +51,9 @@ export default function ContactPage() {
                 </a>
               </p>
               <p className="mt-2">
-                VC programs, strategics, and capital allocators evaluating {BRAND_NAME}. For a concise company narrative,
-                see{' '}
-                <Link href="/company" className="font-medium text-primary underline-offset-2 hover:underline">
-                  Company overview
+                VC programs, strategics, and capital allocators evaluating {BRAND_NAME}. For a concise narrative, see{' '}
+                <Link href="/about" className="font-medium text-primary underline-offset-2 hover:underline">
+                  About
                 </Link>
                 .
               </p>

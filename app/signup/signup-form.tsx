@@ -36,9 +36,9 @@ export function SignUpForm() {
   useEffect(() => {
     if (userPickedAccountTypeRef.current) return
     const r = redirectUrl.trim()
-    if (r === '/vc/claim' || r.startsWith('/vc/') || r.startsWith('/investor/')) {
+    if (r === '/vc/claim' || r.startsWith('/vc/') || r === '/investor' || r.startsWith('/investor/')) {
       setUserType('investor')
-    } else if (r.startsWith('/founder/') || r === '/pricing') {
+    } else if (r.startsWith('/founder/') || r === '/founder' || r.split('?')[0] === '/pricing') {
       setUserType('founder')
     }
   }, [redirectUrl])
@@ -144,7 +144,8 @@ export function SignUpForm() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="container relative z-[1] mx-auto max-w-md px-4 py-8 md:py-12">
+      <div className="page-shell-narrow">
+        <div className="relative z-[1] mx-auto max-w-md py-4 md:py-6">
         <header className="mb-8 text-center">
           <Badge className="mb-3 px-2.5 py-0.5 text-xs font-medium" variant="secondary">
             <Mail className="mr-1.5 h-3.5 w-3.5" />
@@ -260,6 +261,7 @@ export function SignUpForm() {
             </form>
           </CardContent>
         </Card>
+        </div>
       </div>
     </div>
   )

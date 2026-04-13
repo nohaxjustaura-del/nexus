@@ -176,17 +176,16 @@ export async function POST(request: NextRequest) {
     })
 
     if (!emailResult.success) {
-      if (emailResult.resendTestingRecipientOnly) {
-        return NextResponse.json(
-          {
-            error: RESEND_TESTING_MODE_PUBLIC_MESSAGE,
-            code: 'RESEND_TESTING_RECIPIENT',
-          },
-          { status: 503 }
-        )
-      }
       const resendHint = formatResendErrorMessage(emailResult.error)
-      console.error('Resend-code email send failed:', resendHint || emailResult.error)
+      const resendTestingOnly = Boolean(emailResult.resendTestingRecipientOnly)
+      if (resendTestingOnly) {
+        console.warn(
+          'Resend test mode blocked this recipient; trying Supabase email fallback.',
+          resendHint || emailResult.error
+        )
+      } else {
+        console.error('Resend-code email send failed:', resendHint || emailResult.error)
+      }
       if (supabaseUrl && anonKey) {
         if (existingUser) {
           const otp = await sendMagicLinkViaSupabaseOtp({
@@ -197,7 +196,9 @@ export async function POST(request: NextRequest) {
           })
           if (otp.ok) {
             return respondSupabaseSuccess(
-              `We could not send through Resend, so we sent a new sign-in link via Supabase. Check your inbox (and spam). ${AUTH_EMAIL_SPAM_DELIVERABILITY_HINT}`
+              resendTestingOnly
+                ? `Your Resend project is in test mode, so we sent a new sign-in link via Supabase instead. Check your inbox (and spam). ${AUTH_EMAIL_SPAM_DELIVERABILITY_HINT}`
+                : `We could not send through Resend, so we sent a new sign-in link via Supabase. Check your inbox (and spam). ${AUTH_EMAIL_SPAM_DELIVERABILITY_HINT}`
             )
           }
         } else {
@@ -209,10 +210,21 @@ export async function POST(request: NextRequest) {
           })
           if (invite.ok) {
             return respondSupabaseSuccess(
-              `We could not send through Resend, so we sent a new verification link via Supabase. Check your inbox (and spam). ${AUTH_EMAIL_SPAM_DELIVERABILITY_HINT}`
+              resendTestingOnly
+                ? `Your Resend project is in test mode, so we sent a new verification link via Supabase instead. Check your inbox (and spam). ${AUTH_EMAIL_SPAM_DELIVERABILITY_HINT}`
+                : `We could not send through Resend, so we sent a new verification link via Supabase. Check your inbox (and spam). ${AUTH_EMAIL_SPAM_DELIVERABILITY_HINT}`
             )
           }
         }
+      }
+      if (resendTestingOnly) {
+        return NextResponse.json(
+          {
+            error: RESEND_TESTING_MODE_PUBLIC_MESSAGE,
+            code: 'RESEND_TESTING_RECIPIENT',
+          },
+          { status: 503 }
+        )
       }
       return NextResponse.json(
         {

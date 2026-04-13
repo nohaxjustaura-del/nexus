@@ -3,7 +3,10 @@ import { isAdminEmail } from '@/lib/constants'
 
 export type UserApprovalStatus = 'pending' | 'approved' | 'rejected'
 
-/** Ensures a `UserApproval` row exists. Only `rejected` blocks auth email flows; app access uses email verification in `/api/auth/check`. */
+/**
+ * Ensures a `UserApproval` row exists and is auto-approved when not rejected.
+ * Only `rejected` blocks auth email flows; app access uses email verification in `/api/auth/check`.
+ */
 export async function resolveUserApprovalAccess(email: string): Promise<{
   approved: boolean
   status: UserApprovalStatus
@@ -12,14 +15,21 @@ export async function resolveUserApprovalAccess(email: string): Promise<{
   if (isAdminEmail(normalized)) {
     return { approved: true, status: 'approved' }
   }
-  const row = await db.userApproval.upsert({
-    where: { email: normalized },
-    create: { email: normalized, status: 'pending' },
-    update: {},
-  })
+
+  const now = new Date()
+  let row = await db.userApproval.findUnique({ where: { email: normalized } })
+  if (!row) {
+    row = await db.userApproval.create({
+      data: { email: normalized, status: 'approved', reviewedAt: now },
+    })
+  } else if (row.status === 'pending') {
+    row = await db.userApproval.update({
+      where: { email: normalized },
+      data: { status: 'approved', reviewedAt: now },
+    })
+  }
+
   const status = row.status as UserApprovalStatus
-  // Only hard-reject "rejected" accounts. Pending users must still be able to complete
-  // magic-link / OTP flows; /api/auth/check + founder verification gate product access.
   return {
     approved: status !== 'rejected',
     status,

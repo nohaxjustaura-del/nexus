@@ -31,6 +31,7 @@ import { buildUnifiedFounderContext } from '@/lib/unified-pitch/unified-founder-
 import { reviewerAssignableWhere } from '@/lib/reviewer-filters'
 import { analyzeFounderNotFoundResponse, analyzeUnauthorizedResponse } from '@/lib/analyze-routes/responses'
 import { upsertFounderAnalysisSummary } from '@/lib/analysis/upsert-founder-analysis-summary'
+import { adaptRankedInvestorForApi } from '@/lib/pipelines/adapt-ranked-investor-for-api'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -385,23 +386,7 @@ export async function POST(request: NextRequest) {
 
     if (matchRes) {
       matchPipelineResult = matchRes
-      matchedVCs = matchRes.rankedInvestors.map((r: any) => ({
-        ...r,
-        investor: r.vc,
-        score: r.combinedScore,
-        intelligentScore: r.combinedScore,
-        vectorSimilarity: 0,
-        confidence:
-          r.investmentLikelihood.confidence === 'HIGH'
-            ? 0.95
-            : r.investmentLikelihood.confidence === 'MEDIUM'
-              ? 0.8
-              : 0.6,
-        reasons: [],
-        suggestions: [],
-        detailedReasons: [],
-        livePulse: null,
-      }))
+      matchedVCs = matchRes.rankedInvestors.map((r: any) => adaptRankedInvestorForApi(r as Record<string, unknown>))
     }
 
     let scoringResult: Awaited<ReturnType<typeof runScoringPipeline>> | null = null

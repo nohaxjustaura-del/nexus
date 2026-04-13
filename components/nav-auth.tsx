@@ -34,7 +34,7 @@ export const NavAuth = memo(function NavAuth() {
           </>
         )}
 
-        <div className="flex items-center gap-2 sm:gap-2.5">
+        <div className="flex flex-wrap items-center justify-end gap-1.5 sm:gap-2">
           {verified ? (
             <>
               <NotificationBell />
@@ -45,7 +45,7 @@ export const NavAuth = memo(function NavAuth() {
                     aria-current={onAdminPage ? 'page' : undefined}
                     className={cn(
                       buttonVariants({ size: 'sm', variant: onAdminPage ? 'secondary' : 'default' }),
-                      'h-8 rounded-full px-3 text-sm font-medium shadow-none',
+                      'h-9 rounded-full px-4 text-sm font-semibold shadow-none',
                       onAdminPage && 'ring-2 ring-amber-500/45 dark:ring-amber-400/40'
                     )}
                   >
@@ -54,9 +54,9 @@ export const NavAuth = memo(function NavAuth() {
                   <Link
                     href={isInvestorPortal ? '/vc/profile' : '/founder/dashboard'}
                     className={cn(
-                      'hidden sm:inline-flex',
+                      'hidden sm:inline-flex lg:hidden',
                       buttonVariants({ size: 'sm', variant: 'outline' }),
-                      'h-8 rounded-full border-border/80 px-3 text-sm font-medium shadow-none'
+                      'h-9 rounded-full border-border/80 px-3.5 text-sm font-medium shadow-none'
                     )}
                   >
                     {isInvestorPortal ? 'Listing' : 'Hub'}
@@ -67,7 +67,7 @@ export const NavAuth = memo(function NavAuth() {
                   href={isInvestorPortal ? '/vc/profile' : '/founder/dashboard'}
                   className={cn(
                     buttonVariants({ size: 'sm', variant: 'outline' }),
-                    'h-8 rounded-full border-border/80 px-3 text-sm font-medium shadow-none'
+                    'h-9 rounded-full border-border/80 px-3.5 text-sm font-medium shadow-none lg:hidden'
                   )}
                 >
                   {isInvestorPortal ? 'Listing' : 'Hub'}
@@ -77,7 +77,7 @@ export const NavAuth = memo(function NavAuth() {
           ) : (
             <Link
               href="/founder/onboarding"
-              className={cn(buttonVariants({ size: 'sm' }), 'h-8 rounded-full px-3 text-sm font-medium shadow-none')}
+              className={cn(buttonVariants({ size: 'sm' }), 'h-9 rounded-full px-4 text-sm font-semibold shadow-none')}
             >
               Onboarding
             </Link>
@@ -86,7 +86,7 @@ export const NavAuth = memo(function NavAuth() {
             href="/account"
             className={cn(
               buttonVariants({ variant: 'ghost', size: 'sm' }),
-              'hidden h-8 rounded-full px-2.5 sm:inline-flex'
+              'hidden h-9 rounded-full px-3 sm:inline-flex'
             )}
             aria-label="Account"
           >
@@ -113,13 +113,16 @@ export const NavAuth = memo(function NavAuth() {
     >
       <Link
         href="/login"
-        className={cn(buttonVariants({ variant: 'ghost', size: 'sm' }), 'h-8 rounded-full px-3 text-sm font-medium')}
+        className={cn(
+          buttonVariants({ variant: 'outline', size: 'sm' }),
+          'h-9 rounded-full border-border/60 bg-muted/20 px-4 text-sm font-medium shadow-none hover:bg-muted/40'
+        )}
       >
         Log in
       </Link>
       <Link
         href="/signup"
-        className={cn(buttonVariants({ size: 'sm' }), 'h-8 rounded-full px-3 text-sm font-medium shadow-none')}
+        className={cn(buttonVariants({ size: 'sm' }), 'h-9 rounded-full px-4 text-sm font-semibold shadow-none')}
       >
         Sign up
       </Link>

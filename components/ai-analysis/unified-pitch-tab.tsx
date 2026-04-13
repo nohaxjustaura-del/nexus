@@ -270,7 +270,8 @@ export function UnifiedPitchTab() {
                 <span className="text-foreground">
                   {UNIFIED_CREDITS} credits (AI) · {REVIEWER_CREDITS} credits (human review)
                 </span>
-                .
+                . The more detail and supporting material you include, the more accurate and actionable the
+                feedback tends to be.
               </CardDescription>
             </div>
           </div>

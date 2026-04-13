@@ -230,7 +230,6 @@ export async function GET() {
     const founderId = founder.id
 
     const [
-      verification,
       contact,
       bookmarkCount,
       videoCount,
@@ -243,7 +242,6 @@ export async function GET() {
       recentDecks,
       recentIdeas,
     ] = await Promise.all([
-      db.founderVerification.findUnique({ where: { email } }).catch(() => null),
       db.founderContact.findUnique({ where: { email }, select: { linkedin: true } }).catch(() => null),
       db.bookmark.count({ where: { founderId } }),
       db.videoPitch.count({ where: { founderId, analysisResult: { not: null } } }),
@@ -287,7 +285,7 @@ export async function GET() {
       linkedinUrl: founder.linkedinUrl,
       linkedin: contact?.linkedin ?? null,
     }
-    const verificationStatus = verification?.status ?? null
+    const verificationStatus = null
     const profileCompleteness = computeFounderProfileCompletenessPercentUi(founderLike, verificationStatus)
 
     const mergedRecent = [

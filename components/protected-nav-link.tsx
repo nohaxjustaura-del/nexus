@@ -51,9 +51,9 @@ export function ProtectedNavLink({ href, children, className, publicRoute = fals
     <Link
       href={finalHref}
       className={cn(
-        'rounded-full px-3 py-1.5 text-sm font-medium transition-colors',
+        'rounded-full px-3 py-1.5 text-sm font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
         showActive
-          ? 'bg-primary/15 text-foreground shadow-sm ring-1 ring-primary/20'
+          ? 'bg-background/85 text-primary shadow-sm ring-1 ring-border/45 dark:bg-background/60'
           : 'text-muted-foreground hover:bg-muted/55 hover:text-foreground',
         className
       )}

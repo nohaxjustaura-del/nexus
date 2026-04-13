@@ -16,6 +16,7 @@ import {
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
 import { BRAND_NAME, BRAND_TAGLINE } from '@/lib/brand'
+import { legacyNexusExtrasEnabled } from '@/lib/nexus-surface-flags'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
 
 const cardClass =
@@ -132,18 +133,20 @@ export default function AboutClient({ verifiedInvestorCountLabel }: { verifiedIn
                             flows finish by email).
                           </span>
                         </li>
-                        <li className="flex items-start gap-2">
-                          <CheckCircle className={checkClass} aria-hidden />
-                          <span>
-                            <strong className="text-foreground">Resume:</strong> Team and traction context. See{' '}
-                            <Link
-                              href="/founder/resume-analysis"
-                              className="font-medium text-primary underline-offset-2 hover:underline"
-                            >
-                              Resume analysis
-                            </Link>
-                          </span>
-                        </li>
+                        {legacyNexusExtrasEnabled() ? (
+                          <li className="flex items-start gap-2">
+                            <CheckCircle className={checkClass} aria-hidden />
+                            <span>
+                              <strong className="text-foreground">Resume:</strong> Team and traction context. See{' '}
+                              <Link
+                                href="/founder/resume-analysis"
+                                className="font-medium text-primary underline-offset-2 hover:underline"
+                              >
+                                Resume analysis
+                              </Link>
+                            </span>
+                          </li>
+                        ) : null}
                       </ul>
                     </AccordionContent>
                   </AccordionItem>

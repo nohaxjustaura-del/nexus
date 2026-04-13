@@ -53,6 +53,8 @@ interface Step2StartupDetailsProps {
   setStep: (step: number) => void
   toggleArrayItem: (key: keyof Step2FormSlice, value: string) => void
   hideNavigation?: boolean
+  sectionTitle?: string
+  sectionDescription?: string
 }
 
 export function Step2StartupDetails({
@@ -63,6 +65,8 @@ export function Step2StartupDetails({
   setStep,
   toggleArrayItem,
   hideNavigation = false,
+  sectionTitle = 'Your Startup',
+  sectionDescription = "Tell us about what you're building",
 }: Step2StartupDetailsProps) {
   const cc = formData.countryCode?.trim().toUpperCase() || ''
   const subdivisions = cc ? getSubdivisionsForCountry(cc) : []
@@ -71,8 +75,8 @@ export function Step2StartupDetails({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Your Startup</CardTitle>
-        <CardDescription>Tell us about what you&apos;re building</CardDescription>
+        <CardTitle>{sectionTitle}</CardTitle>
+        <CardDescription>{sectionDescription}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
         <div className="space-y-2">

@@ -3,7 +3,7 @@
  * MATCHING ORCHESTRATOR — VC MATCHING PIPELINE v3
  * ===============================================================================
  *
- * Master function that replaces aiNativeMatchVCs() from lib/ai-native-matching.ts.
+ * Master VC matching entrypoint (replaces legacy monolithic matcher).
  * Wires together all lib/matching/ modules into a single async pipeline.
  *
  * Pipeline summary:
@@ -78,7 +78,7 @@ export interface PitchAnalysisResult {
 }
 
 // ---------------------------------------------------------------------------
-// Stage normalisation (unchanged from ai-native-matching.ts)
+// Stage normalisation (legacy-compatible labels)
 // ---------------------------------------------------------------------------
 
 const STAGE_EXPANSION: Record<string, string[]> = {

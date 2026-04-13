@@ -4,11 +4,6 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { LayoutDashboard, UserCheck, Building2, Wrench, Shield } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { useAuthSession } from '@/components/auth-session-provider'
-
-function isVcPortalUser(userType: string | undefined) {
-  return userType === 'investor' || userType === 'vc'
-}
 
 const items = [
   { href: '/admin/dashboard', label: 'Overview', icon: LayoutDashboard },
@@ -48,16 +43,11 @@ function getAdminPageTitle(pathname: string | null | undefined): string {
 
 export function AdminSubnav() {
   const pathname = usePathname()
-  const { user } = useAuthSession()
-  const stackBelowVcBar = pathname?.startsWith('/admin') && isVcPortalUser(user?.userType)
   const pageTitle = getAdminPageTitle(pathname)
 
   return (
     <div
-      className={cn(
-        'sticky z-40 border-b border-amber-500/20 bg-background/90 backdrop-blur-md',
-        stackBelowVcBar ? 'top-[9.75rem] sm:top-[10.5rem] lg:top-[13.25rem]' : 'top-28 sm:top-[7.5rem] lg:top-40'
-      )}
+      className="relative z-30 border-b border-amber-500/20 bg-background/95 shadow-[0_1px_0_0_hsl(var(--border)/0.2)] backdrop-blur-md dark:shadow-[0_1px_0_0_rgba(255,255,255,0.04)]"
       role="navigation"
       aria-label="Admin"
     >

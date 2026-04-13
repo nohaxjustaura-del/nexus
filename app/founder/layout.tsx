@@ -16,6 +16,8 @@ export default function FounderLayout({ children }: { children: React.ReactNode 
 
   const isOnboardingPage = pathname === '/founder/onboarding'
   const isDiscoverPage = pathname === '/founder/discover' || pathname?.startsWith('/founder/discover/')
+  /** Public marketing entry (same gate as discover: browse before account). */
+  const isFounderLandingPage = pathname === '/founder'
 
   useEffect(() => {
     const isOnboarding = pathname === '/founder/onboarding'
@@ -47,7 +49,7 @@ export default function FounderLayout({ children }: { children: React.ReactNode 
   }, [router, pathname])
 
   useEffect(() => {
-    if (!mounted || isOnboardingPage || isDiscoverPage || loading) return
+    if (!mounted || isOnboardingPage || isDiscoverPage || isFounderLandingPage || loading) return
     if (!authenticated) {
       const ret = encodeURIComponent(pathname || '/founder')
       router.push(`/signup?next=${ret}`)
@@ -57,7 +59,17 @@ export default function FounderLayout({ children }: { children: React.ReactNode 
       const ret = encodeURIComponent(pathname || '/founder')
       router.push(`/signup/thank-you?next=${ret}`)
     }
-  }, [mounted, loading, authenticated, verified, pathname, isOnboardingPage, isDiscoverPage, router])
+  }, [
+    mounted,
+    loading,
+    authenticated,
+    verified,
+    pathname,
+    isOnboardingPage,
+    isDiscoverPage,
+    isFounderLandingPage,
+    router,
+  ])
 
   if (!mounted) {
     return (
@@ -75,7 +87,7 @@ export default function FounderLayout({ children }: { children: React.ReactNode 
     )
   }
 
-  if (isOnboardingPage || isDiscoverPage) {
+  if (isOnboardingPage || isDiscoverPage || isFounderLandingPage) {
     return children
   }
 

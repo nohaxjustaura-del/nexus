@@ -1,6 +1,8 @@
 'use client'
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import Link from 'next/link'
 import { Sparkles, AlertCircle, CheckCircle, Lightbulb, TrendingUp, Target, GraduationCap, Heart, Globe, Shield } from 'lucide-react'
 import SmartMatchResults from '@/components/smart-match-results'
 import AnalysisDashboard from '@/components/analysis/AnalysisDashboard'
@@ -272,7 +274,7 @@ export function PitchAnalysisReport({ result, showMatches = true }: PitchAnalysi
             <div>
               <h3 className="text-base font-semibold text-foreground">Campus and accelerator programs</h3>
               <p className="text-sm text-muted-foreground">
-                Based on your school and stage — separate from the institutional investor list below.
+                Based on your school and stage, separate from the institutional investor list below.
               </p>
             </div>
           </div>
@@ -327,6 +329,23 @@ export function PitchAnalysisReport({ result, showMatches = true }: PitchAnalysi
             </div>
           </div>
           <SmartMatchResults matches={matches} />
+          {typeof result.videoPitchId === 'string' && result.videoPitchId.length > 0 && (
+            <Card className="border-primary/25 bg-primary/[0.04]">
+              <CardContent className="flex flex-col gap-3 py-5 sm:flex-row sm:items-center sm:justify-between">
+                <div className="min-w-0 space-y-1">
+                  <p className="text-sm font-medium text-foreground">Next: act on your shortlist</p>
+                  <p className="text-xs text-muted-foreground">
+                    Open the full ranked list, filters, and outreach context for this run.
+                  </p>
+                </div>
+                <Button asChild className="shrink-0">
+                  <Link href={`/founder/matches?analysis=${encodeURIComponent(result.videoPitchId)}`}>
+                    View investor matches
+                  </Link>
+                </Button>
+              </CardContent>
+            </Card>
+          )}
         </div>
       )}
 

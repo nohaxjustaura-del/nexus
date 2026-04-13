@@ -1,3 +1,5 @@
+import { legacyNexusExtrasEnabled } from '@/lib/nexus-surface-flags'
+
 /** Where invite / first magic-link should land after Supabase auth. */
 export function signupCallbackPath(userType: string | undefined): string {
   const t = (userType || 'founder').toLowerCase()
@@ -5,29 +7,40 @@ export function signupCallbackPath(userType: string | undefined): string {
   return '/founder/onboarding'
 }
 
-const SAFE_AUTH_NEXT = new Set([
+const SAFE_AUTH_NEXT_BASE = [
   '/founder/onboarding',
   '/vc/claim',
   '/founder/dashboard',
   '/vc/dashboard',
   '/vc/profile',
-  '/founder/network',
   '/investor/onboarding',
   '/investor/dashboard',
-])
+] as const
+
+function safeAuthNextSet(): Set<string> {
+  const s = new Set<string>(SAFE_AUTH_NEXT_BASE)
+  if (legacyNexusExtrasEnabled()) {
+    s.add('/founder/network')
+  }
+  return s
+}
 
 const FOUNDER_AUTH_NEXT_EXACT = new Set(['/founder/onboarding', '/founder/dashboard'])
 const INVESTOR_AUTH_NEXT_EXACT = new Set(['/vc/claim', '/vc/dashboard', '/vc/profile', '/investor/onboarding', '/investor/dashboard'])
 
 /** Limit optional `next` from the client (e.g. verify resend). */
 export function safeAuthNextPath(candidate: string | undefined, fallback: string): string {
-  if (
-    candidate &&
-    candidate.startsWith('/') &&
-    !candidate.startsWith('//') &&
-    SAFE_AUTH_NEXT.has(candidate)
-  ) {
-    return candidate
+  if (candidate && candidate.startsWith('/') && !candidate.startsWith('//')) {
+    const allowed = safeAuthNextSet()
+    if (allowed.has(candidate)) return candidate
+    const pathOnly = candidate.split('?')[0]?.split('#')[0] ?? ''
+    if (pathOnly === '/pricing') return candidate
+    if (
+      legacyNexusExtrasEnabled() &&
+      (candidate === '/founder/network' || candidate.startsWith('/founder/network/'))
+    ) {
+      return candidate
+    }
   }
   return fallback
 }
@@ -52,12 +65,13 @@ export function sanitizeAuthNextPathForUserType(
 
   if (isInvestorUserType(userType)) {
     if (INVESTOR_AUTH_NEXT_EXACT.has(p)) return p
-    if (p === '/founder/network' || p.startsWith('/founder/network/')) return p
     return fallback
   }
 
   if (p.startsWith('/vc/')) return fallback
-  if (p === '/founder/network' || p.startsWith('/founder/network/')) return p
+  if (legacyNexusExtrasEnabled() && (p === '/founder/network' || p.startsWith('/founder/network/'))) return p
   if (FOUNDER_AUTH_NEXT_EXACT.has(p)) return p
+  const pathOnly = p.split('?')[0]?.split('#')[0] ?? ''
+  if (pathOnly === '/pricing') return p
   return fallback
 }

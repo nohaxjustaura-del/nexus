@@ -29,7 +29,7 @@ function neutralChromeFromUserType(userType: string | undefined): 'founder' | 'i
 }
 
 export function ChromeModeProvider({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname() ?? ''
+  const pathname = usePathname()
   const { authenticated, user, loading } = useAuthSession()
 
   useEffect(() => {
@@ -46,7 +46,7 @@ export function ChromeModeProvider({ children }: { children: React.ReactNode }) 
     if (pathname.startsWith('/founder')) return 'founder'
     if (loading && !user?.userType) return 'founder'
     return neutralChromeFromUserType(user?.userType)
-  }, [authenticated, pathname, loading, user?.userType])
+  }, [authenticated, loading, pathname, user?.userType])
 
   const value = useMemo(() => ({ chrome }), [chrome])
 

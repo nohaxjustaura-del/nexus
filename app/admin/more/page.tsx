@@ -2,13 +2,14 @@ import Link from 'next/link'
 import { getCurrentUser } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { isAdminEmail } from '@/lib/constants'
+import { legacyNexusExtrasEnabled } from '@/lib/nexus-surface-flags'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Database, MessageSquare } from 'lucide-react'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
-const tools = [
+const allTools = [
   {
     href: '/admin/training-data',
     title: 'Training data',
@@ -29,6 +30,8 @@ export default async function AdminMorePage() {
     redirect('/')
   }
 
+  const tools = legacyNexusExtrasEnabled() ? allTools : []
+
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto max-w-2xl px-4 py-8 sm:px-6">
@@ -40,28 +43,36 @@ export default async function AdminMorePage() {
           </p>
         </div>
 
-        <ul className="space-y-3">
-          {tools.map(({ href, title, description, icon: Icon }) => (
-            <li key={href}>
-              <Link href={href}>
-                <Card className="transition-colors hover:border-primary/30">
-                  <CardHeader className="flex flex-row items-center gap-3 space-y-0 pb-2 pt-5">
-                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-muted">
-                      <Icon className="h-4 w-4 text-muted-foreground" aria-hidden />
-                    </span>
-                    <div>
-                      <CardTitle className="text-base">{title}</CardTitle>
-                      <CardDescription>{description}</CardDescription>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="pb-5 pt-0">
-                    <span className="text-sm font-medium text-primary">Open →</span>
-                  </CardContent>
-                </Card>
-              </Link>
-            </li>
-          ))}
-        </ul>
+        {tools.length === 0 ? (
+          <p className="rounded-lg border border-border/60 bg-muted/20 px-4 py-6 text-sm text-muted-foreground">
+            No extra admin tools are exposed while legacy surfaces are disabled. Set{' '}
+            <code className="rounded bg-muted px-1.5 py-0.5 text-xs text-foreground">NEXT_PUBLIC_NEXUS_LEGACY_EXTRAS=1</code>{' '}
+            to restore training data and partner-request queues.
+          </p>
+        ) : (
+          <ul className="space-y-3">
+            {tools.map(({ href, title, description, icon: Icon }) => (
+              <li key={href}>
+                <Link href={href}>
+                  <Card className="transition-colors hover:border-primary/30">
+                    <CardHeader className="flex flex-row items-center gap-3 space-y-0 pb-2 pt-5">
+                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-muted">
+                        <Icon className="h-4 w-4 text-muted-foreground" aria-hidden />
+                      </span>
+                      <div>
+                        <CardTitle className="text-base">{title}</CardTitle>
+                        <CardDescription>{description}</CardDescription>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="pb-5 pt-0">
+                      <span className="text-sm font-medium text-primary">Open →</span>
+                    </CardContent>
+                  </Card>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
     </div>
   )

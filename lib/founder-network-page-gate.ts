@@ -6,7 +6,9 @@ import { canAccessFounderNetwork } from '@/lib/founder-network-access'
 /** Redirects to pricing when the session cannot access the founder network hub. */
 export async function ensureFounderNetworkPageAccess() {
   const user = await getCurrentUser()
-  if (!user) redirect('/pricing?from=network')
+  if (!user) {
+    redirect(`/signup?next=${encodeURIComponent('/pricing?from=network')}`)
+  }
 
   const [uc, approval, investor] = await Promise.all([
     db.userCredits.findUnique({

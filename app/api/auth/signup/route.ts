@@ -136,7 +136,47 @@ export async function POST(request: NextRequest) {
     })
 
     if (!emailResult.success) {
-      if (emailResult.resendTestingRecipientOnly) {
+      const resendHint = formatResendErrorMessage(emailResult.error)
+      const resendTestingOnly = Boolean(emailResult.resendTestingRecipientOnly)
+      if (resendTestingOnly) {
+        console.warn(
+          'Resend test mode blocked this recipient; trying Supabase invite email fallback.',
+          resendHint || emailResult.error
+        )
+      } else {
+        console.error('Signup email send failed:', resendHint || emailResult.error)
+      }
+
+      const inviteFallback = await sendSignupInviteViaSupabase({
+        admin: adminClient,
+        email: normalizedEmail,
+        redirectTo: callbackUrl,
+        userMetadata: { user_type: supabaseUserType },
+      })
+      if (inviteFallback.ok) {
+        const { applyAuthCookies } = createSupabaseAuthRouteClient(request)
+        const res = NextResponse.json({
+          success: true,
+          message: resendTestingOnly
+            ? `Your Resend project is in test mode, so we sent your verification link via Supabase instead. Check your inbox (and spam). ${AUTH_EMAIL_SPAM_DELIVERABILITY_HINT}`
+            : `We could not send email through Resend, so we sent your verification link via Supabase instead. Check your inbox (and spam). ${AUTH_EMAIL_SPAM_DELIVERABILITY_HINT}`,
+          email: normalizedEmail,
+          deliveredBy: 'supabase' as const,
+        })
+        applyAuthCookies(res)
+        return res
+      }
+      if (isExistingUserAuthError({ message: inviteFallback.message, code: inviteFallback.code })) {
+        return NextResponse.json(
+          {
+            error: 'An account with this email already exists.',
+            existingAccount: true,
+            message: 'Try logging in instead.',
+          },
+          { status: 400 }
+        )
+      }
+      if (resendTestingOnly) {
         return NextResponse.json(
           {
             error: RESEND_TESTING_MODE_PUBLIC_MESSAGE,
@@ -145,13 +185,12 @@ export async function POST(request: NextRequest) {
           { status: 503 }
         )
       }
-      const resendHint = formatResendErrorMessage(emailResult.error)
-      console.error('Signup email send failed:', resendHint || emailResult.error)
       return NextResponse.json(
         {
           error: 'Failed to send verification email. Please try again.',
           code: 'EMAIL_SEND_FAILED',
           ...(resendHint ? { details: resendHint } : {}),
+          ...(inviteFallback.message ? { supabaseDetails: inviteFallback.message } : {}),
         },
         { status: 500 }
       )

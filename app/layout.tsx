@@ -1,5 +1,4 @@
 import React from "react"
-import type { Metadata } from "next"
 import { DM_Sans, Outfit } from "next/font/google"
 import "./globals.css"
 import { cn } from "@/lib/utils"
@@ -9,13 +8,12 @@ import { ChromeModeProvider } from "@/components/chrome-mode-provider"
 import { SiteHeader } from "@/components/site-header"
 import Link from "next/link"
 import { NexusWordmark } from "@/components/nexus-wordmark"
-import { getSiteUrl } from "@/lib/site-url"
-import { BRAND_DEFAULT_TITLE, BRAND_NAME, BRAND_TITLE_TEMPLATE } from "@/lib/brand"
+import { BRAND_NAME, BRAND_TAGLINE } from "@/lib/brand"
 import { AppToaster } from "@/components/ui/app-toaster"
-import { formatVerifiedInvestorCount, getVerifiedInvestorCount } from "@/lib/investor-public-stats"
 import { generateOrganizationSchema, generateWebsiteSchema } from "@/lib/seo"
+import { buildRootStaticMetadata } from "@/lib/static-site-metadata"
 
-const siteUrl = getSiteUrl()
+export const metadata = buildRootStaticMetadata()
 
 const dmSans = DM_Sans({
   subsets: ["latin"],
@@ -32,78 +30,11 @@ const outfit = Outfit({
   variable: "--font-heading",
 })
 
-export async function generateMetadata(): Promise<Metadata> {
-  const verifiedCount = await getVerifiedInvestorCount()
-  const label = formatVerifiedInvestorCount(verifiedCount)
-  const description = `NEXUS is fundraising intelligence built for investor fit. It reads your pitch like an investor would, scores fit, and ranks ${label}+ verified VCs, angels, accelerators, and corporate venture arms. You get a shortlist tied to real mandates, not a generic chatbot list of who might invest.`
-  const ogDescription = `${label}+ verified investors ranked to your story and stage. Shortlists, rationale, and outreach in one workflow, not a one-off answer from a general chat model.`
-
-  return {
-    metadataBase: new URL(siteUrl),
-    title: {
-      default: BRAND_DEFAULT_TITLE,
-      template: BRAND_TITLE_TEMPLATE,
-    },
-    description,
-    keywords: [
-      "fundraising match engine",
-      "investor matching",
-      "founder fundraising",
-      "startup funding",
-      "pitch deck analysis",
-      "VC matching",
-      "angel investors",
-      "accelerator matching",
-      "corporate venture",
-      "investor discovery",
-    ],
-    authors: [{ name: BRAND_NAME, url: siteUrl }],
-    creator: BRAND_NAME,
-    publisher: BRAND_NAME,
-    formatDetection: {
-      email: false,
-      address: false,
-      telephone: false,
-    },
-    openGraph: {
-      type: "website",
-      locale: "en_US",
-      url: siteUrl,
-      siteName: BRAND_NAME,
-      title: BRAND_DEFAULT_TITLE,
-      description: ogDescription,
-    },
-    twitter: {
-      card: "summary_large_image",
-      title: BRAND_DEFAULT_TITLE,
-      description:
-        "Ranked investor shortlists from your pitch using verified mandates, clear scores, and workflow tools. More specific than asking a general AI who to email.",
-    },
-    robots: {
-      index: true,
-      follow: true,
-      googleBot: {
-        index: true,
-        follow: true,
-        'max-video-preview': -1,
-        'max-image-preview': 'large',
-        'max-snippet': -1,
-      },
-    },
-    manifest: '/manifest.json',
-    verification: {
-      // Add verification tokens here when available
-      // google: 'your-google-verification-token',
-      // yandex: 'your-yandex-verification-token',
-    },
-  }
-}
-
 export const viewport = {
   width: 'device-width',
   initialScale: 1,
   maximumScale: 5,
-  themeColor: '#1D3567',
+  themeColor: '#0b1220',
 }
 
 type RootLayoutProps = Readonly<{
@@ -123,7 +54,10 @@ export default function RootLayout({ children }: RootLayoutProps) {
           dangerouslySetInnerHTML={{ __html: JSON.stringify(generateWebsiteSchema()) }}
         />
       </head>
-      <body className={cn("flex min-h-screen flex-col bg-background font-sans antialiased")} suppressHydrationWarning>
+      <body
+        className={cn("flex min-h-screen flex-col bg-page-mesh font-sans antialiased")}
+        suppressHydrationWarning
+      >
         <SessionKeeper />
         <AuthSessionProvider>
           <ChromeModeProvider>
@@ -140,66 +74,87 @@ export default function RootLayout({ children }: RootLayoutProps) {
           <main id="main-content" className="flex-1">
             {children}
           </main>
-          <footer className="mt-auto border-t border-border/30 bg-muted/[0.06] py-12 sm:py-14 no-print" role="contentinfo">
-            <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-              <div className="flex flex-col gap-10 lg:flex-row lg:items-start lg:justify-between lg:gap-16">
-                <div className="max-w-sm shrink-0">
+          <footer className="site-footer mt-auto py-14 sm:py-16 no-print" role="contentinfo">
+            <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+              <div className="flex flex-col gap-12 lg:flex-row lg:items-start lg:justify-between lg:gap-10 xl:gap-14">
+                <div className="max-w-md shrink-0">
                   <NexusWordmark heightClass="h-28 sm:h-32" className="max-w-[40rem] sm:max-w-[52rem]" />
-                  <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
-                    Fundraising match engine: VCs, angels, accelerators, and corporate venture. Built for clarity, not clutter.
+                  <p className="mt-5 text-sm leading-relaxed text-muted-foreground">
+                    Fundraising match engine: VCs, angels, accelerators, and corporate venture. Built for clarity, not
+                    clutter.
                   </p>
                 </div>
 
-                <div className="flex flex-wrap gap-x-16 gap-y-10 sm:gap-x-20">
-                  <div>
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Product</p>
-                    <nav className="mt-3 flex flex-col gap-2 text-sm" aria-label="Footer product">
-                      <Link href="/pricing" className="text-muted-foreground transition-colors hover:text-foreground">
+                <div className="grid w-full min-w-0 max-w-xl shrink-0 grid-cols-1 gap-10 sm:max-w-none sm:grid-cols-3 sm:gap-x-8 md:gap-x-12 lg:max-w-3xl">
+                  <div className="min-w-0">
+                    <p className="text-xs font-semibold uppercase tracking-[0.12em] text-foreground/80">Product</p>
+                    <nav className="mt-4 flex flex-col items-start gap-2.5 text-sm" aria-label="Footer product">
+                      <Link
+                        href="/founder"
+                        className="text-muted-foreground transition-colors duration-200 hover:text-primary"
+                      >
+                        For founders
+                      </Link>
+                      <Link
+                        href="/investor"
+                        className="text-muted-foreground transition-colors duration-200 hover:text-primary"
+                      >
+                        For investors
+                      </Link>
+                      <Link
+                        href="/pricing"
+                        className="text-muted-foreground transition-colors duration-200 hover:text-primary"
+                      >
                         Pricing
-                      </Link>
-                      <Link href="/vc-guide" className="text-muted-foreground transition-colors hover:text-foreground">
-                        VC guide
-                      </Link>
-                      <Link href="/about" className="text-muted-foreground transition-colors hover:text-foreground">
-                        About
-                      </Link>
-                      <Link href="/company" className="text-muted-foreground transition-colors hover:text-foreground">
-                        Company
-                      </Link>
-                      <Link href="/contact" className="text-muted-foreground transition-colors hover:text-foreground">
-                        Contact
                       </Link>
                     </nav>
                   </div>
 
-                  <div>
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Legal & trust</p>
-                    <nav className="mt-3 flex flex-col gap-2 text-sm" aria-label="Footer legal">
-                      <Link href="/privacy" className="text-muted-foreground transition-colors hover:text-foreground">
-                        Privacy
+                  <div className="min-w-0">
+                    <p className="text-xs font-semibold uppercase tracking-[0.12em] text-foreground/80">Company</p>
+                    <nav className="mt-4 flex flex-col items-start gap-2.5 text-sm" aria-label="Footer company">
+                      <Link
+                        href="/about"
+                        className="text-muted-foreground transition-colors duration-200 hover:text-primary"
+                      >
+                        About
                       </Link>
-                      <Link href="/terms" className="text-muted-foreground transition-colors hover:text-foreground">
-                        Terms
+                      <Link
+                        href="/contact"
+                        className="text-muted-foreground transition-colors duration-200 hover:text-primary"
+                      >
+                        Contact
                       </Link>
-                      <Link href="/verification-notice" className="text-muted-foreground transition-colors hover:text-foreground">
-                        Verification notice
+                      <Link
+                        href="/vc-guide"
+                        className="text-muted-foreground transition-colors duration-200 hover:text-primary"
+                      >
+                        VC guide
                       </Link>
-                      <Link href="/security" className="text-muted-foreground transition-colors hover:text-foreground">
-                        Security
-                      </Link>
-                      <Link href="/disclaimer" className="text-muted-foreground transition-colors hover:text-foreground">
-                        Disclaimer
+                    </nav>
+                  </div>
+
+                  <div className="min-w-0">
+                    <p className="text-xs font-semibold uppercase tracking-[0.12em] text-foreground/80">Legal &amp; trust</p>
+                    <nav className="mt-4 flex flex-col items-start gap-2.5 text-sm" aria-label="Footer legal">
+                      <Link
+                        href="/legal"
+                        className="text-muted-foreground transition-colors duration-200 hover:text-primary"
+                      >
+                        Privacy, terms &amp; security
                       </Link>
                     </nav>
                   </div>
                 </div>
               </div>
 
-              <p className="mt-10 border-t border-border/25 pt-8 text-center text-xs leading-relaxed text-muted-foreground/85 sm:mt-12">
-                ©{' '}
-                <span suppressHydrationWarning>{new Date().getFullYear()}</span> {BRAND_NAME}. Information and tools
-                only. We do not broker or advise on securities.
-              </p>
+              <div className="mt-12 flex flex-col gap-3 border-t border-border/30 pt-8 dark:border-white/[0.06] sm:mt-14 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
+                <p className="text-xs leading-relaxed text-muted-foreground/90">
+                  © <span suppressHydrationWarning>{new Date().getFullYear()}</span> {BRAND_NAME}. Information and tools
+                  only. We do not broker or advise on securities.
+                </p>
+                <p className="text-xs leading-relaxed text-muted-foreground/75 sm:max-w-xs sm:text-right">{BRAND_TAGLINE}</p>
+              </div>
             </div>
           </footer>
           <AppToaster />

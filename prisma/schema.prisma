@@ -3,6 +3,9 @@ generator client {
   binaryTargets = ["native", "rhel-openssl-3.0.x"]
 }
 
+// Supabase: keep DATABASE_URL on the transaction pooler (:6543, pgbouncer=true) for the app.
+// DIRECT_DATABASE_URL must be the session pooler URI from Dashboard → Connect (:5432 on *.pooler.supabase.com).
+// If DIRECT_DATABASE_URL reuses :6543, `prisma migrate deploy` often hangs after printing the datasource line.
 datasource db {
   provider  = "postgresql"
   url       = env("DATABASE_URL")

@@ -24,6 +24,26 @@ import {
 import Link from "next/link"
 import { PitchFeedbackComparison } from "@/components/pitch-feedback-comparison"
 import { getRubricSectionScoresFromResult } from "@/lib/analysis/is-safe-rubric-for-dashboard"
+import { legacyNexusExtrasEnabled } from '@/lib/nexus-surface-flags'
+
+function newAnalysisEntryHref(
+  type: 'unified-pitch' | 'video-pitch' | 'pitch-idea' | 'pitch-deck' | string,
+): string {
+  if (!legacyNexusExtrasEnabled()) return '/founder/ai-analysis'
+  if (type === 'unified-pitch' || type === 'pitch-idea') return '/founder/ai-analysis'
+  if (type === 'video-pitch') return '/founder/video-pitch'
+  return '/founder/pitch-deck'
+}
+
+function newAnalysisEntryLabel(
+  type: 'unified-pitch' | 'video-pitch' | 'pitch-idea' | 'pitch-deck' | string,
+): string {
+  if (!legacyNexusExtrasEnabled()) return 'New analysis'
+  if (type === 'unified-pitch') return 'New unified pitch'
+  if (type === 'video-pitch') return 'New video pitch'
+  if (type === 'pitch-idea') return 'New pitch idea'
+  return 'New pitch deck'
+}
 
 /**
  * Rank-based presentation score so the #1 match always reads as a strong fit
@@ -556,27 +576,10 @@ export default function MyAnalysesPage() {
                             </Button>
                           </Link>
                         )}
-                        <Link
-                          href={
-                            analysis.type === 'unified-pitch'
-                              ? '/founder/ai-analysis'
-                              : analysis.type === 'video-pitch'
-                                ? '/founder/video-pitch'
-                                : analysis.type === 'pitch-idea'
-                                  ? '/founder/ai-analysis'
-                                  : '/founder/pitch-deck'
-                          }
-                          className="min-w-[140px] flex-1"
-                        >
+                        <Link href={newAnalysisEntryHref(analysis.type)} className="min-w-[140px] flex-1">
                           <Button variant="outline" className="w-full border-border hover:border-primary hover:bg-primary/5 transition-all">
                             <Sparkles className="mr-2 h-4 w-4" />
-                            {analysis.type === 'unified-pitch'
-                              ? 'New unified pitch'
-                              : analysis.type === 'video-pitch'
-                                ? 'New video pitch'
-                                : analysis.type === 'pitch-idea'
-                                  ? 'New pitch idea'
-                                  : 'New pitch deck'}
+                            {newAnalysisEntryLabel(analysis.type)}
                           </Button>
                         </Link>
                         {analysis.type === 'pitch-deck' && analysis.url ? (
@@ -599,7 +602,7 @@ export default function MyAnalysesPage() {
                       <p className="text-muted-foreground mb-4">
                         Analysis data unavailable. Please run a new analysis.
                       </p>
-                      <Link href="/founder/video-pitch">
+                      <Link href={legacyNexusExtrasEnabled() ? '/founder/video-pitch' : '/founder/ai-analysis'}>
                         <Button>
                           Start New Analysis
                           <ArrowRight className="ml-2 h-4 w-4" />

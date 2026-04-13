@@ -38,6 +38,8 @@ interface Step3PreferencesProps {
   /** When set, the primary action finishes onboarding instead of advancing a step. */
   onFinish?: () => void | Promise<void>
   saving?: boolean
+  sectionTitle?: string
+  sectionDescription?: string
 }
 
 export function Step3Preferences({
@@ -48,12 +50,14 @@ export function Step3Preferences({
   hideNavigation = false,
   onFinish,
   saving = false,
+  sectionTitle = 'Preferences',
+  sectionDescription = 'Help us find your perfect match',
 }: Step3PreferencesProps) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Preferences</CardTitle>
-        <CardDescription>Help us find your perfect match</CardDescription>
+        <CardTitle>{sectionTitle}</CardTitle>
+        <CardDescription>{sectionDescription}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
         {/* Investor Type Preference */}

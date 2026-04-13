@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation'
 import { getCurrentUser } from '@/lib/auth'
+import { db } from '@/lib/db'
 import { AccountPageClient } from './account-page-client'
 
 export const dynamic = 'force-dynamic'
@@ -16,11 +17,22 @@ export default async function AccountPage() {
       redirect(`/verify?redirect=/account&email=${encodeURIComponent(user.email)}`)
     }
 
+    const userType = (user.userType || 'founder').toLowerCase()
+    let showFounderProfileEditor = userType === 'founder' || userType === 'mentor'
+    if (userType === 'vc' || userType === 'investor') {
+      const founder = await db.founder.findUnique({
+        where: { email: user.email },
+        select: { id: true },
+      })
+      showFounderProfileEditor = Boolean(founder)
+    }
+
     return (
       <AccountPageClient
         email={user.email}
         emailVerified={user.emailVerified}
         userType={user.userType}
+        showFounderProfileEditor={showFounderProfileEditor}
       />
     )
   } catch (error) {

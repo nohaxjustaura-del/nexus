@@ -11,13 +11,12 @@ import { toast } from "@/components/ui/toast-simple"
 import { 
   Sparkles, 
   Zap, 
-  Target, 
   CheckCircle,
   ArrowRight,
   Crown,
   UserCheck,
   Calendar,
-  Bookmark
+  UserRound,
 } from "lucide-react"
 /** Credit Costs grid: high contrast, black + blue only (no mint/purple/pastels). */
 const creditCostRow =
@@ -112,10 +111,10 @@ export default function PricingClient({ verifiedInvestorCountLabel }: { verified
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="container mx-auto max-w-7xl px-4 py-8 md:py-10">
+      <div className="page-shell-narrow">
         <div className="mb-8 text-center">
-          <h1 className="text-4xl md:text-5xl font-bold mb-4 bg-gradient-to-r from-blue-400 via-blue-500 to-blue-700 bg-clip-text text-transparent">
-            Simple Credit-Based Pricing
+          <h1 className="mb-4 font-heading text-4xl font-semibold tracking-tight text-foreground md:text-5xl">
+            Simple credit-based pricing
           </h1>
           <p className="mx-auto max-w-lg text-sm text-foreground/80 md:text-base">
             Credits for analyses and unlocks, or Premium for unlimited. Expand below for per-feature costs.
@@ -138,8 +137,8 @@ export default function PricingClient({ verifiedInvestorCountLabel }: { verified
         </div>
 
         {/* Credit Packages - 4 column grid with Premium */}
-        <div className="mb-8 grid gap-4 md:grid-cols-2 lg:grid-cols-4 items-stretch">
-          <Card className="flex h-full flex-col border-2 hover:shadow-lg transition-all duration-300">
+        <div className="mb-8 grid gap-4 md:grid-cols-2 md:gap-6 lg:grid-cols-4 items-stretch">
+          <Card className="flex h-full flex-col border-border/60 transition-colors duration-200 hover:border-border">
             <CardHeader>
               <CardTitle className="text-lg">Starter</CardTitle>
               <div className="mt-2">
@@ -178,7 +177,7 @@ export default function PricingClient({ verifiedInvestorCountLabel }: { verified
             </CardContent>
           </Card>
 
-          <Card className="relative flex h-full flex-col border-2 border-primary hover:shadow-xl transition-all duration-300">
+          <Card className="relative flex h-full flex-col border-primary/45 ring-1 ring-primary/15 transition-colors duration-200 hover:border-primary/60">
             <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary text-white">Most Popular</Badge>
             <CardHeader>
               <CardTitle className="text-lg">Founder</CardTitle>
@@ -223,7 +222,7 @@ export default function PricingClient({ verifiedInvestorCountLabel }: { verified
             </CardContent>
           </Card>
 
-          <Card className="flex h-full flex-col border-2 hover:shadow-lg transition-all duration-300">
+          <Card className="flex h-full flex-col border-border/60 transition-colors duration-200 hover:border-border">
             <CardHeader>
               <CardTitle className="text-lg">Pro</CardTitle>
               <div className="mt-2">
@@ -266,7 +265,7 @@ export default function PricingClient({ verifiedInvestorCountLabel }: { verified
             </CardContent>
           </Card>
 
-          <Card className="relative flex h-full flex-col border-2 border-primary/50 bg-gradient-to-br from-primary/5 via-primary/3 to-background hover:shadow-xl transition-all duration-300">
+          <Card className="relative flex h-full flex-col border-primary/40 bg-gradient-to-br from-primary/[0.06] via-transparent to-background ring-1 ring-border/30 transition-colors duration-200 hover:border-primary/55">
             <div className="absolute -top-3 left-1/2 -translate-x-1/2 flex items-center gap-1 bg-gradient-to-r from-blue-600 to-blue-800 text-white px-3 py-1 rounded-full text-xs font-semibold">
               <Crown className="h-3 w-3" />
               Premium
@@ -333,7 +332,7 @@ export default function PricingClient({ verifiedInvestorCountLabel }: { verified
             </AccordionTrigger>
             <AccordionContent>
               <div className="grid gap-4 pb-4 md:grid-cols-2 lg:grid-cols-3">
-              {/* FREE FEATURES FIRST */}
+              {/* Row 1 (lg: 3 cols): all free — then paid, ascending by credits */}
               <div className={creditCostRow}>
                 <div className="flex items-center gap-3 min-w-0">
                   <CheckCircle className="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400" />
@@ -360,16 +359,17 @@ export default function PricingClient({ verifiedInvestorCountLabel }: { verified
                 </Badge>
               </div>
 
-              {/* PAID FEATURES - CHEAPEST TO MOST EXPENSIVE */}
               <div className={creditCostRow}>
                 <div className="flex items-center gap-3 min-w-0">
-                  <Target className="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400" />
+                  <CheckCircle className="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400" />
                   <div className="min-w-0">
                     <div className={creditCostTitle}>Unlock Top 5 Matches</div>
                     <div className={creditCostSub}>See detailed match scores</div>
                   </div>
                 </div>
-                <Badge className={creditCostBadge}>10</Badge>
+                <Badge className="shrink-0 border-0 bg-blue-600 px-3 py-1 text-base font-medium text-white shadow-none hover:bg-blue-600">
+                  Free
+                </Badge>
               </div>
 
               <div className={creditCostRow}>
@@ -407,6 +407,17 @@ export default function PricingClient({ verifiedInvestorCountLabel }: { verified
 
               <div className={creditCostRow}>
                 <div className="flex items-center gap-3 min-w-0">
+                  <UserRound className="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400" />
+                  <div className="min-w-0">
+                    <div className={creditCostTitle}>Expert App Review</div>
+                    <div className={creditCostSub}>A real person reviews your product or application</div>
+                  </div>
+                </div>
+                <Badge className={creditCostBadge}>100</Badge>
+              </div>
+
+              <div className={creditCostRow}>
+                <div className="flex items-center gap-3 min-w-0">
                   <UserCheck className="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400" />
                   <div className="min-w-0">
                     <div className={creditCostTitle}>Investor-Accepted Founder Review</div>
@@ -425,19 +436,6 @@ export default function PricingClient({ verifiedInvestorCountLabel }: { verified
                   </div>
                 </div>
                 <Badge className={creditCostBadge}>400</Badge>
-              </div>
-
-              <div className={creditCostRow}>
-                <div className="flex items-center gap-3 min-w-0">
-                  <Bookmark className="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400" />
-                  <div className="min-w-0">
-                    <div className={creditCostTitle}>Bookmark Investors</div>
-                    <div className={creditCostSub}>Save investors to revisit later</div>
-                  </div>
-                </div>
-                <Badge className="shrink-0 border-0 bg-blue-600 px-3 py-1 text-base font-medium text-white shadow-none hover:bg-blue-600">
-                  Free
-                </Badge>
               </div>
             </div>
             </AccordionContent>

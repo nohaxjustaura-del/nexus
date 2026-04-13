@@ -5,11 +5,25 @@ import { useEffect, useState } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Search, Sparkles, Target, Bookmark, Crown, Shield, ArrowRight, FileText, Video, Lightbulb, Clock } from 'lucide-react'
+import {
+  Search,
+  Sparkles,
+  Target,
+  Bookmark,
+  Crown,
+  Shield,
+  ArrowRight,
+  FileText,
+  Video,
+  Lightbulb,
+  Clock,
+  Network,
+} from 'lucide-react'
 import Link from 'next/link'
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
 import { useAuthSession } from '@/components/auth-session-provider'
+import { legacyNexusExtrasEnabled } from '@/lib/nexus-surface-flags'
 
 const DailyClaim = dynamic(() => import('@/components/daily-claim'), {
   loading: () => <Skeleton className="mb-8 h-36 w-full rounded-lg" aria-hidden />,
@@ -34,6 +48,7 @@ export default function FounderDashboard() {
   const { isAdmin } = useAuthSession()
   const [pending, setPending] = useState(true)
   const [summary, setSummary] = useState<HubSummary | null>(null)
+  const [canAccessFounderNetwork, setCanAccessFounderNetwork] = useState(false)
 
   useEffect(() => {
     let alive = true
@@ -41,6 +56,16 @@ export default function FounderDashboard() {
     const maxWait = window.setTimeout(() => {
       if (alive) setPending(false)
     }, maxWaitMs)
+
+    fetch('/api/account/capabilities', { credentials: 'include' })
+      .then(async (r) => {
+        if (!alive || !r.ok) return
+        const data = (await r.json()) as { authenticated?: boolean; canAccessFounderNetwork?: boolean }
+        if (alive && data.authenticated && data.canAccessFounderNetwork) {
+          setCanAccessFounderNetwork(true)
+        }
+      })
+      .catch(() => {})
 
     fetch('/api/founder/hub-summary', { credentials: 'include' })
       .then(async (r) => {
@@ -65,25 +90,38 @@ export default function FounderDashboard() {
     }
   }, [])
 
+  const showNetworkStartHere =
+    legacyNexusExtrasEnabled() && canAccessFounderNetwork
+
   const primaryLinks = [
+    {
+      title: 'Analyze pitch',
+      desc: 'Unified pitch, deck, video, and idea',
+      icon: Sparkles,
+      href: '/founder/ai-analysis',
+    },
+    {
+      title: 'Your matches',
+      desc: 'Ranked shortlist from analyses',
+      icon: Target,
+      href: '/founder/matches',
+    },
     {
       title: 'Find investors',
       desc: 'Search the directory',
       icon: Search,
       href: '/founder/discover',
     },
-    {
-      title: 'Analyze pitch',
-      desc: 'Deck, video, or idea',
-      icon: Sparkles,
-      href: '/founder/ai-analysis',
-    },
-    {
-      title: 'Your matches',
-      desc: 'From past analyses',
-      icon: Target,
-      href: '/founder/matches',
-    },
+    ...(showNetworkStartHere
+      ? ([
+          {
+            title: 'Network',
+            desc: 'Partner hubs: Luel playbooks, credits, founder access',
+            icon: Network,
+            href: '/founder/network',
+          },
+        ] as const)
+      : []),
     {
       title: 'Saved',
       desc: 'Bookmarked investors',
@@ -147,14 +185,14 @@ export default function FounderDashboard() {
         </div>
 
         {pending ? (
-          <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3 md:gap-6">
             {[1, 2, 3].map((i) => (
               <Skeleton key={i} className="h-24 rounded-lg sm:h-[5.5rem]" />
             ))}
           </div>
         ) : stats ? (
           <>
-            <div className="mb-6 grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3 md:gap-6">
               <Card className="border-border/80">
                 <CardContent className="p-4 text-center sm:p-5">
                   <div className="text-xl font-bold tabular-nums sm:text-2xl">{stats.analysesCount}</div>
@@ -190,7 +228,7 @@ export default function FounderDashboard() {
         ) : null}
 
         <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">Start here</h2>
-        <div className="mb-10 grid gap-3 sm:grid-cols-2">
+        <div className="mb-10 grid gap-4 sm:grid-cols-2 md:gap-6">
           {primaryLinks.map(({ title, desc, icon: Icon, href }) => (
             <Link key={href} href={href}>
               <Card className="h-full border-border/80 transition-colors hover:border-primary/40">

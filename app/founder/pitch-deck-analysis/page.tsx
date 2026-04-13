@@ -33,6 +33,7 @@ import { useRouter } from "next/navigation"
 import { loadStripe } from '@stripe/stripe-js'
 import SmartMatchResults from '@/components/smart-match-results'
 import { toast } from '@/components/ui/toast-simple'
+import { CREDIT_COSTS } from '@/lib/constants'
 
 interface PitchAnalysisResult {
   pitchDeckId: string
@@ -669,13 +670,17 @@ export default function PitchDeckAnalysisPage() {
                       ) : (
                         <>
                           <Lock className="mr-2 h-4 w-4" />
-                          {credits?.isPremium || (credits && credits.credits > 0)
+                          {credits?.isPremium ||
+                          (credits && credits.credits >= CREDIT_COSTS.UNLOCK_TOP_MATCHES)
                             ? 'Unlock Top 5 Matches'
                             : 'Get Credits to Unlock'}
                         </>
                       )}
                     </Button>
-                    {credits && !credits.isPremium && credits.credits === 0 && (
+                    {credits &&
+                      !credits.isPremium &&
+                      CREDIT_COSTS.UNLOCK_TOP_MATCHES > 0 &&
+                      credits.credits < CREDIT_COSTS.UNLOCK_TOP_MATCHES && (
                       <p className="mt-2 text-xs text-muted-foreground">
                         Need credits? <Link href="/pricing" className="text-primary hover:underline">View pricing</Link>
                       </p>

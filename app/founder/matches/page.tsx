@@ -441,7 +441,7 @@ export default async function MatchesPage({
           </p>
         </div>
 
-        {/* Niche-focused programs — displayed above university and general investor matches */}
+        {/* Niche-focused programs: displayed above university and general investor matches */}
         {nichePrograms.length > 0 && (() => {
           const NICHE_META: Record<string, { label: string; icon: React.ReactNode; gradient: string; border: string }> = {
             women:           { label: 'Programs for women founders',           icon: <Heart className="h-5 w-5" />,          gradient: 'from-pink-500/[0.06] via-card to-card',   border: 'border-pink-500/20 ring-pink-500/10' },
@@ -476,7 +476,7 @@ export default async function MatchesPage({
                         </Badge>
                       </CardTitle>
                       <CardDescription>
-                        Investors and programs that specifically support founders like you — separate from the general investor list.
+                        Investors and programs that specifically support founders like you, separate from the general investor list.
                       </CardDescription>
                     </div>
                   </div>
@@ -541,7 +541,7 @@ export default async function MatchesPage({
           })
         })()}
 
-        {/* School-specific programs — displayed above general investor matches */}
+        {/* School-specific programs: displayed above general investor matches */}
         {universityPrograms.length > 0 && (
           <Card className="mb-6 overflow-hidden rounded-2xl border-2 border-primary/20 bg-gradient-to-br from-primary/[0.06] via-card to-card shadow-sm ring-1 ring-primary/10">
             <CardHeader className="pb-3">
@@ -557,7 +557,7 @@ export default async function MatchesPage({
                     </Badge>
                   </CardTitle>
                   <CardDescription>
-                    Based on your school affiliation and stage — exclusive opportunities separate from the general investor list.
+                    Based on your school affiliation and stage, with exclusive opportunities separate from the general investor list.
                   </CardDescription>
                 </div>
               </div>

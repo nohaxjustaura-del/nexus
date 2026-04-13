@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { Coins, Gift } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
@@ -27,13 +27,7 @@ export function CreditCounter({
   const [mounted, setMounted] = useState(false)
   const claimInFlight = useRef(false)
 
-  useEffect(() => {
-    setMounted(true)
-    fetchCredits()
-    fetchClaimStatus()
-  }, [])
-
-  const fetchCredits = async () => {
+  const fetchCredits = useCallback(async () => {
     try {
       const { ok, data } = await getUserCreditsClient()
       if (ok) {
@@ -48,9 +42,9 @@ export function CreditCounter({
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
 
-  const fetchClaimStatus = async () => {
+  const fetchClaimStatus = useCallback(async () => {
     try {
       const res = await fetch('/api/claim-daily', {
         credentials: 'include'
@@ -62,7 +56,35 @@ export function CreditCounter({
     } catch (error) {
       console.error('Failed to check claim status:', error)
     }
-  }
+  }, [])
+
+  useEffect(() => {
+    setMounted(true)
+    let cancelled = false
+    let usedIdle = false
+    let idleOrTimer: number | undefined
+    const runCredits = () => {
+      if (!cancelled) void fetchCredits()
+    }
+    if (typeof requestIdleCallback !== 'undefined') {
+      usedIdle = true
+      idleOrTimer = requestIdleCallback(runCredits, { timeout: 1800 })
+    } else {
+      idleOrTimer = window.setTimeout(runCredits, 0) as unknown as number
+    }
+    if (showClaimButton) {
+      void fetchClaimStatus()
+    }
+    return () => {
+      cancelled = true
+      if (idleOrTimer === undefined) return
+      if (usedIdle && typeof cancelIdleCallback !== 'undefined') {
+        cancelIdleCallback(idleOrTimer)
+      } else {
+        clearTimeout(idleOrTimer as unknown as ReturnType<typeof setTimeout>)
+      }
+    }
+  }, [showClaimButton, fetchCredits, fetchClaimStatus])
 
   const handleClaim = async () => {
     if (claiming || claimInFlight.current) return

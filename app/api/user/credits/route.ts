@@ -142,10 +142,9 @@ export async function POST(request: NextRequest) {
 
     if (action === 'unlock_top_matches') {
       const CREDIT_COST = CREDIT_COSTS.UNLOCK_TOP_MATCHES
-      // Check if user has credits or is premium
-      if (credits.isPremium || credits.credits >= CREDIT_COST) {
-        // Deduct credits if not premium
-        if (!credits.isPremium && credits.credits >= CREDIT_COST) {
+      // Free unlock (0 cost): always allow; otherwise require premium or enough credits
+      if (CREDIT_COST === 0 || credits.isPremium || credits.credits >= CREDIT_COST) {
+        if (CREDIT_COST > 0 && !credits.isPremium && credits.credits >= CREDIT_COST) {
           await (db as any).userCredits.update({
             where: { userId: user.id },
             data: {
@@ -153,13 +152,16 @@ export async function POST(request: NextRequest) {
             },
           })
         }
-        return NextResponse.json({ success: true, unlocked: true, creditsUsed: credits.isPremium ? 0 : CREDIT_COST })
-      } else {
-        return NextResponse.json(
-          { error: `Insufficient credits. Need ${CREDIT_COST} credits to unlock top matches.`, requiresPayment: true, creditCost: CREDIT_COST },
-          { status: 402 }
-        )
+        return NextResponse.json({
+          success: true,
+          unlocked: true,
+          creditsUsed: credits.isPremium || CREDIT_COST === 0 ? 0 : CREDIT_COST,
+        })
       }
+      return NextResponse.json(
+        { error: `Insufficient credits. Need ${CREDIT_COST} credits to unlock top matches.`, requiresPayment: true, creditCost: CREDIT_COST },
+        { status: 402 }
+      )
     }
 
     return NextResponse.json({ error: 'Invalid action' }, { status: 400 })

@@ -46,19 +46,42 @@ function normalizeResendFromHeader(trimmed: string): string {
   return trimmed
 }
 
+/** Env values are often pasted with accidental newlines inside the address, e.g. `noreply@\n>`. */
+function stripLineBreaksInFromEnv(s: string): string {
+  return s.replace(/\r\n|\n|\r|\u2028|\u2029/g, '')
+}
+
+/** First email-like token inside angle brackets, else whole string trimmed. */
+function resendFromHeaderMailboxToken(header: string): string {
+  const m = header.match(/<([^>]+)>/)
+  return (m ? m[1] : header).trim()
+}
+
+function resendFromHeaderIsDeliverable(header: string): boolean {
+  const token = resendFromHeaderMailboxToken(header)
+  return looksLikeBareEmail(token.replace(/\s+/g, ''))
+}
+
 function emailFromHeader(): string {
+  const defaultFrom = `${BRAND_NAME} <onboarding@resend.dev>`
   const raw = process.env.RESEND_FROM_EMAIL
-  if (!raw) return `${BRAND_NAME} <onboarding@resend.dev>`
-  let trimmed = raw.trim()
+  if (!raw) return defaultFrom
+  let trimmed = stripLineBreaksInFromEnv(raw.trim())
   // Vercel env UI sometimes stores quotes literally; strip one wrapping pair.
   if (
     (trimmed.startsWith('"') && trimmed.endsWith('"')) ||
     (trimmed.startsWith("'") && trimmed.endsWith("'"))
   ) {
-    const unwrapped = trimmed.slice(1, -1).trim()
+    const unwrapped = stripLineBreaksInFromEnv(trimmed.slice(1, -1).trim())
     if (unwrapped) trimmed = unwrapped
   }
   const normalized = normalizeResendFromHeader(trimmed)
+  if (!resendFromHeaderIsDeliverable(normalized)) {
+    console.warn(
+      '[email] RESEND_FROM_EMAIL is missing a valid domain address (check for line breaks or typos). Using default onboarding@resend.dev.'
+    )
+    return defaultFrom
+  }
   return normalized
 }
 

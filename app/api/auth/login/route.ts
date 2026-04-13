@@ -192,17 +192,16 @@ export async function POST(request: NextRequest) {
     // #endregion
 
     if (!emailResult.success) {
-      if (emailResult.resendTestingRecipientOnly) {
-        return NextResponse.json(
-          {
-            error: RESEND_TESTING_MODE_PUBLIC_MESSAGE,
-            code: 'RESEND_TESTING_RECIPIENT',
-          },
-          { status: 503 }
-        )
-      }
       const resendHint = formatResendErrorMessage(emailResult.error)
-      console.error('Login email send failed:', resendHint || emailResult.error)
+      const resendTestingOnly = Boolean(emailResult.resendTestingRecipientOnly)
+      if (resendTestingOnly) {
+        console.warn(
+          'Resend test mode blocked this recipient; trying Supabase sign-in email fallback.',
+          resendHint || emailResult.error
+        )
+      } else {
+        console.error('Login email send failed:', resendHint || emailResult.error)
+      }
       if (supabaseUrl && anonKey) {
         const otp = await sendMagicLinkViaSupabaseOtp({
           supabaseUrl,
@@ -213,8 +212,9 @@ export async function POST(request: NextRequest) {
         if (otp.ok) {
           const res = NextResponse.json({
             success: true,
-            message:
-              `We could not send email through Resend, so we sent your sign-in link via Supabase instead. Check your inbox (and spam). ${AUTH_EMAIL_SPAM_DELIVERABILITY_HINT}`,
+            message: resendTestingOnly
+              ? `Your Resend project is in test mode (it cannot email arbitrary addresses yet), so we sent your sign-in link via Supabase instead. Check your inbox (and spam). ${AUTH_EMAIL_SPAM_DELIVERABILITY_HINT}`
+              : `We could not send email through Resend, so we sent your sign-in link via Supabase instead. Check your inbox (and spam). ${AUTH_EMAIL_SPAM_DELIVERABILITY_HINT}`,
             email: normalizedEmail,
             deliveredBy: 'supabase' as const,
             resendError: resendHint || undefined,
@@ -222,6 +222,15 @@ export async function POST(request: NextRequest) {
           applyAuthCookies(res)
           return res
         }
+      }
+      if (resendTestingOnly) {
+        return NextResponse.json(
+          {
+            error: RESEND_TESTING_MODE_PUBLIC_MESSAGE,
+            code: 'RESEND_TESTING_RECIPIENT',
+          },
+          { status: 503 }
+        )
       }
       return NextResponse.json(
         {

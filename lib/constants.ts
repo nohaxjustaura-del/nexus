@@ -43,7 +43,7 @@ export const CREDIT_COSTS = {
     REVIEWER: 100,
   },
   FOUNDER_FEEDBACK: 200,
-  UNLOCK_TOP_MATCHES: 10,
+  UNLOCK_TOP_MATCHES: 0,
   RESUME_ANALYSIS: 25, // Note: Feature is disabled but keeping for reference
 } as const
 

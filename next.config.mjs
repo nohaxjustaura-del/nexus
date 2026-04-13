@@ -65,6 +65,10 @@ const nextConfig = {
     return [
       { source: '/founder/resources', destination: '/founder/network', permanent: true },
       { source: '/founder/resources/:slug*', destination: '/founder/network/:slug*', permanent: true },
+      { source: '/privacy', destination: '/legal#privacy', permanent: true },
+      { source: '/terms', destination: '/legal#terms', permanent: true },
+      { source: '/verification-notice', destination: '/legal#verification', permanent: true },
+      { source: '/security', destination: '/legal#security', permanent: true },
     ]
   },
 

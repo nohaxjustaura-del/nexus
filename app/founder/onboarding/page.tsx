@@ -49,6 +49,8 @@ type OnboardingFormData = {
   isVeteran: boolean
   needsImmigrationSupport: boolean
   universityAffiliation: string
+  resumeUrl?: string
+  resumeFileName?: string
   [key: string]: any
 }
 
@@ -103,6 +105,8 @@ export default function OnboardingPage() {
     isVeteran: false,
     needsImmigrationSupport: false,
     universityAffiliation: '',
+    resumeUrl: '',
+    resumeFileName: '',
   })
 
   const normalizeOnboardingStep = (raw: unknown): number | null => {
@@ -163,6 +167,13 @@ export default function OnboardingPage() {
               isUnderrepresented: Boolean(p.isUnderrepresented),
               isStudent: Boolean(p.isStudent),
               isVeteran: Boolean(p.isVeteran),
+              resumeUrl: p.resumeUrl || '',
+              resumeFileName: p.resumeUrl
+                ? (() => {
+                    const tail = String(p.resumeUrl).split('/').pop() || ''
+                    return tail.replace(/^\d+_/, '') || 'resume.pdf'
+                  })()
+                : '',
             }))
 
             let resolvedStep: number | null = null
@@ -332,6 +343,7 @@ export default function OnboardingPage() {
           isVeteran: formData.isVeteran,
           needsImmigrationSupport: formData.needsImmigrationSupport,
           universityAffiliation: formData.universityAffiliation,
+          resumeUrl: formData.resumeUrl?.trim() || '',
         }),
       })
 
@@ -460,11 +472,10 @@ export default function OnboardingPage() {
         )}
       </div>
       <div className="mt-10 text-center text-xs text-muted-foreground">
-        <a className="underline hover:text-foreground" href="/terms">Terms</a> ·{' '}
-        <a className="underline hover:text-foreground" href="/privacy">Privacy</a> ·{' '}
+        <a className="underline hover:text-foreground" href="/legal#terms">Terms</a> ·{' '}
+        <a className="underline hover:text-foreground" href="/legal#privacy">Privacy</a> ·{' '}
         <a className="underline hover:text-foreground" href="/cookies">Cookies</a> ·{' '}
-        <a className="underline hover:text-foreground" href="/security">Security</a> ·{' '}
-        <a className="underline hover:text-foreground" href="/disclaimer">Disclaimer</a>
+        <a className="underline hover:text-foreground" href="/legal#security">Security</a>
       </div>
     </div>
   )

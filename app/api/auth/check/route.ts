@@ -3,6 +3,7 @@ import { getCurrentUser } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { logger } from '@/lib/logger'
 import { isAdminEmail } from '@/lib/constants'
+import { resolveUserApprovalAccess } from '@/lib/user-approval-access'
 
 export const dynamic = 'force-dynamic'
 
@@ -16,23 +17,13 @@ export async function GET(_request: NextRequest) {
       return res
     }
 
+    const emailNorm = user.email.toLowerCase().trim()
+
     /** `UserApproval` is only used to hard-block rejected accounts; email verification unlocks the product. */
     let accountRejected = false
     try {
-      let row = await db.userApproval.findUnique({
-        where: { email: user.email },
-      })
-      if (!row) {
-        try {
-          row = await db.userApproval.create({
-            data: { email: user.email, status: 'pending' },
-          })
-        } catch {
-          row = await db.userApproval.findUnique({
-            where: { email: user.email },
-          })
-        }
-      }
+      await resolveUserApprovalAccess(emailNorm)
+      const row = await db.userApproval.findUnique({ where: { email: emailNorm } })
       accountRejected = row?.status === 'rejected'
     } catch (approvalError) {
       logger.error('AUTH_CHECK', 'Approval check error', approvalError)
@@ -42,9 +33,9 @@ export async function GET(_request: NextRequest) {
     if (isAdminEmail(user.email) && accountRejected) {
       try {
         await db.userApproval.upsert({
-          where: { email: user.email },
+          where: { email: emailNorm },
           create: {
-            email: user.email,
+            email: emailNorm,
             status: 'approved',
             reviewedAt: new Date(),
           },

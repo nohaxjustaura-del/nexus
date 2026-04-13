@@ -2,7 +2,7 @@
 
 **Fundraising match engine for founders.** NEXUS produces ranked investor shortlists from your pitch -- scoring VCs, angels, accelerators, and corporate venture arms on stage, sector, thesis, and narrative fit.
 
-**Deployed app:** Set `NEXT_PUBLIC_URL` to your production origin (e.g. Vercel). **Company overview** for partners and investors lives at `/company` on that host.
+**Deployed app:** Set `NEXT_PUBLIC_URL` to your production origin (e.g. Vercel). **Company narrative** for partners and investors lives at `/about` on that host.
 
 ---
 
