@@ -233,11 +233,8 @@ export default function VCProfilePage() {
             Your listing
           </h1>
           <p className="mt-2 max-w-xl text-sm text-muted-foreground">
-            What founders see in discovery: thesis, check size, stages, and how to apply. Use{' '}
-            <Link href="/vc/extract" className="text-primary underline-offset-4 hover:underline">
-              Extract
-            </Link>{' '}
-            if you already have copy elsewhere.
+            What founders see in discovery: thesis, check size, stages, and how to apply. Keep these fields current so
+            recommendations stay aligned with how you actually invest.
           </p>
         </header>
 
@@ -461,19 +458,10 @@ export default function VCProfilePage() {
             </Button>
           )}
           <Link
-            href="/vc/dashboard"
+            href="/investor/dashboard"
             className={cn(buttonVariants({ variant: 'outline', size: 'default' }))}
           >
-            View matched founders
-          </Link>
-          <Link
-            href="/vc/extract"
-            className={cn(
-              buttonVariants({ variant: 'ghost', size: 'default' }),
-              'text-muted-foreground hover:text-foreground'
-            )}
-          >
-            Run extraction
+            View founder recommendations
           </Link>
         </div>
       </div>

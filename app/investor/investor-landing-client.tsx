@@ -50,10 +50,10 @@ export default function InvestorLandingClient({
       router.replace('/vc/claim')
       return
     }
-    router.replace('/vc/dashboard')
+    router.replace('/investor/dashboard')
   }, [loading, authenticated, verified, user?.userType, router])
 
-  const dashboardHref = '/vc/dashboard'
+  const dashboardHref = '/investor/dashboard'
   const claimHref = '/vc/claim'
 
   const primaryCta =
@@ -105,7 +105,7 @@ export default function InvestorLandingClient({
             </Button>
           </div>
           <p className="mt-4 text-xs text-muted-foreground">
-            Already on the graph? Log in and open Matches to export or review inbound interest.
+            Already on the graph? Log in to open your investor dashboard and review founder recommendations.
           </p>
           </div>
         </div>
@@ -132,8 +132,8 @@ export default function InvestorLandingClient({
               },
               {
                 icon: Users,
-                title: 'Matches dashboard',
-                body: 'Sortable applicant list with stage, sector, traction hints, and fit score for your mandate.',
+                title: 'Investor dashboard',
+                body: 'Founder recommendations with stage, sector, traction hints, and fit scores for your mandate.',
               },
               {
                 icon: FileSearch,
@@ -147,8 +147,8 @@ export default function InvestorLandingClient({
               },
               {
                 icon: Sparkles,
-                title: 'Extract tools',
-                body: 'Workspace utilities to keep your public fields aligned with how you actually invest.',
+                title: 'Listing quality',
+                body: 'A complete mandate profile improves how founders discover you and how recommendations are ranked.',
               },
               {
                 icon: Shield,
@@ -211,8 +211,8 @@ export default function InvestorLandingClient({
               },
               {
                 step: '3',
-                title: 'Review matches',
-                body: 'Use the dashboard to scan applicants, drill into profiles, and export when you need a snapshot.',
+                title: 'Review recommendations',
+                body: 'Use the investor dashboard to scan founder profiles, drill into fit context, and bookmark prospects.',
               },
             ].map(({ step, title, body }) => (
               <li key={step} className="relative rounded-2xl border border-border/40 bg-muted/[0.08] p-6">

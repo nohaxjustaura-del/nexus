@@ -131,7 +131,7 @@ export default function VCApplicantDetailPage() {
     return (
       <div className="container mx-auto max-w-2xl px-4 py-12">
         <Link
-          href="/vc/dashboard"
+          href="/investor/dashboard"
           className="mb-6 inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
         >
           <ArrowLeft className="h-4 w-4" />
@@ -143,7 +143,7 @@ export default function VCApplicantDetailPage() {
             <CardDescription>{error || 'This profile could not be loaded.'}</CardDescription>
           </CardHeader>
           <CardContent>
-            <Link href="/vc/dashboard" className={buttonVariants({ variant: 'outline' })}>
+            <Link href="/investor/dashboard" className={buttonVariants({ variant: 'outline' })}>
               Return to list
             </Link>
           </CardContent>
@@ -170,7 +170,7 @@ export default function VCApplicantDetailPage() {
     <div className="min-h-screen bg-background">
       <div className="container mx-auto max-w-3xl px-4 py-8 sm:px-6">
         <Link
-          href="/vc/dashboard"
+          href="/investor/dashboard"
           className="mb-6 inline-flex items-center gap-1 text-sm font-medium text-muted-foreground hover:text-foreground"
         >
           <ArrowLeft className="h-4 w-4" />

@@ -143,14 +143,12 @@ export function SiteHeader() {
     const base: MobileNavItem[] = [
       { section: 'Workspace', href: '/investor/dashboard', label: 'Dashboard' },
       { href: '/vc/profile', label: 'Your listing' },
-      { href: '/vc/dashboard', label: 'Matches' },
-      ...(caps?.canAccessFounderNetwork ? [{ href: '/founder/network', label: 'Network' as const }] : []),
     ]
     if (authenticated) {
       base.push({ section: 'Account', href: '/account', label: 'Account' })
     }
     return base
-  }, [authenticated, caps?.canAccessFounderNetwork])
+  }, [authenticated])
 
   const mobileLinks =
     chrome === 'guest' ? guestMobileLinks : chrome === 'investor' ? investorMobileLinks : founderMobileLinks
@@ -228,12 +226,7 @@ export function SiteHeader() {
             {chrome === 'investor' && (
               <div className={navDockClass}>
                 <DesktopNavLink href="/investor/dashboard" label="Dashboard" pathname={pathname} />
-                <DesktopNavLink href="/vc/extract" label="Extract" pathname={pathname} />
                 <DesktopNavLink href="/vc/profile" label="Your listing" pathname={pathname} />
-                <DesktopNavLink href="/vc/dashboard" label="Matches" pathname={pathname} />
-                {caps?.canAccessFounderNetwork ? (
-                  <DesktopNavLink href="/founder/network" label="Network" pathname={pathname} />
-                ) : null}
               </div>
             )}
         </nav>
