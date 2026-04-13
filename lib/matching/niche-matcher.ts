@@ -42,13 +42,28 @@ function founderFocusTags(founder: FounderMatchSignal): Set<NicheFocusTag> {
 // Stage + sector helpers (shared logic with university matcher)
 // ---------------------------------------------------------------------------
 
+function normalizeStage(s: string): string {
+  return s.toLowerCase().trim().replace(/[\s_-]+/g, '-')
+}
+
+const STAGE_EXPANSION: Record<string, string[]> = {
+  'idea':      ['pre-seed', 'seed'],
+  'mvp':       ['pre-seed', 'seed'],
+  'revenue':   ['seed', 'pre-seed'],
+  'seed':      ['seed', 'pre-seed'],
+  'pre-seed':  ['pre-seed', 'seed'],
+  'series-a':  ['series-a', 'seed'],
+  'seriesa':   ['series-a', 'seed'],
+}
+
 function stageMatches(program: NicheProgram, founderStage: string): boolean {
   if (program.stageFocus.length === 0) return true
-  const needle = founderStage.toLowerCase().trim()
-  const focus = program.stageFocus.map((s) => s.toLowerCase())
+  const needle = normalizeStage(founderStage)
+  const focus = program.stageFocus.map(normalizeStage)
   if (focus.some((s) => s === needle)) return true
-  if (needle === 'idea' || needle === 'mvp') {
-    return focus.some((s) => s === 'pre-seed' || s === 'seed')
+  const expanded = STAGE_EXPANSION[needle]
+  if (expanded) {
+    return expanded.some((exp) => focus.includes(exp))
   }
   return false
 }

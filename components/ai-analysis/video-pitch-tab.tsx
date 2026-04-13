@@ -166,10 +166,11 @@ export function VideoPitchAnalysisTab() {
       // SUCCESS - Display results immediately
       console.log('[VIDEO-PITCH] Analysis successful, displaying results...')
       
-      // Store both analysis and videoPitchId
       setResult({
         ...data.analysis,
         videoPitchId: data.videoPitchId,
+        universityPrograms: Array.isArray(data.universityPrograms) ? data.universityPrograms : (data.analysis?.universityPrograms ?? []),
+        nichePrograms: Array.isArray(data.nichePrograms) ? data.nichePrograms : (data.analysis?.nichePrograms ?? []),
       })
       setAnalyzing(false)
       

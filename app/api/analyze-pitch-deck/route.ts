@@ -15,6 +15,7 @@ import { getDeepMarketContext } from '@/lib/market-intelligence'
 import { runScoringPipeline } from '@/lib/scoring/scoring-pipeline'
 import { extractDeckTextFromFile, validateDeckFile } from '@/lib/unified-pitch/extract-deck-text'
 import { analyzeFounderNotFoundResponse, analyzeUnauthorizedResponse } from '@/lib/analyze-routes/responses'
+import { upsertFounderAnalysisSummary } from '@/lib/analysis/upsert-founder-analysis-summary'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -43,11 +44,12 @@ export async function POST(request: NextRequest) {
     }
 
     // Get founder profile
+    const sessionEmail = user.email.toLowerCase().trim()
     if (process.env.NODE_ENV === 'development') {
-      logger.log('[ANALYZE-PITCH-DECK] Fetching founder profile for:', user.email)
+      logger.log('[ANALYZE-PITCH-DECK] Fetching founder profile for:', sessionEmail)
     }
     const founder = await db.founder.findUnique({
-      where: { email: user.email },
+      where: { email: sessionEmail },
     }).catch((err) => {
       logger.error('[ANALYZE-PITCH-DECK] Error fetching founder:', err)
       return null
@@ -400,6 +402,22 @@ export async function POST(request: NextRequest) {
         },
       })
       logger.log(`[ANALYZE-PITCH-DECK] Saved analysis to database: ${pitchDeckAnalysis.id}`)
+
+      upsertFounderAnalysisSummary(
+        founder.id,
+        {
+          strengths: features.strengths,
+          weaknesses: features.weaknesses,
+          sectorFit: features.sectorFit as Record<string, number> | undefined,
+          tractionMetrics: features.tractionMetrics as any,
+          marketAnalysis: features.marketAnalysis as any,
+          teamAnalysis: features.teamAnalysis as any,
+          productFit: features.productFit as any,
+        },
+        scoringResult,
+        'DECK',
+        pitchDeckAnalysis.id,
+      ).catch(e => logger.error('[ANALYZE-PITCH-DECK] upsertFounderAnalysisSummary failed', e))
     } catch (saveError: any) {
       logger.error('[ANALYZE-PITCH-DECK] Failed to save analysis to database:', saveError.message)
       // Continue anyway - don't fail the request if save fails

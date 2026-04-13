@@ -16,7 +16,26 @@ export default function SignupThankYouPage() {
 
     async function run() {
       if (authenticated && verified) {
-        if (user?.userType === 'founder') {
+        const isVc = user?.userType === 'vc' || user?.userType === 'investor'
+
+        if (isVc) {
+          try {
+            const profileRes = await fetch('/api/investor/profile', { credentials: 'include' })
+            if (profileRes.ok) {
+              const profileData = await profileRes.json()
+              if (!profileData.onboardingCompleted) {
+                router.replace('/investor/onboarding')
+                return
+              }
+            } else {
+              router.replace('/investor/onboarding')
+              return
+            }
+          } catch {
+            router.replace('/investor/onboarding')
+            return
+          }
+        } else if (user?.userType === 'founder') {
           try {
             const profileRes = await fetch('/api/founder/profile', { credentials: 'include' })
             if (profileRes.ok) {

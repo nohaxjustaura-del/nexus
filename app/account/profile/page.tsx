@@ -24,7 +24,7 @@ export default async function AccountProfilePage() {
       select: { id: true },
     })
     if (!founder) {
-      redirect('/vc/profile')
+      redirect('/investor/dashboard')
     }
   }
   if (userType === 'mentor') {

@@ -114,9 +114,8 @@ export function SiteHeader() {
 
   const investorMobileLinks: MobileNavItem[] = useMemo(() => {
     const base: MobileNavItem[] = [
-      { section: 'Workspace', href: '/vc/extract', label: 'Extract' },
+      { section: 'Workspace', href: '/investor/dashboard', label: 'Dashboard' },
       { href: '/vc/profile', label: 'Your listing' },
-      { href: '/vc/dashboard', label: 'Matches' },
       ...(caps?.canAccessFounderNetwork ? [{ href: '/founder/network', label: 'Network' as const }] : []),
     ]
     if (authenticated) {
@@ -129,7 +128,7 @@ export function SiteHeader() {
     chrome === 'guest' ? guestMobileLinks : chrome === 'investor' ? investorMobileLinks : founderMobileLinks
 
   const logoHref =
-    chrome === 'investor' ? '/vc/profile' : chrome === 'founder' ? '/founder/dashboard' : '/'
+    chrome === 'investor' ? '/investor/dashboard' : chrome === 'founder' ? '/founder/dashboard' : '/'
 
   const isAdminRoute = Boolean(pathname?.startsWith('/admin'))
 
@@ -206,9 +205,8 @@ export function SiteHeader() {
             {chrome === 'investor' && (
               <div className="flex flex-wrap items-center justify-center gap-2">
                 <div className={navShellClass}>
-                  <DesktopNavLink href="/vc/extract" label="Extract" pathname={pathname} />
+                  <DesktopNavLink href="/investor/dashboard" label="Dashboard" pathname={pathname} />
                   <DesktopNavLink href="/vc/profile" label="Your listing" pathname={pathname} />
-                  <DesktopNavLink href="/vc/dashboard" label="Matches" pathname={pathname} />
                   {caps?.canAccessFounderNetwork ? (
                     <DesktopNavLink href="/founder/network" label="Network" pathname={pathname} />
                   ) : null}

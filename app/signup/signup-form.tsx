@@ -36,7 +36,7 @@ export function SignUpForm() {
   useEffect(() => {
     if (userPickedAccountTypeRef.current) return
     const r = redirectUrl.trim()
-    if (r === '/vc/claim' || r.startsWith('/vc/')) {
+    if (r === '/vc/claim' || r.startsWith('/vc/') || r.startsWith('/investor/')) {
       setUserType('investor')
     } else if (r.startsWith('/founder/') || r === '/pricing') {
       setUserType('founder')
@@ -48,8 +48,8 @@ export function SignUpForm() {
     const isVc = user?.userType === 'vc' || user?.userType === 'investor'
     const fallback = isVc
       ? verified
-        ? '/vc/dashboard'
-        : '/vc/claim'
+        ? '/investor/dashboard'
+        : '/investor/onboarding'
       : verified
         ? '/founder/dashboard'
         : '/founder/onboarding'

@@ -22,7 +22,7 @@ export function portalRedirectIfNeeded(
         pathname === '/founder/network' || pathname.startsWith('/founder/network/')
       if (!networkOk) {
         const url = request.nextUrl.clone()
-        url.pathname = '/vc/profile'
+        url.pathname = '/investor/dashboard'
         url.search = ''
         const redirectResponse = NextResponse.redirect(url)
         for (const c of baseResponse.cookies.getAll()) {
@@ -34,7 +34,7 @@ export function portalRedirectIfNeeded(
     return null
   }
 
-  if (pathname.startsWith('/vc')) {
+  if (pathname.startsWith('/vc') || pathname.startsWith('/investor')) {
     const url = request.nextUrl.clone()
     url.pathname = '/founder/dashboard'
     url.search = ''

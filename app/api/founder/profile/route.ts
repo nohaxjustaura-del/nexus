@@ -1,10 +1,29 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { invalidateFounderContextCache } from '@/lib/founder-context'
 import { getUserFromRequest } from '@/lib/auth'
 import { notifyAdminsNewFounderSignup, sendFounderApplicationReceipt } from '@/lib/email'
+import { parseFounderGeoRequest } from '@/lib/geo/parse-founder-geo'
 import type { Founder, FounderContact, FounderPrefs } from '@prisma/client'
+import { PrismaClientValidationError } from '@prisma/client/runtime/library'
 
 export const dynamic = 'force-dynamic'
+
+/** Stale `node_modules/.prisma` after schema adds `countryCode` / `regionCode` — regenerate client. */
+function responseIfStaleFounderGeoPrisma(e: unknown): NextResponse | null {
+  if (!(e instanceof PrismaClientValidationError)) return null
+  const m = e.message
+  if (!m.includes('Unknown argument')) return null
+  if (!m.includes('countryCode') && !m.includes('regionCode')) return null
+  return NextResponse.json(
+    {
+      error: 'Prisma client out of date',
+      message:
+        'Regenerate the Prisma client and apply migrations: run `npx prisma generate`, then `npx prisma migrate deploy` (or `npx prisma db push` for local dev), and restart `npm run dev`.',
+    },
+    { status: 503 },
+  )
+}
 
 /** Map stored lowercase stage to onboarding UI labels (Step2 STAGES). */
 function displayStageFromDb(dbStage: string): string {
@@ -49,6 +68,8 @@ function founderRowToPublicFields(founder: Founder, contact: FounderContact | nu
     sectors,
     businessModel: founder.businessModel,
     location: founder.location,
+    countryCode: founder.countryCode ?? '',
+    regionCode: founder.regionCode ?? '',
     fundingNeed: founder.fundingNeed,
     bio: founder.bio,
     pitchDeck: founder.pitchDeck,
@@ -70,6 +91,10 @@ function founderRowToPublicFields(founder: Founder, contact: FounderContact | nu
     isUnderrepresented: prefs?.isUnderrepresented ?? false,
     isStudent: prefs?.isStudent ?? false,
     isVeteran: prefs?.isVeteran ?? false,
+    isWoman: prefs?.isWoman ?? ((founder.gender ?? '').toLowerCase().trim() === 'female' || (founder.gender ?? '').toLowerCase().trim() === 'woman'),
+    isLgbtq: prefs?.isLgbtq ?? false,
+    isBipoc: prefs?.isBipoc ?? false,
+    needsImmigrationSupport: prefs?.needsImmigrationSupport ?? false,
   }
 }
 
@@ -196,6 +221,10 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       )
     }
+    const geoParsed = parseFounderGeoRequest(data)
+    if (!geoParsed.ok) {
+      return NextResponse.json({ error: geoParsed.message }, { status: 400 })
+    }
     // Step 1 required inputs
     if (!age || isNaN(parseInt(age))) {
       return NextResponse.json(
@@ -251,6 +280,8 @@ export async function POST(request: NextRequest) {
       sectors: JSON.stringify(sectors || []),
       businessModel: businessModel || null,
       location,
+      countryCode: geoParsed.countryCode,
+      regionCode: geoParsed.regionCode,
       fundingNeed: fundingNeed ? parseInt(fundingNeed) : 0,
       ethicsTags: JSON.stringify(ethicsTags || []),
       personalityTags: JSON.stringify(personalityTags || []),
@@ -278,6 +309,8 @@ export async function POST(request: NextRequest) {
           stage: stage.toLowerCase(),
           sectors: JSON.stringify(sectors || []),
           location,
+          countryCode: geoParsed.countryCode,
+          regionCode: geoParsed.regionCode,
           fundingNeed: fundingNeed ? parseInt(fundingNeed) : 0,
           ethicsTags: JSON.stringify(ethicsTags || []),
           personalityTags: JSON.stringify(personalityTags || []),
@@ -334,6 +367,10 @@ export async function POST(request: NextRequest) {
         isVeteran,
       } = data
 
+      const genderLow = (gender ?? '').toLowerCase().trim()
+      const isWomanResolved =
+        data.isWoman === true || genderLow === 'female' || genderLow === 'woman'
+
       await db.founderPrefs.upsert({
         where: { email: normalizedEmail },
         create: {
@@ -347,6 +384,10 @@ export async function POST(request: NextRequest) {
           isUnderrepresented: isUnderrepresented || false,
           isStudent: isStudent || false,
           isVeteran: isVeteran || false,
+          isWoman: isWomanResolved,
+          isLgbtq: data.isLgbtq || false,
+          isBipoc: data.isBipoc || false,
+          needsImmigrationSupport: needsImmigrationSupport || false,
         },
         update: {
           geoPreference: geoPreference || null,
@@ -358,8 +399,13 @@ export async function POST(request: NextRequest) {
           isUnderrepresented: isUnderrepresented || false,
           isStudent: isStudent || false,
           isVeteran: isVeteran || false,
+          isWoman: isWomanResolved,
+          isLgbtq: data.isLgbtq || false,
+          isBipoc: data.isBipoc || false,
+          needsImmigrationSupport: needsImmigrationSupport || false,
         },
       })
+      invalidateFounderContextCache(normalizedEmail)
     } catch (e) {
       console.warn('FounderContact / FounderPrefs upsert skipped:', e)
     }
@@ -396,11 +442,14 @@ export async function POST(request: NextRequest) {
         name: founder.name,
       },
     })
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error saving founder profile:', error)
+    const stale = responseIfStaleFounderGeoPrisma(error)
+    if (stale) return stale
+    const message = error instanceof Error ? error.message : 'Unknown error'
     return NextResponse.json(
-      { error: 'Failed to save profile', message: error?.message },
-      { status: 500 }
+      { error: 'Failed to save profile', message },
+      { status: 500 },
     )
   }
 }
@@ -475,6 +524,10 @@ export async function PATCH(request: NextRequest) {
         { status: 400 }
       )
     }
+    const geoParsedPatch = parseFounderGeoRequest(data)
+    if (!geoParsedPatch.ok) {
+      return NextResponse.json({ error: geoParsedPatch.message }, { status: 400 })
+    }
     if (!age || isNaN(parseInt(String(age), 10))) {
       return NextResponse.json({ error: 'Age is required' }, { status: 400 })
     }
@@ -510,6 +563,8 @@ export async function PATCH(request: NextRequest) {
       sectors: JSON.stringify(sectors || []),
       businessModel: businessModel || null,
       location,
+      countryCode: geoParsedPatch.countryCode,
+      regionCode: geoParsedPatch.regionCode,
       fundingNeed: fundingNeed ? parseInt(String(fundingNeed), 10) : 0,
       ethicsTags: JSON.stringify(ethicsTags || []),
       personalityTags: JSON.stringify(personalityTags || []),
@@ -551,6 +606,10 @@ export async function PATCH(request: NextRequest) {
         },
       })
 
+      const patchGenderLow = (gender ?? '').toLowerCase().trim()
+      const patchDerivedIsWoman = patchGenderLow === 'female' || patchGenderLow === 'woman'
+      const isWomanResolved = data.isWoman === true || patchDerivedIsWoman
+
       await db.founderPrefs.upsert({
         where: { email: normalizedEmail },
         create: {
@@ -564,6 +623,10 @@ export async function PATCH(request: NextRequest) {
           isUnderrepresented: isUnderrepresented || false,
           isStudent: isStudent || false,
           isVeteran: isVeteran || false,
+          isWoman: isWomanResolved,
+          isLgbtq: data.isLgbtq || false,
+          isBipoc: data.isBipoc || false,
+          needsImmigrationSupport: data.needsImmigrationSupport || false,
         },
         update: {
           geoPreference: geoPreference || null,
@@ -575,8 +638,13 @@ export async function PATCH(request: NextRequest) {
           isUnderrepresented: isUnderrepresented || false,
           isStudent: isStudent || false,
           isVeteran: isVeteran || false,
+          isWoman: isWomanResolved,
+          isLgbtq: data.isLgbtq || false,
+          isBipoc: data.isBipoc || false,
+          needsImmigrationSupport: data.needsImmigrationSupport || false,
         },
       })
+      invalidateFounderContextCache(normalizedEmail)
     } catch (e) {
       console.warn('FounderContact / FounderPrefs upsert skipped:', e)
     }
@@ -589,11 +657,14 @@ export async function PATCH(request: NextRequest) {
         name: founder.name,
       },
     })
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error updating founder profile:', error)
+    const stale = responseIfStaleFounderGeoPrisma(error)
+    if (stale) return stale
+    const message = error instanceof Error ? error.message : 'Unknown error'
     return NextResponse.json(
-      { error: 'Failed to update profile', message: error?.message },
-      { status: 500 }
+      { error: 'Failed to update profile', message },
+      { status: 500 },
     )
   }
 }

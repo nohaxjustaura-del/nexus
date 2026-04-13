@@ -51,18 +51,32 @@ function isPanUniversityProgram(program: UniversityProgram): boolean {
   return program.university === '' && program.aliases.length === 0 && !program.isOpenAccelerator
 }
 
+function normalizeStage(s: string): string {
+  return s.toLowerCase().trim().replace(/[\s_-]+/g, '-')
+}
+
+const STAGE_EXPANSION: Record<string, string[]> = {
+  'idea':      ['pre-seed', 'seed'],
+  'mvp':       ['pre-seed', 'seed'],
+  'revenue':   ['seed', 'pre-seed'],
+  'seed':      ['seed', 'pre-seed'],
+  'pre-seed':  ['pre-seed', 'seed'],
+  'series-a':  ['series-a', 'seed'],
+  'seriesa':   ['series-a', 'seed'],
+}
+
 /**
  * Stage filter — true when the program accepts the founder's stage.
  * An empty stageFocus array means all stages are accepted.
  */
 function stageMatches(program: UniversityProgram, founderStage: string): boolean {
   if (program.stageFocus.length === 0) return true
-  const needle = founderStage.toLowerCase().trim()
-  const focus = program.stageFocus.map((s) => s.toLowerCase())
+  const needle = normalizeStage(founderStage)
+  const focus = program.stageFocus.map(normalizeStage)
   if (focus.some((s) => s === needle)) return true
-  // Onboarding often uses "idea" / "mvp" while programs list pre-seed — still eligible.
-  if (needle === 'idea' || needle === 'mvp') {
-    return focus.some((s) => s === 'pre-seed' || s === 'seed')
+  const expanded = STAGE_EXPANSION[needle]
+  if (expanded) {
+    return expanded.some((exp) => focus.includes(exp))
   }
   return false
 }

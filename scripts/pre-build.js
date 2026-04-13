@@ -7,11 +7,22 @@
 
 const fs = require('fs')
 const path = require('path')
+const { execSync } = require('child_process')
 
 // Load .env so env var checks reflect actual values (next build loads .env after this script)
 try { require('dotenv').config({ path: path.join(__dirname, '..', '.env') }) } catch (_) {}
 
 console.log('🚀 Running pre-build optimizations...\n')
+
+// 0. Prisma client must match schema (avoids Unknown argument `countryCode` etc. at runtime)
+console.log('🔧 Generating Prisma client (clean + generate — avoids Windows EPERM on engine DLL)…')
+try {
+  execSync('node scripts/clean-prisma-generate.js', { stdio: 'inherit', cwd: path.join(__dirname, '..') })
+  console.log('   ✓ Prisma client in sync with schema\n')
+} catch {
+  console.error('\n   ❌ prisma generate failed. Stop other Node/Next processes, then retry the build.\n')
+  process.exit(1)
+}
 
 // 1. Clean static export dir only (do not delete .next here: next build manages it;
 //    wiping .next on Windows often causes ENOTEMPTY, or rare ENOENT during manifest reads).

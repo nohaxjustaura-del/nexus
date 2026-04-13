@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
           typeof nextFromBody === 'string' ? nextFromBody : undefined,
           existingUser.userType,
           existingUser.userType === 'vc' || existingUser.userType === 'investor'
-            ? '/vc/claim'
+            ? '/investor/onboarding'
             : '/founder/onboarding'
         )
       : safeAuthNextPath(

@@ -62,6 +62,8 @@ export async function getOrCreateDevAiBypassUser(): Promise<PrismaUser> {
         stage: 'idea',
         sectors: JSON.stringify([]),
         location: 'Local',
+        countryCode: 'US',
+        regionCode: 'CA',
         fundingNeed: 0,
         ethicsTags: JSON.stringify([]),
         personalityTags: JSON.stringify([]),
