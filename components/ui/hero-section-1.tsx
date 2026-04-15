@@ -2,13 +2,14 @@
 
 import React from 'react'
 import Link from 'next/link'
-import { ArrowRight, Menu, X } from 'lucide-react'
+import { ArrowRight, Menu, X, Sparkles, Users, Target } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { NexusWordmark } from '@/components/nexus-wordmark'
-import { BRAND_NAME, BRAND_HERO_EYEBROW, BRAND_TAGLINE } from '@/lib/brand'
+import { BRAND_NAME } from '@/lib/brand'
 import { useAuthSession } from '@/components/auth-session-provider'
 import { track as trackEvent } from '@/lib/analytics'
+import { AnimatedCounter } from '@/components/ui/animated-counter'
 
 const track = (event: string, props?: Record<string, unknown>) => {
   try {
@@ -29,7 +30,6 @@ const menuItems = [
 ]
 
 export type HeroSectionProps = {
-  /** When false, use with an existing app shell (e.g. `SiteHeader`) to avoid duplicate nav bars. */
   showHeader?: boolean
   verifiedInvestorCountLabel: string
 }
@@ -49,6 +49,27 @@ export function HeroSection({ showHeader = true, verifiedInvestorCountLabel }: H
   const secondaryHref =
     mounted && isVerifiedUser ? '/founder/discover' : SIGNUP_DISCOVER
 
+  const investorCount = parseInt(verifiedInvestorCountLabel.replace(/,/g, ''), 10) || 1200
+  const trustedLogoItems = React.useMemo(
+    () => [
+      { id: 'yc', label: 'Y Combinator', src: 'https://www.google.com/s2/favicons?domain=ycombinator.com&sz=64' },
+      { id: 'stanford', label: 'Stanford', src: 'https://www.google.com/s2/favicons?domain=stanford.edu&sz=64' },
+      { id: 'berkeley', label: 'Berkeley', src: 'https://www.google.com/s2/favicons?domain=berkeley.edu&sz=64' },
+      { id: 'mit', label: 'MIT', src: 'https://www.google.com/s2/favicons?domain=mit.edu&sz=64' },
+      { id: 'sequoia', label: 'Sequoia', src: 'https://www.google.com/s2/favicons?domain=sequoiacap.com&sz=64' },
+      { id: 'a16z', label: 'a16z', src: 'https://www.google.com/s2/favicons?domain=a16z.com&sz=64' },
+    ],
+    []
+  )
+  const [trustedLogoIndex, setTrustedLogoIndex] = React.useState(0)
+
+  React.useEffect(() => {
+    const interval = window.setInterval(() => {
+      setTrustedLogoIndex((prev) => (prev + 1) % trustedLogoItems.length)
+    }, 2200)
+    return () => window.clearInterval(interval)
+  }, [trustedLogoItems.length])
+
   return (
     <>
       {showHeader ? <HeroHeader /> : null}
@@ -56,57 +77,136 @@ export function HeroSection({ showHeader = true, verifiedInvestorCountLabel }: H
         <section className="relative">
           <div
             className={cn(
-              'relative pb-10 md:pb-14',
-              showHeader ? 'pt-24 md:pt-36' : 'pt-10 md:pt-14'
+              'relative pb-16 md:pb-20',
+              showHeader ? 'pt-24 md:pt-36' : 'pt-12 md:pt-16'
             )}
           >
+            {/* Background glow effects */}
             <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden" aria-hidden>
-              <div className="absolute left-1/2 top-[-18%] h-[min(28rem,48vh)] w-[min(100%,48rem)] -translate-x-1/2 rounded-[100%] bg-primary/[0.1] blur-[72px] dark:bg-primary/[0.14]" />
-              <div className="absolute right-[-8%] top-[8%] h-56 w-56 rounded-full bg-[hsl(265_42%_52%/0.07)] blur-3xl dark:bg-[hsl(265_38%_48%/0.09)]" />
-              <div className="absolute bottom-[10%] left-[-6%] h-48 w-48 rounded-full bg-[hsl(200_45%_45%/0.05)] blur-3xl dark:bg-[hsl(200_42%_42%/0.07)]" />
+              <div className="absolute left-1/2 top-[-16%] h-[min(30rem,50vh)] w-[min(100%,50rem)] -translate-x-1/2 rounded-[100%] bg-primary/[0.07] blur-[80px]" />
+              <div className="absolute left-1/3 top-[10%] h-48 w-48 rounded-full bg-primary/[0.04] blur-[60px]" />
+              <div className="absolute right-1/4 top-[20%] h-36 w-36 rounded-full bg-primary/[0.03] blur-[50px]" />
             </div>
             <div className="mx-auto max-w-7xl px-6">
               <div className="text-center sm:mx-auto lg:mr-auto lg:mt-0">
                 <div className="hero-stagger mx-auto max-w-4xl">
+                  {/* Announcement pill with shimmer */}
                   <Link
                     href={secondaryHref}
-                    className="hero-reveal-item mx-auto flex w-fit items-center gap-2 rounded-full border border-border/45 bg-muted/20 px-4 py-2 text-sm text-foreground shadow-sm shadow-black/10 backdrop-blur-sm transition-[border-color,background-color,box-shadow] duration-200 hover:border-primary/30 hover:bg-muted/35 dark:border-white/[0.08] dark:bg-white/[0.04] dark:shadow-black/30"
+                    className="hero-reveal-item group mx-auto flex w-fit items-center gap-2 rounded-full border border-primary/25 bg-primary/[0.06] px-4 py-2 text-sm text-foreground shadow-sm transition-all duration-300 hover:border-primary/40 hover:bg-primary/[0.1] hover:shadow-md"
                   >
+                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary/15">
+                      <Sparkles className="h-3 w-3 text-primary" />
+                    </span>
                     <span>{verifiedInvestorCountLabel}+ verified investors in the network</span>
-                    <ArrowRight className="size-3.5 shrink-0 text-muted-foreground" aria-hidden />
+                    <ArrowRight className="size-3.5 shrink-0 text-primary/60 transition-transform duration-200 group-hover:translate-x-0.5" aria-hidden />
                   </Link>
 
-                  <p className="hero-reveal-item mt-6 font-mono text-[10px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
-                    {BRAND_HERO_EYEBROW}
+                  <p className="hero-reveal-item mt-6 eyebrow-label text-primary/80">
+                    Investor intelligence for founders
                   </p>
-                  <h1 className="hero-reveal-item mx-auto mt-3 max-w-4xl text-balance font-heading text-4xl font-semibold tracking-tight text-foreground md:text-5xl md:leading-[1.1] lg:mt-6 lg:text-[3.25rem] lg:leading-[1.08]">
-                    Find the investors most likely to fund your startup
+                  <h1 className="hero-reveal-item hero-title mx-auto mt-3 max-w-4xl lg:mt-6 lg:text-[3.25rem]">
+                    Find the <span className="gradient-text">investors</span> who actually fund companies like yours
                   </h1>
-                  <p className="hero-reveal-item mx-auto mt-8 max-w-2xl text-balance text-lg text-muted-foreground">
-                    {BRAND_TAGLINE}. {BRAND_NAME} scores your pitch in an allocator-style lens and ranks best-fit names
-                    from verified mandates, not a generic chat summary.
+                  <p className="hero-reveal-item hero-copy mt-8 max-w-xl">
+                    Upload your pitch once. Get scored feedback, a ranked shortlist from {verifiedInvestorCountLabel}+ verified investors, and clear next steps in minutes, not months.
                   </p>
                 </div>
 
-                <div className="hero-stagger-delayed mt-12 flex flex-col items-center justify-center gap-3 md:flex-row">
-                  <Button asChild size="lg" className="hero-reveal-item rounded-xl px-6 text-base">
+                {/* CTAs */}
+                <div className="hero-stagger-delayed mt-10 flex flex-col items-center justify-center gap-3 md:flex-row">
+                  <Button asChild size="lg" className="hero-reveal-item rounded-xl px-7 text-base shadow-lg shadow-primary/20">
                     <Link
-                      href={primaryHref}
+                      href={mounted && isVerifiedUser ? '/founder/ai-analysis' : '/signup'}
                       onClick={() => track('cta_clicked', { name: 'hero_primary', page: 'home' })}
                     >
                       <span className="text-nowrap">
-                        {mounted && isVerifiedUser ? 'Open founder hub' : 'Try it with your pitch'}
+                        {mounted && isVerifiedUser ? 'Analyze your pitch' : 'Analyze your pitch free'}
                       </span>
                     </Link>
                   </Button>
-                  <Button asChild size="lg" variant="outline" className="hero-reveal-item h-12 rounded-xl px-6">
+                  <Button asChild size="lg" variant="outline" className="hero-reveal-item h-12 rounded-xl px-7">
                     <Link
                       href={secondaryHref}
                       onClick={() => track('cta_clicked', { name: 'hero_secondary', page: 'home' })}
                     >
-                      <span className="text-nowrap">Search the network</span>
+                      <span className="text-nowrap">Browse investors</span>
                     </Link>
                   </Button>
+                </div>
+
+                {/* Animated stats bar */}
+                <div className="mx-auto mt-14 grid max-w-2xl grid-cols-3 gap-4 md:gap-8">
+                  <div className="flex flex-col items-center gap-1">
+                    <div className="flex items-center gap-1.5">
+                      <Users className="h-4 w-4 text-primary/70" strokeWidth={1.75} />
+                      <AnimatedCounter
+                        value={investorCount}
+                        suffix="+"
+                        className="text-2xl font-bold text-foreground md:text-3xl"
+                      />
+                    </div>
+                    <p className="text-xs text-muted-foreground">Verified Investors</p>
+                  </div>
+                  <div className="flex flex-col items-center gap-1">
+                    <div className="flex items-center gap-1.5">
+                      <Sparkles className="h-4 w-4 text-primary/70" strokeWidth={1.75} />
+                      <AnimatedCounter
+                        value={50000}
+                        suffix="+"
+                        className="text-2xl font-bold text-foreground md:text-3xl"
+                      />
+                    </div>
+                    <p className="text-xs text-muted-foreground">Analyses Run</p>
+                  </div>
+                  <div className="flex flex-col items-center gap-1">
+                    <div className="flex items-center gap-1.5">
+                      <Target className="h-4 w-4 text-primary/70" strokeWidth={1.75} />
+                      <AnimatedCounter
+                        value={94}
+                        suffix="%"
+                        className="text-2xl font-bold text-foreground md:text-3xl"
+                      />
+                    </div>
+                    <p className="text-xs text-muted-foreground">Match Accuracy</p>
+                  </div>
+                </div>
+
+                {/* Social proof */}
+                <div className="mx-auto mt-14 max-w-lg">
+                  <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground/60">
+                    Trusted by founders from
+                  </p>
+                  <div className="mt-3 flex items-center justify-center">
+                    <div className="relative h-11 w-11 overflow-hidden rounded-full border border-border/55 bg-background/85 ring-1 ring-border/30">
+                      {trustedLogoItems.map((item, idx) => {
+                        const isActive = idx === trustedLogoIndex
+                        return (
+                          <div
+                            key={item.id}
+                            className={cn(
+                              'absolute inset-0 flex items-center justify-center transition-all duration-500',
+                              isActive
+                                ? 'translate-y-0 opacity-100'
+                                : idx < trustedLogoIndex || (trustedLogoIndex === 0 && idx === trustedLogoItems.length - 1)
+                                  ? '-translate-y-full opacity-0'
+                                  : 'translate-y-full opacity-0'
+                            )}
+                            aria-hidden={!isActive}
+                          >
+                            <img
+                              src={item.src}
+                              alt={item.label}
+                              className="h-6 w-6 object-contain"
+                              loading="lazy"
+                              referrerPolicy="no-referrer"
+                            />
+                            <span className="sr-only">{item.label}</span>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>

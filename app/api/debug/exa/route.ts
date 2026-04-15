@@ -84,8 +84,8 @@ export async function GET() {
     },
     recommendation:
       quotaExhausted.length > 0 || authErrors.length > 0
-        ? `Key(s) ${[...quotaExhausted, ...authErrors].map((r) => r.index).join(', ')} are dead — they will be skipped automatically (round-robin). To remove the overhead entirely, delete them from EXA_API_KEYS in .env.local.`
-        : 'All keys healthy — round-robin distributing load across all keys.',
+        ? `Key(s) ${[...quotaExhausted, ...authErrors].map((r) => r.index).join(', ')} are dead - they will be skipped automatically (round-robin). To remove the overhead entirely, delete them from EXA_API_KEYS in .env.local.`
+        : 'All keys healthy - round-robin distributing load across all keys.',
     keys: results,
     currentDeadKeys: deadStatus
       .filter((s) => s.deadUntil !== null)

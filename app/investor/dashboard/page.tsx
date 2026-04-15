@@ -106,7 +106,7 @@ function ScoreBar({ label, score, max, icon }: { label: string; score: number | 
     <div className="space-y-1.5">
       <div className="flex items-center justify-between text-xs">
         <span className="flex items-center gap-1.5 font-medium text-muted-foreground">{icon}{label}</span>
-        <span className="tabular-nums font-semibold text-foreground">{score != null ? Math.round(score) : '—'}</span>
+        <span className="tabular-nums font-semibold text-foreground">{score != null ? Math.round(score) : '-'}</span>
       </div>
       <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
         <div className={cn('h-full rounded-full transition-all duration-500', color)} style={{ width: `${pct}%` }} />

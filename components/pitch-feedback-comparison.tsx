@@ -1,8 +1,11 @@
 'use client'
 
+import { useState } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
+import { cn } from "@/lib/utils"
 import {
   TrendingUp,
   TrendingDown,
@@ -10,6 +13,7 @@ import {
   BarChart3,
   Calendar,
   Sparkles,
+  ChevronDown,
 } from "lucide-react"
 
 interface Analysis {
@@ -27,6 +31,8 @@ interface PitchFeedbackComparisonProps {
 }
 
 export function PitchFeedbackComparison({ analyses }: PitchFeedbackComparisonProps) {
+  const [detailsOpen, setDetailsOpen] = useState(false)
+
   // Filter analyses with scores
   const scoredAnalyses = analyses
     .filter(a => a.compatibilityScore > 0)
@@ -68,17 +74,58 @@ export function PitchFeedbackComparison({ analyses }: PitchFeedbackComparisonPro
   const feedbackComparison = getFeedbackComparison()
 
   return (
-    <Card className="border-2">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <BarChart3 className="h-5 w-5 text-primary" />
-          Pitch Improvement Over Time
-        </CardTitle>
-        <CardDescription>
-          Track how your pitch quality has improved
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-6">
+    <Collapsible open={detailsOpen} onOpenChange={setDetailsOpen}>
+      <Card className="border-2">
+        <CardHeader className="space-y-3">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <BarChart3 className="h-5 w-5 text-primary" />
+                Pitch trend
+              </CardTitle>
+              <CardDescription>
+                Latest vs previous score
+              </CardDescription>
+            </div>
+            <CollapsibleTrigger asChild>
+              <Button variant="outline" size="sm" className="shrink-0 gap-1.5">
+                {detailsOpen ? 'Hide' : 'Details'}
+                <ChevronDown
+                  className={cn('h-4 w-4 transition-transform', detailsOpen && 'rotate-180')}
+                  aria-hidden
+                />
+              </Button>
+            </CollapsibleTrigger>
+          </div>
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border border-border/80 bg-muted/30 px-3 py-2 text-sm">
+            <span className="text-lg font-semibold tabular-nums text-foreground">
+              {Math.round(latest.compatibilityScore)}
+            </span>
+            <span className="text-muted-foreground">latest</span>
+            <span className="text-muted-foreground/50">·</span>
+            <span className="text-muted-foreground">
+              {Math.round(previous.compatibilityScore)} previous
+            </span>
+            {scoreChange.trend === 'up' ? (
+              <span className="inline-flex items-center gap-1 font-medium text-green-600">
+                <TrendingUp className="h-3.5 w-3.5" />
+                +{scoreChange.change} ({scoreChange.percentage}%)
+              </span>
+            ) : scoreChange.trend === 'down' ? (
+              <span className="inline-flex items-center gap-1 font-medium text-red-600">
+                <TrendingDown className="h-3.5 w-3.5" />
+                {scoreChange.change} ({Math.abs(scoreChange.percentage)}%)
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1 font-medium text-muted-foreground">
+                <Minus className="h-3.5 w-3.5" />
+                No change
+              </span>
+            )}
+          </div>
+        </CardHeader>
+        <CollapsibleContent>
+          <CardContent className="space-y-6 pt-0">
         {/* Score Trend */}
         <div className="p-4 rounded-lg bg-gradient-to-r from-muted/50 to-primary/5 border-2">
           <div className="flex items-center justify-between mb-2">
@@ -117,7 +164,7 @@ export function PitchFeedbackComparison({ analyses }: PitchFeedbackComparisonPro
 
         {/* Analysis History */}
         <div>
-          <h4 className="text-sm font-semibold mb-3">Score History</h4>
+          <h4 className="text-sm font-semibold mb-3">History</h4>
           <div className="space-y-2">
             {scoredAnalyses.slice(0, 5).map((analysis, i) => {
               const isLatest = i === 0
@@ -173,7 +220,7 @@ export function PitchFeedbackComparison({ analyses }: PitchFeedbackComparisonPro
           <div>
             <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
               <Sparkles className="h-4 w-4 text-primary" />
-              New Improvements Addressed
+              New wins
             </h4>
             <ul className="space-y-2">
               {feedbackComparison.newImprovements.map((improvement: string, i: number) => (
@@ -191,14 +238,16 @@ export function PitchFeedbackComparison({ analyses }: PitchFeedbackComparisonPro
         {/* Summary */}
         <div className="p-4 rounded-lg bg-muted/50 border">
           <p className="text-sm text-foreground/85">
-            <span className="font-semibold">{feedbackComparison.totalImprovements}</span> total improvements in latest analysis
+            <span className="font-semibold">{feedbackComparison.totalImprovements}</span> points in latest report
             {feedbackComparison.previousTotal > 0 && (
-              <> (was {feedbackComparison.previousTotal} previously)</>
+              <> (was {feedbackComparison.previousTotal})</>
             )}
           </p>
         </div>
-      </CardContent>
-    </Card>
+          </CardContent>
+        </CollapsibleContent>
+      </Card>
+    </Collapsible>
   )
 }
 

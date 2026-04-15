@@ -4,6 +4,11 @@ const fs = require('fs');
 const path = require('path');
 
 console.log('🧹 Clearing Next.js cache...');
+if (process.platform === 'win32') {
+  console.log(
+    '   Tip: stop every `next dev` / `npm run dev` first. Clearing `.next` while a dev server is running can cause ENOENT on `.next/server/edge-chunks/*.wasm`.',
+  );
+}
 
 // Remove .next directory
 const nextDir = path.join(process.cwd(), '.next');

@@ -49,9 +49,6 @@ export function nexusLegacyRedirectTarget(pathname: string): string | null {
   if (pathname === '/founder/yc-insider' || pathname.startsWith('/founder/yc-insider/')) {
     return '/founder/discover'
   }
-  if (pathname === '/founder/network' || pathname.startsWith('/founder/network/')) {
-    return '/founder/discover'
-  }
   if (pathname === '/founder/resources' || pathname.startsWith('/founder/resources/')) {
     return legacyNexusExtrasEnabled() ? null : '/founder/ai-analysis'
   }

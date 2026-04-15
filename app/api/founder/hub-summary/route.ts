@@ -218,6 +218,7 @@ export async function GET() {
       return NextResponse.json({
         founderExists: false,
         credits: { credits: creditsPayload.credits, isPremium: creditsPayload.isPremium },
+        subscription: { isPro: creditsPayload.isPremium, tier: creditsPayload.isPremium ? 'pro' : 'free' },
         bookmarksCount: 0,
         analysesCount: 0,
         matchesCount: 0,
@@ -299,6 +300,7 @@ export async function GET() {
     return NextResponse.json({
       founderExists: true,
       credits: { credits: creditsPayload.credits, isPremium: creditsPayload.isPremium },
+      subscription: { isPro: creditsPayload.isPremium, tier: creditsPayload.isPremium ? 'pro' : 'free' },
       bookmarksCount: bookmarkCount,
       analysesCount: videoCount + deckCount + ideaCount,
       matchesCount: matchVideo + matchDeck + matchIdea,

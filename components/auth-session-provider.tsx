@@ -9,6 +9,7 @@ import React, {
   useRef,
   useState,
 } from 'react'
+import { usePathname } from 'next/navigation'
 
 export type AuthUser = {
   id: string
@@ -40,6 +41,7 @@ export function useAuthSession(): AuthSessionContextValue {
 }
 
 export function AuthSessionProvider({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname()
   const [loading, setLoading] = useState(true)
   const [authenticated, setAuthenticated] = useState(false)
   const [verified, setVerified] = useState(false)
@@ -105,21 +107,43 @@ export function AuthSessionProvider({ children }: { children: React.ReactNode })
   const refresh = useCallback(() => fetchSession(false), [fetchSession])
   const refreshSilent = useCallback(() => fetchSession(true), [fetchSession])
 
+  const shouldEagerCheck = useMemo(() => {
+    const protectedPrefixes = ['/founder', '/investor', '/mentor', '/vc', '/account', '/admin']
+    if (protectedPrefixes.some((prefix) => pathname.startsWith(prefix))) return true
+    if (typeof document === 'undefined') return false
+    // On public pages, avoid eager auth checks unless a likely auth cookie exists.
+    return document.cookie.includes('sb-')
+  }, [pathname])
+
   useEffect(() => {
+    if (!shouldEagerCheck) {
+      setLoading(false)
+      return
+    }
     void fetchSession(false)
-  }, [fetchSession])
+  }, [fetchSession, shouldEagerCheck])
 
   useEffect(() => {
     const onStorage = () => {
       void fetchSession(true)
     }
+    const onFocus = () => {
+      if (document.visibilityState === 'visible') {
+        void fetchSession(true)
+      }
+    }
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        void fetchSession(true)
+      }
+    }
     window.addEventListener('storage', onStorage)
-    const id = window.setInterval(() => {
-      void fetchSession(true)
-    }, 5 * 60 * 1000)
+    window.addEventListener('focus', onFocus)
+    document.addEventListener('visibilitychange', onVisibility)
     return () => {
       window.removeEventListener('storage', onStorage)
-      window.clearInterval(id)
+      window.removeEventListener('focus', onFocus)
+      document.removeEventListener('visibilitychange', onVisibility)
     }
   }, [fetchSession])
 

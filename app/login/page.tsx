@@ -50,9 +50,19 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (authLoading || !authenticated) return
-    const isVc = user?.userType === 'vc' || user?.userType === 'investor'
-    const defaultVerified = isVc ? '/investor/dashboard' : '/founder/dashboard'
-    const defaultUnverified = isVc ? '/investor/onboarding' : '/founder/onboarding'
+    const t = (user?.userType || '').toLowerCase()
+    const defaultVerified =
+      t === 'vc' || t === 'investor'
+        ? '/investor/dashboard'
+        : t === 'mentor'
+          ? '/mentor/dashboard'
+          : '/founder/dashboard'
+    const defaultUnverified =
+      t === 'vc' || t === 'investor'
+        ? '/investor/onboarding'
+        : t === 'mentor'
+          ? '/mentor/onboarding'
+          : '/founder/onboarding'
     const fallback = verified ? defaultVerified : defaultUnverified
     const target = sanitizeAuthNextPathForUserType(
       redirectUrl ? redirectUrl : undefined,
@@ -136,7 +146,7 @@ export default function LoginPage() {
         if (!targetUrl) {
           const t = data.user?.userType
           if (t === 'investor' || t === 'vc') targetUrl = '/investor/dashboard'
-          else if (t === 'mentor') targetUrl = '/'
+          else if (t === 'mentor') targetUrl = '/mentor/dashboard'
           else targetUrl = '/founder/dashboard'
         }
 
@@ -172,7 +182,7 @@ export default function LoginPage() {
   const closeAccountExistsModal = () => setAccountExistsModalOpen(false)
 
   return (
-    <div className="flex min-h-[calc(100vh-3.25rem)] items-center justify-center p-5 sm:p-8 relative">
+    <div className="relative flex min-h-[calc(100vh-3.25rem)] items-center justify-center p-5 sm:p-8">
       {accountExistsModalOpen && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm"
@@ -263,7 +273,7 @@ export default function LoginPage() {
           </Card>
         </div>
       )}
-      <Card className="w-full max-w-md border-border/35 shadow-none">
+      <Card className="w-full max-w-md border-border/60 bg-card/95 shadow-sm">
         <CardHeader className="space-y-1 text-center">
           <div className="mx-auto w-12 h-12 rounded-full flex items-center justify-center mb-4 bg-primary/15 ring-1 ring-border/60">
             <Mail className="w-6 h-6 text-primary" />
@@ -304,11 +314,7 @@ export default function LoginPage() {
               </div>
             )}
 
-            <Button
-              type="submit"
-              className="w-full rounded-full"
-              disabled={loading || !email.trim()}
-            >
+            <Button type="submit" className="w-full" disabled={loading || !email.trim()}>
               {loading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />

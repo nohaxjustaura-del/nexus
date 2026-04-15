@@ -27,6 +27,7 @@ import { getCurrentUser } from "@/lib/auth"
 import { parseJSON, fmtCheckSize, fmtCheckRange } from "@/lib/utils"
 import { logger } from "@/lib/logger"
 import { loadFounderAnalysisById } from "@/lib/analysis/load-founder-analysis"
+import { FounderWorkspaceTabs } from "@/components/founder-workspace-tabs"
 
 export const dynamic = "force-dynamic"
 export const runtime = "nodejs"
@@ -210,96 +211,51 @@ export default async function MatchesPage({
   if (!hasAnalysis) {
     return (
       <div className="min-h-screen bg-background">
-        <div className="container mx-auto max-w-7xl px-4 py-4 md:py-6">
-          {/* Tab Navigation */}
-          <div className="mb-4 border-b border-border/60">
-            <nav className="flex items-center gap-1 -mb-px">
-              <Link
-                href="/founder/discover"
-                className="px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
-              >
-                Discover
-              </Link>
-              <Link
-                href="/founder/matches"
-                className="px-4 py-2 text-sm font-medium border-b-2 border-primary text-primary"
-              >
-                Matches
-              </Link>
-              <Link
-                href="/founder/bookmarks"
-                className="px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
-              >
-                Bookmarks
-              </Link>
-              <Link
-                href="/founder/my-analyses"
-                className="px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
-              >
-                My Analyses
-              </Link>
-            </nav>
+        <div className="page-shell-narrow">
+          <div className="mb-4">
+            <FounderWorkspaceTabs />
           </div>
 
           {/* Locked Content */}
-          <Card className="relative overflow-hidden rounded-2xl border border-border/40 bg-gradient-to-b from-primary/[0.07] via-card/95 to-card/95 shadow-sm ring-1 ring-border/15">
+          <Card className="relative overflow-hidden rounded-2xl border border-border/60 bg-card/95 shadow-sm">
             <CardContent className="relative pt-12 pb-12 text-center sm:px-8">
               <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-primary/12 ring-1 ring-border/40">
                 <Lock className="h-10 w-10 text-primary" aria-hidden />
               </div>
               <CardTitle className="mb-3 text-balance text-3xl font-bold text-foreground">
-                Unlock your personalized investor matches
+                Run analysis to unlock matches
               </CardTitle>
               <CardDescription className="mx-auto mb-6 max-w-2xl text-pretty text-base text-muted-foreground sm:text-lg">
-                Run a pitch analysis first, then get compatibility scores, match notes, and a ranked list of VCs, angels, accelerators, and more.
+                Analyze your pitch first, then view ranked investors with fit scores.
               </CardDescription>
 
-              <div className="mx-auto mb-8 max-w-2xl space-y-3 text-left sm:space-y-4">
-                <div className="flex items-center gap-4 rounded-xl border border-border/40 bg-background/50 p-4 dark:bg-background/40">
-                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-muted/40 text-primary ring-1 ring-border/30">
-                    <Video className="h-5 w-5" strokeWidth={2} aria-hidden />
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <h3 className="mb-1 font-semibold leading-snug text-foreground">Pitch analysis</h3>
-                    <p className="text-sm leading-relaxed text-muted-foreground">
-                      Use idea, deck, or video analysis to build a profile. We match from that, with scores you can read.
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-4 rounded-xl border border-border/40 bg-background/50 p-4 dark:bg-background/40">
-                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-muted/40 text-primary ring-1 ring-border/30">
-                    <Target className="h-5 w-5" strokeWidth={2} aria-hidden />
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <h3 className="mb-1 font-semibold leading-snug text-foreground">Detailed match breakdown</h3>
-                    <p className="text-sm leading-relaxed text-muted-foreground">
-                      See exactly why each investor is a good fit with component scores, evidence, and improvement suggestions.
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-4 rounded-xl border border-border/40 bg-background/50 p-4 dark:bg-background/40">
-                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-muted/40 text-primary ring-1 ring-border/30">
-                    <TrendingUp className="h-5 w-5 animate-trend-nudge" strokeWidth={2} aria-hidden />
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <h3 className="mb-1 font-semibold leading-snug text-foreground">Actionable Insights</h3>
-                    <p className="text-sm leading-relaxed text-muted-foreground">
-                      Get specific recommendations on how to improve your match scores and increase your chances.
-                    </p>
-                  </div>
-                </div>
+              <div className="mx-auto mb-8 max-w-xl rounded-xl border border-border/40 bg-background/50 p-4 text-left dark:bg-background/40">
+                <ul className="space-y-2 text-sm text-muted-foreground">
+                  <li className="flex items-center gap-2">
+                    <Video className="h-4 w-4 text-primary" aria-hidden />
+                    Analyze an idea, deck, or video
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <Target className="h-4 w-4 text-primary" aria-hidden />
+                    Get ranked investor matches
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <TrendingUp className="h-4 w-4 text-primary" aria-hidden />
+                    Use score tips to improve fit
+                  </li>
+                </ul>
               </div>
 
               <div className="flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
                 <Link href="/founder/ai-analysis">
                   <Button size="lg" className="shadow-md">
                     <Sparkles className="mr-2 h-5 w-5" />
-                    Run pitch analysis
+                    Analyze
                   </Button>
                 </Link>
                 <Link href="/founder/discover">
                   <Button size="lg" variant="outline" className="border-border/60 bg-background/40 shadow-sm">
-                    Browse all investors
+                    Browse investors
                   </Button>
                 </Link>
               </div>
@@ -314,53 +270,27 @@ export default async function MatchesPage({
   if (topMatches.length === 0) {
     return (
       <div className="min-h-screen bg-background">
-        <div className="container mx-auto max-w-7xl px-4 py-4 md:py-6">
-          {/* Tab Navigation */}
-          <div className="mb-4 border-b border-border/60">
-            <nav className="flex items-center gap-1 -mb-px">
-              <Link
-                href="/founder/discover"
-                className="px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
-              >
-                Discover
-              </Link>
-              <Link
-                href="/founder/matches"
-                className="px-4 py-2 text-sm font-medium border-b-2 border-primary text-primary"
-              >
-                Matches
-              </Link>
-              <Link
-                href="/founder/bookmarks"
-                className="px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
-              >
-                Bookmarks
-              </Link>
-              <Link
-                href="/founder/my-analyses"
-                className="px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
-              >
-                My Analyses
-              </Link>
-            </nav>
+        <div className="page-shell-narrow">
+          <div className="mb-4">
+            <FounderWorkspaceTabs />
           </div>
 
-          <Card className="rounded-2xl border border-border/40 bg-card/80 shadow-sm ring-1 ring-border/15">
+          <Card className="rounded-2xl border border-border/60 bg-card/95 shadow-sm">
             <CardContent className="pt-12 pb-12 text-center sm:px-8">
               <AlertCircle className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
               <CardTitle className="mb-2">No Matches Found</CardTitle>
               <CardDescription className="mb-6">
-                No matches found in your latest analysis. Try running a new analysis or browse all investors.
+                No matches in the latest run. Try again or browse investors.
               </CardDescription>
               <div className="flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
                 <Link href="/founder/ai-analysis">
                   <Button>
                     <Sparkles className="mr-2 h-4 w-4" />
-                    Run pitch analysis
+                    Analyze
                   </Button>
                 </Link>
                 <Link href="/founder/discover">
-                  <Button variant="outline">Browse all investors</Button>
+                    <Button variant="outline">Browse investors</Button>
                 </Link>
               </div>
             </CardContent>
@@ -402,42 +332,16 @@ export default async function MatchesPage({
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="container mx-auto max-w-7xl px-4 py-4 md:py-6">
-        {/* Tab Navigation */}
-        <div className="mb-4 border-b border-border/60">
-          <nav className="flex items-center gap-1 -mb-px">
-            <Link
-              href="/founder/discover"
-              className="px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
-            >
-              Discover
-            </Link>
-            <Link
-              href="/founder/matches"
-              className="px-4 py-2 text-sm font-medium border-b-2 border-primary text-primary"
-            >
-              Matches
-            </Link>
-            <Link
-              href="/founder/bookmarks"
-              className="px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
-            >
-              Bookmarks
-            </Link>
-            <Link
-              href="/founder/my-analyses"
-              className="px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
-            >
-              My Analyses
-            </Link>
-          </nav>
+      <div className="page-shell-narrow">
+        <div className="mb-4">
+          <FounderWorkspaceTabs />
         </div>
 
         {/* Header */}
         <div className="mb-4">
           <h1 className="mb-2 text-3xl font-bold">Your top investor matches</h1>
           <p className="text-muted-foreground">
-            Ranked by fit with your pitch -- thesis alignment, stage, sector, and recent activity
+            Ranked by pitch fit
           </p>
         </div>
 
@@ -463,79 +367,84 @@ export default async function MatchesPage({
             const meta = NICHE_META[tag] ?? NICHE_META.underrepresented
             return (
               <Card key={tag} className={`mb-6 overflow-hidden rounded-2xl border-2 bg-gradient-to-br shadow-sm ring-1 ${meta.border} ${meta.gradient}`}>
-                <CardHeader className="pb-3">
-                  <div className="flex items-start gap-3">
-                    <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary ring-1 ring-primary/15`}>
-                      {meta.icon}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <CardTitle className="flex flex-wrap items-center gap-2 text-lg text-foreground">
-                        {meta.label}
-                        <Badge variant="secondary" className="font-normal text-muted-foreground">
-                          {matches.length} matched
-                        </Badge>
-                      </CardTitle>
-                      <CardDescription>
-                        Investors and programs that specifically support founders like you, separate from the general investor list.
-                      </CardDescription>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="pt-0">
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    {matches.map((match: any, i: number) => {
-                      const p = match.program || match
-                      const key = p.id || `${p.name}-${i}`
-                      const url = typeof p.applicationUrl === 'string' ? p.applicationUrl : ''
-                      const urgency = match.urgency
-                      return (
-                        <div
-                          key={key}
-                          className="flex flex-col justify-between rounded-xl border border-border/60 bg-card/80 p-4 transition-colors hover:border-primary/25 hover:bg-accent/30"
-                        >
-                          <div className="space-y-2">
-                            <div className="flex items-start justify-between gap-2">
-                              <div className="min-w-0">
-                                <h3 className="font-semibold leading-snug text-foreground">{p.name}</h3>
-                                {p.type && (
-                                  <p className="text-xs font-medium capitalize text-muted-foreground">{p.type.replace(/_/g, ' ')}</p>
+                <details>
+                  <summary className="group cursor-pointer list-none">
+                    <CardHeader className="pb-3">
+                      <div className="flex items-start gap-3">
+                        <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary ring-1 ring-primary/15`}>
+                          {meta.icon}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <CardTitle className="flex flex-wrap items-center gap-2 text-lg text-foreground">
+                            {meta.label}
+                            <Badge variant="secondary" className="font-normal text-muted-foreground">
+                              {matches.length} matched
+                            </Badge>
+                          </CardTitle>
+                          <CardDescription>
+                            Investors and programs that specifically support founders like you, separate from the general investor list.
+                          </CardDescription>
+                        </div>
+                        <ChevronDown className="mt-1 h-4 w-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-180" />
+                      </div>
+                    </CardHeader>
+                  </summary>
+                  <CardContent className="pt-0">
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      {matches.map((match: any, i: number) => {
+                        const p = match.program || match
+                        const key = p.id || `${p.name}-${i}`
+                        const url = typeof p.applicationUrl === 'string' ? p.applicationUrl : ''
+                        const urgency = match.urgency
+                        return (
+                          <div
+                            key={key}
+                            className="flex flex-col justify-between rounded-xl border border-border/60 bg-card/80 p-4 transition-colors hover:border-primary/25 hover:bg-accent/30"
+                          >
+                            <div className="space-y-2">
+                              <div className="flex items-start justify-between gap-2">
+                                <div className="min-w-0">
+                                  <h3 className="font-semibold leading-snug text-foreground">{p.name}</h3>
+                                  {p.type && (
+                                    <p className="text-xs font-medium capitalize text-muted-foreground">{p.type.replace(/_/g, ' ')}</p>
+                                  )}
+                                </div>
+                                {urgency === 'apply_now' && (
+                                  <Badge variant="destructive" className="shrink-0 text-xs">Apply now</Badge>
+                                )}
+                                {urgency === 'upcoming_deadline' && (
+                                  <Badge variant="secondary" className="shrink-0 text-xs">Upcoming</Badge>
                                 )}
                               </div>
-                              {urgency === 'apply_now' && (
-                                <Badge variant="destructive" className="shrink-0 text-xs">Apply now</Badge>
+
+                              {typeof match.qualificationReason === 'string' && match.qualificationReason.trim() && (
+                                <p className="text-sm leading-relaxed text-foreground/80">{match.qualificationReason}</p>
                               )}
-                              {urgency === 'upcoming_deadline' && (
-                                <Badge variant="secondary" className="shrink-0 text-xs">Upcoming</Badge>
+                              {p.checkSize && (p.checkSize.min || p.checkSize.max) && (
+                                <p className="text-xs text-muted-foreground">
+                                  <span className="font-medium text-foreground/80">Check size:</span>{' '}
+                                  {fmtCheckRange(p.checkSize.min, p.checkSize.max)}
+                                </p>
                               )}
                             </div>
 
-                            {typeof match.qualificationReason === 'string' && match.qualificationReason.trim() && (
-                              <p className="text-sm leading-relaxed text-foreground/80">{match.qualificationReason}</p>
-                            )}
-                            {p.checkSize && (p.checkSize.min || p.checkSize.max) && (
-                              <p className="text-xs text-muted-foreground">
-                                <span className="font-medium text-foreground/80">Check size:</span>{' '}
-                                {fmtCheckRange(p.checkSize.min, p.checkSize.max)}
-                              </p>
+                            {url && (
+                              <a
+                                href={url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold text-primary underline-offset-4 hover:underline"
+                              >
+                                Apply / learn more
+                                <ArrowUpRight className="h-3 w-3" />
+                              </a>
                             )}
                           </div>
-
-                          {url && (
-                            <a
-                              href={url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold text-primary underline-offset-4 hover:underline"
-                            >
-                              Apply / learn more
-                              <ArrowUpRight className="h-3 w-3" />
-                            </a>
-                          )}
-                        </div>
-                      )
-                    })}
-                  </div>
-                </CardContent>
+                        )
+                      })}
+                    </div>
+                  </CardContent>
+                </details>
               </Card>
             )
           })
@@ -544,82 +453,87 @@ export default async function MatchesPage({
         {/* School-specific programs: displayed above general investor matches */}
         {universityPrograms.length > 0 && (
           <Card className="mb-6 overflow-hidden rounded-2xl border-2 border-primary/20 bg-gradient-to-br from-primary/[0.06] via-card to-card shadow-sm ring-1 ring-primary/10">
-            <CardHeader className="pb-3">
-              <div className="flex items-start gap-3">
-                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary ring-1 ring-primary/15">
-                  <GraduationCap className="h-5 w-5" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <CardTitle className="flex flex-wrap items-center gap-2 text-lg text-foreground">
-                    Campus and accelerator programs
-                    <Badge variant="secondary" className="font-normal text-muted-foreground">
-                      {universityPrograms.length} matched
-                    </Badge>
-                  </CardTitle>
-                  <CardDescription>
-                    Based on your school affiliation and stage, with exclusive opportunities separate from the general investor list.
-                  </CardDescription>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="pt-0">
-              <div className="grid gap-3 sm:grid-cols-2">
-                {universityPrograms.map((match: any, i: number) => {
-                  const p = match.program || match
-                  const key = p.id || `${p.name}-${i}`
-                  const url = typeof p.applicationUrl === 'string' ? p.applicationUrl : ''
-                  const urgency = match.urgency
-                  return (
-                    <div
-                      key={key}
-                      className="flex flex-col justify-between rounded-xl border border-border/60 bg-card/80 p-4 transition-colors hover:border-primary/25 hover:bg-accent/30"
-                    >
-                      <div className="space-y-2">
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="min-w-0">
-                            <h3 className="font-semibold leading-snug text-foreground">{p.name}</h3>
-                            {p.university && (
-                              <p className="text-xs font-medium text-muted-foreground">{p.university}</p>
+            <details>
+              <summary className="group cursor-pointer list-none">
+                <CardHeader className="pb-3">
+                  <div className="flex items-start gap-3">
+                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary ring-1 ring-primary/15">
+                      <GraduationCap className="h-5 w-5" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <CardTitle className="flex flex-wrap items-center gap-2 text-lg text-foreground">
+                        Campus and accelerator programs
+                        <Badge variant="secondary" className="font-normal text-muted-foreground">
+                          {universityPrograms.length} matched
+                        </Badge>
+                      </CardTitle>
+                      <CardDescription>
+                        Based on your school affiliation and stage, with exclusive opportunities separate from the general investor list.
+                      </CardDescription>
+                    </div>
+                    <ChevronDown className="mt-1 h-4 w-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-180" />
+                  </div>
+                </CardHeader>
+              </summary>
+              <CardContent className="pt-0">
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {universityPrograms.map((match: any, i: number) => {
+                    const p = match.program || match
+                    const key = p.id || `${p.name}-${i}`
+                    const url = typeof p.applicationUrl === 'string' ? p.applicationUrl : ''
+                    const urgency = match.urgency
+                    return (
+                      <div
+                        key={key}
+                        className="flex flex-col justify-between rounded-xl border border-border/60 bg-card/80 p-4 transition-colors hover:border-primary/25 hover:bg-accent/30"
+                      >
+                        <div className="space-y-2">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="min-w-0">
+                              <h3 className="font-semibold leading-snug text-foreground">{p.name}</h3>
+                              {p.university && (
+                                <p className="text-xs font-medium text-muted-foreground">{p.university}</p>
+                              )}
+                            </div>
+                            {urgency === 'apply_now' && (
+                              <Badge variant="destructive" className="shrink-0 text-xs">Apply now</Badge>
+                            )}
+                            {urgency === 'upcoming_deadline' && (
+                              <Badge variant="secondary" className="shrink-0 text-xs">Upcoming</Badge>
                             )}
                           </div>
-                          {urgency === 'apply_now' && (
-                            <Badge variant="destructive" className="shrink-0 text-xs">Apply now</Badge>
+
+                          {typeof match.qualificationReason === 'string' && match.qualificationReason.trim() && (
+                            <p className="text-sm leading-relaxed text-foreground/80">{match.qualificationReason}</p>
                           )}
-                          {urgency === 'upcoming_deadline' && (
-                            <Badge variant="secondary" className="shrink-0 text-xs">Upcoming</Badge>
+                          {typeof p.description === 'string' && p.description.trim() && (
+                            <p className="text-xs leading-relaxed text-muted-foreground">{p.description}</p>
+                          )}
+                          {p.checkSize && (p.checkSize.min || p.checkSize.max) && (
+                            <p className="text-xs text-muted-foreground">
+                              <span className="font-medium text-foreground/80">Check size:</span>{' '}
+                              {fmtCheckRange(p.checkSize.min, p.checkSize.max)}
+                            </p>
                           )}
                         </div>
 
-                        {typeof match.qualificationReason === 'string' && match.qualificationReason.trim() && (
-                          <p className="text-sm leading-relaxed text-foreground/80">{match.qualificationReason}</p>
-                        )}
-                        {typeof p.description === 'string' && p.description.trim() && (
-                          <p className="text-xs leading-relaxed text-muted-foreground">{p.description}</p>
-                        )}
-                        {p.checkSize && (p.checkSize.min || p.checkSize.max) && (
-                          <p className="text-xs text-muted-foreground">
-                            <span className="font-medium text-foreground/80">Check size:</span>{' '}
-                            {fmtCheckRange(p.checkSize.min, p.checkSize.max)}
-                          </p>
+                        {url && (
+                          <a
+                            href={url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold text-primary underline-offset-4 hover:underline"
+                          >
+                            Apply / learn more
+                            <ArrowUpRight className="h-3 w-3" />
+                          </a>
                         )}
                       </div>
-
-                      {url && (
-                        <a
-                          href={url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold text-primary underline-offset-4 hover:underline"
-                        >
-                          Apply / learn more
-                          <ArrowUpRight className="h-3 w-3" />
-                        </a>
-                      )}
-                    </div>
-                  )
-                })}
-              </div>
-            </CardContent>
+                    )
+                  })}
+                </div>
+              </CardContent>
+            </details>
           </Card>
         )}
 
@@ -667,127 +581,128 @@ export default async function MatchesPage({
               </CardHeader>
 
               <CardContent className="pt-6">
-                {/* Subscores */}
-                <div className="mb-6">
-                  <h3 className="mb-4 font-semibold flex items-center gap-2">
-                    <Star className="h-4 w-4" />
-                    Compatibility Breakdown
-                  </h3>
-                  <div className="space-y-3">
-                    {Object.entries(match.components).map(([key, value]: [string, any]) => {
-                      const labels: Record<string, string> = {
-                        sectorFit: 'Sector Fit',
-                        stageReadiness: 'Stage Readiness',
-                        teamTechFit: 'Team/Tech Fit',
-                        gtmFit: 'GTM Fit',
-                        geoFit: 'Geographic Match',
-                        networkFit: 'Network Proximity',
-                      }
-                      
-                      const numValue = typeof value === 'number' ? value : 0
-                      if (key === 'networkFit' && numValue === 0) return null
+                <details className="mb-6 rounded-lg border border-border/70 bg-muted/15 p-4">
+                  <summary className="cursor-pointer list-none text-sm font-semibold text-foreground">
+                    Match details
+                  </summary>
+                  <div className="mt-4">
+                    <div className="mb-6">
+                      <h3 className="mb-4 flex items-center gap-2 font-semibold">
+                        <Star className="h-4 w-4" />
+                        Score breakdown
+                      </h3>
+                      <div className="space-y-3">
+                        {Object.entries(match.components).map(([key, value]: [string, any]) => {
+                          const labels: Record<string, string> = {
+                            sectorFit: 'Sector fit',
+                            stageReadiness: 'Stage fit',
+                            teamTechFit: 'Team and tech',
+                            gtmFit: 'Go-to-market',
+                            geoFit: 'Geography',
+                            networkFit: 'Network',
+                          }
 
-                      return (
-                        <div key={key}>
-                          <div className="mb-1 flex items-center justify-between text-sm">
-                            <span className="font-medium">{labels[key]}</span>
-                            <span className="text-muted-foreground">{numValue}/100</span>
-                          </div>
-                          <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
-                            <div
-                              className={`h-full transition-all ${
-                                numValue >= 80
-                                  ? 'bg-emerald-500'
-                                  : numValue >= 60
-                                  ? 'bg-primary'
-                                  : numValue >= 40
-                                  ? 'bg-orange-500'
-                                  : 'bg-red-500'
-                              }`}
-                              style={{ width: `${numValue}%` }}
-                            />
-                          </div>
-                        </div>
-                      )
-                    })}
-                  </div>
-                </div>
+                          const numValue = typeof value === 'number' ? value : 0
+                          if (key === 'networkFit' && numValue === 0) return null
 
-                {/* Evidence */}
-                <div className="mb-6">
-                  <h3 className="mb-4 font-semibold flex items-center gap-2">
-                    <Info className="h-4 w-4" />
-                    Evidence (Why This Match?)
-                  </h3>
-                  <div className="space-y-3">
-                    {match.evidence.map((ev: any, i: number) => (
-                      <div key={i} className="rounded-lg border bg-muted/30 p-4">
-                        <div className="mb-2 flex items-center gap-2">
-                          <Badge variant="secondary" className="text-xs">
-                            {ev.component}
-                          </Badge>
-                        </div>
-                        <div className="space-y-1.5 text-sm">
-                          <div>
-                            <span className="font-medium">Your Resume: </span>
-                            <span className="text-muted-foreground">"{ev.resumeSpan}"</span>
-                          </div>
-                          <div>
-                            <span className="font-medium">VC Profile: </span>
-                            <span className="text-muted-foreground">"{ev.vcSpan}"</span>
-                          </div>
-                          <div className="pt-1 text-primary">
-                            → {ev.explanation}
-                          </div>
-                        </div>
+                          return (
+                            <div key={key}>
+                              <div className="mb-1 flex items-center justify-between text-sm">
+                                <span className="font-medium">{labels[key]}</span>
+                                <span className="text-muted-foreground">{numValue}/100</span>
+                              </div>
+                              <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+                                <div
+                                  className={`h-full transition-all ${
+                                    numValue >= 80
+                                      ? 'bg-emerald-500'
+                                      : numValue >= 60
+                                      ? 'bg-primary'
+                                      : numValue >= 40
+                                      ? 'bg-orange-500'
+                                      : 'bg-red-500'
+                                  }`}
+                                  style={{ width: `${numValue}%` }}
+                                />
+                              </div>
+                            </div>
+                          )
+                        })}
                       </div>
-                    ))}
-                  </div>
-                </div>
+                    </div>
 
-                {/* Thesis */}
-                <div className="mb-6 rounded-lg border bg-muted/20 p-4">
-                  <h3 className="mb-2 flex items-center gap-2 text-sm font-semibold">
-                    <Building2 className="h-4 w-4" />
-                    Investment Thesis
-                  </h3>
-                  <p className="text-sm text-muted-foreground italic">
-                    "{match.investor.thesis}"
-                  </p>
-                </div>
-
-                {/* Suggestions */}
-                <div className="mb-6">
-                  <h3 className="mb-4 font-semibold flex items-center gap-2">
-                    <Lightbulb className="h-4 w-4" />
-                    How to Improve This Match
-                  </h3>
-                  <div className="space-y-2">
-                    {match.suggestions.map((suggestion: any, i: number) => (
-                      <div key={i} className="flex gap-3 text-sm">
-                        <span className="shrink-0 font-medium text-primary">
-                          {i + 1}.
-                        </span>
-                        <span>{suggestion}</span>
+                    <div className="mb-6">
+                      <h3 className="mb-4 flex items-center gap-2 font-semibold">
+                        <Info className="h-4 w-4" />
+                        Why this match
+                      </h3>
+                      <div className="space-y-3">
+                        {match.evidence.map((ev: any, i: number) => (
+                          <div key={i} className="rounded-lg border bg-muted/30 p-4">
+                            <div className="mb-2 flex items-center gap-2">
+                              <Badge variant="secondary" className="text-xs">
+                                {ev.component}
+                              </Badge>
+                            </div>
+                            <div className="space-y-1.5 text-sm">
+                              <div>
+                                <span className="font-medium">Your pitch: </span>
+                                <span className="text-muted-foreground">"{ev.resumeSpan}"</span>
+                              </div>
+                              <div>
+                                <span className="font-medium">Investor profile: </span>
+                                <span className="text-muted-foreground">"{ev.vcSpan}"</span>
+                              </div>
+                              <div className="pt-1 text-primary">
+                                {ev.explanation}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
                       </div>
-                    ))}
+                    </div>
+
+                    <div className="mb-6 rounded-lg border bg-muted/20 p-4">
+                      <h3 className="mb-2 flex items-center gap-2 text-sm font-semibold">
+                        <Building2 className="h-4 w-4" />
+                        Thesis
+                      </h3>
+                      <p className="text-sm text-muted-foreground italic">
+                        "{match.investor.thesis}"
+                      </p>
+                    </div>
+
+                    <div>
+                      <h3 className="mb-4 flex items-center gap-2 font-semibold">
+                        <Lightbulb className="h-4 w-4" />
+                        Improve fit
+                      </h3>
+                      <div className="space-y-2">
+                        {match.suggestions.map((suggestion: any, i: number) => (
+                          <div key={i} className="flex gap-3 text-sm">
+                            <span className="shrink-0 font-medium text-primary">{i + 1}.</span>
+                            <span>{suggestion}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
                   </div>
-                </div>
+                </details>
 
                 {/* Actions */}
                 <div className="flex gap-3">
                   <a href={match.investor.applicationUrl} target="_blank" rel="noopener noreferrer" className="flex-1">
                     <Button className="w-full">
-                      Apply to {match.investor.firmName}
+                      Apply
                       <ExternalLink className="ml-2 h-4 w-4" />
                     </Button>
                   </a>
                   <Link href={`/founder/crash-course/${match.id}`}>
                     <Button variant="outline">
-                      View Crash Course
+                      Crash course
                     </Button>
                   </Link>
-                  <Button variant="ghost" size="icon">
+                  <Button variant="ghost" size="icon" aria-label={`Save ${match.investor.firmName}`}>
                     <Heart className="h-4 w-4" />
                   </Button>
                 </div>
@@ -797,14 +712,14 @@ export default async function MatchesPage({
         </div>
 
         {/* Next Steps Panel */}
-        <Card className="mt-6 rounded-2xl border border-border/40 bg-gradient-to-b from-primary/[0.06] via-card/95 to-card shadow-sm ring-1 ring-border/15">
+        <Card className="mt-6 rounded-2xl border border-border/60 bg-card/95 shadow-sm">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-lg">
               <Lightbulb className="h-5 w-5 text-primary" />
               Next steps
             </CardTitle>
             <CardDescription>
-              NEXUS does not stop at ranking -- act on your results.
+              Keep moving with one next action.
             </CardDescription>
           </CardHeader>
           <CardContent className="grid gap-3 sm:grid-cols-3">
@@ -813,7 +728,7 @@ export default async function MatchesPage({
                 <Users className="h-5 w-5 shrink-0 text-primary" />
                 <div>
                   <p className="text-sm font-semibold text-foreground">Browse all investors</p>
-                  <p className="text-xs text-muted-foreground">Filter by stage, sector, and type</p>
+                  <p className="text-xs text-muted-foreground">Search and filter</p>
                 </div>
               </div>
             </Link>
@@ -822,7 +737,7 @@ export default async function MatchesPage({
                 <Heart className="h-5 w-5 shrink-0 text-primary" />
                 <div>
                   <p className="text-sm font-semibold text-foreground">Save target list</p>
-                  <p className="text-xs text-muted-foreground">Bookmark investors to track</p>
+                  <p className="text-xs text-muted-foreground">Keep your shortlist</p>
                 </div>
               </div>
             </Link>
@@ -831,7 +746,7 @@ export default async function MatchesPage({
                 <Sparkles className="h-5 w-5 shrink-0 text-primary" />
                 <div>
                   <p className="text-sm font-semibold text-foreground">Improve and re-run</p>
-                  <p className="text-xs text-muted-foreground">Refine your pitch for better matches</p>
+                  <p className="text-xs text-muted-foreground">Run analysis again</p>
                 </div>
               </div>
             </Link>

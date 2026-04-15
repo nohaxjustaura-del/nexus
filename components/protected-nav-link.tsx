@@ -53,8 +53,8 @@ export function ProtectedNavLink({ href, children, className, publicRoute = fals
       className={cn(
         'rounded-full px-3 py-1.5 text-sm font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
         showActive
-          ? 'bg-background/85 text-primary shadow-sm ring-1 ring-border/45 dark:bg-background/60'
-          : 'text-muted-foreground hover:bg-muted/55 hover:text-foreground',
+          ? 'bg-card text-foreground ring-1 ring-border/70'
+          : 'text-muted-foreground hover:bg-muted/65 hover:text-foreground',
         className
       )}
       prefetch={publicRoute || authed || prefetchFounderWorkspace}

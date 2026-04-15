@@ -4,6 +4,7 @@ import { getCurrentUser } from "@/lib/auth"
 import { parseJSON } from "@/lib/utils"
 import Link from "next/link"
 import { redirect } from "next/navigation"
+import { FounderWorkspaceTabs } from "@/components/founder-workspace-tabs"
 
 /**
  * Investor JSON columns are stored as strings but may arrive pre-parsed (e.g. JsonValue).
@@ -74,7 +75,6 @@ function investorMatchesDirectorySearch(
   return tokens.length === 0 ? true : tokens.every((t) => hay.includes(t))
 }
 
-export const dynamic = "force-dynamic"
 export const runtime = "nodejs"
 
 export default async function DiscoverPage({
@@ -246,19 +246,15 @@ export default async function DiscoverPage({
         decisionSpeed: true,
         applicationUrl: true,
         websiteUrl: true,
-        linkedinUrl: true,
         twitterUrl: true,
         fundType: true,
         thesis: true,
-        bio: true,
-        geography: true,
         leadFollow: true,
         ownershipTarget: true,
         proofPoints: true,
         portfolio: true,
         personalityType: true,
         notableInvestments: true,
-        fundSize: true,
       },
       orderBy: [
         { verified: "desc" }, // Verified VCs first
@@ -531,9 +527,14 @@ export default async function DiscoverPage({
   const verifiedInDirectory = investors.reduce((n, inv) => n + (inv.verified ? 1 : 0), 0)
   const verifiedLabel = formatVerifiedInvestorCount(verifiedInDirectory)
 
+  const SERVER_PAGE_CAP = 120
+  if (filteredInvestors.length > SERVER_PAGE_CAP) {
+    filteredInvestors = filteredInvestors.slice(0, SERVER_PAGE_CAP)
+  }
+
   return (
     <div className="min-h-screen bg-background" data-page="discover">
-      <div className="container mx-auto max-w-7xl px-4 py-6 md:py-10">
+      <div className="page-shell-narrow">
         <header className="mb-6 md:mb-8">
           <h1 className="font-heading text-2xl font-semibold tracking-tight text-foreground md:text-3xl">
             Investors
@@ -543,39 +544,15 @@ export default async function DiscoverPage({
             {totalInDirectory !== verifiedInDirectory
               ? ` · ${totalInDirectory.toLocaleString('en-US')} profiles in directory`
               : ' in directory'}
-            {showLimitedTailored ? ' · upgrade with analysis to see full tailored list' : ''}
+            {showLimitedTailored ? ' · run analysis to unlock full list' : ''}
           </p>
         </header>
 
         <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
-          <nav
-            className="flex gap-1 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-            aria-label="Founder directory sections"
-          >
-            {(
-              [
-                { href: '/founder/discover', label: 'Discover' },
-                { href: '/founder/matches', label: 'Matches' },
-                { href: '/founder/bookmarks', label: 'Bookmarks' },
-                { href: '/founder/my-analyses', label: 'Analyses' },
-              ] as const
-            ).map(({ href, label }) => (
-              <Link
-                key={href}
-                href={href}
-                className={`shrink-0 rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${
-                  href === '/founder/discover'
-                    ? 'bg-primary/15 text-foreground ring-1 ring-primary/20'
-                    : 'text-muted-foreground hover:bg-muted/70 hover:text-foreground'
-                }`}
-              >
-                {label}
-              </Link>
-            ))}
-          </nav>
+          <FounderWorkspaceTabs />
 
           <div
-            className="inline-flex shrink-0 rounded-lg border border-border bg-muted/30 p-1"
+            className="inline-flex shrink-0 rounded-xl border border-border/70 bg-card p-1"
             role="group"
             aria-label="List mode"
           >

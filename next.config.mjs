@@ -37,7 +37,6 @@ const nextConfig = {
   },
 
   experimental: {
-    // lucide-react here breaks RSC flight ↔ client webpack (undefined `options.factory`).
     optimizePackageImports: [
       '@radix-ui/react-select',
       '@radix-ui/react-checkbox',
@@ -45,6 +44,7 @@ const nextConfig = {
       '@radix-ui/react-collapsible',
       'framer-motion',
       'react-markdown',
+      'lucide-react',
     ],
   },
 
@@ -53,6 +53,8 @@ const nextConfig = {
    * hot restarts, `next.config` reloads, antivirus, or a second dev server on another port —
    * leading to ENOENT on `*.pack.gz` and client runtime `options.factory` / `.call` errors.
    * Disabling persistent cache in dev trades a bit of compile speed for stability.
+   * If you see ENOENT on `.next/server/edge-chunks/*.wasm`, stop `next dev`, run
+   * `node scripts/optimize.js`, then `npm run dev` (or `npm run dev:fresh`).
    */
   webpack: (config, { dev }) => {
     if (dev && process.platform === 'win32') {

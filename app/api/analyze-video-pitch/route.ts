@@ -4,8 +4,7 @@ import { getUserFromRequest } from '@/lib/auth'
 import { analyzeVideoPitch, VideoPitchFeatures } from '@/lib/ai'
 import { runMatchingPipeline } from '@/lib/matching/matching-orchestrator'
 import { validateVideoPitch } from '@/lib/content-validator'
-import { CREDIT_COSTS } from '@/lib/constants'
-import { shouldEnforceAiCredits } from '@/lib/dev-ai-analysis-bypass'
+import { getSubscriptionStatus, requiresPro } from '@/lib/subscription'
 import { parseJSON } from '@/lib/utils'
 import { logger } from '@/lib/logger'
 import { rateLimitMiddleware, RATE_LIMITS } from '@/lib/rate-limit'
@@ -99,63 +98,13 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Check credits (but don't deduct yet - will deduct after successful analysis)
-    const CREDIT_COST = reviewType === 'reviewer' ? CREDIT_COSTS.VIDEO_PITCH.REVIEWER : CREDIT_COSTS.VIDEO_PITCH.REGULAR
-    
-    // Skip credit check for admin
-    let userCredits = null
-    if (shouldEnforceAiCredits(user.email)) {
-      userCredits = await db.userCredits.findUnique({
-        where: { userId: user.id },
-      })
-      
-      if (!userCredits) {
-        userCredits = await db.userCredits.create({
-          data: {
-            userId: user.id,
-            credits: 0,
-            isPremium: false,
-          },
-        })
-      }
-      
-      if (!userCredits.isPremium && (userCredits.credits ?? 0) < CREDIT_COST) {
-        const creditsNeeded = CREDIT_COST - (userCredits.credits ?? 0)
-        return NextResponse.json({
-          error: 'Insufficient Credits',
-          message: `${reviewType === 'reviewer' ? 'VC-Accepted Reviewer Review' : 'AI Video Pitch Analysis'} costs ${CREDIT_COST} credits. You have ${userCredits.credits ?? 0} credits.`,
-          whatWentWrong: `You need ${creditsNeeded} more credit${creditsNeeded > 1 ? 's' : ''} to analyze your video pitch`,
-          whyItFailed: 'Each analysis uses credits to cover AI processing costs',
-          howToFix: [
-            'Claim your daily free credits (available every 24 hours)',
-            'Purchase additional credits from your account page',
-            'Upgrade to Premium for unlimited analyses',
-            'Wait until you have enough credits from daily claims',
-          ],
-          requiresPayment: true,
-          creditCost: CREDIT_COST,
-          currentCredits: userCredits.credits ?? 0,
-          creditsNeeded,
-        }, { 
-          status: 402,
-          headers: { 'Content-Type': 'application/json' },
-        })
-      }
-    }
-
-    // Require payment verification only if user is not Premium and doesn't have enough credits
-    // Premium users or users with sufficient credits don't need payment verification
-    const hasEnoughCredits = userCredits?.isPremium || (userCredits && (userCredits.credits ?? 0) >= CREDIT_COST)
-    if (!paymentVerified && !hasEnoughCredits && shouldEnforceAiCredits(user.email)) {
+    const sub = await getSubscriptionStatus(user.id, user.email)
+    if (requiresPro(sub)) {
       return NextResponse.json({
-        error: 'Payment required',
-        requiresPayment: true,
-        amount: 0,
-        message: 'Please complete checkout before analysis.',
-      }, { 
-        status: 402,
-        headers: { 'Content-Type': 'application/json' },
-      })
+        error: 'Upgrade Required',
+        message: 'Upgrade to Pro for unlimited video pitch analyses.',
+        requiresUpgrade: true,
+      }, { status: 403, headers: { 'Content-Type': 'application/json' } })
     }
 
     // Validate file
@@ -753,22 +702,6 @@ export async function POST(request: NextRequest) {
       videoPitch.id,
       ventureNameOverride ? { ventureNameOverride } : undefined,
     ).catch(e => logger.error('[ANALYZE-VIDEO-PITCH] upsertFounderAnalysisSummary failed', e))
-
-    // Deduct credits AFTER successful analysis (admin bypass)
-    if (shouldEnforceAiCredits(user.email)) {
-      try {
-        await db.userCredits.update({
-          where: { userId: user.id },
-          data: {
-            credits: { decrement: CREDIT_COST },
-          },
-        })
-        logger.log(`[ANALYZE-VIDEO-PITCH] Deducted ${CREDIT_COST} credits from user ${user.id}`)
-      } catch (creditError: any) {
-        // Log but don't fail the request if credit deduction fails
-        logger.error('[ANALYZE-VIDEO-PITCH] Error deducting credits:', creditError)
-      }
-    }
 
     // Smart Match is now handled by Matching Pipeline v3 (runMatchingPipeline)
     // The combined scores include gate-based investment likelihood + deployment scoring

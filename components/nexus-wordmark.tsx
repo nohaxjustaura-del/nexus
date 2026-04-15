@@ -1,5 +1,6 @@
 import { BRAND_NAME } from '@/lib/brand'
 import { cn } from '@/lib/utils'
+import Image from 'next/image'
 
 const SRC = '/nexus-logo.png'
 
@@ -10,17 +11,18 @@ type NexusWordmarkProps = {
   priority?: boolean
 }
 
-export function NexusWordmark({ className, heightClass = 'h-28 sm:h-32', priority }: NexusWordmarkProps) {
+export function NexusWordmark({ className, heightClass = 'h-16 sm:h-20', priority }: NexusWordmarkProps) {
   return (
-    <img
+    <Image
       src={SRC}
       alt={BRAND_NAME}
       width={1536}
       height={1024}
-      decoding="async"
+      priority={priority}
       loading={priority ? 'eager' : 'lazy'}
+      sizes="(max-width: 640px) 10rem, (max-width: 1024px) 19rem, 24rem"
       className={cn(
-        'nexus-wordmark-img w-auto shrink-0 object-contain object-left',
+        'nexus-wordmark-img block w-auto shrink-0 object-contain object-left object-top',
         heightClass,
         className,
       )}

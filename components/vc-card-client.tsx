@@ -9,6 +9,8 @@ import Link from "next/link"
 import InvestorProfileModal from '@/components/investor-profile-modal'
 import { parseJSON, fmtCheckRange } from '@/lib/utils'
 import { toast } from '@/components/ui/toast-simple'
+import { useAuthSession } from '@/components/auth-session-provider'
+import { useAccountCapabilities } from '@/components/account-capabilities-provider'
 import { legacyNexusExtrasEnabled } from '@/lib/nexus-surface-flags'
 
 const SIGNUP_NETWORK_PRICING = `/signup?next=${encodeURIComponent('/pricing?from=network')}`
@@ -36,28 +38,14 @@ export function VCCardClient({
 }: VCCardClientProps) {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isBookmarked, setIsBookmarked] = useState(isBookmarkedProp || false)
-  const [networkHref, setNetworkHref] = useState('/pricing?from=network')
-
-  useEffect(() => {
-    if (!isYC) return
-    let cancelled = false
-    fetch('/api/account/capabilities', { credentials: 'include' })
-      .then((r) => r.json())
-      .then((data) => {
-        if (cancelled) return
-        if (legacyNexusExtrasEnabled() && data?.authenticated && data.canAccessFounderNetwork) {
-          setNetworkHref('/founder/network')
-        } else if (data?.authenticated) {
-          setNetworkHref('/pricing?from=network')
-        } else {
-          setNetworkHref(SIGNUP_NETWORK_PRICING)
-        }
-      })
-      .catch(() => {})
-    return () => {
-      cancelled = true
-    }
-  }, [isYC])
+  const { authenticated } = useAuthSession()
+  const { capabilities } = useAccountCapabilities()
+  const networkHref =
+    legacyNexusExtrasEnabled() && authenticated && capabilities?.canAccessFounderNetwork
+      ? '/founder/network'
+      : authenticated
+        ? '/pricing?from=network'
+        : SIGNUP_NETWORK_PRICING
 
   // Update local state when prop changes
   useEffect(() => {

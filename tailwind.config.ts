@@ -3,18 +3,16 @@ import type { Config } from "tailwindcss"
 const config = {
   darkMode: ["class"],
   content: [
-    './pages/**/*.{ts,tsx}',
     './components/**/*.{ts,tsx}',
     './app/**/*.{ts,tsx}',
-    './src/**/*.{ts,tsx}',
   ],
   prefix: "",
   theme: {
     container: {
       center: true,
-      padding: "2rem",
+      padding: "1.5rem",
       screens: {
-        "2xl": "1400px",
+        "2xl": "1280px",
       },
     },
     extend: {
@@ -35,6 +33,14 @@ const config = {
         destructive: {
           DEFAULT: "hsl(var(--destructive))",
           foreground: "hsl(var(--destructive-foreground))",
+        },
+        success: {
+          DEFAULT: "hsl(var(--success))",
+          foreground: "hsl(var(--primary-foreground))",
+        },
+        warning: {
+          DEFAULT: "hsl(var(--warning))",
+          foreground: "hsl(var(--foreground))",
         },
         muted: {
           DEFAULT: "hsl(var(--muted))",
@@ -103,6 +109,18 @@ const config = {
           "0%, 100%": { transform: "translate(0, 0)", opacity: "0.88" },
           "50%": { transform: "translate(2px, -2px)", opacity: "1" },
         },
+        "glow-pulse": {
+          "0%, 100%": { opacity: "0.4" },
+          "50%": { opacity: "1" },
+        },
+        "border-flow": {
+          "0%": { "--border-angle": "0deg" },
+          "100%": { "--border-angle": "360deg" },
+        },
+        "shimmer-sweep": {
+          "0%": { transform: "translateX(-100%)" },
+          "100%": { transform: "translateX(100%)" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -113,10 +131,13 @@ const config = {
         "shimmer": "shimmer 2s infinite",
         "chevron-bounce": "chevron-bounce 1.6s ease-in-out infinite",
         "trend-nudge": "trend-nudge 1.6s ease-in-out infinite",
+        "glow-pulse": "glow-pulse 2.5s ease-in-out infinite",
+        "border-flow": "border-flow 4s linear infinite",
+        "shimmer-sweep": "shimmer-sweep 2s ease-in-out infinite",
       },
       fontFamily: {
         sans: ["var(--font-sans)", "system-ui", "sans-serif"],
-        heading: ["var(--font-heading)", "var(--font-sans)", "system-ui", "sans-serif"],
+        heading: ["var(--font-sans)", "system-ui", "sans-serif"],
       },
     },
   },

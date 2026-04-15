@@ -33,18 +33,30 @@ export function isAdminEmail(email: string | null | undefined): boolean {
   return adminEmailSet.has(email.trim().toLowerCase())
 }
 
-// Credit Costs for AI Analysis Features
-export const CREDIT_COSTS = {
-  PITCH_IDEA: 15,
-  PITCH_DECK: 30, // Fixed: was 50, should be 30
-  UNIFIED_PITCH: 50,
-  VIDEO_PITCH: {
-    REGULAR: 50,
-    REVIEWER: 100,
+// Subscription tiers — replaces the old per-action credit system
+export const SUBSCRIPTION_TIERS = {
+  FREE: 'free',
+  PRO: 'pro',
+  TEAM: 'team',
+} as const
+
+export const TIER_LIMITS = {
+  [SUBSCRIPTION_TIERS.FREE]: {
+    investorBrowseLimit: 50,
+    analysesPerMonth: 1,
+    matchesPerAnalysis: 5,
   },
-  FOUNDER_FEEDBACK: 200,
-  UNLOCK_TOP_MATCHES: 0,
-  RESUME_ANALYSIS: 25, // Note: Feature is disabled but keeping for reference
+  [SUBSCRIPTION_TIERS.PRO]: {
+    investorBrowseLimit: Infinity,
+    analysesPerMonth: Infinity,
+    matchesPerAnalysis: 20,
+  },
+  [SUBSCRIPTION_TIERS.TEAM]: {
+    investorBrowseLimit: Infinity,
+    analysesPerMonth: Infinity,
+    matchesPerAnalysis: 20,
+    seats: 3,
+  },
 } as const
 
 // File Upload Limits
@@ -74,8 +86,6 @@ export const PAGINATION = {
 export const USER_LIMITS = {
   FREE_TIER_VC_MATCHES: 5,
   PREMIUM_TIER_VC_MATCHES: 20,
-  /** Pitch idea analyses per UTC week (Mon 00:00) without spending credits; non-premium only. */
-  FREE_PITCH_IDEA_ANALYSES_PER_WEEK: 2,
   MIN_AGE: 16,
   MAX_AGE: 100,
 } as const
@@ -102,7 +112,7 @@ export const ERROR_MESSAGES = {
   FORBIDDEN: 'Forbidden',
   NOT_FOUND: 'Not found',
   INVALID_INPUT: 'Invalid input',
-  INSUFFICIENT_CREDITS: 'Insufficient credits',
+  UPGRADE_REQUIRED: 'Upgrade to Pro to access this feature',
   FILE_TOO_LARGE: 'File too large',
   INVALID_FILE_TYPE: 'Invalid file type',
 } as const
@@ -111,7 +121,6 @@ export const ERROR_MESSAGES = {
 export const SUCCESS_MESSAGES = {
   PROFILE_UPDATED: 'Profile updated successfully',
   ANALYSIS_COMPLETE: 'Analysis complete',
-  CREDITS_DEDUCTED: 'Credits deducted successfully',
 } as const
 
 

@@ -4,8 +4,7 @@ import { getCurrentUser } from '@/lib/auth'
 import { runMatchingPipeline } from '@/lib/matching/matching-orchestrator'
 import { logger } from '@/lib/logger'
 import { validatePitchIdea } from '@/lib/content-validator'
-import { CREDIT_COSTS } from '@/lib/constants'
-import { shouldEnforceAiCredits } from '@/lib/dev-ai-analysis-bypass'
+import { getSubscriptionStatus } from '@/lib/subscription'
 import { rateLimitMiddleware, RATE_LIMITS } from '@/lib/rate-limit'
 import { parseJSON } from '@/lib/utils'
 import { getComprehensiveFounderContext, buildAIPromptContext } from '@/lib/founder-context'
@@ -17,7 +16,6 @@ import { buildFounderSnapshot } from '@/lib/file-storage'
 import { getDeepMarketContext } from '@/lib/market-intelligence'
 import { runScoringPipeline } from '@/lib/scoring/scoring-pipeline'
 import { analyzeFounderNotFoundResponse, analyzeUnauthorizedResponse } from '@/lib/analyze-routes/responses'
-import { getPitchIdeaWeeklyQuotaInfo } from '@/lib/pitch-idea-weekly-quota'
 import {
   upsertFounderAnalysisSummary,
   ventureNameOverrideFromFormData,
@@ -74,8 +72,6 @@ export async function POST(request: NextRequest) {
     /** Buckets `FounderAnalysisSummary` per saved startup name at submit time (see FormData / JSON `ventureName`). */
     let ventureNameForSummary: string | undefined
 
-    /** Set during credit / free-tier gate; read again after successful AI for deduction. */
-    let pitchIdeaUsesFreeWeeklySlot = false
     let pitchIdeaIsPremium = false
 
     // Accept either JSON (text idea) or FormData (file upload or text field)
@@ -226,52 +222,10 @@ export async function POST(request: NextRequest) {
       logger.error('[ANALYZE-PITCH-IDEA] Validation failed:', validationError)
     }
 
-    // Check credits + weekly free tier (admin/dev bypass skips)
-    if (shouldEnforceAiCredits(user.email)) {
-      const userCredits = await db.userCredits.findUnique({
-        where: { userId: user.id },
-      })
-      pitchIdeaIsPremium = Boolean(userCredits?.isPremium)
-      const weeklyQuota = await getPitchIdeaWeeklyQuotaInfo(founder.id)
-      const creditsBalance = userCredits?.credits ?? 0
-      const hasPaidCredits = creditsBalance >= CREDIT_COSTS.PITCH_IDEA
-      pitchIdeaUsesFreeWeeklySlot = !pitchIdeaIsPremium && weeklyQuota.remaining > 0
+    const sub = await getSubscriptionStatus(user.id, user.email)
+    pitchIdeaIsPremium = sub.isPro
 
-      const allowed =
-        pitchIdeaIsPremium || pitchIdeaUsesFreeWeeklySlot || hasPaidCredits
-
-      if (!allowed) {
-        const creditsNeeded = Math.max(0, CREDIT_COSTS.PITCH_IDEA - creditsBalance)
-        return NextResponse.json(
-          {
-            error: 'Insufficient Credits',
-            message: `Pitch idea analysis costs ${CREDIT_COSTS.PITCH_IDEA} credits after your free weekly analyses. You have ${creditsBalance} credits.`,
-            whatWentWrong: `You need ${creditsNeeded} more credit${creditsNeeded !== 1 ? 's' : ''} to analyze your pitch idea this week`,
-            whyItFailed: 'You have used your free pitch idea analyses for this week, or you need more credits',
-            howToFix: [
-              `Your free analyses reset next Monday 00:00 UTC (resets at ${weeklyQuota.resetsAt})`,
-              'Claim daily free credits or purchase credits to continue this week',
-              'Purchase additional credits from your account page',
-              'Upgrade to Premium for unlimited analyses',
-            ],
-            requiresPayment: true,
-            creditCost: CREDIT_COSTS.PITCH_IDEA,
-            currentCredits: creditsBalance,
-            creditsNeeded,
-            weeklyFreeRemaining: weeklyQuota.remaining,
-            weeklyFreeLimit: weeklyQuota.limit,
-            weekResetsAt: weeklyQuota.resetsAt,
-            usedWeeklyFreeAnalyses: weeklyQuota.used,
-          },
-          {
-            status: 402,
-            headers: { 'Content-Type': 'application/json' },
-          }
-        )
-      }
-    }
-
-    // Analyze pitch idea with AI (credits will be deducted after successful analysis)
+    // Analyze pitch idea with AI
     // ✅ Use OpenRouter for reliable AI analysis
     if (!hasOpenRouterKey()) {
       return NextResponse.json(
@@ -316,7 +270,7 @@ export async function POST(request: NextRequest) {
     }
 
     const ycTrendLine = ycTrendsAnalysis?.insights?.[0]
-      ? `\nRELEVANT YC TREND: ${ycTrendsAnalysis.insights[0].title}${ycTrendsAnalysis.insights[0].description ? ` — ${ycTrendsAnalysis.insights[0].description}` : ''}\n`
+      ? `\nRELEVANT YC TREND: ${ycTrendsAnalysis.insights[0].title}${ycTrendsAnalysis.insights[0].description ? ` - ${ycTrendsAnalysis.insights[0].description}` : ''}\n`
       : ''
 
     const analysisPrompt = `You are conducting a deep analysis of a startup pitch. Think carefully before responding.
@@ -329,20 +283,20 @@ ${idea.substring(0, 8000)}
 ${ycTrendLine}
 === ANALYSIS FRAMEWORK ===
 
-STEP 1 — REASONING (internal): Before generating your response, consider:
+STEP 1 - REASONING (internal): Before generating your response, consider:
 - What specific sub-sector or niche does this startup operate in? (e.g., not just "fintech" but "embedded payroll for gig economy platforms")
 - What is the founder's unique insight or unfair advantage?
 - What non-obvious market adjacencies or emerging categories does this touch?
 - What would a domain-expert investor in this exact niche care about most?
 - What specific competitors (including indirect ones) exist in this space?
 
-STEP 2 — Generate your analysis with these requirements:
+STEP 2 - Generate your analysis with these requirements:
 
 STRENGTHS: Identify 3-5 genuine strengths. Each must cite a specific element from the pitch or founder profile. Distinguish between strong signals (backed by evidence) and moderate signals (plausible but unverified). Prioritize niche-specific advantages over generic positives.
 
 IMPROVEMENTS: Identify 3-5 areas for improvement. Be specific about WHAT is weak and WHY it matters for fundraising. Reference what investors in this specific sub-sector typically expect.
 
-SUGGESTIONS: Provide 3-5 actionable next steps. Each should be achievable within 30-60 days and directly address a gap. Include specific tactics (not just "get more traction" — say HOW).
+SUGGESTIONS: Provide 3-5 actionable next steps. Each should be achievable within 30-60 days and directly address a gap. Include specific tactics (not just "get more traction" - say HOW).
 
 MARKET FIT: Assess the startup's positioning within its specific market niche. Reference the competitive landscape, timing factors, and whether the problem is acute enough to drive buyer urgency.
 
@@ -354,7 +308,7 @@ SUB-SECTOR TAGS: Identify 2-4 specific niche tags that describe this startup's e
 
 Return valid JSON:
 {
-  "reasoning": "<2-3 sentences of your initial assessment — what makes this pitch interesting or concerning at first glance>",
+  "reasoning": "<2-3 sentences of your initial assessment - what makes this pitch interesting or concerning at first glance>",
   "strengths": ["<specific strength with evidence>", ...],
   "improvements": ["<specific gap with context>", ...],
   "suggestions": ["<actionable step with timeline>", ...],
@@ -367,7 +321,7 @@ Return valid JSON:
     try {
       const aiAnalysis = await openrouterGenerateJson<any>({
         system:
-          'You are a Principal at a Tier-1 VC firm with deep expertise across sectors. You have evaluated thousands of pitches and can identify non-obvious patterns, niche market opportunities, and founder-market fit signals that generalist analysts miss. Provide specific, evidence-based feedback grounded in the actual pitch content — never generic advice. Always respond with valid JSON.',
+          'You are a Principal at a Tier-1 VC firm with deep expertise across sectors. You have evaluated thousands of pitches and can identify non-obvious patterns, niche market opportunities, and founder-market fit signals that generalist analysts miss. Provide specific, evidence-based feedback grounded in the actual pitch content - never generic advice. Always respond with valid JSON.',
         user: analysisPrompt,
         temperature: 0.3,
         model: getAnalysisOpenRouterModel(),
@@ -383,27 +337,6 @@ Return valid JSON:
       }
 
       // (rest of handler expects `analysis` to exist below)
-
-      // Deduct credits AFTER successful analysis (skip premium, weekly free slot, admin bypass)
-      if (
-        shouldEnforceAiCredits(user.email) &&
-        !pitchIdeaIsPremium &&
-        !pitchIdeaUsesFreeWeeklySlot
-      ) {
-        try {
-          await db.userCredits.update({
-            where: { userId: user.id },
-            data: {
-              credits: { decrement: CREDIT_COSTS.PITCH_IDEA },
-            },
-          })
-          logger.log(`[ANALYZE-PITCH-IDEA] Deducted ${CREDIT_COSTS.PITCH_IDEA} credits`)
-        } catch (creditError: any) {
-          logger.error('[ANALYZE-PITCH-IDEA] Credit deduction failed:', creditError)
-        }
-      } else if (shouldEnforceAiCredits(user.email) && pitchIdeaUsesFreeWeeklySlot) {
-        logger.log('[ANALYZE-PITCH-IDEA] Weekly free pitch idea slot — no credits deducted')
-      }
 
       // Matching Pipeline v3
       const { getCachedInvestors } = await import('@/lib/investor-cache')

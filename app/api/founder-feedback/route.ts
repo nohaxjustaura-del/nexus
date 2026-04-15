@@ -4,8 +4,7 @@ import { getCurrentUser } from '@/lib/auth'
 import { logger } from '@/lib/logger'
 import OpenAI from 'openai'
 import { getLlmClient, getModelName } from '@/lib/openrouter'
-import { CREDIT_COSTS } from '@/lib/constants'
-import { shouldEnforceAiCredits } from '@/lib/dev-ai-analysis-bypass'
+import { getSubscriptionStatus, requiresPro } from '@/lib/subscription'
 import { rateLimitMiddleware, RATE_LIMITS } from '@/lib/rate-limit'
 
 // Get AI client - supports both OpenRouter and OpenAI
@@ -48,22 +47,12 @@ export async function POST(request: NextRequest) {
 
     const { analysisId, idea, pitchDeckText, videoTranscript } = await request.json()
 
-    // Check credits (admin bypass) - but don't deduct yet
-    if (shouldEnforceAiCredits(user.email)) {
-      const userCredits = await db.userCredits.findUnique({
-        where: { userId: user.id },
-      })
-
-      if (!userCredits || (!userCredits.isPremium && (userCredits.credits ?? 0) < CREDIT_COSTS.FOUNDER_FEEDBACK)) {
-        return NextResponse.json(
-          { 
-            error: 'Insufficient credits',
-            message: `Founder feedback costs ${CREDIT_COSTS.FOUNDER_FEEDBACK} credits. You have ${userCredits?.credits ?? 0} credits.`,
-            requiresPayment: true,
-          },
-          { status: 402 }
-        )
-      }
+    const sub = await getSubscriptionStatus(user.id, user.email)
+    if (requiresPro(sub)) {
+      return NextResponse.json(
+        { error: 'Upgrade Required', message: 'Upgrade to Pro for founder feedback.', requiresUpgrade: true },
+        { status: 403 },
+      )
     }
 
     // Note: Analysis model doesn't exist in schema
@@ -129,22 +118,6 @@ export async function POST(request: NextRequest) {
     })
 
     const feedback = completion.choices[0]?.message?.content || 'Unable to generate feedback at this time. Please try again.'
-
-    // Deduct credits AFTER successful analysis (admin bypass)
-    if (shouldEnforceAiCredits(user.email)) {
-      try {
-        await db.userCredits.update({
-          where: { userId: user.id },
-          data: {
-            credits: { decrement: CREDIT_COSTS.FOUNDER_FEEDBACK },
-          },
-        })
-        logger.log(`[FOUNDER-FEEDBACK] Deducted ${CREDIT_COSTS.FOUNDER_FEEDBACK} credits from user ${user.id}`)
-      } catch (creditError: any) {
-        // Log but don't fail the request if credit deduction fails
-        console.error('[FOUNDER-FEEDBACK] Error deducting credits:', creditError)
-      }
-    }
 
     // Note: Analysis model doesn't exist in schema
     // Saving feedback is temporarily disabled until Analysis model is added to schema

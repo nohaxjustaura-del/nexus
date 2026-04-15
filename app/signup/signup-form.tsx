@@ -13,7 +13,6 @@ import { cn } from '@/lib/utils'
 import { CLIENT_STORAGE } from '@/lib/client-storage-keys'
 import { useAuthSession } from '@/components/auth-session-provider'
 import { sanitizeAuthNextPathForUserType, signupCallbackPath } from '@/lib/auth-flow-paths'
-import { BRAND_NAME } from '@/lib/brand'
 import { AUTH_EMAIL_SPAM_DELIVERABILITY_LINE } from '@/lib/resend-user-messages'
 
 export function SignUpForm() {
@@ -38,6 +37,8 @@ export function SignUpForm() {
     const r = redirectUrl.trim()
     if (r === '/vc/claim' || r.startsWith('/vc/') || r === '/investor' || r.startsWith('/investor/')) {
       setUserType('investor')
+    } else if (r === '/mentor' || r.startsWith('/mentor/')) {
+      setUserType('mentor')
     } else if (r.startsWith('/founder/') || r === '/founder' || r.split('?')[0] === '/pricing') {
       setUserType('founder')
     }
@@ -45,14 +46,19 @@ export function SignUpForm() {
 
   useEffect(() => {
     if (authLoading || !authenticated) return
-    const isVc = user?.userType === 'vc' || user?.userType === 'investor'
-    const fallback = isVc
-      ? verified
-        ? '/investor/dashboard'
-        : '/investor/onboarding'
-      : verified
-        ? '/founder/dashboard'
-        : '/founder/onboarding'
+    const t = (user?.userType || '').toLowerCase()
+    const fallback =
+      t === 'vc' || t === 'investor'
+        ? verified
+          ? '/investor/dashboard'
+          : '/investor/onboarding'
+        : t === 'mentor'
+          ? verified
+            ? '/mentor/dashboard'
+            : '/mentor/onboarding'
+          : verified
+            ? '/founder/dashboard'
+            : '/founder/onboarding'
     const target = sanitizeAuthNextPathForUserType(
       redirectUrl ? redirectUrl : undefined,
       user?.userType,
@@ -145,7 +151,7 @@ export function SignUpForm() {
   return (
     <div className="min-h-screen bg-background">
       <div className="page-shell-narrow">
-        <div className="relative z-[1] mx-auto max-w-md py-4 md:py-6">
+        <div className="relative z-[1] mx-auto max-w-md py-6 md:py-10">
         <header className="mb-8 text-center">
           <Badge className="mb-3 px-2.5 py-0.5 text-xs font-medium" variant="secondary">
             <Mail className="mr-1.5 h-3.5 w-3.5" />
@@ -155,14 +161,14 @@ export function SignUpForm() {
             Create your account
           </h1>
           <p className="mx-auto mt-2 max-w-sm text-sm text-muted-foreground">
-            Pick how you&apos;ll use {BRAND_NAME}, then enter your email. We&apos;ll send a one-tap verification link.
+            Choose your role, enter your email, and get a one-tap verification link.
           </p>
           <p className="mx-auto mt-2 max-w-md text-xs text-muted-foreground leading-relaxed">
             {AUTH_EMAIL_SPAM_DELIVERABILITY_LINE}
           </p>
         </header>
 
-        <Card className="relative z-[1]">
+        <Card className="relative z-[1] border-border/60 bg-card/95 shadow-sm">
           <CardContent className="space-y-6 p-6 md:p-7">
             <form noValidate onSubmit={handleSubmit} className="space-y-6">
               <div className="space-y-2">
@@ -189,7 +195,7 @@ export function SignUpForm() {
                 <div
                   role="group"
                   aria-labelledby="account-type-label"
-                  className="flex gap-1 rounded-full border border-border/60 bg-muted/20 p-1"
+                  className="flex gap-1 rounded-full border border-border/70 bg-muted/40 p-1"
                 >
                   <button
                     type="button"
@@ -244,7 +250,7 @@ export function SignUpForm() {
               </Button>
 
               <p className="text-center text-xs text-muted-foreground">
-                By signing up, you agree to our Terms of Service and Privacy Policy
+                By signing up, you agree to our Terms and Privacy Policy
               </p>
 
               <div className="border-t border-border/50 pt-6">

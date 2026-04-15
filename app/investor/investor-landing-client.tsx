@@ -73,20 +73,20 @@ export default function InvestorLandingClient({
   return (
     <div className="relative bg-background text-foreground">
       <div
-        className="pointer-events-none absolute inset-x-0 top-0 h-[min(48vh,28rem)] bg-[radial-gradient(ellipse_80%_50%_at_50%_-10%,hsl(var(--primary)/0.09),transparent_58%)]"
+        className="pointer-events-none absolute inset-x-0 top-0 h-[min(48vh,28rem)] bg-[radial-gradient(ellipse_80%_50%_at_50%_-10%,hsl(var(--primary)/0.05),transparent_60%)]"
         aria-hidden
       />
 
-      <section className="relative border-b border-border/30 pb-14 pt-12 sm:pb-16 sm:pt-16 md:pt-20">
+      <section className="relative section-shell pt-12 sm:pt-16 md:pt-20">
         <div className="page-shell-x">
           <div className="mx-auto max-w-3xl text-center">
-          <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+          <p className="eyebrow-label text-[11px]">
             Investors &amp; funds
           </p>
-          <h1 className="mt-4 font-heading text-4xl font-semibold tracking-tight text-balance md:text-5xl md:leading-[1.08]">
+          <h1 className="hero-title mt-4">
             Meet founders who already fit your thesis
           </h1>
-          <p className="mx-auto mt-5 max-w-2xl text-balance text-base leading-relaxed text-muted-foreground sm:text-lg">
+          <p className="hero-copy mt-5">
             {BRAND_NAME} is built for double opt-in intros. Claim your verified listing, keep your mandate current, and
             review applicants alongside the same verified graph of {verifiedInvestorCountLabel}+ investor profiles
             founders use for discovery.
@@ -111,7 +111,7 @@ export default function InvestorLandingClient({
         </div>
       </section>
 
-      <section className="border-b border-border/30 py-14 sm:py-16" aria-labelledby="investor-cap-heading">
+      <section className="section-shell" aria-labelledby="investor-cap-heading">
         <div className="page-shell-x">
           <div className="mx-auto w-full max-w-6xl">
           <div className="max-w-2xl">
@@ -171,10 +171,7 @@ export default function InvestorLandingClient({
                 body: 'Use Log in from the header; investors route to claim until the profile is approved.',
               },
             ].map(({ icon: Icon, title, body }) => (
-              <li
-                key={title}
-                className="rounded-2xl border border-border/40 bg-card/50 p-5 ring-1 ring-border/20"
-              >
+              <li key={title} className="minimal-feature-card">
                 <div className="flex items-start gap-3">
                   <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border/50 bg-muted/30 text-primary">
                     <Icon className="h-5 w-5" aria-hidden />
@@ -191,7 +188,7 @@ export default function InvestorLandingClient({
         </div>
       </section>
 
-      <section className="border-b border-border/30 py-14 sm:py-16" aria-labelledby="investor-steps-heading">
+      <section className="section-shell" aria-labelledby="investor-steps-heading">
         <div className="page-shell-x">
           <div className="mx-auto w-full max-w-6xl">
           <h2 id="investor-steps-heading" className="font-heading text-2xl font-semibold tracking-tight md:text-3xl">
@@ -215,7 +212,7 @@ export default function InvestorLandingClient({
                 body: 'Use the investor dashboard to scan founder profiles, drill into fit context, and bookmark prospects.',
               },
             ].map(({ step, title, body }) => (
-              <li key={step} className="relative rounded-2xl border border-border/40 bg-muted/[0.08] p-6">
+              <li key={step} className="minimal-step-card">
                 <span className="font-mono text-xs font-semibold text-primary">{step}</span>
                 <h3 className="mt-2 font-heading text-lg font-semibold">{title}</h3>
                 <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{body}</p>
@@ -259,7 +256,7 @@ export default function InvestorLandingClient({
         </div>
       </section>
 
-      <section className="border-t border-border/30 bg-muted/[0.06] py-14 sm:py-16">
+      <section className="border-t border-border/50 bg-card/40 py-14 sm:py-16">
         <div className="page-shell-x">
           <div className="mx-auto flex w-full max-w-4xl flex-col items-center gap-6 text-center">
           <h2 className="font-heading text-2xl font-semibold tracking-tight md:text-3xl">Claim your mandate</h2>

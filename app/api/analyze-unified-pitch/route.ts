@@ -6,8 +6,7 @@ import { runMatchingPipeline } from '@/lib/matching/matching-orchestrator'
 import { runScoringPipeline } from '@/lib/scoring/scoring-pipeline'
 import { logger } from '@/lib/logger'
 import { validatePitchDeck, validateVideoPitch, validatePitchIdea } from '@/lib/content-validator'
-import { CREDIT_COSTS } from '@/lib/constants'
-import { shouldEnforceAiCredits } from '@/lib/dev-ai-analysis-bypass'
+import { getSubscriptionStatus, requiresPro } from '@/lib/subscription'
 import { rateLimitMiddleware, RATE_LIMITS } from '@/lib/rate-limit'
 import { parseJSON } from '@/lib/utils'
 import { getComprehensiveFounderContext } from '@/lib/founder-context'
@@ -91,28 +90,12 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const creditCost =
-      reviewType === 'reviewer' ? CREDIT_COSTS.VIDEO_PITCH.REVIEWER : CREDIT_COSTS.UNIFIED_PITCH
-
-    if (shouldEnforceAiCredits(user.email)) {
-      let userCredits = await db.userCredits.findUnique({ where: { userId: user.id } })
-      if (!userCredits) {
-        userCredits = await db.userCredits.create({
-          data: { userId: user.id, credits: 0, isPremium: false },
-        })
-      }
-      if (!userCredits.isPremium && (userCredits.credits ?? 0) < creditCost) {
-        return NextResponse.json(
-          {
-            error: 'Insufficient Credits',
-            message: `Unified pitch analysis costs ${creditCost} credits. You have ${userCredits.credits ?? 0} credits.`,
-            requiresPayment: true,
-            creditCost,
-            currentCredits: userCredits.credits ?? 0,
-          },
-          { status: 402 },
-        )
-      }
+    const sub = await getSubscriptionStatus(user.id, user.email)
+    if (requiresPro(sub)) {
+      return NextResponse.json(
+        { error: 'Upgrade Required', message: 'Upgrade to Pro for unlimited pitch analyses.', requiresUpgrade: true },
+        { status: 403 },
+      )
     }
 
     const warnings: string[] = []
@@ -324,17 +307,6 @@ export async function POST(request: NextRequest) {
         },
       })
 
-      if (shouldEnforceAiCredits(user.email)) {
-        try {
-          await db.userCredits.update({
-            where: { userId: user.id },
-            data: { credits: { decrement: creditCost } },
-          })
-        } catch (e) {
-          logger.error('[UNIFIED-PITCH] credit deduct failed', e)
-        }
-      }
-
       return NextResponse.json({
         success: true,
         reviewId: review.id,
@@ -535,17 +507,6 @@ export async function POST(request: NextRequest) {
       videoPitch.id,
       ventureNameOverride ? { ventureNameOverride } : undefined,
     ).catch(e => logger.error('[UNIFIED-PITCH] upsertFounderAnalysisSummary failed', e))
-
-    if (shouldEnforceAiCredits(user.email)) {
-      try {
-        await db.userCredits.update({
-          where: { userId: user.id },
-          data: { credits: { decrement: creditCost } },
-        })
-      } catch (e) {
-        logger.error('[UNIFIED-PITCH] credit deduct failed', e)
-      }
-    }
 
     return NextResponse.json({
       success: true,

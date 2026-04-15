@@ -1,9 +1,13 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import VCSearchSimple from "@/components/vc-search-simple"
-import VCCardsGrid from "@/components/vc-cards-grid"
-import Link from "next/link"
+import { useEffect, useMemo, useState } from 'react'
+import VCSearchSimple from '@/components/vc-search-simple'
+import VCCardsGrid from '@/components/vc-cards-grid'
+import InvestorTable from '@/components/investor-intelligence/InvestorTable'
+import Link from 'next/link'
+import { Button } from '@/components/ui/button'
+import { LayoutGrid, Table2 } from 'lucide-react'
+import { cn } from '@/lib/utils'
 
 interface DiscoverClientProps {
   investors: Array<{
@@ -33,9 +37,19 @@ interface DiscoverClientProps {
   profileComplete: boolean
 }
 
+type ViewMode = 'table' | 'cards'
+
 export default function DiscoverClient({ investors, profileComplete }: DiscoverClientProps) {
   const [bookmarkedIds, setBookmarkedIds] = useState<Set<string>>(new Set())
-  const safeInvestors = Array.isArray(investors) ? investors : []
+  const safeInvestors = useMemo(() => (Array.isArray(investors) ? investors : []), [investors])
+  const [visibleCount, setVisibleCount] = useState(24)
+  const [viewMode, setViewMode] = useState<ViewMode>('table')
+  const hasMore = safeInvestors.length > visibleCount
+  const visibleInvestors = useMemo(() => safeInvestors.slice(0, visibleCount), [safeInvestors, visibleCount])
+
+  useEffect(() => {
+    setVisibleCount(24)
+  }, [safeInvestors.length])
 
   useEffect(() => {
     fetch('/api/bookmarks', { credentials: 'include' })
@@ -57,37 +71,77 @@ export default function DiscoverClient({ investors, profileComplete }: DiscoverC
         <div className="min-w-0 flex-1">
           <VCSearchSimple />
         </div>
-        <Link
-          href="/founder/ai-analysis"
-          className="shrink-0 text-sm font-medium text-primary underline-offset-4 hover:underline"
-        >
-          Analyze pitch for ranked matches →
-        </Link>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center rounded-lg border border-border/60 bg-muted/30 p-0.5">
+            <button
+              onClick={() => setViewMode('table')}
+              className={cn(
+                'rounded-md p-1.5 transition-colors',
+                viewMode === 'table'
+                  ? 'bg-card text-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground'
+              )}
+              title="Table view"
+            >
+              <Table2 className="h-4 w-4" />
+            </button>
+            <button
+              onClick={() => setViewMode('cards')}
+              className={cn(
+                'rounded-md p-1.5 transition-colors',
+                viewMode === 'cards'
+                  ? 'bg-card text-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground'
+              )}
+              title="Card view"
+            >
+              <LayoutGrid className="h-4 w-4" />
+            </button>
+          </div>
+          <Link
+            href="/founder/ai-analysis"
+            className="shrink-0 text-sm font-medium text-primary underline-offset-4 hover:underline"
+          >
+            Analyze for ranked matches
+          </Link>
+        </div>
       </div>
 
       {safeInvestors.length > 0 ? (
-        <VCCardsGrid 
-          investors={safeInvestors} 
-          profileComplete={profileComplete}
-          bookmarkedIds={bookmarkedIds}
-          onBookmarkChange={(investorId: string, isBookmarked: boolean) => {
-            setBookmarkedIds(prev => {
-              const next = new Set(prev)
-              if (isBookmarked) {
-                next.add(investorId)
-              } else {
-                next.delete(investorId)
-              }
-              return next
-            })
-          }}
-        />
+        <>
+          {viewMode === 'table' ? (
+            <InvestorTable investors={visibleInvestors} totalCount={safeInvestors.length} />
+          ) : (
+            <VCCardsGrid
+              investors={visibleInvestors}
+              profileComplete={profileComplete}
+              bookmarkedIds={bookmarkedIds}
+              onBookmarkChange={(investorId: string, isBookmarked: boolean) => {
+                setBookmarkedIds((prev) => {
+                  const next = new Set(prev)
+                  if (isBookmarked) {
+                    next.add(investorId)
+                  } else {
+                    next.delete(investorId)
+                  }
+                  return next
+                })
+              }}
+            />
+          )}
+          {hasMore ? (
+            <div className="mt-6 flex justify-center">
+              <Button variant="outline" onClick={() => setVisibleCount((prev) => prev + 24)}>
+                Load 24 more investors
+              </Button>
+            </div>
+          ) : null}
+        </>
       ) : (
         <div className="py-12 text-center text-sm text-muted-foreground">
-          No investors match. Try search or switch to &quot;All&quot; for the full directory.
+          No matches yet. Adjust search or switch to &quot;All&quot;.
         </div>
       )}
     </>
   )
 }
-

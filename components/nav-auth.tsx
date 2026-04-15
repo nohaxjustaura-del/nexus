@@ -5,7 +5,6 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { buttonVariants } from '@/components/ui/button'
 import { LogoutButton } from '@/components/logout-button'
-import { CreditCounter } from '@/components/credit-counter'
 import { NotificationBell } from '@/components/notification-bell'
 import { User } from 'lucide-react'
 import { useAuthSession } from '@/components/auth-session-provider'
@@ -27,13 +26,6 @@ export const NavAuth = memo(function NavAuth() {
   if (authenticated) {
     return (
       <div className="flex items-center gap-3" suppressHydrationWarning>
-        {verified && (
-          <>
-            <CreditCounter variant="badge" showClaimButton={false} className="flex shrink-0" />
-            <div className="hidden sm:block h-5 w-px bg-border shrink-0" aria-hidden />
-          </>
-        )}
-
         <div className="flex flex-wrap items-center justify-end gap-1.5 sm:gap-2">
           {verified ? (
             <>

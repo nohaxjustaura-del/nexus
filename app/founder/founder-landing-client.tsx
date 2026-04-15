@@ -61,20 +61,19 @@ export default function FounderLandingClient({
   return (
     <div className="relative bg-background text-foreground">
       <div
-        className="pointer-events-none absolute inset-x-0 top-0 h-[min(48vh,28rem)] bg-[radial-gradient(ellipse_80%_50%_at_50%_-10%,hsl(var(--primary)/0.1),transparent_58%)]"
+        className="pointer-events-none absolute inset-x-0 top-0 h-[min(48vh,28rem)] bg-[radial-gradient(ellipse_80%_50%_at_50%_-10%,hsl(var(--primary)/0.075),transparent_58%)]"
         aria-hidden
       />
 
-      <section className="relative border-b border-border/30 pb-14 pt-12 sm:pb-16 sm:pt-16 md:pt-20">
+      <section className="relative section-shell pt-12 sm:pt-16 md:pt-20">
         <div className="page-shell-x">
           <div className="mx-auto max-w-3xl text-center">
-          <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">Founders</p>
-          <h1 className="mt-4 font-heading text-4xl font-semibold tracking-tight text-balance md:text-5xl md:leading-[1.08]">
-            Raise with a shortlist built for your stage, sector, and story
+          <p className="eyebrow-label text-[11px]">Founders</p>
+          <h1 className="hero-title mt-4">
+            Stop cold-emailing the wrong investors
           </h1>
-          <p className="mx-auto mt-5 max-w-2xl text-balance text-base leading-relaxed text-muted-foreground sm:text-lg">
-            {BRAND_TAGLINE}. {BRAND_NAME} scores your materials in an allocator-style lens, then ranks who actually
-            fits from {verifiedInvestorCountLabel}+ verified mandates, not a generic list from a chat model.
+          <p className="hero-copy mt-5">
+            {BRAND_NAME} reads your pitch like an investor would, scores fit, and builds a ranked shortlist of who to talk to first from {verifiedInvestorCountLabel} verified profiles.
           </p>
           <div className="mt-10 flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:items-center">
             <Button asChild size="lg" className="rounded-xl px-6">
@@ -90,13 +89,13 @@ export default function FounderLandingClient({
             </Button>
           </div>
           <p className="mt-4 text-xs text-muted-foreground">
-            No deck required to explore the directory. Add your profile when you are ready for matches and outreach.
+            Explore without a deck. Add your profile when you want ranked matches.
           </p>
           </div>
         </div>
       </section>
 
-      <section className="border-b border-border/30 py-14 sm:py-16" aria-labelledby="founder-cap-heading">
+      <section className="section-shell" aria-labelledby="founder-cap-heading">
         <div className="page-shell-x">
           <div className="mx-auto w-full max-w-6xl">
           <div className="max-w-2xl">
@@ -104,8 +103,7 @@ export default function FounderLandingClient({
               Everything in one founder workspace
             </h2>
             <p className="mt-3 text-sm leading-relaxed text-muted-foreground sm:text-[15px]">
-              From first draft to investor conversations: analysis, discovery, saved lists, and tailored prep, wired
-              to the same graph of verified investors.
+              From first draft to outreach: analysis, discovery, saved lists, and prep in one workspace.
             </p>
           </div>
           <ul className="mt-10 grid gap-4 sm:grid-cols-2 md:gap-6 lg:grid-cols-3">
@@ -113,17 +111,17 @@ export default function FounderLandingClient({
               {
                 icon: Sparkles,
                 title: 'Allocator-style analysis',
-                body: 'Deck, resume, or narrative: structured scores and feedback aligned with how investors read risk.',
+                body: 'Structured feedback on deck, resume, or narrative.',
               },
               {
                 icon: Search,
                 title: 'Discover & filters',
-                body: `Search ${verifiedInvestorCountLabel}+ profiles by stage, sector, check size, geography, and more.`,
+                body: `Search ${verifiedInvestorCountLabel}+ profiles by stage, sector, and check size.`,
               },
               {
                 icon: Target,
                 title: 'Ranked matches',
-                body: 'Shortlists with rationale tied to your profile, not hand-wavy “try these ten funds.”',
+                body: 'Shortlists with clear rationale tied to your profile.',
               },
               {
                 icon: FileText,
@@ -138,7 +136,7 @@ export default function FounderLandingClient({
               {
                 icon: Shield,
                 title: 'Verification & quality',
-                body: 'Directory entries are maintained and checked so you are not chasing stale or junk listings.',
+                body: 'Maintained listings so you avoid stale or low-quality leads.',
               },
               {
                 icon: Video,
@@ -156,10 +154,7 @@ export default function FounderLandingClient({
                 body: 'Curated partner resources when your plan includes the founder network.',
               },
             ].map(({ icon: Icon, title, body }) => (
-              <li
-                key={title}
-                className="rounded-2xl border border-border/40 bg-card/50 p-5 ring-1 ring-border/20"
-              >
+              <li key={title} className="minimal-feature-card">
                 <div className="flex items-start gap-3">
                   <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border/50 bg-muted/30 text-primary">
                     <Icon className="h-5 w-5" aria-hidden />
@@ -176,7 +171,7 @@ export default function FounderLandingClient({
         </div>
       </section>
 
-      <section className="border-b border-border/30 py-14 sm:py-16" aria-labelledby="founder-steps-heading">
+      <section className="section-shell" aria-labelledby="founder-steps-heading">
         <div className="page-shell-x">
           <div className="mx-auto w-full max-w-6xl">
           <h2 id="founder-steps-heading" className="font-heading text-2xl font-semibold tracking-tight md:text-3xl">
@@ -200,7 +195,7 @@ export default function FounderLandingClient({
                 body: 'Bookmark firms, open crash courses, and draft outreach from the same workspace.',
               },
             ].map(({ step, title, body }) => (
-              <li key={step} className="relative rounded-2xl border border-border/40 bg-muted/[0.08] p-6">
+              <li key={step} className="minimal-step-card">
                 <span className="font-mono text-xs font-semibold text-primary">{step}</span>
                 <h3 className="mt-2 font-heading text-lg font-semibold">{title}</h3>
                 <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{body}</p>
@@ -269,7 +264,7 @@ export default function FounderLandingClient({
                 <Link
                   href={
                     label === 'Why NEXUS'
-                      ? '/why-nexus'
+                      ? '/#why-nexus'
                       : label === 'Pricing'
                         ? authenticated && verified
                           ? '/pricing'

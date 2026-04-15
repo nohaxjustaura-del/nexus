@@ -12,19 +12,22 @@ import {
   Sparkles,
   ArrowRight,
   ExternalLink,
-  RefreshCw,
   Video,
   Presentation,
   Lightbulb,
   Layers,
   Search,
   Filter,
-  X
+  X,
+  ChevronDown,
 } from "lucide-react"
 import Link from "next/link"
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
+import { cn } from "@/lib/utils"
 import { PitchFeedbackComparison } from "@/components/pitch-feedback-comparison"
 import { getRubricSectionScoresFromResult } from "@/lib/analysis/is-safe-rubric-for-dashboard"
 import { legacyNexusExtrasEnabled } from '@/lib/nexus-surface-flags'
+import { FounderWorkspaceTabs } from "@/components/founder-workspace-tabs"
 
 function newAnalysisEntryHref(
   type: 'unified-pitch' | 'video-pitch' | 'pitch-idea' | 'pitch-deck' | string,
@@ -91,6 +94,8 @@ export default function MyAnalysesPage() {
     'all' | 'video-pitch' | 'unified-pitch' | 'pitch-deck' | 'pitch-idea'
   >('all')
   const [sortBy, setSortBy] = useState<'date' | 'score'>('date')
+  /** Expanded detail sections — default collapsed to keep the list scannable */
+  const [expandedCards, setExpandedCards] = useState<Record<string, boolean>>({})
 
   const loadAnalyses = async () => {
     try {
@@ -212,43 +217,17 @@ export default function MyAnalysesPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="container mx-auto px-4 py-4 md:py-6">
-        {/* Tab Navigation */}
-        <div className="mb-4 border-b border-border">
-          <nav className="flex items-center gap-1 -mb-px">
-            <Link
-              href="/founder/discover"
-              className="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
-            >
-              Discover
-            </Link>
-            <Link
-              href="/founder/matches"
-              className="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
-            >
-              Matches
-            </Link>
-            <Link
-              href="/founder/bookmarks"
-              className="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
-            >
-              Bookmarks
-            </Link>
-            <Link
-              href="/founder/my-analyses"
-              className="px-4 py-2 text-sm font-medium border-b-2 border-primary text-primary"
-            >
-              My Analyses
-            </Link>
-          </nav>
+      <div className="page-shell-narrow">
+        <div className="mb-4">
+          <FounderWorkspaceTabs />
         </div>
 
         <div className="mb-6">
-          <h1 className="mb-2 text-3xl md:text-4xl font-bold bg-gradient-to-r from-primary via-blue-600 to-purple-600 bg-clip-text text-transparent">
+          <h1 className="mb-2 text-3xl font-semibold tracking-tight text-foreground md:text-4xl">
             My Analyses
           </h1>
           <p className="text-muted-foreground text-lg">
-            Past pitch runs, feedback, and investor matches in one place
+            Reports and investor fit in one place
           </p>
         </div>
 
@@ -268,7 +247,7 @@ export default function MyAnalysesPage() {
                 <div className="flex-1 relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground/65" />
                   <Input
-                    placeholder="Search analyses by filename or type..."
+                    placeholder="Search by file or type"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="pl-10"
@@ -276,6 +255,7 @@ export default function MyAnalysesPage() {
                   {searchQuery && (
                     <button
                       onClick={() => setSearchQuery('')}
+                      aria-label="Clear search"
                       className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground/65 hover:text-foreground"
                     >
                       <X className="h-4 w-4" />
@@ -291,11 +271,11 @@ export default function MyAnalysesPage() {
                     onChange={(e) => setTypeFilter(e.target.value as any)}
                     className="px-3 py-2 border border-border bg-card rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary text-foreground"
                   >
-                    <option value="all">All Types</option>
-                    <option value="unified-pitch">Unified Pitch</option>
-                    <option value="video-pitch">Video Pitch</option>
-                    <option value="pitch-deck">Pitch Deck</option>
-                    <option value="pitch-idea">Pitch Idea</option>
+                    <option value="all">All</option>
+                    <option value="unified-pitch">Unified</option>
+                    <option value="video-pitch">Video</option>
+                    <option value="pitch-deck">Deck</option>
+                    <option value="pitch-idea">Idea</option>
                   </select>
                 </div>
 
@@ -306,8 +286,8 @@ export default function MyAnalysesPage() {
                     onChange={(e) => setSortBy(e.target.value as 'date' | 'score')}
                     className="px-3 py-2 border border-border bg-card rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary text-foreground"
                   >
-                    <option value="date">Sort by Date</option>
-                    <option value="score">Sort by Score</option>
+                    <option value="date">Newest</option>
+                    <option value="score">Best score</option>
                   </select>
                 </div>
               </div>
@@ -330,8 +310,7 @@ export default function MyAnalysesPage() {
               </div>
               <h3 className="text-2xl font-bold mb-3">No Analyses Yet</h3>
               <p className="text-muted-foreground mb-8 max-w-lg mx-auto text-base leading-relaxed">
-                Feedback and investor matches from your pitch materials. Start a full pitch review with deck, video,
-                and written context in one flow.
+                Run your first analysis to get feedback and matches.
               </p>
               <Link href="/founder/ai-analysis">
                 <Button size="lg" className="min-w-[200px] bg-gradient-to-r from-primary to-blue-600 hover:from-primary/90 hover:to-blue-600/90">
@@ -350,8 +329,8 @@ export default function MyAnalysesPage() {
               <h3 className="text-xl font-bold mb-2">No analyses found</h3>
               <p className="text-muted-foreground mb-4">
                 {searchQuery || typeFilter !== 'all' 
-                  ? 'Try adjusting your search or filters'
-                  : 'Get started by analyzing your pitch materials'}
+                  ? 'Try a different filter'
+                  : 'Run an analysis to start'}
               </p>
               {(searchQuery || typeFilter !== 'all') && (
                 <Button
@@ -368,68 +347,110 @@ export default function MyAnalysesPage() {
           </Card>
         ) : (
           <div className="space-y-4">
-            {filteredAndSortedAnalyses.map((analysis) => (
-              <Card key={analysis.id} className="hover:shadow-medium transition-all duration-300 border border-border hover:border-primary/40 overflow-hidden relative group">
+            {filteredAndSortedAnalyses.map((analysis) => {
+              const detailsOpen = expandedCards[analysis.id] ?? false
+              const setDetailsOpen = (open: boolean) =>
+                setExpandedCards((prev) => ({ ...prev, [analysis.id]: open }))
+
+              return (
+              <Card key={analysis.id} className="relative overflow-hidden border border-border/60 transition-all duration-200 hover:border-primary/40">
                 {/* Gradient accent bar */}
-                <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-primary via-blue-500 to-purple-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                
-                <CardHeader className="bg-gradient-to-br from-muted/40 to-card pb-4 border-b border-border/60">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <CardTitle className="flex items-center gap-2 text-lg font-bold">
-                        <div className="p-2 rounded-lg bg-primary/10">
-                          {analysis.type === 'unified-pitch' && <Layers className="h-5 w-5 text-primary" />}
-                          {analysis.type === 'video-pitch' && <Video className="h-5 w-5 text-primary" />}
-                          {analysis.type === 'pitch-deck' && <Presentation className="h-5 w-5 text-primary" />}
-                          {analysis.type === 'pitch-idea' && <Lightbulb className="h-5 w-5 text-primary" />}
-                        </div>
-                        {analysis.type === 'unified-pitch' ? 'Unified Pitch Analysis' :
-                         analysis.type === 'video-pitch' ? 'Video Pitch Analysis Report' :
-                         analysis.type === 'pitch-deck' ? 'Pitch Deck Analysis Report' :
-                         'Pitch Idea Analysis Report'}
-                      </CardTitle>
-                      <CardDescription className="mt-2 flex items-center gap-2">
-                        <Calendar className="h-4 w-4" />
-                        Analyzed {new Date(analysis.createdAt).toLocaleDateString('en-US', {
-                          year: 'numeric',
-                          month: 'long',
-                          day: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit',
-                        })}
-                        {analysis.fileName && (
-                          <>
-                            <span className="text-muted-foreground/50">•</span>
-                            <span className="text-xs">{analysis.fileName}</span>
-                          </>
-                        )}
-                      </CardDescription>
-                    </div>
-                    <div className="text-right">
-                      {analysis.compatibilityScore > 0 ? (
-                        <>
-                          <div className="text-4xl font-bold bg-gradient-to-r from-primary via-blue-600 to-purple-600 bg-clip-text text-transparent">
-                            {Math.round(analysis.compatibilityScore)}
+                <div className="absolute left-0 right-0 top-0 h-1 bg-primary/45" />
+
+                {analysis.result ? (
+                <Collapsible open={detailsOpen} onOpenChange={setDetailsOpen}>
+                  <CardHeader className="border-b border-border/60 bg-muted/25 pb-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <CardTitle className="flex items-center gap-2 text-lg font-bold">
+                          <div className="p-2 rounded-lg bg-primary/10 shrink-0">
+                            {analysis.type === 'unified-pitch' && <Layers className="h-5 w-5 text-primary" />}
+                            {analysis.type === 'video-pitch' && <Video className="h-5 w-5 text-primary" />}
+                            {analysis.type === 'pitch-deck' && <Presentation className="h-5 w-5 text-primary" />}
+                            {analysis.type === 'pitch-idea' && <Lightbulb className="h-5 w-5 text-primary" />}
                           </div>
-                          <div className="text-xs font-medium text-muted-foreground">Rubric / fit score</div>
-                          {analysis.confidence && analysis.confidence > 0 && (
-                            <div className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
-                              <TrendingUp className="h-3 w-3" />
-                              {analysis.confidence}% confidence
-                            </div>
+                          <span className="min-w-0">
+                            {analysis.type === 'unified-pitch' ? 'Unified Pitch Analysis' :
+                             analysis.type === 'video-pitch' ? 'Video Analysis' :
+                             analysis.type === 'pitch-deck' ? 'Deck Analysis' :
+                             'Idea Analysis'}
+                          </span>
+                        </CardTitle>
+                        <CardDescription className="mt-2 flex flex-wrap items-center gap-2">
+                          <Calendar className="h-4 w-4 shrink-0" />
+                          <span>
+                            Analyzed {new Date(analysis.createdAt).toLocaleDateString('en-US', {
+                              year: 'numeric',
+                              month: 'long',
+                              day: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            })}
+                          </span>
+                          {analysis.fileName && (
+                            <>
+                              <span className="text-muted-foreground/50">•</span>
+                              <span className="text-xs break-all">{analysis.fileName}</span>
+                            </>
                           )}
-                        </>
-                      ) : (
-                        <Badge variant="outline" className="text-xs">
-                          Pending Analysis
-                        </Badge>
-                      )}
+                        </CardDescription>
+                      </div>
+                      <div className="flex shrink-0 flex-col items-end gap-2">
+                        {analysis.compatibilityScore > 0 ? (
+                          <>
+                            <div className="text-3xl font-bold bg-gradient-to-r from-primary via-blue-600 to-purple-600 bg-clip-text text-transparent tabular-nums sm:text-4xl">
+                              {Math.round(analysis.compatibilityScore)}
+                            </div>
+                            <div className="text-xs font-medium text-muted-foreground">Fit score</div>
+                            {analysis.confidence && analysis.confidence > 0 && (
+                              <div className="text-xs text-muted-foreground flex items-center gap-1">
+                                <TrendingUp className="h-3 w-3" />
+                                {analysis.confidence}% confidence
+                              </div>
+                            )}
+                          </>
+                        ) : (
+                          <Badge variant="outline" className="text-xs">
+                            Pending Analysis
+                          </Badge>
+                        )}
+                        <CollapsibleTrigger asChild>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="mt-1 gap-1.5"
+                            aria-expanded={detailsOpen}
+                          >
+                            {detailsOpen ? 'Less' : 'Details'}
+                            <ChevronDown
+                              className={cn('h-4 w-4 transition-transform', detailsOpen && 'rotate-180')}
+                              aria-hidden
+                            />
+                          </Button>
+                        </CollapsibleTrigger>
+                      </div>
                     </div>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  {analysis.result ? (
-                    <>
+                  </CardHeader>
+
+                  {!detailsOpen && (
+                    <div className="flex flex-col gap-3 border-b border-border/60 bg-muted/20 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
+                        <p className="text-xs text-muted-foreground">
+                        Open details for score breakdown and match notes.
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        <Link href={`/founder/analyses/${analysis.id}`}>
+                          <Button size="sm" className="bg-gradient-to-r from-primary to-blue-600 hover:from-primary/90 hover:to-blue-600/90">
+                            View report
+                            <ArrowRight className="ml-2 h-4 w-4" />
+                          </Button>
+                        </Link>
+                      </div>
+                    </div>
+                  )}
+
+                  <CollapsibleContent>
+                    <CardContent>
                       {(() => {
                         const rubricScores = getRubricSectionScoresFromResult(analysis.result)
                         if (!rubricScores) return null
@@ -457,7 +478,7 @@ export default function MyAnalysesPage() {
                             ) : (
                               <Video className="h-4 w-4" />
                             )}
-                            {analysis.type === 'unified-pitch' ? 'Unified pitch' : 'Video Pitch Analysis'}
+                            {analysis.type === 'unified-pitch' ? 'Unified pitch' : 'Video pitch'}
                           </h4>
                           {analysis.fileName && (
                             <p className="text-xs text-muted-foreground">
@@ -480,7 +501,7 @@ export default function MyAnalysesPage() {
                         <div className="mb-4">
                           <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
                             <TrendingUp className="h-4 w-4 text-primary" />
-                            Top {topMatches.length} investor matches
+                            Top {topMatches.length} matches
                           </h4>
                           <div className="space-y-2">
                             {topMatches.map((match: any, i: number) => {
@@ -531,7 +552,12 @@ export default function MyAnalysesPage() {
                                     }
                                   }}
                                 >
-                                  <Button variant="ghost" size="sm" className="hover:bg-primary/10 hover:text-primary">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="hover:bg-primary/10 hover:text-primary"
+                                    aria-label={`Open ${match.firmName || match.investor?.firmName || 'investor'} link`}
+                                  >
                                     <ExternalLink className="h-4 w-4" />
                                   </Button>
                                 </a>
@@ -542,7 +568,7 @@ export default function MyAnalysesPage() {
                           </div>
                           {cleanMatches.length > 5 && (
                             <p className="text-xs text-muted-foreground mt-2 text-center">
-                              +{cleanMatches.length - 5} more matches available
+                              +{cleanMatches.length - 5} more
                             </p>
                           )}
                         </div>
@@ -555,64 +581,96 @@ export default function MyAnalysesPage() {
                           <h4 className="text-sm font-semibold mb-2">Pitch Deck</h4>
                           <a href={analysis.url} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline flex items-center gap-2">
                             <ExternalLink className="h-4 w-4" />
-                            View Pitch Deck
+                            Open deck
                           </a>
                         </div>
                       )}
 
                       {/* Actions */}
-                      <div className="flex flex-col gap-3 pt-4 border-t border-border sm:flex-row sm:flex-wrap">
-                        <Link href={`/founder/analyses/${analysis.id}`} className="min-w-[140px] flex-1">
+                      <div className="flex flex-col gap-3 pt-4 border-t border-border sm:flex-row sm:items-center">
+                        <Link href={`/founder/analyses/${analysis.id}`} className="sm:min-w-[170px]">
                           <Button className="w-full bg-gradient-to-r from-primary to-blue-600 hover:from-primary/90 hover:to-blue-600/90 shadow-sm hover:shadow-md transition-all font-semibold">
-                            View full analysis
+                            View report
                             <ArrowRight className="ml-2 h-4 w-4" />
                           </Button>
                         </Link>
                         {(analysis.result?.matches?.length > 0 || analysis.result?.matchedVCs?.length > 0) && (
-                          <Link href={`/founder/matches?analysis=${analysis.id}`} className="min-w-[140px] flex-1">
+                          <Link href={`/founder/matches?analysis=${analysis.id}`} className="sm:min-w-[140px]">
                             <Button variant="outline" className="w-full border-border hover:border-primary hover:bg-primary/5">
                               <TrendingUp className="mr-2 h-4 w-4" />
-                              Investor matches
+                              Matches
                             </Button>
                           </Link>
                         )}
-                        <Link href={newAnalysisEntryHref(analysis.type)} className="min-w-[140px] flex-1">
+                        <Link href={newAnalysisEntryHref(analysis.type)} className="sm:min-w-[140px]">
                           <Button variant="outline" className="w-full border-border hover:border-primary hover:bg-primary/5 transition-all">
                             <Sparkles className="mr-2 h-4 w-4" />
-                            {newAnalysisEntryLabel(analysis.type)}
+                            Run again
                           </Button>
                         </Link>
-                        {analysis.type === 'pitch-deck' && analysis.url ? (
-                          <a
-                            href={analysis.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="min-w-[140px] flex-1"
-                          >
-                            <Button variant="outline" className="w-full">
-                              Open deck file
-                              <ExternalLink className="ml-2 h-4 w-4" />
-                            </Button>
-                          </a>
-                        ) : null}
                       </div>
-                    </>
-                  ) : (
-                    <div className="text-center py-8">
-                      <p className="text-muted-foreground mb-4">
-                        Analysis data unavailable. Please run a new analysis.
-                      </p>
-                      <Link href={legacyNexusExtrasEnabled() ? '/founder/video-pitch' : '/founder/ai-analysis'}>
-                        <Button>
-                          Start New Analysis
-                          <ArrowRight className="ml-2 h-4 w-4" />
-                        </Button>
-                      </Link>
-                    </div>
-                  )}
-                </CardContent>
+                    </CardContent>
+                  </CollapsibleContent>
+                </Collapsible>
+                ) : (
+                  <>
+                    <CardHeader className="bg-gradient-to-br from-muted/40 to-card pb-4 border-b border-border/60">
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <CardTitle className="flex items-center gap-2 text-lg font-bold">
+                            <div className="p-2 rounded-lg bg-primary/10">
+                              {analysis.type === 'unified-pitch' && <Layers className="h-5 w-5 text-primary" />}
+                              {analysis.type === 'video-pitch' && <Video className="h-5 w-5 text-primary" />}
+                              {analysis.type === 'pitch-deck' && <Presentation className="h-5 w-5 text-primary" />}
+                              {analysis.type === 'pitch-idea' && <Lightbulb className="h-5 w-5 text-primary" />}
+                            </div>
+                            {analysis.type === 'unified-pitch' ? 'Unified Pitch Analysis' :
+                             analysis.type === 'video-pitch' ? 'Video Pitch Analysis Report' :
+                             analysis.type === 'pitch-deck' ? 'Pitch Deck Analysis Report' :
+                             'Pitch Idea Analysis Report'}
+                          </CardTitle>
+                          <CardDescription className="mt-2 flex items-center gap-2">
+                            <Calendar className="h-4 w-4" />
+                            Analyzed {new Date(analysis.createdAt).toLocaleDateString('en-US', {
+                              year: 'numeric',
+                              month: 'long',
+                              day: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            })}
+                            {analysis.fileName && (
+                              <>
+                                <span className="text-muted-foreground/50">•</span>
+                                <span className="text-xs">{analysis.fileName}</span>
+                              </>
+                            )}
+                          </CardDescription>
+                        </div>
+                        <div className="text-right">
+                          <Badge variant="outline" className="text-xs">
+                            Pending Analysis
+                          </Badge>
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-center py-8">
+                        <p className="text-muted-foreground mb-4">
+                          Analysis data unavailable. Please run a new analysis.
+                        </p>
+                        <Link href={legacyNexusExtrasEnabled() ? '/founder/video-pitch' : '/founder/ai-analysis'}>
+                          <Button>
+                          Analyze
+                            <ArrowRight className="ml-2 h-4 w-4" />
+                          </Button>
+                        </Link>
+                      </div>
+                    </CardContent>
+                  </>
+                )}
               </Card>
-              ))}
+              )
+            })}
           </div>
         )}
       </div>

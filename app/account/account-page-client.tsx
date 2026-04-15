@@ -52,10 +52,10 @@ export function AccountPageClient({
     }
   }, [])
 
-  const canUseFounderWorkspace =
-    (isFounder && Boolean(caps?.hasFounderProfile)) || userType === 'mentor'
+  const canUseFounderWorkspace = isFounder && Boolean(caps?.hasFounderProfile)
 
   const investorHomeHref = caps?.hasInvestorProfile ? '/investor/dashboard' : '/investor/onboarding'
+  const mentorHomeHref = '/mentor/dashboard'
 
   const [deleteConfirm, setDeleteConfirm] = useState('')
   const [deleteSubmitting, setDeleteSubmitting] = useState(false)
@@ -152,7 +152,9 @@ export function AccountPageClient({
               <CardDescription>
                 {isVc
                   ? 'Investor accounts use the VC area: listing, matches, and extract tools.'
-                  : 'Founder and mentor accounts use the founder hub, discover, and analysis tools.'}
+                  : isMentor
+                    ? 'Mentor accounts use the mentor workspace for guidance and support workflows.'
+                    : 'Founder accounts use the founder hub, discover, and analysis tools.'}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3 pt-2">
@@ -174,6 +176,15 @@ export function AccountPageClient({
                     </p>
                   )}
                 </>
+              ) : isMentor ? (
+                <Button
+                  type="button"
+                  variant="default"
+                  className="shadow-none"
+                  onClick={() => router.push(mentorHomeHref)}
+                >
+                  Open mentor dashboard
+                </Button>
               ) : (
                 <>
                   <Button

@@ -14,18 +14,13 @@ import {
   hasAnyStructuredAnswer,
   type StructuredQaAnswers,
 } from '@/lib/unified-pitch/structured-qa'
-import { CREDIT_COSTS } from '@/lib/constants'
 import {
   getUserCreditsClient,
-  invalidateUserCreditsClientCache,
 } from '@/lib/client/user-credits-client'
 import { cn } from '@/lib/utils'
 import { appendVentureNameToAnalysisFormData } from '@/lib/client/analysis-venture-name'
 
-const UNIFIED_CREDITS = CREDIT_COSTS.UNIFIED_PITCH
-const REVIEWER_CREDITS = CREDIT_COSTS.VIDEO_PITCH.REVIEWER
-
-type CreditsState = { credits: number; isPremium: boolean }
+type CreditsState = { credits: number; isPremium: boolean; isPro?: boolean }
 
 type ReviewerOption = { id: string; name: string }
 
@@ -34,8 +29,7 @@ type UnifiedPitchResultState =
   | { reviewSubmitted: true; message?: string; videoPitchId?: string }
   | (Record<string, unknown> & { reviewSubmitted?: false; videoPitchId?: string })
 
-async function refreshCreditsCache(setCredits: Dispatch<SetStateAction<CreditsState | null>>) {
-  invalidateUserCreditsClientCache()
+async function refreshSubscriptionStatus(setCredits: Dispatch<SetStateAction<CreditsState | null>>) {
   const { ok, data } = await getUserCreditsClient()
   if (ok) setCredits(data as CreditsState)
 }
@@ -139,7 +133,6 @@ export function UnifiedPitchTab() {
   const hasDeck = !!(deckFile && deckFile.size > 0)
   const hasVideo = !!(videoFile && videoFile.size > 0)
   const canSubmit = hasAnyStructuredAnswer(answers) || hasDeck || hasVideo
-  const creditCost = reviewType === 'reviewer' ? REVIEWER_CREDITS : UNIFIED_CREDITS
 
   const hasLargeUpload = hasDeck || hasVideo
   const progressBarValue = !analyzing
@@ -166,13 +159,7 @@ export function UnifiedPitchTab() {
       return
     }
     if (!credits) {
-      setError('Loading credits… try again in a moment.')
-      return
-    }
-    if (!credits.isPremium && (credits.credits ?? 0) < creditCost) {
-      setError(
-        `Insufficient credits. This run costs ${creditCost} credits; you have ${credits.credits ?? 0}.`,
-      )
+      setError('Checking subscription status… try again in a moment.')
       return
     }
     setAnalyzing(true)
@@ -204,8 +191,8 @@ export function UnifiedPitchTab() {
 
       if (!ok) {
         if (status === 402) {
-          setError((payload.message as string) || 'Insufficient credits.')
-          await refreshCreditsCache(setCredits)
+          setError((payload.message as string) || 'Upgrade to Pro for unlimited analyses.')
+          await refreshSubscriptionStatus(setCredits)
           return
         }
         if (status === 404 && typeof payload.redirectTo === 'string') {
@@ -239,7 +226,7 @@ export function UnifiedPitchTab() {
         setWarnings((payload.warnings as string[]) || [])
       }
 
-      await refreshCreditsCache(setCredits)
+      await refreshSubscriptionStatus(setCredits)
 
       requestAnimationFrame(() => {
         document.getElementById('analysis-results')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
@@ -270,7 +257,7 @@ export function UnifiedPitchTab() {
               <CardDescription className="text-sm leading-relaxed">
                 Add structured answers and any supporting files. At least one input is required.{' '}
                 <span className="text-foreground">
-                  {UNIFIED_CREDITS} credits (AI) · {REVIEWER_CREDITS} credits (human review)
+                  Included with your Pro subscription
                 </span>
                 . The more detail and supporting material you include, the more accurate and actionable the
                 feedback tends to be.
@@ -387,7 +374,7 @@ export function UnifiedPitchTab() {
                   AI analysis
                 </div>
                 <p className="max-w-[18rem] text-center text-xs leading-snug text-muted-foreground">
-                  {UNIFIED_CREDITS} credits · rubric, feedback, and investor matching
+                  AI rubric, feedback, and investor matching
                 </p>
               </button>
               <button
@@ -407,7 +394,7 @@ export function UnifiedPitchTab() {
                   Human reviewer
                 </div>
                 <p className="max-w-[18rem] text-center text-xs leading-snug text-muted-foreground">
-                  {REVIEWER_CREDITS} credits · expert review of your submission
+                  Expert review of your submission
                 </p>
               </button>
             </div>
@@ -506,7 +493,7 @@ export function UnifiedPitchTab() {
           ) : (
             <>
               <Sparkles className="h-4 w-4" />
-              Run analysis ({creditCost} credits)
+              Run analysis
             </>
           )}
         </Button>

@@ -1,5 +1,6 @@
 'use client'
 
+import { useMemo } from 'react'
 import VCCardClient from '@/components/vc-card-client'
 import { generateInvestorSummary, truncateInvestorSummaryForCard } from '@/lib/investor-utils'
 
@@ -41,10 +42,18 @@ interface VCCardsGridProps {
 }
 
 function VCCardsGrid({ investors, profileComplete, bookmarkedIds, onBookmarkChange }: VCCardsGridProps) {
-  // Guard against invalid investors array
-  if (!investors || !Array.isArray(investors)) {
-    return null
-  }
+  const safeInvestors = useMemo(
+    () => (Array.isArray(investors) ? investors : []),
+    [investors],
+  )
+
+  const validInvestors = useMemo(
+    () =>
+      safeInvestors.filter((investor) => {
+        return investor && typeof investor === 'object' && investor.id && investor.firmName
+      }),
+    [safeInvestors],
+  )
 
   /** Same summary logic as the profile modal (thesis → bio → structured). */
   const generateFullDescription = (investor: Investor) => {
@@ -73,23 +82,6 @@ function VCCardsGrid({ investors, profileComplete, bookmarkedIds, onBookmarkChan
     })
   }
 
-  const generateTruncatedDescription = (investor: Investor) => {
-    const full = generateFullDescription(investor)
-    return truncateInvestorSummaryForCard(full, 150)
-  }
-
-  // Guard against empty or invalid investors array
-  if (!investors || !Array.isArray(investors) || investors.length === 0) {
-    return null
-  }
-
-  const validInvestors = investors.filter((investor) => {
-    return investor && 
-           typeof investor === 'object' && 
-           investor.id && 
-           investor.firmName
-  })
-
   if (validInvestors.length === 0) {
     return null
   }
@@ -98,8 +90,8 @@ function VCCardsGrid({ investors, profileComplete, bookmarkedIds, onBookmarkChan
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
       {validInvestors.map((investor) => {
         try {
-          const truncatedDescription = generateTruncatedDescription(investor)
           const fullDescription = generateFullDescription(investor)
+          const truncatedDescription = truncateInvestorSummaryForCard(fullDescription, 150)
           const isYC = (investor.firmName || '')?.toLowerCase().includes('y combinator') || false
           
           // Ensure all VCs have an application link

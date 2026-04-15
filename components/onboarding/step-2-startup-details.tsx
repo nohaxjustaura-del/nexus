@@ -221,7 +221,7 @@ export function Step2StartupDetails({
               </Select>
             ) : (
               <p className="text-sm text-muted-foreground pt-2">
-                {cc ? 'No region list for this country — city and country are enough.' : 'Select a country first.'}
+                {cc ? 'No region list for this country; city and country are enough.' : 'Select a country first.'}
               </p>
             )}
             {errors.regionCode && <p className="text-xs text-red-600">{errors.regionCode}</p>}

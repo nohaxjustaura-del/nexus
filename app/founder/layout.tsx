@@ -1,18 +1,33 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useSyncExternalStore } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { useAuthSession } from '@/components/auth-session-provider'
+
+const subscribeToNothing = () => () => {}
+
+function useIsClient() {
+  return useSyncExternalStore(subscribeToNothing, () => true, () => false)
+}
+
+function FounderGateLoading() {
+  return (
+    <div
+      className="flex min-h-[50vh] items-center justify-center bg-background px-4"
+      role="status"
+      aria-busy="true"
+      aria-label="Loading founder workspace"
+    >
+      <div className="h-9 w-9 animate-pulse rounded-full bg-muted" aria-hidden />
+    </div>
+  )
+}
 
 export default function FounderLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const pathname = usePathname()
-  const [mounted, setMounted] = useState(false)
-  const { loading, authenticated, verified } = useAuthSession()
-
-  useEffect(() => {
-    setMounted(true)
-  }, [])
+  const isClient = useIsClient()
+  const { loading, authenticated, verified, user } = useAuthSession()
 
   const isOnboardingPage = pathname === '/founder/onboarding'
   const isDiscoverPage = pathname === '/founder/discover' || pathname?.startsWith('/founder/discover/')
@@ -49,18 +64,33 @@ export default function FounderLayout({ children }: { children: React.ReactNode 
   }, [router, pathname])
 
   useEffect(() => {
-    if (!mounted || isOnboardingPage || isDiscoverPage || isFounderLandingPage || loading) return
+    if (!isClient || loading) return
+
+    if (authenticated) {
+      const t = (user?.userType || '').toLowerCase()
+      if (t === 'vc' || t === 'investor') {
+        router.replace('/investor/dashboard')
+        return
+      }
+      if (t === 'mentor') {
+        router.replace('/mentor/dashboard')
+        return
+      }
+    }
+
+    if (isOnboardingPage || isDiscoverPage || isFounderLandingPage) return
+
     if (!authenticated) {
       const ret = encodeURIComponent(pathname || '/founder')
-      router.push(`/signup?next=${ret}`)
+      router.replace(`/signup?next=${ret}`)
       return
     }
     if (!verified) {
       const ret = encodeURIComponent(pathname || '/founder')
-      router.push(`/signup/thank-you?next=${ret}`)
+      router.replace(`/signup/thank-you?next=${ret}`)
     }
   }, [
-    mounted,
+    isClient,
     loading,
     authenticated,
     verified,
@@ -69,22 +99,11 @@ export default function FounderLayout({ children }: { children: React.ReactNode 
     isDiscoverPage,
     isFounderLandingPage,
     router,
+    user?.userType,
   ])
 
-  if (!mounted) {
-    return (
-      <div
-        suppressHydrationWarning
-        className="flex min-h-[50vh] items-center justify-center bg-background px-4"
-      >
-        <div
-          suppressHydrationWarning
-          className="h-9 w-9 animate-pulse rounded-full bg-muted"
-          aria-hidden
-        />
-        <span className="sr-only">Loading</span>
-      </div>
-    )
+  if (!isClient) {
+    return <FounderGateLoading />
   }
 
   if (isOnboardingPage || isDiscoverPage || isFounderLandingPage) {
@@ -92,19 +111,7 @@ export default function FounderLayout({ children }: { children: React.ReactNode 
   }
 
   if (loading || !authenticated || !verified) {
-    return (
-      <div
-        suppressHydrationWarning
-        className="flex min-h-[50vh] items-center justify-center bg-background px-4"
-      >
-        <div
-          suppressHydrationWarning
-          className="h-9 w-9 animate-pulse rounded-full bg-muted"
-          aria-hidden
-        />
-        <span className="sr-only">Loading</span>
-      </div>
-    )
+    return <FounderGateLoading />
   }
 
   return children

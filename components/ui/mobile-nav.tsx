@@ -68,7 +68,7 @@ export function MobileNav({ links }: MobileNavProps) {
         onClick={() => setIsOpen(!isOpen)}
         aria-label={isOpen ? 'Close menu' : 'Open menu'}
         aria-expanded={isOpen}
-        className="p-2"
+        className="h-9 w-9 rounded-full border border-border/60 bg-card p-0"
       >
         {isOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
       </Button>
@@ -76,31 +76,31 @@ export function MobileNav({ links }: MobileNavProps) {
       {isOpen && (
         <>
           <div
-            className="fixed inset-0 z-40 bg-background/70 backdrop-blur-sm"
+            className="fixed inset-0 z-40 bg-background/80"
             onClick={() => setIsOpen(false)}
             aria-hidden="true"
           />
           <nav
             ref={navRef}
             className={cn(
-              'fixed left-0 right-0 top-28 z-50 max-h-[calc(100vh-7rem)] overflow-y-auto border-b border-border/50 bg-card/98 shadow-lg animate-slide-down sm:top-[7.5rem] sm:max-h-[calc(100vh-7.5rem)] lg:top-40 lg:max-h-[calc(100vh-10rem)]'
+              'fixed left-3 right-3 top-20 z-50 max-h-[calc(100vh-6rem)] overflow-y-auto rounded-2xl border border-border/70 bg-card p-1 shadow-lg animate-slide-down sm:top-24 sm:max-h-[calc(100vh-7rem)]'
             )}
             role="navigation"
             aria-label="Mobile navigation"
           >
-            <div className="flex flex-col gap-1 p-3 pb-5">
+            <div className="flex flex-col gap-1 p-2 pb-3">
               {links.map((link, i) => {
                 const showSection = Boolean(link.section && (i === 0 || links[i - 1]?.section !== link.section))
                 return (
                   <div key={`${link.href}-${link.label}-${i}`}>
                     {showSection && (
-                      <p className="mb-1 mt-3 first:mt-0 px-4 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                      <p className="mb-1 mt-3 px-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                         {link.section}
                       </p>
                     )}
                     <Link
                       href={link.href}
-                      className="block rounded-lg px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-muted/50"
+                      className="block rounded-xl px-3 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-muted/70"
                       onClick={() => {
                         link.onNavigate?.()
                         setIsOpen(false)

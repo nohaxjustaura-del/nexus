@@ -27,7 +27,7 @@ export default function AIAnalysisPage() {
       <div className="pointer-events-none fixed inset-0 -z-10 bg-page-mesh" aria-hidden />
       <div className="page-shell-narrow">
         <div className="mx-auto w-full max-w-3xl pb-12">
-          <header className="mb-8 border-b border-border pb-8">
+          <header className="mb-8 border-b border-border/50 pb-8">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <h1 className="font-heading text-2xl font-semibold tracking-tight md:text-3xl">
                 Analyze your pitch
@@ -36,30 +36,28 @@ export default function AIAnalysisPage() {
                 href="/founder/my-analyses"
                 className="shrink-0 text-sm font-medium text-primary underline-offset-4 hover:underline"
               >
-                Past reports and scores
+                View reports
               </Link>
             </div>
             <p className="mt-3 text-sm text-muted-foreground">
               {mode === 'unified' ? (
                 <>
-                  <span className="font-medium text-foreground">Unified pitch</span>: one submission merges Q&A, deck,
-                  video, and notes for scoring and matching.
+                  <span className="font-medium text-foreground">Unified pitch</span>: analyze deck, video, and context together.
                 </>
               ) : (
                 <>
-                  <span className="font-medium text-foreground">Pitch idea</span>: concept only (text, short doc, or voice).
-                  Feedback and matches without a full deck.
+                  <span className="font-medium text-foreground">Pitch idea</span>: fast concept-only pass.
                 </>
               )}
             </p>
-            <Accordion type="single" collapsible className="mt-3 rounded-lg border border-border/50 bg-muted/10 px-3">
+            <Accordion type="single" collapsible className="mt-3 rounded-xl border border-border/60 bg-card/70 px-3">
               <AccordionItem value="details" className="border-0">
                 <AccordionTrigger className="py-2.5 text-xs hover:no-underline sm:text-sm">
                   Privacy and retention
                 </AccordionTrigger>
                 <AccordionContent>
                   <p className="pb-2 text-xs leading-relaxed text-muted-foreground">
-                    Content stays private and is removed automatically after 30 to 90 days per retention settings.
+                    Private by default. Content auto-deletes after 30-90 days.
                   </p>
                 </AccordionContent>
               </AccordionItem>
@@ -70,7 +68,7 @@ export default function AIAnalysisPage() {
             <div
               role="tablist"
               aria-label="Choose analysis type"
-              className="grid w-full grid-cols-2 gap-1 rounded-full border border-border/60 bg-muted/25 p-1 sm:p-1.5"
+              className="grid w-full grid-cols-2 gap-1 rounded-full border border-border/70 bg-card p-1 sm:p-1.5"
             >
               <button
                 type="button"

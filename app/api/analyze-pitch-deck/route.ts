@@ -5,8 +5,7 @@ import { extractPitchDeckFeatures } from '@/lib/ai'
 import { runMatchingPipeline } from '@/lib/matching/matching-orchestrator'
 import { logger } from '@/lib/logger'
 import { validatePitchDeck } from '@/lib/content-validator'
-import { CREDIT_COSTS } from '@/lib/constants'
-import { shouldEnforceAiCredits } from '@/lib/dev-ai-analysis-bypass'
+import { getSubscriptionStatus, requiresPro } from '@/lib/subscription'
 import { rateLimitMiddleware, RATE_LIMITS } from '@/lib/rate-limit'
 import { parseJSON } from '@/lib/utils'
 import { getComprehensiveFounderContext } from '@/lib/founder-context'
@@ -132,47 +131,13 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    // Check credits (but don't deduct yet - will deduct after successful analysis)
-    const CREDIT_COST = CREDIT_COSTS.PITCH_DECK
-    
-    // Skip credit check for admin / UNLIMITED_CREDITS_EMAIL / dev bypass
-    if (shouldEnforceAiCredits(user.email)) {
-      let userCredits = await db.userCredits.findUnique({
-        where: { userId: user.id },
-      })
-      
-      if (!userCredits) {
-        userCredits = await db.userCredits.create({
-          data: {
-            userId: user.id,
-            credits: 0,
-            isPremium: false,
-          },
-        })
-      }
-      
-      if (!userCredits.isPremium && (userCredits.credits ?? 0) < CREDIT_COST) {
-        const creditsNeeded = CREDIT_COST - (userCredits.credits ?? 0)
-        return NextResponse.json({
-          error: 'Insufficient Credits',
-          message: `Pitch deck analysis costs ${CREDIT_COST} credits. You have ${userCredits.credits ?? 0} credits.`,
-          whatWentWrong: `You need ${creditsNeeded} more credit${creditsNeeded > 1 ? 's' : ''} to analyze your pitch deck`,
-          whyItFailed: 'Each analysis uses credits to cover AI processing costs',
-          howToFix: [
-            'Claim your daily free credits (available every 24 hours)',
-            'Purchase additional credits from your account page',
-            'Upgrade to Premium for unlimited analyses',
-            'Wait until you have enough credits from daily claims',
-          ],
-          requiresPayment: true,
-          creditCost: CREDIT_COST,
-          currentCredits: userCredits.credits ?? 0,
-          creditsNeeded,
-        }, { 
-          status: 402,
-          headers: { 'Content-Type': 'application/json' },
-        })
-      }
+    const sub = await getSubscriptionStatus(user.id, user.email)
+    if (requiresPro(sub)) {
+      return NextResponse.json({
+        error: 'Upgrade Required',
+        message: 'Upgrade to Pro for unlimited pitch deck analyses.',
+        requiresUpgrade: true,
+      }, { status: 403, headers: { 'Content-Type': 'application/json' } })
     }
 
     // Save pitch deck file to local disk for training data
@@ -535,7 +500,7 @@ export async function POST(request: NextRequest) {
       errorDetails.whyItFailed = 'Could not save or retrieve data from the database'
       errorDetails.howToFix = [
         'Try again in a few moments',
-        'Your file was not processed - no credits were deducted',
+        'Your file was not processed',
         'Contact support if this continues',
       ]
     }

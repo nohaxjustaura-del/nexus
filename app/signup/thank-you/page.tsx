@@ -52,6 +52,9 @@ export default function SignupThankYouPage() {
             router.replace('/founder/onboarding')
             return
           }
+        } else if (user?.userType === 'mentor') {
+          router.replace('/mentor/onboarding')
+          return
         }
 
         const nextUrl = searchParams.get('next')
@@ -73,7 +76,7 @@ export default function SignupThankYouPage() {
     return (
       <div className="min-h-screen bg-background">
         <div className="container mx-auto max-w-2xl px-4 py-20">
-          <div className="rounded-lg border bg-card p-10 text-center shadow-sm">
+          <div className="rounded-2xl border border-border/60 bg-card/95 p-10 text-center shadow-sm">
             <h1 className="mb-3 font-heading text-3xl font-bold tracking-tight">Check your email</h1>
             <p className="text-muted-foreground">
               We sent you a verification link. Open it on this device to confirm your email and open your account.
@@ -92,7 +95,7 @@ export default function SignupThankYouPage() {
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto max-w-2xl px-4 py-20">
-        <div className="rounded-lg border bg-card p-10 text-center shadow-sm">
+        <div className="rounded-2xl border border-border/60 bg-card/95 p-10 text-center shadow-sm">
           <h1 className="mb-3 font-heading text-3xl font-bold tracking-tight">Almost there</h1>
           <p className="text-muted-foreground">
             Follow the link in your email to verify your address. After that, you can use the product right away.

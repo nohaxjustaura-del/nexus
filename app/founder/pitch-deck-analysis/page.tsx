@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -30,10 +30,8 @@ import {
 } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { loadStripe } from '@stripe/stripe-js'
 import SmartMatchResults from '@/components/smart-match-results'
 import { toast } from '@/components/ui/toast-simple'
-import { CREDIT_COSTS } from '@/lib/constants'
 import { appendVentureNameToAnalysisFormData } from '@/lib/client/analysis-venture-name'
 
 interface PitchAnalysisResult {
@@ -106,31 +104,33 @@ export default function PitchDeckAnalysisPage() {
   const [paymentAmount, setPaymentAmount] = useState<number | null>(0) // $0 beta
   const [checkoutSessionId, setCheckoutSessionId] = useState<string | null>('beta_free')
 
-  // Verify Stripe session on redirect back from Checkout (client-side)
-  if (typeof window !== 'undefined') {
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    let cancelled = false
     queueMicrotask(async () => {
       try {
         const params = new URLSearchParams(window.location.search)
         const sessionId = params.get('session_id')
-        if (sessionId && !paymentVerified) {
-          const verifyRes = await fetch(`/api/create-checkout?session_id=${encodeURIComponent(sessionId)}`)
-          if (verifyRes.ok) {
-            const data = await verifyRes.json()
-            if (data.verified) {
-              setPaymentVerified(true)
-              setCheckoutSessionId(sessionId)
-              if (typeof data.amount === 'number') setPaymentAmount(data.amount)
-              const url = new URL(window.location.href)
-              url.searchParams.delete('session_id')
-              window.history.replaceState({}, '', url.toString())
-            }
-          }
+        if (!sessionId || paymentVerified || cancelled) return
+        const verifyRes = await fetch(`/api/create-checkout?session_id=${encodeURIComponent(sessionId)}`)
+        if (!verifyRes.ok) return
+        const data = await verifyRes.json()
+        if (!cancelled && data.verified) {
+          setPaymentVerified(true)
+          setCheckoutSessionId(sessionId)
+          if (typeof data.amount === 'number') setPaymentAmount(data.amount)
+          const url = new URL(window.location.href)
+          url.searchParams.delete('session_id')
+          window.history.replaceState({}, '', url.toString())
         }
       } catch {
         // ignore
       }
     })
-  }
+    return () => {
+      cancelled = true
+    }
+  }, [paymentVerified])
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -160,6 +160,7 @@ export default function PitchDeckAnalysisPage() {
         // Fallback for older flows (shouldn't be needed with latest Stripe)
         const pk = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY as string | undefined
         if (!pk) throw new Error('Stripe publishable key is not configured. Add NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY to .env.local')
+        const { loadStripe } = await import('@stripe/stripe-js')
         const stripe = await loadStripe(pk)
         if (!stripe) throw new Error('Stripe failed to initialize')
         const { error } = await (stripe as any).redirectToCheckout({ sessionId })
@@ -269,7 +270,7 @@ export default function PitchDeckAnalysisPage() {
           setCredits(creditsData)
         }
       } else if (response.status === 402) {
-        toast.error('You need credits or premium to unlock top matches. Please purchase credits or upgrade to premium.')
+        toast.error('Upgrade to Pro to unlock top matches.')
       } else {
         toast.error(data.error || 'Failed to unlock top matches')
       }
@@ -644,19 +645,11 @@ export default function PitchDeckAnalysisPage() {
                       See your highest compatibility scores and best-fit VCs
                     </p>
                     <div className="mb-4 flex items-center justify-center gap-2 text-sm">
-                      {credits && (
-                        <>
-                          {credits.isPremium ? (
-                            <Badge className="bg-yellow-500">
-                              <Crown className="mr-1 h-3 w-3" />
-                              Premium Member
-                            </Badge>
-                          ) : (
-                            <Badge variant="secondary">
-                              {credits.credits} Credit{credits.credits !== 1 ? 's' : ''} Available
-                            </Badge>
-                          )}
-                        </>
+                      {credits?.isPremium && (
+                        <Badge className="bg-yellow-500">
+                          <Crown className="mr-1 h-3 w-3" />
+                          Pro Member
+                        </Badge>
                       )}
                     </div>
                     <Button
@@ -672,21 +665,10 @@ export default function PitchDeckAnalysisPage() {
                       ) : (
                         <>
                           <Lock className="mr-2 h-4 w-4" />
-                          {credits?.isPremium ||
-                          (credits && credits.credits >= CREDIT_COSTS.UNLOCK_TOP_MATCHES)
-                            ? 'Unlock Top 5 Matches'
-                            : 'Get Credits to Unlock'}
+                          Unlock Top 5 Matches
                         </>
                       )}
                     </Button>
-                    {credits &&
-                      !credits.isPremium &&
-                      CREDIT_COSTS.UNLOCK_TOP_MATCHES > 0 &&
-                      credits.credits < CREDIT_COSTS.UNLOCK_TOP_MATCHES && (
-                      <p className="mt-2 text-xs text-muted-foreground">
-                        Need credits? <Link href="/pricing" className="text-primary hover:underline">View pricing</Link>
-                      </p>
-                    )}
                   </div>
                 )}
 
