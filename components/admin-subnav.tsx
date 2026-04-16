@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { ArrowRightLeft, LayoutDashboard, UserCheck, Building2, Shield } from 'lucide-react'
+import { ArrowRightLeft, Briefcase, LayoutDashboard, UserCheck, Building2, Shield } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const items = [
@@ -93,6 +93,13 @@ export function AdminSubnav() {
             >
               <ArrowRightLeft className="h-3.5 w-3.5 opacity-70" aria-hidden />
               Switch to Founder
+            </Link>
+            <Link
+              href="/investor/dashboard"
+              className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-border/70 bg-background/70 px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground"
+            >
+              <Briefcase className="h-3.5 w-3.5 opacity-70" aria-hidden />
+              Switch to Investor
             </Link>
           </div>
         </div>

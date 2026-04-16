@@ -1,9 +1,9 @@
-import dynamic from 'next/dynamic'
+import nextDynamic from 'next/dynamic'
 import { redirect } from 'next/navigation'
 import { getCurrentUser } from '@/lib/auth'
 import { isAdminEmail } from '@/lib/constants'
 
-const TrainingDataClient = dynamic(() => import('./training-data-client'), {
+const TrainingDataClient = nextDynamic(() => import('./training-data-client'), {
   ssr: false,
   loading: () => (
     <div className="flex min-h-[40vh] flex-col items-center justify-center gap-3 text-muted-foreground">

@@ -11,9 +11,11 @@ function hasSupabaseSessionCookies(request: NextRequest): boolean {
   })
 }
 
+/** Admins may preview app portals; paths outside this set still route to the admin hub. */
 function adminBypassAllowed(pathname: string): boolean {
   if (pathname.startsWith('/admin')) return true
-  return pathname === '/founder/dashboard'
+  const portalPrefixes = ['/founder', '/investor', '/mentor', '/vc', '/account'] as const
+  return portalPrefixes.some((p) => pathname === p || pathname.startsWith(`${p}/`))
 }
 
 export async function updateSupabaseSession(request: NextRequest) {
@@ -95,8 +97,10 @@ export async function updateSupabaseSession(request: NextRequest) {
       return redirectResponse
     }
 
-    const redirected = portalRedirectIfNeeded(request, user, response)
-    if (redirected) return redirected
+    if (!isAdminEmail(user.email)) {
+      const redirected = portalRedirectIfNeeded(request, user, response)
+      if (redirected) return redirected
+    }
   }
 
   return response
