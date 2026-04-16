@@ -30,7 +30,10 @@ export function bypassesAiCredits(email: string | null | undefined): boolean {
   return false
 }
 
-/** True when this user should be charged AI analysis credits. */
+/**
+ * True when this user should be charged AI analysis credits.
+ * Keep in sync with portal access: admins/unlimited/dev-bypass never pay; everyone else follows subscription/tier in route handlers.
+ */
 export function shouldEnforceAiCredits(email: string | null | undefined): boolean {
   return !bypassesAiCredits(email)
 }

@@ -7,7 +7,6 @@ import { cn } from '@/lib/utils'
 const items = [
   { href: '/founder/dashboard', label: 'Hub' },
   { href: '/founder/discover', label: 'Discover' },
-  { href: '/founder/matches', label: 'Matches' },
   { href: '/founder/bookmarks', label: 'Bookmarks' },
   { href: '/founder/my-analyses', label: 'Analyses' },
   { href: '/founder/network', label: 'Network' },

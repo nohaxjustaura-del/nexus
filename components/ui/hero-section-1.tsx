@@ -6,7 +6,7 @@ import { ArrowRight, Menu, X, Sparkles, Users, Target } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { NexusWordmark } from '@/components/nexus-wordmark'
-import { BRAND_NAME } from '@/lib/brand'
+import { BRAND_HERO_EYEBROW } from '@/lib/brand'
 import { useAuthSession } from '@/components/auth-session-provider'
 import { track as trackEvent } from '@/lib/analytics'
 import { AnimatedCounter } from '@/components/ui/animated-counter'
@@ -98,18 +98,21 @@ export function HeroSection({ showHeader = true, verifiedInvestorCountLabel }: H
                     <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary/15">
                       <Sparkles className="h-3 w-3 text-primary" />
                     </span>
-                    <span>{verifiedInvestorCountLabel}+ verified investors in the network</span>
+                    <span>
+                      {verifiedInvestorCountLabel}+ profiles across stages, sectors, and check sizes
+                    </span>
                     <ArrowRight className="size-3.5 shrink-0 text-primary/60 transition-transform duration-200 group-hover:translate-x-0.5" aria-hidden />
                   </Link>
 
                   <p className="hero-reveal-item mt-6 eyebrow-label text-primary/80">
-                    Investor intelligence for founders
+                    {BRAND_HERO_EYEBROW}
                   </p>
                   <h1 className="hero-reveal-item hero-title mx-auto mt-3 max-w-4xl lg:mt-6 lg:text-[3.25rem]">
                     Find the <span className="gradient-text">investors</span> who actually fund companies like yours
                   </h1>
                   <p className="hero-reveal-item hero-copy mt-8 max-w-xl">
-                    Upload your pitch once. Get scored feedback, a ranked shortlist from {verifiedInvestorCountLabel}+ verified investors, and clear next steps in minutes, not months.
+                    Upload your pitch once. Get scored feedback, a ranked shortlist matched to your company, and clear next steps
+                    in minutes, not months.
                   </p>
                 </div>
 

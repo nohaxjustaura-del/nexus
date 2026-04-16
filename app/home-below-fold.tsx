@@ -53,11 +53,14 @@ function HomeHowItWorksConnector() {
   return (
     <div className="flex flex-col items-center py-3 sm:py-4" aria-hidden>
       <div className="h-7 w-px shrink-0 rounded-full bg-gradient-to-b from-transparent via-border/70 to-primary/25" />
-      <span className="group relative z-[1] flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-primary/30 bg-background/95 text-primary shadow-[0_0_0_1px_rgba(99,102,241,0.08),0_8px_24px_rgba(15,23,42,0.22)]">
-        <span className="absolute inset-0 rounded-full bg-primary/[0.08] blur-[1px] transition-opacity duration-500 group-hover:opacity-100" />
-        <span className="absolute inset-[-5px] rounded-full border border-primary/20 animate-[ping_2.2s_ease-in-out_infinite]" />
+      <span className="group relative z-[1] flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-primary/30 bg-background/95 text-primary shadow-[0_0_0_1px_rgba(99,102,241,0.06),0_6px_20px_rgba(15,23,42,0.18)] transition-shadow duration-500 group-hover:shadow-[0_0_0_1px_rgba(99,102,241,0.1),0_10px_28px_rgba(15,23,42,0.24)]">
+        <span className="absolute inset-0 rounded-full bg-primary/[0.07] blur-[1px] transition-opacity duration-500 group-hover:opacity-100" />
+        <span
+          className="pointer-events-none absolute inset-[-6px] rounded-full border border-primary/18 animate-connector-ring"
+          aria-hidden
+        />
         <ChevronDown
-          className="relative h-4 w-4 animate-[bounce_1.5s_ease-in-out_infinite]"
+          className="relative h-4 w-4 animate-connector-chevron will-change-transform"
           strokeWidth={2.25}
           aria-hidden
         />
@@ -76,14 +79,12 @@ function StepNumber({ step }: { step: '1' | '2' | '3' }) {
 }
 
 export type HomeBelowFoldProps = {
-  verifiedInvestorCountLabel: string
   homeDemoRubric: UniversalAnalysisResult
   mounted: boolean
   isVerifiedUser: boolean
 }
 
 export function HomeBelowFold({
-  verifiedInvestorCountLabel,
   homeDemoRubric,
   mounted,
   isVerifiedUser,
@@ -255,7 +256,7 @@ export function HomeBelowFold({
                     <p className="mt-1.5 text-sm font-medium text-foreground">Founders and operators in the program</p>
                     <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">
                       Learn from teams shipping now: sharper positioning, cleaner narrative, and better investor conversations tied
-                      to {verifiedInvestorCountLabel}+ verified investor profiles.
+                      to the same verified profiles that power your shortlist.
                     </p>
                   </div>
                 </div>
@@ -268,20 +269,18 @@ export function HomeBelowFold({
       {/* Closing CTA */}
       <section className="section-shell-compact border-b-0 px-4 sm:px-6">
         <ScrollReveal>
-          <div className="mx-auto max-w-3xl">
-            <div className="relative overflow-hidden rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/[0.06] via-primary/[0.02] to-transparent p-8 text-center sm:p-12 md:p-16">
-              {/* Glow accents */}
-              <div className="pointer-events-none absolute -right-12 -top-12 h-40 w-40 rounded-full bg-primary/[0.08] blur-[60px]" aria-hidden />
-              <div className="pointer-events-none absolute -bottom-8 -left-8 h-32 w-32 rounded-full bg-primary/[0.06] blur-[50px]" aria-hidden />
+          <div className="mx-auto max-w-2xl">
+            <div className="relative overflow-hidden rounded-xl border border-border/40 bg-muted/20 px-6 py-7 text-center sm:px-8 sm:py-8">
+              <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-primary/[0.03] to-transparent" aria-hidden />
 
               <div className="relative">
-                <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
-                  <Zap className="h-6 w-6 text-primary" strokeWidth={1.75} />
+                <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+                  <Zap className="h-5 w-5 text-primary" strokeWidth={1.75} />
                 </div>
-                <h2 className="mt-5 font-heading text-2xl font-semibold tracking-tight text-foreground sm:text-3xl text-balance">
+                <h2 className="mt-4 font-heading text-xl font-semibold tracking-tight text-foreground sm:text-2xl text-balance">
                   Ready to find your investors?
                 </h2>
-                <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
+                <div className="mt-6 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
                   <Button
                     size="lg"
                     onClick={() => {

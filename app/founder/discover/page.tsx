@@ -22,6 +22,7 @@ function parseJSONStringArray(value: unknown): string[] {
 import DiscoverClient from "./discover-client"
 import { investorCheckRangeThousands, investorHasUnknownCheckSize } from "@/lib/investor-check-range"
 import { isFounderCoreProfileComplete } from '@/lib/founder-profile-completeness'
+import { compareInvestorsByDiscoverSearch } from '@/lib/discover-investor-search'
 
 function searchableSlice(v: unknown): string {
   if (v == null) return ''
@@ -299,6 +300,9 @@ export default async function DiscoverPage({
   if (searchParams.search?.trim()) {
     const q = searchParams.search.trim()
     filteredInvestors = filteredInvestors.filter((inv) => investorMatchesDirectorySearch(inv, q))
+    filteredInvestors = [...filteredInvestors].sort((a, b) =>
+      compareInvestorsByDiscoverSearch(a, b, q),
+    )
   }
 
   // Fund type filter

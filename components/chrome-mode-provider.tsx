@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useEffect, useMemo } from 'react'
 import { usePathname } from 'next/navigation'
 import { useAuthSession } from '@/components/auth-session-provider'
+import { isInvestorAccountAreaPath } from '@/lib/investor-account-path'
 
 const LEGACY_STORAGE_KEY = 'nexus_chrome_preference_v1'
 
@@ -43,7 +44,7 @@ export function ChromeModeProvider({ children }: { children: React.ReactNode }) 
 
   const chrome = useMemo((): ChromeMode => {
     if (!authenticated) return 'guest'
-    if (pathname.startsWith('/vc') || pathname.startsWith('/investor')) return 'investor'
+    if (isInvestorAccountAreaPath(pathname)) return 'investor'
     if (pathname.startsWith('/mentor')) return 'mentor'
     if (pathname.startsWith('/founder')) return 'founder'
     if (loading && !user?.userType) return 'founder'

@@ -464,18 +464,22 @@
 
   /* Marketing / chrome: footer top fade + hairline */
   .site-footer {
-    @apply relative overflow-hidden border-t border-border/50 bg-card/60;
+    @apply relative overflow-hidden border-t border-border/50 bg-card/70 backdrop-blur-md supports-[backdrop-filter]:bg-card/55;
   }
 
   .site-footer::before {
     content: "";
-    @apply pointer-events-none absolute inset-x-0 top-0 z-0 h-px bg-gradient-to-r from-transparent via-border to-transparent;
+    @apply pointer-events-none absolute inset-x-0 top-0 z-0 h-px bg-gradient-to-r from-transparent via-primary/25 to-transparent;
   }
 
   .site-footer::after {
     content: "";
-    @apply pointer-events-none absolute left-1/2 top-0 z-0 h-24 w-[min(100%,46rem)] -translate-x-1/2 rounded-full opacity-70 blur-3xl;
-    background: radial-gradient(closest-side, hsl(var(--primary) / 0.06), transparent 76%);
+    @apply pointer-events-none absolute left-1/2 top-0 z-0 h-32 w-[min(100%,52rem)] -translate-x-1/2 rounded-full opacity-80 blur-3xl;
+    background: radial-gradient(closest-side, hsl(var(--primary) / 0.09), transparent 72%);
+  }
+
+  a:hover .nexus-wordmark-text {
+    @apply opacity-90;
   }
 
   .section-title {

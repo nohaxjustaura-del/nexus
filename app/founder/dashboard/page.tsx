@@ -7,10 +7,8 @@ import { Badge } from '@/components/ui/badge'
 import {
   Search,
   Sparkles,
-  Target,
   Bookmark,
   Crown,
-  Shield,
   ArrowRight,
   FileText,
   Video,
@@ -26,7 +24,6 @@ import {
 import Link from 'next/link'
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
-import { useAuthSession } from '@/components/auth-session-provider'
 import { legacyNexusExtrasEnabled } from '@/lib/nexus-surface-flags'
 import { FounderWorkspaceTabs } from '@/components/founder-workspace-tabs'
 import { AnimatedCounter } from '@/components/ui/animated-counter'
@@ -54,11 +51,10 @@ const analysisTypeConfig: Record<string, { icon: typeof FileText; label: string;
 }
 
 export default function FounderDashboard() {
-  const { isAdmin } = useAuthSession()
   const [pending, setPending] = useState(true)
   const [summary, setSummary] = useState<HubSummary | null>(null)
   const [canAccessFounderNetwork, setCanAccessFounderNetwork] = useState(false)
-  const [recentAnalysesCollapsed, setRecentAnalysesCollapsed] = useState(true)
+  const [recentAnalysesCollapsed, setRecentAnalysesCollapsed] = useState(false)
 
   useEffect(() => {
     let alive = true
@@ -113,14 +109,6 @@ export default function FounderDashboard() {
       iconColor: 'text-violet-400',
     },
     {
-      title: 'Your matches',
-      desc: 'View best fits',
-      icon: Target,
-      href: '/founder/matches',
-      gradient: 'from-emerald-500/10 to-teal-500/10',
-      iconColor: 'text-emerald-400',
-    },
-    {
       title: 'Find investors',
       desc: 'Browse directory',
       icon: Search,
@@ -151,31 +139,12 @@ export default function FounderDashboard() {
   ] as const
 
   const stats = summary
-  const hasData = stats && (stats.analysesCount > 0 || stats.matchesCount > 0 || stats.bookmarksCount > 0)
+  const hasData = stats && (stats.analysesCount > 0 || stats.bookmarksCount > 0)
 
   return (
     <div className="relative min-h-screen bg-background">
       <div className="pointer-events-none fixed inset-0 -z-10 bg-page-mesh bg-dot-grid" aria-hidden />
       <div className="page-shell-narrow">
-        {isAdmin && (
-          <div className="mb-6 flex flex-col gap-3 rounded-xl border border-amber-500/25 bg-amber-500/[0.06] px-4 py-3 backdrop-blur-sm sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-center gap-2 text-sm text-amber-200/80">
-              <Shield className="h-4 w-4 shrink-0 text-amber-400" aria-hidden />
-              <span>Admin mode active</span>
-            </div>
-            <Link
-              href="/admin/dashboard"
-              className={buttonVariants({
-                size: 'sm',
-                className: 'shrink-0 bg-amber-600/80 text-white hover:bg-amber-600 shadow-none',
-              })}
-            >
-              Admin hub
-              <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
-            </Link>
-          </div>
-        )}
-
         <div className="mb-6">
           <FounderWorkspaceTabs />
         </div>
@@ -188,7 +157,7 @@ export default function FounderDashboard() {
                 Your hub
               </h1>
               <p className="mt-2 text-sm text-muted-foreground md:text-[15px]">
-                Analyze, match, and track everything in one clean workspace.
+                Analyze, discover, and track everything in one clean workspace.
               </p>
             </div>
             {pending ? (
@@ -209,17 +178,16 @@ export default function FounderDashboard() {
 
         {/* Stat cards */}
         {pending ? (
-          <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-3 md:gap-5">
-            {[1, 2, 3].map((i) => (
+          <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 md:gap-5">
+            {[1, 2].map((i) => (
               <Skeleton key={i} className="h-28 rounded-xl" />
             ))}
           </div>
         ) : stats ? (
           <>
-            <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-3 md:gap-5">
+            <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 md:gap-5">
               {[
                 { label: 'Analyses', value: stats.analysesCount, max: 20, icon: BarChart3, color: 'text-violet-400', ring: 'text-violet-400' },
-                { label: 'Matches', value: stats.matchesCount, max: 50, icon: Target, color: 'text-emerald-400', ring: 'text-emerald-400' },
                 { label: 'Saved', value: stats.bookmarksCount, max: 30, icon: Bookmark, color: 'text-blue-400', ring: 'text-blue-400' },
               ].map((stat) => {
                 const Icon = stat.icon

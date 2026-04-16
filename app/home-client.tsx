@@ -44,12 +44,7 @@ export default function HomeClient({ verifiedInvestorCountLabel, homeDemoRubric 
 
         <ProductPreview />
 
-        <HomeBelowFold
-          verifiedInvestorCountLabel={verifiedInvestorCountLabel}
-          homeDemoRubric={homeDemoRubric}
-          mounted={mounted}
-          isVerifiedUser={isVerifiedUser}
-        />
+        <HomeBelowFold homeDemoRubric={homeDemoRubric} mounted={mounted} isVerifiedUser={isVerifiedUser} />
       </div>
     </div>
   )

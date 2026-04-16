@@ -5,12 +5,21 @@ import { cookies } from 'next/headers'
 import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { getSupabaseAuthUserFromRequest } from '@/lib/supabase/request-reader'
-import { ADMIN_EMAILS_ORDERED } from '@/lib/constants'
 import {
   DEV_AI_BYPASS_COOKIE,
   getDevAiBypassEmail,
   isDevAiAnalysisBypassEnabled,
 } from '@/lib/dev-ai-analysis-bypass'
+
+/** Mirrors Supabase Auth `email_confirmed_at` (magic link / OAuth) for app gating in `/api/auth/check`. */
+function emailVerifiedFromSupabase(authUser: SupabaseAuthUser): boolean {
+  return Boolean(authUser.email_confirmed_at)
+}
+
+/**
+ * Upserts the Prisma `User` row for the signed-in Supabase identity.
+ * `emailVerified` follows Supabase only (set true when `email_confirmed_at` is present); never downgrades here.
+ */
 export async function syncPrismaUserFromAuth(authUser: SupabaseAuthUser): Promise<PrismaUser | null> {
   const email = authUser.email?.toLowerCase().trim()
   if (!email) {
@@ -25,13 +34,15 @@ export async function syncPrismaUserFromAuth(authUser: SupabaseAuthUser): Promis
         ? metaType
         : 'founder'
 
+  const supabaseEmailVerified = emailVerifiedFromSupabase(authUser)
+
   let user = await db.user.findUnique({ where: { email } })
 
   if (!user) {
     user = await db.user.create({
       data: {
         email,
-        emailVerified: true,
+        emailVerified: supabaseEmailVerified,
         userType,
       },
     })
@@ -39,7 +50,7 @@ export async function syncPrismaUserFromAuth(authUser: SupabaseAuthUser): Promis
   }
 
   const updates: { emailVerified?: boolean; userType?: string } = {}
-  if (!user.emailVerified) {
+  if (!user.emailVerified && supabaseEmailVerified) {
     updates.emailVerified = true
   }
   if (metaType && user.userType !== userType) {
@@ -86,37 +97,8 @@ export async function getUserFromRequest(request: NextRequest): Promise<PrismaUs
   }
 }
 
-export async function getAdminUser(): Promise<PrismaUser | null> {
-  if (ADMIN_EMAILS_ORDERED.length === 0) return null
-  try {
-    for (const email of ADMIN_EMAILS_ORDERED) {
-      const u = await db.user.findUnique({ where: { email } })
-      if (u) return u
-    }
-    return null
-  } catch {
-    return null
-  }
-}
-
-/** Tries Supabase session first; falls back to admin user for analysis routes (scoring branch behavior). */
-export async function getCurrentUserOrAdmin(): Promise<PrismaUser | null> {
-  const user = await getCurrentUser()
-  if (user) return user
-  return getAdminUser()
-}
-
-/** Same as getUserFromRequest with admin fallback. */
-export async function getUserFromRequestOrAdmin(
-  request: NextRequest,
-): Promise<PrismaUser | null> {
-  const user = await getUserFromRequest(request)
-  if (user) return user
-  return getAdminUser()
-}
-
 /**
- * Supabase session, then dev AI-bypass cookie (local only), then admin fallback.
+ * Supabase session, then dev AI-bypass cookie (local only).
  * Use for /founder/ai-analysis API routes.
  */
 export async function getCurrentUserIncludingDevBypass(): Promise<PrismaUser | null> {
@@ -136,6 +118,11 @@ export async function getCurrentUserIncludingDevBypass(): Promise<PrismaUser | n
   }
 }
 
+/**
+ * Resolves the Prisma user for unified AI analysis routes.
+ * Order: (1) session from this request, (2) normal server session + dev bypass cookie (dev only).
+ * Never uses an implicit admin DB user — unauthenticated calls must not run paid pipelines as admin.
+ */
 export async function getUserForAiAnalysis(request?: NextRequest): Promise<PrismaUser | null> {
   if (request) {
     const fromReq = await getUserFromRequest(request)
@@ -143,7 +130,7 @@ export async function getUserForAiAnalysis(request?: NextRequest): Promise<Prism
   }
   const fromCookie = await getCurrentUserIncludingDevBypass()
   if (fromCookie) return fromCookie
-  return getAdminUser()
+  return null
 }
 
 /** @deprecated Legacy JWT session  -  use Supabase Auth. */

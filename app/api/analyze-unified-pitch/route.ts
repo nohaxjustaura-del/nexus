@@ -37,6 +37,7 @@ import { adaptRankedInvestorForApi } from '@/lib/pipelines/adapt-ranked-investor
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
+// Auth: `getUserForAiAnalysis` — real Supabase session or local dev bypass only (see lib/auth.ts).
 
 function isFile(f: unknown): f is File {
   return typeof f === 'object' && f !== null && 'size' in f && typeof (f as File).size === 'number'

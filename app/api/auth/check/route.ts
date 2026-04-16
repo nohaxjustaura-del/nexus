@@ -53,6 +53,7 @@ export async function GET(_request: NextRequest) {
     }
 
     const isAdmin = isAdminEmail(user.email)
+    /** `emailVerified` on `User` is synced from Supabase `email_confirmed_at` in `syncPrismaUserFromAuth` (not a separate manual flag). */
     const isVerified = isAdmin || (Boolean(user.emailVerified) && !accountRejected)
 
     if (!isVerified) {

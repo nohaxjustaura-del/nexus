@@ -1,7 +1,11 @@
 import type { User } from '@supabase/supabase-js'
 import { type NextRequest, NextResponse } from 'next/server'
+import { isInvestorAccountAreaPath } from '@/lib/investor-account-path'
 
-/** Align with lib/auth.ts syncPrismaUserFromAuth metadata normalization. */
+/**
+ * Align with `syncPrismaUserFromAuth` in lib/auth.ts (`user_metadata.user_type` → Prisma `userType`).
+ * Investor sessions use `/investor/*` and `/vc/*` (see `isInvestorAccountAreaPath`); founders are kept off those paths here.
+ */
 export function portalRoleFromAuthUser(user: User): 'founder' | 'investor' {
   const metaType = (user.user_metadata?.user_type as string | undefined)?.toLowerCase()
   if (metaType === 'vc' || metaType === 'investor') return 'investor'
@@ -34,7 +38,7 @@ export function portalRedirectIfNeeded(
     return null
   }
 
-  if (pathname.startsWith('/vc') || pathname.startsWith('/investor')) {
+  if (isInvestorAccountAreaPath(pathname)) {
     const url = request.nextUrl.clone()
     url.pathname = '/founder/dashboard'
     url.search = ''

@@ -14,6 +14,7 @@ import { parseJSON, fmtCheckRange } from '@/lib/utils'
 import { logger } from '@/lib/logger'
 
 const EMBEDDING_MODEL = 'voyage-3'
+/** Source of truth for vector width; keep `scripts/check-faiss.ts` `EXPECTED_EMBEDDING_DIM` aligned. */
 const EMBEDDING_DIMENSIONS = 1024
 
 function resolveVoyageMinIntervalMs(): number {
