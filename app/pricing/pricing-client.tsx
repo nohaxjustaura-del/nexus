@@ -175,7 +175,7 @@ export default function PricingClient({ verifiedInvestorCountLabel }: { verified
                 className={cn(
                   'relative flex h-full flex-col transition-all duration-300',
                   plan.highlighted
-                    ? 'border-primary/40 card-glow hover:border-primary/60'
+                    ? 'border-primary/40 ring-1 ring-primary/15 hover:border-primary/60'
                     : 'border-border/60 hover:border-border'
                 )}
               >

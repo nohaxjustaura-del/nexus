@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { getCurrentUser } from '@/lib/auth'
 import { db } from '@/lib/db'
+import { isAdminEmail } from '@/lib/constants'
 import { canAccessFounderNetwork } from '@/lib/founder-network-access'
 
 /** Redirects to pricing when the session cannot access the founder network hub. */
@@ -9,6 +10,8 @@ export async function ensureFounderNetworkPageAccess() {
   if (!user) {
     redirect(`/signup?next=${encodeURIComponent('/pricing?from=network')}`)
   }
+
+  if (isAdminEmail(user.email)) return
 
   const [uc, approval, investor] = await Promise.all([
     db.userCredits.findUnique({

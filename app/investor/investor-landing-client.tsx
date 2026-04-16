@@ -42,29 +42,31 @@ export default function InvestorLandingClient({
   verifiedInvestorCountLabel: string
 }) {
   const router = useRouter()
-  const { loading, authenticated, verified, user } = useAuthSession()
+  const { loading, authenticated, verified, user, isAdmin } = useAuthSession()
 
   useEffect(() => {
-    if (loading || !authenticated || !isInvestorAccount(user?.userType)) return
+    if (loading || !authenticated || (!isInvestorAccount(user?.userType) && !isAdmin)) return
     if (!verified) {
       router.replace('/vc/claim')
       return
     }
     router.replace('/investor/dashboard')
-  }, [loading, authenticated, verified, user?.userType, router])
+  }, [loading, authenticated, verified, user?.userType, router, isAdmin])
 
   const dashboardHref = '/investor/dashboard'
   const claimHref = '/vc/claim'
 
+  const actsAsInvestor = isInvestorAccount(user?.userType) || isAdmin
+
   const primaryCta =
-    authenticated && isInvestorAccount(user?.userType)
+    authenticated && actsAsInvestor
       ? verified
         ? dashboardHref
         : claimHref
       : SIGNUP_INVESTOR
 
   const primaryLabel =
-    authenticated && isInvestorAccount(user?.userType)
+    authenticated && actsAsInvestor
       ? verified
         ? 'Open investor workspace'
         : 'Complete listing'

@@ -2,14 +2,13 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { ArrowRightLeft, LayoutDashboard, UserCheck, Building2, Wrench, Shield } from 'lucide-react'
+import { ArrowRightLeft, LayoutDashboard, UserCheck, Building2, Shield } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const items = [
   { href: '/admin/dashboard', label: 'Overview', icon: LayoutDashboard },
   { href: '/admin/approvals', label: 'Founders', icon: UserCheck },
   { href: '/admin/vcs', label: 'VCs', icon: Building2 },
-  { href: '/admin/more', label: 'More', icon: Wrench },
 ] as const
 
 /** Human-readable current admin screen for the subnav context line. */
@@ -24,7 +23,6 @@ function getAdminPageTitle(pathname: string | null | undefined): string {
     approvals: 'Founder approvals',
     founders: 'Founder directory',
     vcs: 'VC directory',
-    more: 'More tools',
     'pending-requests': 'Pending requests',
     'training-data': 'Training data',
     worker: 'Worker',

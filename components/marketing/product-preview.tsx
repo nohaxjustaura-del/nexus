@@ -1,19 +1,24 @@
 'use client'
 
 import { useEffect, useRef } from 'react'
-import { BarChart3, CheckCircle, Sparkles, Target, TrendingUp } from 'lucide-react'
+import { CheckCircle, Compass, Mail, Sparkles, Target } from 'lucide-react'
 
-const mockScores = [
-  { label: 'Market', score: 82, color: 'bg-emerald-500' },
-  { label: 'Team', score: 74, color: 'bg-primary' },
-  { label: 'Traction', score: 68, color: 'bg-amber-500' },
-  { label: 'Product', score: 88, color: 'bg-emerald-500' },
+const playbookPillars = [
+  { label: 'Investor thesis fit', detail: 'Mapped against stage, check size, and focus sectors' },
+  { label: 'Outreach personalization', detail: 'Angles tied to your strongest proof points' },
+  { label: 'Application acceleration', detail: 'Draft answers with score-backed evidence' },
 ]
 
 const mockMatches = [
-  { firm: 'Sequoia Capital', fit: 94, stage: 'Series A', reason: 'Strong market fit, thesis alignment' },
-  { firm: 'Andreessen Horowitz', fit: 89, stage: 'Seed–A', reason: 'Product-led growth focus' },
-  { firm: 'Founders Fund', fit: 85, stage: 'Seed', reason: 'Deep-tech thesis match' },
+  { firm: 'Sequoia Capital', fit: 94, stage: 'Series A', reason: 'Strong market fit, thesis alignment', owner: 'Ava', eta: 'Today' },
+  { firm: 'Andreessen Horowitz', fit: 89, stage: 'Seed-A', reason: 'Product-led growth focus', owner: 'Leo', eta: 'Thu' },
+  { firm: 'Founders Fund', fit: 85, stage: 'Seed', reason: 'Deep-tech thesis match', owner: 'Maya', eta: 'Fri' },
+]
+
+const assetQueue = [
+  { icon: Mail, title: 'Partner intro email', status: 'Ready to send' },
+  { icon: Compass, title: 'Program application draft', status: 'Needs 1 edit' },
+  { icon: Target, title: 'Talking points for first call', status: 'Generated' },
 ]
 
 export function ProductPreview() {
@@ -49,13 +54,13 @@ export function ProductPreview() {
           className="io-stagger mx-auto max-w-5xl"
         >
           <p className="io-item text-center text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
-            What you get
+            What you unlock
           </p>
           <h2 className="io-item mt-3 text-center font-heading text-xl font-semibold tracking-tight text-foreground sm:text-2xl">
-            Scored feedback and a ranked shortlist, not a generic PDF
+            A fundraising command center, not another one-off report
           </h2>
 
-          {/* Mock dashboard */}
+          {/* Mock command center */}
           <div className="io-item mt-8 overflow-hidden rounded-2xl border border-border/60 bg-card/95 shadow-xl shadow-black/[0.08] ring-1 ring-border/20">
             {/* Chrome bar */}
             <div className="flex items-center gap-2 border-b border-border/40 bg-muted/30 px-4 py-2.5">
@@ -66,43 +71,43 @@ export function ProductPreview() {
             </div>
 
             <div className="grid gap-px bg-border/30 md:grid-cols-[1fr_1.2fr]">
-              {/* Left: Score breakdown */}
+              {/* Left: Strategy playbook */}
               <div className="bg-card p-5 sm:p-6">
                 <div className="mb-4 flex items-center gap-2">
                   <Sparkles className="h-4 w-4 text-primary" />
-                  <h3 className="text-sm font-semibold text-foreground">Pitch Score</h3>
-                  <span className="ml-auto rounded-full bg-emerald-500/15 px-2.5 py-0.5 text-xs font-bold text-emerald-600 dark:text-emerald-400">
-                    78/100
+                  <h3 className="text-sm font-semibold text-foreground">Fundraising Playbook</h3>
+                  <span className="ml-auto rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-bold text-primary">
+                    Auto-built
                   </span>
                 </div>
-                <div className="space-y-3">
-                  {mockScores.map((s) => (
-                    <div key={s.label}>
-                      <div className="mb-1 flex items-center justify-between text-xs">
-                        <span className="font-medium text-foreground">{s.label}</span>
-                        <span className="tabular-nums text-muted-foreground">{s.score}</span>
-                      </div>
-                      <div className="h-2 w-full overflow-hidden rounded-full bg-muted/60">
-                        <div
-                          className={`h-full rounded-full ${s.color} transition-all duration-700`}
-                          style={{ width: `${s.score}%` }}
-                        />
-                      </div>
+                <div className="space-y-2.5">
+                  {playbookPillars.map((pillar) => (
+                    <div key={pillar.label} className="rounded-xl border border-border/50 bg-background/70 p-3">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-primary/80">{pillar.label}</p>
+                      <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{pillar.detail}</p>
                     </div>
                   ))}
                 </div>
-                <div className="mt-5 rounded-lg border border-border/40 bg-muted/20 p-3">
+                <div className="mt-4 rounded-lg border border-border/40 bg-muted/20 p-3">
                   <div className="mb-2 flex items-center gap-1.5">
-                    <TrendingUp className="h-3.5 w-3.5 text-primary" />
-                    <span className="text-xs font-medium text-foreground">Key insight</span>
+                    <Compass className="h-3.5 w-3.5 text-primary" />
+                    <span className="text-xs font-medium text-foreground">Execution queue</span>
                   </div>
-                  <p className="text-xs leading-relaxed text-muted-foreground">
-                    Strong product thesis. Traction section needs concrete metrics; add MRR or user count to strengthen the ask.
-                  </p>
+                  <div className="space-y-2">
+                    {assetQueue.map(({ icon: Icon, title, status }) => (
+                      <div key={title} className="flex items-center justify-between rounded-lg border border-border/40 bg-background/70 px-2.5 py-2">
+                        <span className="flex items-center gap-2 text-xs text-foreground">
+                          <Icon className="h-3.5 w-3.5 text-primary/80" />
+                          {title}
+                        </span>
+                        <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">{status}</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
 
-              {/* Right: Investor matches */}
+              {/* Right: Investor matches + ownership */}
               <div className="bg-card p-5 sm:p-6">
                 <div className="mb-4 flex items-center gap-2">
                   <Target className="h-4 w-4 text-primary" />
@@ -124,6 +129,9 @@ export function ProductPreview() {
                             <span className="truncate text-sm font-medium text-foreground">{m.firm}</span>
                           </div>
                           <p className="mt-1 pl-7 text-xs text-muted-foreground">{m.reason}</p>
+                          <p className="mt-1 pl-7 text-[11px] text-foreground/75">
+                            Owner: <span className="font-medium">{m.owner}</span> · Outreach ETA: {m.eta}
+                          </p>
                         </div>
                         <div className="flex shrink-0 flex-col items-end gap-0.5">
                           <span className="rounded-md bg-primary/10 px-2 py-0.5 text-xs font-bold tabular-nums text-primary">
@@ -138,7 +146,7 @@ export function ProductPreview() {
                 <div className="mt-4 flex items-center gap-2 rounded-lg border border-primary/20 bg-primary/[0.04] p-3">
                   <CheckCircle className="h-4 w-4 shrink-0 text-primary" />
                   <p className="text-xs text-foreground/80">
-                    Each match includes thesis fit, talking points, and application links.
+                    Every match ships with fit rationale, warm-intro angle, and one-click outreach/application assets.
                   </p>
                 </div>
               </div>

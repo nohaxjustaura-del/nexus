@@ -5,7 +5,6 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { Layers, Lightbulb } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
 
 const UnifiedPitchTab = dynamic(
   () => import('@/components/ai-analysis/unified-pitch-tab').then((m) => ({ default: m.UnifiedPitchTab })),
@@ -50,18 +49,6 @@ export default function AIAnalysisPage() {
                 </>
               )}
             </p>
-            <Accordion type="single" collapsible className="mt-3 rounded-xl border border-border/60 bg-card/70 px-3">
-              <AccordionItem value="details" className="border-0">
-                <AccordionTrigger className="py-2.5 text-xs hover:no-underline sm:text-sm">
-                  Privacy and retention
-                </AccordionTrigger>
-                <AccordionContent>
-                  <p className="pb-2 text-xs leading-relaxed text-muted-foreground">
-                    Private by default. Content auto-deletes after 30-90 days.
-                  </p>
-                </AccordionContent>
-              </AccordionItem>
-            </Accordion>
           </header>
 
           <div className="mx-auto mb-8 flex w-full max-w-xl justify-center px-1">

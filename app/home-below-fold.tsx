@@ -52,11 +52,17 @@ const track = (event: string, props?: Record<string, unknown>) => {
 function HomeHowItWorksConnector() {
   return (
     <div className="flex flex-col items-center py-3 sm:py-4" aria-hidden>
-      <div className="h-6 w-px shrink-0 rounded-full bg-gradient-to-b from-border/60 to-primary/20" />
-      <span className="relative z-[1] flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-primary/20 bg-primary/[0.06] text-primary">
-        <ChevronDown className="h-4 w-4 animate-chevron-bounce" strokeWidth={2} aria-hidden />
+      <div className="h-7 w-px shrink-0 rounded-full bg-gradient-to-b from-transparent via-border/70 to-primary/25" />
+      <span className="group relative z-[1] flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-primary/30 bg-background/95 text-primary shadow-[0_0_0_1px_rgba(99,102,241,0.08),0_8px_24px_rgba(15,23,42,0.22)]">
+        <span className="absolute inset-0 rounded-full bg-primary/[0.08] blur-[1px] transition-opacity duration-500 group-hover:opacity-100" />
+        <span className="absolute inset-[-5px] rounded-full border border-primary/20 animate-[ping_2.2s_ease-in-out_infinite]" />
+        <ChevronDown
+          className="relative h-4 w-4 animate-[bounce_1.5s_ease-in-out_infinite]"
+          strokeWidth={2.25}
+          aria-hidden
+        />
       </span>
-      <div className="h-6 w-px shrink-0 rounded-full bg-gradient-to-b from-primary/20 to-border/60" />
+      <div className="h-7 w-px shrink-0 rounded-full bg-gradient-to-b from-primary/25 via-border/70 to-transparent" />
     </div>
   )
 }
@@ -212,8 +218,8 @@ export function HomeBelowFold({
                     {[
                       {
                         icon: Users,
-                        title: 'Luel (YC W26)',
-                        desc: 'Featured mentors with fresh fundraising context from the current market.',
+                        title: 'Program mentors',
+                        desc: 'Featured mentors with fresh fundraising context from today\'s market.',
                       },
                       {
                         icon: BadgeCheck,
@@ -246,10 +252,10 @@ export function HomeBelowFold({
 
                   <div className="mt-5 rounded-xl border border-primary/20 bg-primary/[0.04] p-3.5">
                     <p className="text-[10px] font-mono uppercase tracking-wider text-primary/70">Featured mentor team</p>
-                    <p className="mt-1.5 text-sm font-medium text-foreground">Luel founders and operators</p>
+                    <p className="mt-1.5 text-sm font-medium text-foreground">Founders and operators in the program</p>
                     <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">
-                      Learn from founders shipping now: sharper positioning, cleaner narrative, and better investor conversations
-                      tied to {verifiedInvestorCountLabel}+ verified investor profiles.
+                      Learn from teams shipping now: sharper positioning, cleaner narrative, and better investor conversations tied
+                      to {verifiedInvestorCountLabel}+ verified investor profiles.
                     </p>
                   </div>
                 </div>

@@ -78,7 +78,7 @@ export function generateOrganizationSchema() {
     description:
       'Fundraising intelligence for founders: ranked investor matches from verified data with clear reasons, not open-ended chat answers.',
     url: siteUrl,
-    logo: `${siteUrl}/nexus-logo.png`,
+    logo: `${siteUrl}/nexus-logo.svg`,
     sameAs: [
       // Add social media URLs here
     ],

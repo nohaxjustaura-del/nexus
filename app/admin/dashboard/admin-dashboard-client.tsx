@@ -279,11 +279,7 @@ export function AdminDashboardClient({
             <CheckCircle2 className="mb-4 h-16 w-16 text-green-500" />
             <h3 className="mb-2 text-xl font-semibold">Nothing pending</h3>
             <p className="text-center text-muted-foreground">
-              New requests will show up here. Extra tools live under{' '}
-              <Link href="/admin/more" className="font-medium text-primary hover:underline">
-                More
-              </Link>
-              .
+              New requests will show up here.
             </p>
           </CardContent>
         </Card>

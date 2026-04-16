@@ -1,9 +1,49 @@
 import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { getCurrentUser } from '@/lib/auth'
+import { isAdminEmail } from '@/lib/constants'
 import { formatFounderLocationLine } from '@/lib/geo/format-founder-location'
 import { rankFoundersForInvestor, type FounderCandidate, type InvestorProfile } from '@/lib/investor-founder-recommendations'
-import type { Founder, FounderAnalysisSummary, FounderPrefs } from '@prisma/client'
+import type { Founder, FounderAnalysisSummary, FounderPrefs, Investor } from '@prisma/client'
+
+/** Neutral mandate so admins can preview rankings without an investor listing row. */
+function adminPreviewInvestorProfile(): InvestorProfile {
+  return {
+    stages: '[]',
+    sectors: '[]',
+    checkMin: 0,
+    checkMax: 0,
+    checkSizeMin: 0,
+    checkSizeMax: 0,
+    geoFocus: '[]',
+    geography: '[]',
+    thesis: null,
+    founderFocus: '',
+    valueAddTags: '[]',
+    ethicsTags: '[]',
+    personalityType: null,
+    investmentApproach: null,
+  }
+}
+
+function investorRowToProfile(investor: Investor): InvestorProfile {
+  return {
+    stages: investor.stages,
+    sectors: investor.sectors,
+    checkMin: investor.checkMin,
+    checkMax: investor.checkMax,
+    checkSizeMin: investor.checkSizeMin,
+    checkSizeMax: investor.checkSizeMax,
+    geoFocus: investor.geoFocus,
+    geography: investor.geography,
+    thesis: investor.thesis,
+    founderFocus: investor.founderFocus,
+    valueAddTags: investor.valueAddTags,
+    ethicsTags: investor.ethicsTags,
+    personalityType: investor.personalityType,
+    investmentApproach: investor.investmentApproach,
+  }
+}
 
 export const dynamic = 'force-dynamic'
 
@@ -90,9 +130,18 @@ export async function GET() {
     const user = await getCurrentUser()
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
+    const admin = isAdminEmail(user.email)
     const investor = await db.investor.findUnique({ where: { email: user.email } })
-    if (!investor) return NextResponse.json({ error: 'Investor profile not found' }, { status: 404 })
-    if (!investor.onboardingCompleted) {
+    const canUseListing =
+      Boolean(investor?.onboardingCompleted)
+
+    let investorProfile: InvestorProfile
+    if (canUseListing && investor) {
+      investorProfile = investorRowToProfile(investor)
+    } else if (admin) {
+      investorProfile = adminPreviewInvestorProfile()
+    } else {
+      if (!investor) return NextResponse.json({ error: 'Investor profile not found' }, { status: 404 })
       return NextResponse.json({ error: 'Complete onboarding first' }, { status: 403 })
     }
 
@@ -138,23 +187,6 @@ export async function GET() {
       } else if (f.profileComplete) {
         candidates.push(buildCandidate(f, null, prefs))
       }
-    }
-
-    const investorProfile: InvestorProfile = {
-      stages: investor.stages,
-      sectors: investor.sectors,
-      checkMin: investor.checkMin,
-      checkMax: investor.checkMax,
-      checkSizeMin: investor.checkSizeMin,
-      checkSizeMax: investor.checkSizeMax,
-      geoFocus: investor.geoFocus,
-      geography: investor.geography,
-      thesis: investor.thesis,
-      founderFocus: investor.founderFocus,
-      valueAddTags: investor.valueAddTags,
-      ethicsTags: investor.ethicsTags,
-      personalityType: investor.personalityType,
-      investmentApproach: investor.investmentApproach,
     }
 
     const recommendations = rankFoundersForInvestor(candidates, investorProfile, 15)

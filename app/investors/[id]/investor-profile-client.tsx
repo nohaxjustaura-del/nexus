@@ -89,7 +89,7 @@ export default function InvestorProfileClient({ investor, enrichment }: Investor
                 {investor.firmName}
               </h1>
               {investor.verified && (
-                <BadgeCheck className="h-6 w-6 text-primary" title="Verified" />
+                <BadgeCheck className="h-6 w-6 text-primary" aria-label="Verified" />
               )}
             </div>
             {investor.name && (

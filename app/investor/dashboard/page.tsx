@@ -1,16 +1,35 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
+import { Button, buttonVariants } from '@/components/ui/button'
+import { useAuthSession } from '@/components/auth-session-provider'
 import { toast } from '@/components/ui/toast-simple'
 import { cn } from '@/lib/utils'
 import {
-  Loader2, ChevronDown, ChevronUp, Bookmark, BookmarkCheck,
-  TrendingUp, Users, MapPin, DollarSign, Sparkles, BarChart3,
-  Shield, Target, Zap, Brain, ExternalLink, Building2,
-  Briefcase, Globe, ArrowUpRight,
+  Loader2,
+  ChevronDown,
+  ChevronUp,
+  Bookmark,
+  BookmarkCheck,
+  TrendingUp,
+  Users,
+  MapPin,
+  DollarSign,
+  Sparkles,
+  BarChart3,
+  Shield,
+  Target,
+  Zap,
+  Brain,
+  ExternalLink,
+  Building2,
+  Briefcase,
+  Globe,
+  ArrowUpRight,
+  ArrowRight,
 } from 'lucide-react'
 
 /* ------------------------------------------------------------------ */
@@ -455,6 +474,7 @@ function FounderCard({ rec, bookmarked, onToggleBookmark }: {
 
 export default function InvestorDashboard() {
   const router = useRouter()
+  const { isAdmin, loading: sessionLoading } = useAuthSession()
   const [loading, setLoading] = useState(true)
   const [recommendations, setRecommendations] = useState<FounderRecommendation[]>([])
   const [bookmarkedIds, setBookmarkedIds] = useState<Set<string>>(new Set())
@@ -462,16 +482,22 @@ export default function InvestorDashboard() {
   const [filter, setFilter] = useState<'all' | 'analyzed' | 'top' | 'bookmarked'>('all')
 
   useEffect(() => {
+    if (sessionLoading) return
     let alive = true
     async function load() {
       try {
         const profileRes = await fetch('/api/investor/profile', { credentials: 'include' })
         const profileData = await profileRes.json()
-        if (!profileData.exists || !profileData.onboardingCompleted) {
-          router.replace('/investor/onboarding')
-          return
+        const listingReady = Boolean(profileData.exists && profileData.onboardingCompleted)
+        if (!listingReady) {
+          if (!isAdmin) {
+            router.replace('/investor/onboarding')
+            return
+          }
+          setInvestorName('Admin preview')
+        } else {
+          setInvestorName(profileData.profile?.firmName || 'Your Firm')
         }
-        setInvestorName(profileData.profile?.firmName || 'Your Firm')
 
         const [recsRes, bmRes] = await Promise.all([
           fetch('/api/investor/recommended-founders', { credentials: 'include' }),
@@ -498,7 +524,7 @@ export default function InvestorDashboard() {
     }
     load()
     return () => { alive = false }
-  }, [router])
+  }, [router, isAdmin, sessionLoading])
 
   const toggleBookmark = useCallback(async (founderId: string) => {
     const was = bookmarkedIds.has(founderId)
@@ -541,7 +567,7 @@ export default function InvestorDashboard() {
   const analyzedCount = recommendations.filter(r => r.analysisSummary != null).length
   const topCount = recommendations.filter(r => r.matchScore >= 50).length
 
-  if (loading) {
+  if (sessionLoading || loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-page-mesh">
         <div className="flex flex-col items-center gap-4">
@@ -560,6 +586,24 @@ export default function InvestorDashboard() {
   return (
     <div className="min-h-screen bg-page-mesh">
       <div className="container mx-auto max-w-5xl px-4 py-8 sm:px-6 md:py-12">
+        {isAdmin && (
+          <div className="mb-6 flex flex-col gap-3 rounded-xl border border-amber-500/25 bg-amber-500/[0.06] px-4 py-3 backdrop-blur-sm sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-2 text-sm text-amber-200/80">
+              <Shield className="h-4 w-4 shrink-0 text-amber-400" aria-hidden />
+              <span>Admin mode — previewing investor workspace (listing optional)</span>
+            </div>
+            <Link
+              href="/admin/dashboard"
+              className={buttonVariants({
+                size: 'sm',
+                className: 'shrink-0 bg-amber-600/80 text-white hover:bg-amber-600 shadow-none',
+              })}
+            >
+              Admin hub
+              <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
+            </Link>
+          </div>
+        )}
         {/* Header */}
         <header className="mb-8">
           <Badge variant="secondary" className="mb-3 px-3 py-1 text-xs font-medium">

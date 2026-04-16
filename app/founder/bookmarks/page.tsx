@@ -17,6 +17,7 @@ import {
 import Link from "next/link"
 import { toast } from '@/components/ui/toast-simple'
 import { fmtCheckRange } from '@/lib/utils'
+import { FounderWorkspaceTabs } from '@/components/founder-workspace-tabs'
 
 interface Bookmark {
   id: string
@@ -97,47 +98,22 @@ export default function BookmarksPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="container mx-auto max-w-7xl px-4 py-4 md:py-6">
-        {/* Tab Navigation */}
-        <div className="mb-4 border-b">
-          <nav className="flex items-center gap-1 -mb-px">
-            <Link
-              href="/founder/discover"
-              className="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
-            >
-              Discover
-            </Link>
-            <Link
-              href="/founder/matches"
-              className="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
-            >
-              Matches
-            </Link>
-            <Link
-              href="/founder/bookmarks"
-              className="px-4 py-2 text-sm font-medium border-b-2 border-primary text-primary"
-            >
-              Bookmarks
-            </Link>
-            <Link
-              href="/founder/my-analyses"
-              className="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
-            >
-              My Analyses
-            </Link>
-          </nav>
+    <div className="relative min-h-screen bg-background">
+      <div className="pointer-events-none fixed inset-0 -z-10 bg-page-mesh bg-dot-grid" aria-hidden />
+      <div className="page-shell-narrow">
+        <div className="mb-6">
+          <FounderWorkspaceTabs />
         </div>
 
-        <div className="mb-4">
-          <h1 className="mb-2 text-3xl font-bold">Your Bookmarked VCs</h1>
+        <div className="mb-6 rounded-2xl border border-border/60 bg-card/70 p-5 shadow-sm backdrop-blur-sm md:p-6">
+          <h1 className="mb-2 text-3xl font-bold tracking-tight">Your Bookmarked VCs</h1>
           <p className="text-muted-foreground">
             {bookmarks.length} investor{bookmarks.length !== 1 ? 's' : ''} saved
           </p>
         </div>
 
         {bookmarks.length === 0 ? (
-          <Card className="p-12 text-center border-2 border-dashed">
+          <Card className="border-border/60 bg-card/70 p-12 text-center shadow-sm">
             <div className="mx-auto mb-4 w-16 h-16 rounded-full bg-gradient-to-br from-primary/10 to-primary/10 flex items-center justify-center">
               <MessageSquare className="h-8 w-8 text-primary" />
             </div>
@@ -163,7 +139,7 @@ export default function BookmarksPage() {
               const sectors = parseJsonArray(investor.sectors)
               
               return (
-                <Card key={bookmark.id} className="flex flex-col">
+                <Card key={bookmark.id} className="flex flex-col border-border/60 bg-card/70 shadow-sm">
                   <CardHeader>
                     <div className="flex items-start justify-between">
                       <div>

@@ -9,7 +9,7 @@ export default function InvestorLayout({ children }: { children: React.ReactNode
   const router = useRouter()
   const pathname = usePathname()
   const [mounted, setMounted] = useState(false)
-  const { loading, authenticated, verified, user } = useAuthSession()
+  const { loading, authenticated, verified, user, isAdmin } = useAuthSession()
 
   useEffect(() => { setMounted(true) }, [])
 
@@ -18,7 +18,7 @@ export default function InvestorLayout({ children }: { children: React.ReactNode
   useEffect(() => {
     if (!mounted || loading) return
 
-    if (authenticated) {
+    if (authenticated && !isAdmin) {
       const t = (user?.userType || '').toLowerCase()
       if (t === 'mentor') {
         router.push('/mentor/dashboard')
@@ -39,7 +39,7 @@ export default function InvestorLayout({ children }: { children: React.ReactNode
     if (!verified) {
       router.push(`/signup/thank-you?next=${encodeURIComponent('/investor/onboarding')}`)
     }
-  }, [mounted, loading, authenticated, verified, pathname, isOnboardingPage, router, user?.userType])
+  }, [mounted, loading, authenticated, verified, pathname, isOnboardingPage, router, user?.userType, isAdmin])
 
   if (!mounted) {
     return (

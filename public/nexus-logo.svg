@@ -1,27 +1,31 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 56" fill="none" aria-hidden="true">
-  <g transform="translate(2 4)">
-    <rect x="0" y="0" width="48" height="48" rx="9" stroke="#1D3567" stroke-width="1.75" />
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 84" fill="none" aria-hidden="true">
+  <defs>
+    <linearGradient id="nexusGradient" x1="10" y1="12" x2="62" y2="72" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#2563EB" />
+      <stop offset="1" stop-color="#0F172A" />
+    </linearGradient>
+  </defs>
+
+  <g transform="translate(6 10)">
+    <rect x="0" y="0" width="56" height="56" rx="16" fill="#F8FAFC" />
     <path
-      d="M 14 10 V 38 M 14 10 L 34 38 M 34 10 V 38"
-      stroke="#1D3567"
-      stroke-width="4"
+      d="M16 42V14L40 42V14"
+      stroke="url(#nexusGradient)"
+      stroke-width="6"
       stroke-linecap="round"
       stroke-linejoin="round"
     />
-    <circle cx="14" cy="10" r="2.75" fill="#1D3567" />
-    <circle cx="14" cy="38" r="2.75" fill="#1D3567" />
-    <circle cx="34" cy="10" r="2.75" fill="#1D3567" />
-    <circle cx="34" cy="38" r="2.75" fill="#1D3567" />
-    <circle cx="24" cy="24" r="2.75" fill="#1D3567" />
+    <rect x="0.75" y="0.75" width="54.5" height="54.5" rx="15.25" stroke="#CBD5E1" stroke-width="1.5" />
   </g>
+
   <text
-    x="58"
-    y="40"
-    fill="#1D3567"
-    font-family="system-ui, -apple-system, 'Segoe UI', sans-serif"
-    font-size="28"
-    font-weight="700"
-    letter-spacing="0.02em"
+    x="78"
+    y="51"
+    fill="#0F172A"
+    font-family="Inter, system-ui, -apple-system, 'Segoe UI', sans-serif"
+    font-size="37"
+    font-weight="800"
+    letter-spacing="0.08em"
   >
     NEXUS
   </text>

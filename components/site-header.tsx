@@ -31,7 +31,6 @@ const adminDesktopTabs = [
   { href: '/admin/dashboard', label: 'Overview' },
   { href: '/admin/approvals', label: 'Founders' },
   { href: '/admin/vcs', label: 'VCs' },
-  { href: '/admin/more', label: 'More' },
 ] as const
 
 function DesktopNavLink({
@@ -125,7 +124,6 @@ export function SiteHeader() {
           { section: 'Admin', href: '/admin/dashboard', label: 'Overview' },
           { href: '/admin/approvals', label: 'Founders' },
           { href: '/admin/vcs', label: 'VCs' },
-          { href: '/admin/more', label: 'More' },
           { section: 'Switch', href: '/founder/dashboard', label: 'Switch to Founder' },
         ] as MobileNavItem[])
       : chrome === 'guest'

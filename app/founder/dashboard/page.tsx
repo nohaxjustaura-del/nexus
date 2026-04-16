@@ -20,6 +20,8 @@ import {
   BarChart3,
   Rocket,
   TrendingUp,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react'
 import Link from 'next/link'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -56,6 +58,7 @@ export default function FounderDashboard() {
   const [pending, setPending] = useState(true)
   const [summary, setSummary] = useState<HubSummary | null>(null)
   const [canAccessFounderNetwork, setCanAccessFounderNetwork] = useState(false)
+  const [recentAnalysesCollapsed, setRecentAnalysesCollapsed] = useState(true)
 
   useEffect(() => {
     let alive = true
@@ -279,20 +282,20 @@ export default function FounderDashboard() {
             <p className="eyebrow-label">Quick actions</p>
             <p className="hidden text-xs text-muted-foreground sm:block">Jump straight into your most-used flows</p>
           </div>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-3 [grid-template-columns:repeat(auto-fit,minmax(220px,1fr))]">
             {primaryLinks.map(({ title, desc, icon: Icon, href, gradient, iconColor }) => (
               <Link key={href} href={href}>
-                <Card className="group h-full border-border/60 bg-card/70 shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/30">
-                  <CardContent className="flex items-center gap-4 p-4 sm:p-5">
+                <Card className="group h-full min-h-[110px] border-border/60 bg-card/70 shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/30">
+                  <CardContent className="flex items-center gap-4 p-4">
                     <span className={cn(
-                      'flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br transition-transform duration-300 group-hover:scale-105',
+                      'flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br transition-transform duration-300 group-hover:scale-105',
                       gradient
                     )}>
-                      <Icon className={cn('h-5 w-5', iconColor)} strokeWidth={1.75} />
+                      <Icon className={cn('h-[18px] w-[18px]', iconColor)} strokeWidth={1.75} />
                     </span>
                     <div className="min-w-0 flex-1">
-                      <h3 className="text-sm font-medium text-foreground">{title}</h3>
-                      <p className="text-xs text-muted-foreground">{desc}</p>
+                      <h3 className="text-[15px] font-semibold text-foreground">{title}</h3>
+                      <p className="mt-0.5 text-xs text-muted-foreground">{desc}</p>
                     </div>
                     <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground/40 transition-transform duration-200 group-hover:translate-x-0.5 group-hover:text-primary/60" />
                   </CardContent>
@@ -318,53 +321,80 @@ export default function FounderDashboard() {
         ) : stats && stats.recentAnalyses.length > 0 ? (
           <Card className="border-border/60 bg-card/70 shadow-sm">
             <CardHeader className="pb-3">
-              <CardTitle className="text-lg">Recent analyses</CardTitle>
-              <CardDescription>Your latest runs at a glance.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-1.5">
-              {stats.recentAnalyses.map((analysis, idx) => {
-                const config = analysisTypeConfig[analysis.type] || analysisTypeConfig['pitch-idea']
-                const Icon = config.icon
-                return (
-                  <Link key={analysis.id} href="/founder/my-analyses">
-                    <div className="group flex items-center justify-between rounded-xl border border-transparent px-3 py-3 transition-all hover:border-border/60 hover:bg-muted/40">
-                      <div className="flex items-center gap-3">
-                        {/* Timeline connector */}
-                        <div className="relative flex flex-col items-center">
-                          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/[0.06]">
-                            <Icon className={cn('h-4 w-4', config.color)} strokeWidth={1.75} />
-                          </div>
-                          {idx < stats.recentAnalyses.length - 1 && (
-                            <div className="absolute -bottom-3 h-3 w-px bg-border/40" />
-                          )}
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium text-foreground">{config.label}</p>
-                          <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                            <Clock className="h-3 w-3" />
-                            {new Date(analysis.createdAt).toLocaleDateString(undefined, {
-                              month: 'short',
-                              day: 'numeric',
-                            })}
-                          </p>
-                        </div>
-                      </div>
-                      {analysis.compatibilityScore > 0 && (
-                        <Badge variant="secondary" className="tabular-nums font-mono text-xs">
-                          {Math.round(analysis.compatibilityScore)}%
-                        </Badge>
-                      )}
-                    </div>
-                  </Link>
-                )
-              })}
-              <Link href="/founder/my-analyses" className="mt-3 block">
-                <Button variant="outline" className="w-full bg-background/60">
-                  All analyses
-                  <ArrowRight className="ml-2 h-4 w-4" />
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <CardTitle className="text-lg">Recent analyses</CardTitle>
+                  <CardDescription>Your latest runs at a glance.</CardDescription>
+                </div>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 px-2 text-muted-foreground"
+                  onClick={() => setRecentAnalysesCollapsed((prev) => !prev)}
+                  aria-expanded={!recentAnalysesCollapsed}
+                  aria-label={recentAnalysesCollapsed ? 'Expand recent analyses' : 'Collapse recent analyses'}
+                >
+                  {recentAnalysesCollapsed ? (
+                    <>
+                      <span className="mr-1.5 text-xs">Expand</span>
+                      <ChevronDown className="h-4 w-4" />
+                    </>
+                  ) : (
+                    <>
+                      <span className="mr-1.5 text-xs">Collapse</span>
+                      <ChevronUp className="h-4 w-4" />
+                    </>
+                  )}
                 </Button>
-              </Link>
-            </CardContent>
+              </div>
+            </CardHeader>
+            {!recentAnalysesCollapsed && (
+              <CardContent className="space-y-1.5">
+                {stats.recentAnalyses.map((analysis, idx) => {
+                  const config = analysisTypeConfig[analysis.type] || analysisTypeConfig['pitch-idea']
+                  const Icon = config.icon
+                  return (
+                    <Link key={analysis.id} href="/founder/my-analyses">
+                      <div className="group flex items-center justify-between rounded-xl border border-transparent px-3 py-3 transition-all hover:border-border/60 hover:bg-muted/40">
+                        <div className="flex items-center gap-3">
+                          {/* Timeline connector */}
+                          <div className="relative flex flex-col items-center">
+                            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/[0.06]">
+                              <Icon className={cn('h-4 w-4', config.color)} strokeWidth={1.75} />
+                            </div>
+                            {idx < stats.recentAnalyses.length - 1 && (
+                              <div className="absolute -bottom-3 h-3 w-px bg-border/40" />
+                            )}
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-foreground">{config.label}</p>
+                            <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                              <Clock className="h-3 w-3" />
+                              {new Date(analysis.createdAt).toLocaleDateString(undefined, {
+                                month: 'short',
+                                day: 'numeric',
+                              })}
+                            </p>
+                          </div>
+                        </div>
+                        {analysis.compatibilityScore > 0 && (
+                          <Badge variant="secondary" className="tabular-nums font-mono text-xs">
+                            {Math.round(analysis.compatibilityScore)}%
+                          </Badge>
+                        )}
+                      </div>
+                    </Link>
+                  )
+                })}
+                <Link href="/founder/my-analyses" className="mt-3 block">
+                  <Button variant="outline" className="w-full bg-background/60">
+                    All analyses
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Button>
+                </Link>
+              </CardContent>
+            )}
           </Card>
         ) : !pending && !hasData ? (
           /* Empty state for new users */

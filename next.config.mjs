@@ -71,6 +71,7 @@ const nextConfig = {
       { source: '/terms', destination: '/legal#terms', permanent: true },
       { source: '/verification-notice', destination: '/legal#verification', permanent: true },
       { source: '/security', destination: '/legal#security', permanent: true },
+      { source: '/admin/more', destination: '/admin/dashboard', permanent: true },
     ]
   },
 

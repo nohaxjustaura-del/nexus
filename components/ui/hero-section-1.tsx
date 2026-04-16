@@ -197,7 +197,7 @@ export function HeroSection({ showHeader = true, verifiedInvestorCountLabel }: H
                             <img
                               src={item.src}
                               alt={item.label}
-                              className="h-6 w-6 object-contain"
+                              className="h-full w-full rounded-full object-cover"
                               loading="lazy"
                               referrerPolicy="no-referrer"
                             />

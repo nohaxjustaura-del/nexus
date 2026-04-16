@@ -27,7 +27,7 @@ export default function FounderLayout({ children }: { children: React.ReactNode 
   const router = useRouter()
   const pathname = usePathname()
   const isClient = useIsClient()
-  const { loading, authenticated, verified, user } = useAuthSession()
+  const { loading, authenticated, verified, user, isAdmin } = useAuthSession()
 
   const isOnboardingPage = pathname === '/founder/onboarding'
   const isDiscoverPage = pathname === '/founder/discover' || pathname?.startsWith('/founder/discover/')
@@ -66,7 +66,7 @@ export default function FounderLayout({ children }: { children: React.ReactNode 
   useEffect(() => {
     if (!isClient || loading) return
 
-    if (authenticated) {
+    if (authenticated && !isAdmin) {
       const t = (user?.userType || '').toLowerCase()
       if (t === 'vc' || t === 'investor') {
         router.replace('/investor/dashboard')
@@ -100,6 +100,7 @@ export default function FounderLayout({ children }: { children: React.ReactNode 
     isFounderLandingPage,
     router,
     user?.userType,
+    isAdmin,
   ])
 
   if (!isClient) {
