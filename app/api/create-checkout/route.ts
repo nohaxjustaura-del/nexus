@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
         packageType,
       },
       customer_email: user.email,
-      success_url: `${getSiteUrl(request)}/pricing?success=true&credits=${creditPackage.credits}`,
+      success_url: `${getSiteUrl(request)}/pricing?success=true`,
       cancel_url: `${getSiteUrl(request)}/pricing?canceled=true`,
     })
 

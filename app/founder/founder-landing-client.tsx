@@ -145,7 +145,7 @@ export default function FounderLandingClient({
               },
               {
                 icon: LineChart,
-                title: 'Credits & pricing',
+                title: 'Pricing',
                 body: 'Transparent usage for AI-heavy flows; see Pricing for plans.',
               },
               {

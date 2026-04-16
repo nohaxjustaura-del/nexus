@@ -86,7 +86,7 @@ export async function GET(request: NextRequest) {
     ])
 
     if (!userCredits) {
-      return NextResponse.json({ error: 'No credits record found' }, { status: 404 })
+      return NextResponse.json({ error: 'No billing record found' }, { status: 404 })
     }
 
     if (

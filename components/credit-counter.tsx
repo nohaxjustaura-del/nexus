@@ -168,7 +168,7 @@ export function CreditCounter({
       <div className="flex items-center gap-2 px-3 py-1.5 bg-gradient-to-br from-primary/10 to-primary/10 rounded-lg border border-primary/20">
         <Coins className="h-4 w-4 text-primary" />
         <span className="font-bold text-foreground text-sm">{formatCredits(credits)}</span>
-        <span className="text-xs text-muted-foreground font-medium">credits</span>
+        <span className="text-xs text-muted-foreground font-medium">balance</span>
       </div>
       {showClaimButton && canClaim && (
         <Button

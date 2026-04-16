@@ -149,7 +149,7 @@ function buildDegradedScoringResult(errorHint: string, startTime: number): Final
   const categoryScores = FALLBACK_CATEGORY_SCORES
   const globalVerdict =
     "Automated scoring hit a service error (for example LLM quota or billing). " +
-    "Your submission is saved; strengths and deck/video feedback above still apply. Retry later or check API credits."
+    "Your submission is saved; strengths and deck/video feedback above still apply. Retry later or check your API provider quota."
   const categoryDescriptions = buildFallbackDescriptions(categoryScores, null, globalVerdict)
   const finalScore = 50
   const rubricCompatible: FinalScoringResult["rubricCompatible"] = {

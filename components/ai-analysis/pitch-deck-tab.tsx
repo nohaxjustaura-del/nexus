@@ -47,9 +47,9 @@ export function PitchDeckAnalysisTab() {
       .catch(err => console.error('Error loading credits:', err))
   }, [])
   
-  // Auto-clear insufficient credits errors when credits change
+  // Auto-clear insufficient-balance errors when balance reloads
   useEffect(() => {
-    if (credits && error && error.includes('Insufficient credits')) {
+    if (credits && error && error.includes('Not enough balance')) {
       setError(null)
     }
   }, [credits])
@@ -70,13 +70,14 @@ export function PitchDeckAnalysisTab() {
     
     // Wait for credits to load if they haven't yet
     if (!credits) {
-      setError('Loading your credits... Please wait a moment and try again.')
+      setError('Loading your balance… Please wait a moment and try again.')
       return
     }
     
-    // Check if user has enough credits (skip check if premium)
     if (!credits.isPremium && (credits.credits ?? 0) < PITCH_DECK_CREDIT_COST) {
-      setError(`Insufficient credits. Pitch deck analysis costs ${PITCH_DECK_CREDIT_COST} credits. You have ${credits.credits ?? 0} credits. Please purchase credits or upgrade to premium.`)
+      setError(
+        `Not enough balance. Pitch deck analysis uses ${PITCH_DECK_CREDIT_COST} from your balance; you have ${credits.credits ?? 0}. Visit Pricing to add funds or upgrade to Premium.`,
+      )
       return
     }
     
@@ -105,8 +106,9 @@ export function PitchDeckAnalysisTab() {
 
       if (!response.ok) {
         if (response.status === 402) {
-          // Insufficient credits
-          setError(data.error || 'Insufficient credits. Please purchase credits or upgrade to premium.')
+          setError(
+            data.error || 'Not enough balance. Visit Pricing to add funds or upgrade to Premium.',
+          )
           // Reload credits
           const creditsRes = await fetch('/api/user/credits', { credentials: 'include' })
           if (creditsRes.ok) {
@@ -162,7 +164,9 @@ export function PitchDeckAnalysisTab() {
           setCredits(creditsData)
         }
       } else if (response.status === 402) {
-        toast.error('You need credits or premium to unlock top matches. Please purchase credits or upgrade to premium.')
+        toast.error(
+          'Premium or a higher balance is required to unlock top matches. Visit Pricing to add funds or upgrade.',
+        )
       } else {
         toast.error(data.error || 'Failed to unlock top matches')
       }
@@ -240,7 +244,7 @@ export function PitchDeckAnalysisTab() {
                       const data = await response.json()
                       if (!response.ok) {
                         if (response.status === 402) {
-                          toast.error('Insufficient credits. Founder feedback costs 200 credits.')
+                          toast.error('Not enough balance. Founder feedback uses 200 from your balance.')
                           return
                         }
                         throw new Error(data.error || 'Failed to get founder feedback')
@@ -260,7 +264,7 @@ export function PitchDeckAnalysisTab() {
                   disabled={requestingFeedback || !credits || (!credits.isPremium && (credits.credits ?? 0) < 200)}
                   className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white"
                 >
-                  {requestingFeedback ? 'Requesting...' : 'Get Feedback (200 credits)'}
+                  {requestingFeedback ? 'Requesting...' : 'Get Feedback (200 from balance)'}
                 </Button>
               </div>
             </CardContent>
@@ -569,7 +573,7 @@ export function PitchDeckAnalysisTab() {
         <CardHeader className="space-y-1 pb-2">
           <CardTitle className="text-lg">Pitch deck</CardTitle>
           <CardDescription>
-            PDF, PPT, or PPTX · up to 50MB · {PITCH_DECK_CREDIT_COST} credits per run
+            PDF, PPT, or PPTX · up to 50MB · {PITCH_DECK_CREDIT_COST} from balance per run
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-5 pt-2">
@@ -652,7 +656,7 @@ export function PitchDeckAnalysisTab() {
           {credits && (!credits.isPremium && (credits.credits ?? 0) < PITCH_DECK_CREDIT_COST) && (
             <Link href="/pricing" className="shrink-0">
               <Button variant="outline" size="sm">
-                Add credits
+                Add to balance
               </Button>
             </Link>
           )}

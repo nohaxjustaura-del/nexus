@@ -222,7 +222,7 @@ export function PitchIdeaAnalysisTab() {
     }
     
     if (!credits) {
-      setError('Loading your credits... Please wait a moment and try again.')
+      setError('Loading your balance… Please wait a moment and try again.')
       return
     }
     
@@ -233,7 +233,7 @@ export function PitchIdeaAnalysisTab() {
       (credits.credits ?? 0) >= PITCH_IDEA_CREDIT_COST
     if (!canRun) {
       setError(
-        `Insufficient credits. Pitch idea analysis costs ${PITCH_IDEA_CREDIT_COST} credits after your free weekly runs. You have ${credits.credits ?? 0} credits. Please purchase credits or upgrade to premium.`
+        `Not enough balance. After your free weekly runs, pitch idea analysis uses ${PITCH_IDEA_CREDIT_COST} from your balance; you have ${credits.credits ?? 0}. Visit Pricing to add funds or upgrade to Premium.`,
       )
       return
     }
@@ -274,8 +274,7 @@ export function PitchIdeaAnalysisTab() {
 
       if (!response.ok) {
         if (response.status === 402) {
-          // Create detailed error message for credits
-          let errorMessage = data.error || 'Insufficient credits'
+          let errorMessage = data.error || 'Not enough balance'
           if (data.whatWentWrong || data.howToFix) {
             errorMessage = `${errorMessage}\n\n${data.whatWentWrong || ''}\n\nWhy: ${data.whyItFailed || ''}\n\nHow to fix:\n${(data.howToFix || []).map((fix: string, i: number) => `${i + 1}. ${fix}`).join('\n')}`
           }
@@ -330,7 +329,7 @@ export function PitchIdeaAnalysisTab() {
 
       if (!response.ok) {
         if (response.status === 402) {
-          toast.error('Insufficient credits. Founder feedback costs 200 credits.')
+          toast.error('Not enough balance. Founder feedback uses 200 from your balance.')
           return
         }
         throw new Error(data.error || 'Failed to get founder feedback')
@@ -395,7 +394,7 @@ export function PitchIdeaAnalysisTab() {
                   disabled={requestingFeedback || !credits || (!credits.isPremium && (credits.credits ?? 0) < 200)}
                   className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white"
                 >
-                  {requestingFeedback ? 'Requesting...' : 'Get Feedback (200 credits)'}
+                  {requestingFeedback ? 'Requesting...' : 'Get Feedback (200 from balance)'}
                 </Button>
               </div>
             </CardContent>
@@ -686,7 +685,7 @@ export function PitchIdeaAnalysisTab() {
         <CardHeader className="space-y-1 pb-2">
           <CardTitle className="text-lg">Pitch idea</CardTitle>
           <CardDescription>
-            Text or a small document · {PITCH_IDEA_CREDIT_COST} credits per run after your free weekly quota
+            Text or a small document · {PITCH_IDEA_CREDIT_COST} from balance per run after your free weekly quota
             {credits && !credits.isPremium && credits.pitchIdeaWeeklyFree ? (
               <span className="mt-1 block text-xs text-muted-foreground">
                 Free tier: {credits.pitchIdeaWeeklyFree.remaining} of {credits.pitchIdeaWeeklyFree.limit} analyses left
@@ -907,7 +906,7 @@ export function PitchIdeaAnalysisTab() {
               (credits.credits ?? 0) < PITCH_IDEA_CREDIT_COST && (
                 <Link href="/pricing" className="shrink-0">
                   <Button variant="outline" size="sm">
-                    Add credits
+                    Add to balance
                   </Button>
                 </Link>
               )}

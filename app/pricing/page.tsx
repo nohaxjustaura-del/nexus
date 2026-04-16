@@ -21,7 +21,7 @@ export async function generateMetadata(): Promise<Metadata> {
   const count = await getVerifiedInvestorCount()
   const label = formatVerifiedInvestorCount(count)
   const description = `Transparent plans for founders matching to ${label}+ verified investors. Fundraising intelligence, shortlists, and workflow tools, not a generic list builder.`
-  const ogDescription = `${label}+ verified investors, ranked to your pitch. See how ${BRAND_NAME} pricing maps to credits and workflow access.`
+  const ogDescription = `${label}+ verified investors, ranked to your pitch. See how ${BRAND_NAME} pricing maps to plans and workflow access.`
   return {
     title: 'Pricing',
     description,

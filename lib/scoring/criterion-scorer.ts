@@ -228,7 +228,7 @@ export function buildCriteria(stage: string): Criterion[] {
       evaluationHint:
         'Explicit = price mentioned, subscription/transaction/service described. ' +
         'Implied = "done for you service" implies retainer, "marketplace" implies take rate. ' +
-        'No model implied at all = NO. Give PARTIAL credit for implied models — do not require explicit pricing at pre-seed.',
+        'No model implied at all = NO. Give PARTIAL weight for implied models — do not require explicit pricing at pre-seed.',
     },
     {
       id: 'biz_2',

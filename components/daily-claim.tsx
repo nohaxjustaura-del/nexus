@@ -48,12 +48,12 @@ export default function DailyClaim() {
       const data = await res.json()
 
       if (data.success) {
-        setMessage('✨ Claimed 1 free credit!')
+        setMessage('✨ Claimed your daily bonus!')
         setCanClaim(false)
         setCredits(data.credits)
         setNextClaimTime(data.canClaimAgainAt)
         
-        // Refresh the page credits after a short delay
+        // Refresh the page after a short delay
         setTimeout(() => {
           window.location.reload()
         }, 1500)
@@ -112,12 +112,12 @@ export default function DailyClaim() {
             </div>
             <div className="flex-1">
               <h3 className="font-bold text-base text-foreground mb-1">
-                Daily Free Credit
+                Daily bonus
               </h3>
               <p className="text-sm text-muted-foreground mb-2">
                 {canClaim 
-                  ? 'Claim your free credit today!' 
-                  : 'You\'ve claimed your credit today'}
+                  ? 'Claim your free bonus today!' 
+                  : 'You\'ve already claimed today\'s bonus'}
               </p>
               {!canClaim && nextClaimTime && (
                 <div className="flex items-center gap-1.5 text-xs text-slate-500">

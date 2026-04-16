@@ -640,7 +640,7 @@ export function AdvancedFilters({ onApply }: { onApply: (filters: any) => void }
                 onChange={(e) => handleChange('technicalResources', e.target.value)}
               >
                 <option value="">Any</option>
-                <option value="cloud-credits">Cloud Credits</option>
+                <option value="cloud-programs">Cloud programs</option>
                 <option value="staff-eng">Staff Eng Hours</option>
                 <option value="ml-infra">ML Infrastructure</option>
               </select>
@@ -681,7 +681,7 @@ export function AdvancedFilters({ onApply }: { onApply: (filters: any) => void }
               >
                 <option value="">Any</option>
                 <option value="real-allocation">Real Allocation</option>
-                <option value="just-credits">Just Credits</option>
+                <option value="non-equity-compute">Non-equity compute only</option>
                 <option value="none">None</option>
               </select>
             </div>

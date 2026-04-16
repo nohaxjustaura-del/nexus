@@ -216,9 +216,9 @@ export function AccountPageClient({
             <CardHeader className="pb-2">
               <CardTitle className="text-lg flex items-center gap-2">
                 <CreditCard className="h-5 w-5 text-muted-foreground" />
-                Plans & credits
+                Plans & billing
               </CardTitle>
-              <CardDescription>Credit packs, premium, and checkout</CardDescription>
+              <CardDescription>Add-ons, premium, and checkout</CardDescription>
             </CardHeader>
             <CardContent className="pt-2">
               <Link href="/pricing">
@@ -237,7 +237,7 @@ export function AccountPageClient({
                 Delete account
               </CardTitle>
               <CardDescription>
-                Permanently remove your login and delete your profile, analyses, credits, messages tied to this
+                Permanently remove your login and delete your profile, analyses, billing balance, messages tied to this
                 account, and other data we store for you. This cannot be undone.
               </CardDescription>
             </CardHeader>

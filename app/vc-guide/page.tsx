@@ -345,7 +345,7 @@ export default function VCGuidePage() {
                       'Pilot sites or LOIs',
                       'Capex / opex model',
                       'Supply chain risk mitigation',
-                      'Incentives and tax credits',
+                      'Incentives and tax incentives',
                       'Carbon impact metrics',
                     ],
                   },

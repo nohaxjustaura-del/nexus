@@ -117,7 +117,7 @@ export async function POST(request: NextRequest) {
 
     const currentCredits = userCredits.credits ?? 0
     if (currentCredits < cost) {
-      return NextResponse.json({ error: 'Insufficient credits' }, { status: 400 })
+      return NextResponse.json({ error: 'Insufficient balance' }, { status: 400 })
     }
 
     const newCredits = currentCredits - cost

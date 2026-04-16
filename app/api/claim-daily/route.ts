@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
 
-// One free credit per rolling 24-hour window from last claim
+// One free balance top-up per rolling 24-hour window from last claim
 const CLAIM_COOLDOWN_MS = 24 * 60 * 60 * 1000
 
 function isUniqueConstraintViolation(error: unknown): boolean {
@@ -39,7 +39,7 @@ export async function POST() {
       const row = await db.userCredits.findUnique({ where: { userId: user.id } })
       return NextResponse.json({
         success: false,
-        message: 'Daily credits are for free accounts',
+        message: 'Daily bonus is for free accounts',
         credits: row?.credits ?? 0,
         canClaimAgainAt: null,
       })
@@ -73,7 +73,7 @@ export async function POST() {
       return NextResponse.json({
         success: true,
         credits: row?.credits ?? 0,
-        message: 'Claimed 1 free credit!',
+        message: 'Claimed your daily bonus!',
         canClaimAgainAt: getNextClaimTime(now),
       })
     }
@@ -96,7 +96,7 @@ export async function POST() {
         return NextResponse.json({
           success: true,
           credits: created.credits,
-          message: 'Claimed 1 free credit!',
+          message: 'Claimed your daily bonus!',
           canClaimAgainAt: getNextClaimTime(now),
         })
       } catch (error: unknown) {
@@ -109,7 +109,7 @@ export async function POST() {
           return NextResponse.json({
             success: true,
             credits: row?.credits ?? 0,
-            message: 'Claimed 1 free credit!',
+            message: 'Claimed your daily bonus!',
             canClaimAgainAt: getNextClaimTime(now),
           })
         }
@@ -121,7 +121,7 @@ export async function POST() {
 
     if (!existing) {
       return NextResponse.json(
-        { error: 'Failed to claim credit' },
+        { error: 'Failed to claim bonus' },
         { status: 500 }
       )
     }
@@ -137,7 +137,7 @@ export async function POST() {
   } catch (error) {
     logger.error('DAILY_CLAIM', 'Error claiming credit:', error)
     return NextResponse.json(
-      { error: 'Failed to claim credit' },
+      { error: 'Failed to claim bonus' },
       { status: 500 }
     )
   }

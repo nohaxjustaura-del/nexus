@@ -40,7 +40,7 @@ const PACK_MODULE_IDS = [
   'demo-teardown',
 ] as const
 
-/** À-la-carte credits per module (multiples of 5; tiered by depth / prep value). */
+/** À-la-carte balance cost per module (multiples of 5; tiered by depth / prep value). */
 const PARTNER_MODULE_CREDITS: Record<(typeof PACK_MODULE_IDS)[number], number> = {
   'application-deconstruction': 100,
   'interview-simulator': 90,
@@ -98,9 +98,9 @@ export default function PartnerResourcesClient({ partnerSlug }: { partnerSlug: s
   }, [])
 
   const handlePurchase = async (itemId: string, cost: number) => {
-    // Skip credit check for premium users (they have unlimited credits shown as MAX_SAFE_INTEGER)
+    // Skip balance check for premium users (unlimited shown as MAX_SAFE_INTEGER)
     if (!isPremium && credits < cost) {
-      toast.error('Not enough credits. Please purchase more credits.')
+      toast.error('Not enough balance. Add funds on the Pricing page.')
       return
     }
     
@@ -187,9 +187,9 @@ export default function PartnerResourcesClient({ partnerSlug }: { partnerSlug: s
               <div className="inline-flex items-center gap-3 rounded-lg border border-zinc-700 bg-zinc-900 px-4 py-2 text-zinc-100">
                 <Coins className="h-3.5 w-3.5 shrink-0 text-primary" />
                 <span className="text-sm font-semibold">
-                  {credits >= Number.MAX_SAFE_INTEGER / 2 ? '∞' : credits} credits
+                  Balance: {credits >= Number.MAX_SAFE_INTEGER / 2 ? '∞' : credits}
                 </span>
-                <Link href="/founder/credits">
+                <Link href="/pricing">
                   <Button size="sm" variant="secondary" className="h-7 bg-zinc-800 text-xs text-zinc-100 hover:bg-zinc-700">
                     Buy more
                   </Button>
@@ -227,14 +227,14 @@ export default function PartnerResourcesClient({ partnerSlug }: { partnerSlug: s
                 Premium unlocks mentorship
               </CardTitle>
               <CardDescription className="text-zinc-400">
-                Premium: full founder profiles, LinkedIn, Ask / Book, and every playbook below at no extra credit cost.
-                Without Premium, browse module descriptions and unlock each section with credits, or buy the bundle.
+                Premium: full founder profiles, LinkedIn, Ask / Book, and every playbook below at no extra charge.
+                Without Premium, browse module descriptions and unlock each section from your balance, or buy the bundle.
               </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="flex flex-col gap-4 border-t border-zinc-700 pt-4 sm:flex-row sm:items-center sm:justify-between">
                 <p className="text-sm text-zinc-400">
-                  Use credits for individual modules, or upgrade for unlimited access to partner playbooks and founder
+                  Pay per module from your balance, or upgrade for unlimited access to partner playbooks and founder
                   requests.
                 </p>
                 <Link
@@ -383,7 +383,7 @@ export default function PartnerResourcesClient({ partnerSlug }: { partnerSlug: s
                         Most Valuable
                       </Badge>
                       <span className="ml-auto text-xs font-semibold tabular-nums text-zinc-400">
-                        {PARTNER_MODULE_CREDITS['application-deconstruction']} credits
+                        {PARTNER_MODULE_CREDITS['application-deconstruction']}
                       </span>
                     </div>
                     <CardDescription className="text-xs">Raw YC application answers + why each works + fill-in templates</CardDescription>
@@ -461,7 +461,7 @@ export default function PartnerResourcesClient({ partnerSlug }: { partnerSlug: s
                     ) : (
                       <>
                         <Lock className="h-3 w-3 mr-2" />
-                        Unlock for {PARTNER_MODULE_CREDITS['application-deconstruction']} credits
+                        Unlock for {PARTNER_MODULE_CREDITS['application-deconstruction']}
                       </>
                     )}
                   </Button>
@@ -485,7 +485,7 @@ export default function PartnerResourcesClient({ partnerSlug }: { partnerSlug: s
                     <div className="mb-1 flex flex-wrap items-center gap-2">
                       <CardTitle className="text-lg">Pitch Deck Autopsy</CardTitle>
                       <span className="ml-auto text-xs font-semibold tabular-nums text-zinc-400">
-                        {PARTNER_MODULE_CREDITS['pitch-deck-autopsy']} credits
+                        {PARTNER_MODULE_CREDITS['pitch-deck-autopsy']}
                       </span>
                     </div>
                     <CardDescription className="text-xs">Annotated deck + critical slides + what YC questioned</CardDescription>
@@ -560,7 +560,7 @@ export default function PartnerResourcesClient({ partnerSlug }: { partnerSlug: s
                     ) : (
                       <>
                         <Lock className="h-3 w-3 mr-2" />
-                        Unlock for {PARTNER_MODULE_CREDITS['pitch-deck-autopsy']} credits
+                        Unlock for {PARTNER_MODULE_CREDITS['pitch-deck-autopsy']}
                       </>
                     )}
                   </Button>
@@ -584,7 +584,7 @@ export default function PartnerResourcesClient({ partnerSlug }: { partnerSlug: s
                     <div className="mb-1 flex flex-wrap items-center gap-2">
                       <CardTitle className="text-lg">Interview Simulator</CardTitle>
                       <span className="ml-auto text-xs font-semibold tabular-nums text-zinc-400">
-                        {PARTNER_MODULE_CREDITS['interview-simulator']} credits
+                        {PARTNER_MODULE_CREDITS['interview-simulator']}
                       </span>
                     </div>
                     <CardDescription className="text-xs">YC questions + their answers + what YC was testing + drill mode</CardDescription>
@@ -659,7 +659,7 @@ export default function PartnerResourcesClient({ partnerSlug }: { partnerSlug: s
                     ) : (
                       <>
                         <Lock className="h-3 w-3 mr-2" />
-                        Unlock for {PARTNER_MODULE_CREDITS['interview-simulator']} credits
+                        Unlock for {PARTNER_MODULE_CREDITS['interview-simulator']}
                       </>
                     )}
                   </Button>
@@ -683,7 +683,7 @@ export default function PartnerResourcesClient({ partnerSlug }: { partnerSlug: s
                     <div className="mb-1 flex flex-wrap items-center gap-2">
                       <CardTitle className="text-lg">Metrics Snapshot Timeline</CardTitle>
                       <span className="ml-auto text-xs font-semibold tabular-nums text-zinc-400">
-                        {PARTNER_MODULE_CREDITS['metrics-timeline']} credits
+                        {PARTNER_MODULE_CREDITS['metrics-timeline']}
                       </span>
                     </div>
                     <CardDescription className="text-xs">Their traction at 90/30/0 days before YC + growth story</CardDescription>
@@ -758,7 +758,7 @@ export default function PartnerResourcesClient({ partnerSlug }: { partnerSlug: s
                     ) : (
                       <>
                         <Lock className="h-3 w-3 mr-2" />
-                        Unlock for {PARTNER_MODULE_CREDITS['metrics-timeline']} credits
+                        Unlock for {PARTNER_MODULE_CREDITS['metrics-timeline']}
                       </>
                     )}
                   </Button>
@@ -782,7 +782,7 @@ export default function PartnerResourcesClient({ partnerSlug }: { partnerSlug: s
                     <div className="mb-1 flex flex-wrap items-center gap-2">
                       <CardTitle className="text-lg">Distribution Diary</CardTitle>
                       <span className="ml-auto text-xs font-semibold tabular-nums text-zinc-400">
-                        {PARTNER_MODULE_CREDITS['distribution-diary']} credits
+                        {PARTNER_MODULE_CREDITS['distribution-diary']}
                       </span>
                     </div>
                     <CardDescription className="text-xs">First 10 customers + outreach scripts + what worked/failed</CardDescription>
@@ -857,7 +857,7 @@ export default function PartnerResourcesClient({ partnerSlug }: { partnerSlug: s
                     ) : (
                       <>
                         <Lock className="h-3 w-3 mr-2" />
-                        Unlock for {PARTNER_MODULE_CREDITS['distribution-diary']} credits
+                        Unlock for {PARTNER_MODULE_CREDITS['distribution-diary']}
                       </>
                     )}
                   </Button>
@@ -881,7 +881,7 @@ export default function PartnerResourcesClient({ partnerSlug }: { partnerSlug: s
                     <div className="mb-1 flex flex-wrap items-center gap-2">
                       <CardTitle className="text-lg">Demo Teardown</CardTitle>
                       <span className="ml-auto text-xs font-semibold tabular-nums text-zinc-400">
-                        {PARTNER_MODULE_CREDITS['demo-teardown']} credits
+                        {PARTNER_MODULE_CREDITS['demo-teardown']}
                       </span>
                     </div>
                     <CardDescription className="text-xs">Application video + timestamp notes + what to copy</CardDescription>
@@ -956,7 +956,7 @@ export default function PartnerResourcesClient({ partnerSlug }: { partnerSlug: s
                     ) : (
                       <>
                         <Lock className="h-3 w-3 mr-2" />
-                        Unlock for {PARTNER_MODULE_CREDITS['demo-teardown']} credits
+                        Unlock for {PARTNER_MODULE_CREDITS['demo-teardown']}
                       </>
                     )}
                   </Button>
@@ -971,7 +971,7 @@ export default function PartnerResourcesClient({ partnerSlug }: { partnerSlug: s
                   <Sparkles className="h-5 w-5 text-amber-400" />
                   <CardTitle className="text-xl">Complete Insider Pack</CardTitle>
                   <Badge className="border border-amber-500/40 bg-amber-500/20 text-amber-100">
-                    Save {PARTNER_BUNDLE_SAVE_CREDITS} credits
+                    Save {PARTNER_BUNDLE_SAVE_CREDITS} vs à la carte
                   </Badge>
                 </div>
                 <CardDescription>Get all 6 modules + bonus templates</CardDescription>
@@ -984,10 +984,10 @@ export default function PartnerResourcesClient({ partnerSlug }: { partnerSlug: s
                   <div className="flex flex-col gap-3 rounded-lg border border-zinc-700 bg-zinc-950/50 p-3 sm:flex-row sm:items-center sm:justify-between">
                     <div>
                       <div className="text-sm text-zinc-400">
-                        Individual: {PARTNER_MODULES_A_LA_CARTE_TOTAL} credits
+                        À la carte total: {PARTNER_MODULES_A_LA_CARTE_TOTAL}
                       </div>
                       <div className="text-2xl font-bold text-zinc-50">
-                        Bundle: {PARTNER_COMPLETE_PACK_CREDITS} credits
+                        Bundle: {PARTNER_COMPLETE_PACK_CREDITS} (all modules)
                       </div>
                     </div>
                     <Button

@@ -468,10 +468,10 @@ export async function POST(request: NextRequest) {
         ]
       } else if (errorCode === 'insufficient_quota' || errorMessage.includes('quota')) {
         errorDetails.whatWentWrong = 'AI service quota exceeded'
-        errorDetails.whyItFailed = 'The AI service has no credits remaining'
+        errorDetails.whyItFailed = 'The AI service has no quota remaining'
         errorDetails.howToFix = [
           'This is a server configuration issue',
-          'Contact support to add credits to the AI service',
+          'Contact support to raise the AI service quota',
         ]
       } else if (errorMessage.includes('rate limit') || errorCode === 'rate_limit_exceeded') {
         errorDetails.whatWentWrong = 'AI service rate limit exceeded'

@@ -50,9 +50,9 @@ export function VideoPitchAnalysisTab() {
     }
   }, [reviewType])
   
-  // Auto-clear insufficient credits errors when credits change
+  // Auto-clear insufficient-balance errors when balance reloads
   useEffect(() => {
-    if (credits && error && error.includes('Insufficient credits')) {
+    if (credits && error && error.includes('Not enough balance')) {
       setError(null)
     }
   }, [credits])
@@ -103,13 +103,15 @@ export function VideoPitchAnalysisTab() {
     
     // Wait for credits to load if they haven't yet
     if (!credits) {
-      setError('Loading your credits... Please wait a moment and try again.')
+      setError('Loading your balance… Please wait a moment and try again.')
       return
     }
     
-    // Check if user has enough credits (skip check if premium)
+    // Check balance (skip if premium)
     if (!credits.isPremium && (credits.credits ?? 0) < currentCreditCost) {
-      setError(`Insufficient credits. ${reviewType === 'ai' ? 'Standard' : 'Reviewer'} video pitch analysis costs ${currentCreditCost} credits. You have ${credits.credits ?? 0} credits. Please purchase credits or upgrade to premium.`)
+      setError(
+        `Not enough balance. ${reviewType === 'ai' ? 'Standard' : 'Reviewer'} video analysis uses ${currentCreditCost} from your balance; you have ${credits.credits ?? 0}. Visit Pricing to add funds or upgrade to Premium.`,
+      )
       return
     }
     
@@ -142,8 +144,10 @@ export function VideoPitchAnalysisTab() {
 
       if (!response.ok) {
         if (response.status === 402) {
-          // Insufficient credits
-          setError(data.error || 'Insufficient credits. Please purchase credits or upgrade to premium.')
+          setError(
+            data.error ||
+              'Not enough balance. Visit Pricing to add funds or upgrade to Premium.',
+          )
           // Reload credits
           const creditsRes = await fetch('/api/user/credits', { credentials: 'include' })
           if (creditsRes.ok) {
@@ -218,7 +222,9 @@ export function VideoPitchAnalysisTab() {
           setCredits(creditsData)
         }
       } else if (response.status === 402) {
-        toast.error('You need credits or premium to unlock top matches. Please purchase credits or upgrade to premium.')
+        toast.error(
+          'Premium or a higher balance is required to unlock top matches. Visit Pricing to add funds or upgrade.',
+        )
       } else {
         toast.error(data.error || 'Failed to unlock top matches')
       }
@@ -313,7 +319,7 @@ export function VideoPitchAnalysisTab() {
               <div className="flex items-center justify-between gap-2">
                 <span className="font-medium">AI analysis</span>
                 <Badge variant="secondary" className="shrink-0 text-xs font-normal">
-                  {VIDEO_AI_CREDIT_COST} cr
+                  {VIDEO_AI_CREDIT_COST}/run
                 </Badge>
               </div>
               <p className="mt-1 text-xs text-muted-foreground">Instant scores and VC matches</p>
@@ -330,7 +336,7 @@ export function VideoPitchAnalysisTab() {
               <div className="flex items-center justify-between gap-2">
                 <span className="font-medium">Human reviewer</span>
                 <Badge variant="secondary" className="shrink-0 text-xs font-normal">
-                  {VIDEO_REVIEWER_CREDIT_COST} cr
+                  {VIDEO_REVIEWER_CREDIT_COST}/run
                 </Badge>
               </div>
               <p className="mt-1 text-xs text-muted-foreground">Founders vetted by top programs · ~2–3 days</p>
@@ -397,7 +403,7 @@ export function VideoPitchAnalysisTab() {
                 (reviewType === 'ai' ? VIDEO_AI_CREDIT_COST : VIDEO_REVIEWER_CREDIT_COST)) && (
               <Link href="/pricing" className="shrink-0">
                 <Button variant="outline" size="sm">
-                  Add credits
+                  Add to balance
                 </Button>
               </Link>
             )}

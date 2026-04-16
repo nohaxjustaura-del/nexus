@@ -21,21 +21,21 @@ export const CREDIT_PACKAGES = {
     price: 19,
     priceId: STRIPE_PRICES.STARTER_PACK,
     name: 'Starter',
-    description: '50 credits - $0.38 per credit',
+    description: 'Starter top-up — $19 · adds 50 to your balance',
   },
   founder: {
     credits: 150,
     price: 49,
     priceId: STRIPE_PRICES.FOUNDER_PACK,
     name: 'Founder',
-    description: '150 credits - $0.33 per credit, 13% savings',
+    description: 'Founder top-up — $49 · adds 150 to your balance (~13% savings vs starter)',
   },
   pro: {
     credits: 400,
     price: 99,
     priceId: STRIPE_PRICES.PRO_PACK,
     name: 'Pro',
-    description: '400 credits - $0.25 per credit, 34% savings',
+    description: 'Pro top-up — $99 · adds 400 to your balance (~34% savings vs starter)',
   },
 }
 
@@ -44,7 +44,7 @@ export const PREMIUM_SUBSCRIPTION = {
   price: 79,
   priceId: STRIPE_PRICES.PREMIUM,
   name: 'Premium',
-  description: 'Unlimited usage - Best value if you use 300+ credits/month',
+  description: 'Unlimited usage — best value if you run many analyses each month',
 }
 
 // Helper: Get package by credits
