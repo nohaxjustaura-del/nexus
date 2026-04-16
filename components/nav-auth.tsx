@@ -43,16 +43,18 @@ export const NavAuth = memo(function NavAuth() {
                   >
                     Admin
                   </Link>
-                  <Link
-                    href={isInvestorPortal ? '/vc/profile' : '/founder/dashboard'}
-                    className={cn(
-                      'hidden sm:inline-flex lg:hidden',
-                      buttonVariants({ size: 'sm', variant: 'outline' }),
-                      'h-9 rounded-full border-border/80 px-3.5 text-sm font-medium shadow-none'
-                    )}
-                  >
-                    {isInvestorPortal ? 'Listing' : 'Hub'}
-                  </Link>
+                  {!onAdminPage && (
+                    <Link
+                      href={isInvestorPortal ? '/vc/profile' : '/founder/dashboard'}
+                      className={cn(
+                        'hidden sm:inline-flex lg:hidden',
+                        buttonVariants({ size: 'sm', variant: 'outline' }),
+                        'h-9 rounded-full border-border/80 px-3.5 text-sm font-medium shadow-none'
+                      )}
+                    >
+                      {isInvestorPortal ? 'Listing' : 'Hub'}
+                    </Link>
+                  )}
                 </>
               ) : (
                 <Link
@@ -74,17 +76,19 @@ export const NavAuth = memo(function NavAuth() {
               Onboarding
             </Link>
           )}
-          <Link
-            href="/account"
-            className={cn(
-              buttonVariants({ variant: 'ghost', size: 'sm' }),
-              'hidden h-9 rounded-full px-3 sm:inline-flex'
-            )}
-            aria-label="Account"
-          >
-            <User className="h-4 w-4" />
-            <span className="hidden md:inline ml-1.5 text-sm">Account</span>
-          </Link>
+          {!onAdminPage && (
+            <Link
+              href="/account"
+              className={cn(
+                buttonVariants({ variant: 'ghost', size: 'sm' }),
+                'hidden h-9 rounded-full px-3 sm:inline-flex'
+              )}
+              aria-label="Account"
+            >
+              <User className="h-4 w-4" />
+              <span className="hidden md:inline ml-1.5 text-sm">Account</span>
+            </Link>
+          )}
           <LogoutButton />
         </div>
       </div>

@@ -1,4 +1,7 @@
 import dynamic from 'next/dynamic'
+import { redirect } from 'next/navigation'
+import { getCurrentUser } from '@/lib/auth'
+import { isAdminEmail } from '@/lib/constants'
 
 const TrainingDataClient = dynamic(() => import('./training-data-client'), {
   ssr: false,
@@ -13,6 +16,14 @@ const TrainingDataClient = dynamic(() => import('./training-data-client'), {
   ),
 })
 
-export default function TrainingDataPage() {
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
+export default async function TrainingDataPage() {
+  const user = await getCurrentUser(false)
+  if (!user || !isAdminEmail(user.email)) {
+    redirect('/')
+  }
+
   return <TrainingDataClient />
 }

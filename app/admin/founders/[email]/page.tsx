@@ -1,4 +1,7 @@
 export const dynamic = 'force-dynamic'
+import { redirect } from 'next/navigation'
+import { getCurrentUser } from '@/lib/auth'
+import { isAdminEmail } from '@/lib/constants'
 
 async function fetchDetails(email: string) {
   const base = process.env.NEXT_PUBLIC_URL || ''
@@ -7,6 +10,11 @@ async function fetchDetails(email: string) {
 }
 
 export default async function FounderDetailPage({ params }: { params: { email: string } }) {
+  const user = await getCurrentUser(false)
+  if (!user || !isAdminEmail(user.email)) {
+    redirect('/')
+  }
+
   const email = decodeURIComponent(params.email)
   const data = await fetchDetails(email)
 

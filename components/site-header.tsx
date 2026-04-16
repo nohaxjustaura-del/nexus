@@ -27,6 +27,12 @@ function guestExploreTabs(): readonly { next: string; label: string }[] {
 }
 
 const navDockClass = 'inline-flex max-w-full flex-nowrap items-center justify-center gap-1'
+const adminDesktopTabs = [
+  { href: '/admin/dashboard', label: 'Overview' },
+  { href: '/admin/approvals', label: 'Founders' },
+  { href: '/admin/vcs', label: 'VCs' },
+  { href: '/admin/more', label: 'More' },
+] as const
 
 function DesktopNavLink({
   href,
@@ -60,6 +66,7 @@ export function SiteHeader() {
   const { authenticated } = useAuthSession()
   const { capabilities } = useAccountCapabilities()
   const showFounderNetworkNav = Boolean(capabilities?.canAccessFounderNetwork)
+  const isAdminRoute = Boolean(pathname?.startsWith('/admin'))
 
   const guestMobileLinks: MobileNavItem[] = useMemo(() => {
     const rows: MobileNavItem[] = [
@@ -113,7 +120,15 @@ export function SiteHeader() {
   }, [authenticated])
 
   const mobileLinks =
-    chrome === 'guest'
+    isAdminRoute
+      ? ([
+          { section: 'Admin', href: '/admin/dashboard', label: 'Overview' },
+          { href: '/admin/approvals', label: 'Founders' },
+          { href: '/admin/vcs', label: 'VCs' },
+          { href: '/admin/more', label: 'More' },
+          { section: 'Switch', href: '/founder/dashboard', label: 'Switch to Founder' },
+        ] as MobileNavItem[])
+      : chrome === 'guest'
       ? guestMobileLinks
       : chrome === 'investor'
         ? investorMobileLinks
@@ -122,15 +137,15 @@ export function SiteHeader() {
           : founderMobileLinks
 
   const logoHref =
-    chrome === 'investor'
+    isAdminRoute
+      ? '/admin/dashboard'
+      : chrome === 'investor'
       ? '/investor/dashboard'
       : chrome === 'mentor'
         ? '/mentor/dashboard'
         : chrome === 'founder'
           ? '/founder/dashboard'
           : '/'
-
-  const isAdminRoute = Boolean(pathname?.startsWith('/admin'))
 
   const guestNavLinkClass =
     'rounded-full px-3 py-1.5 text-sm font-medium text-muted-foreground outline-none transition-colors hover:bg-muted/65 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background'
@@ -175,7 +190,16 @@ export function SiteHeader() {
           aria-label="Main navigation"
           suppressHydrationWarning
         >
-            {chrome === 'guest' && (
+            {isAdminRoute && (
+              <div className={navDockClass}>
+                {adminDesktopTabs.map(({ href, label }) => (
+                  <DesktopNavLink key={href} href={href} label={label} pathname={pathname} />
+                ))}
+                <DesktopNavLink href="/founder/dashboard" label="Switch to Founder" pathname={pathname} />
+              </div>
+            )}
+
+            {!isAdminRoute && chrome === 'guest' && (
               <div className={navDockClass}>
                 {guestExploreTabs().map(({ next, label }) => (
                   <Link key={next} href={guestExploreHref(next)} className={guestNavLinkClass}>
@@ -185,7 +209,7 @@ export function SiteHeader() {
               </div>
             )}
 
-            {chrome === 'founder' && (
+            {!isAdminRoute && chrome === 'founder' && (
               <div className={navDockClass}>
                 <ProtectedNavLink href="/founder/dashboard">Hub</ProtectedNavLink>
                 <ProtectedNavLink href="/founder/discover">Investors</ProtectedNavLink>
@@ -197,7 +221,7 @@ export function SiteHeader() {
               </div>
             )}
 
-            {chrome === 'mentor' && (
+            {!isAdminRoute && chrome === 'mentor' && (
               <div className={navDockClass}>
                 <DesktopNavLink href="/mentor/dashboard" label="Dashboard" pathname={pathname} />
                 <DesktopNavLink href="/mentor/onboarding" label="Setup" pathname={pathname} />
@@ -206,7 +230,7 @@ export function SiteHeader() {
               </div>
             )}
 
-            {chrome === 'investor' && (
+            {!isAdminRoute && chrome === 'investor' && (
               <div className={navDockClass}>
                 <DesktopNavLink href="/investor/dashboard" label="Dashboard" pathname={pathname} />
                 <DesktopNavLink href="/vc/profile" label="Listing" pathname={pathname} />

@@ -1,6 +1,7 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 import { portalRedirectIfNeeded } from '@/lib/portal-middleware'
+import { isAdminEmail } from '@/lib/constants'
 
 /** Skip `getUser()` when no Supabase session cookies are present — avoids a network round-trip for anonymous traffic. */
 function hasSupabaseSessionCookies(request: NextRequest): boolean {
@@ -8,6 +9,11 @@ function hasSupabaseSessionCookies(request: NextRequest): boolean {
     if (!name.startsWith('sb-')) return false
     return /auth|access-token|refresh-token/.test(name)
   })
+}
+
+function adminBypassAllowed(pathname: string): boolean {
+  if (pathname.startsWith('/admin')) return true
+  return pathname === '/founder/dashboard'
 }
 
 export async function updateSupabaseSession(request: NextRequest) {
@@ -78,6 +84,17 @@ export async function updateSupabaseSession(request: NextRequest) {
   } = await supabase.auth.getUser()
 
   if (user) {
+    if (isAdminEmail(user.email) && !adminBypassAllowed(request.nextUrl.pathname)) {
+      const url = request.nextUrl.clone()
+      url.pathname = '/admin/dashboard'
+      url.search = ''
+      const redirectResponse = NextResponse.redirect(url)
+      for (const c of response.cookies.getAll()) {
+        redirectResponse.cookies.set(c.name, c.value)
+      }
+      return redirectResponse
+    }
+
     const redirected = portalRedirectIfNeeded(request, user, response)
     if (redirected) return redirected
   }

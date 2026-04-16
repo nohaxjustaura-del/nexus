@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, UserCheck, Building2, Wrench, Shield } from 'lucide-react'
+import { ArrowRightLeft, LayoutDashboard, UserCheck, Building2, Wrench, Shield } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const items = [
@@ -69,7 +69,7 @@ export function AdminSubnav() {
               {pageTitle}
             </p>
           </div>
-          <div className="-mx-1 flex gap-0.5 overflow-x-auto [scrollbar-width:thin] sm:justify-end sm:pb-0">
+          <div className="-mx-1 flex items-center gap-0.5 overflow-x-auto [scrollbar-width:thin] sm:justify-end sm:pb-0">
             {items.map(({ href, label, icon: Icon }) => {
               const active = pathname === href || pathname?.startsWith(`${href}/`)
               return (
@@ -89,6 +89,13 @@ export function AdminSubnav() {
                 </Link>
               )
             })}
+            <Link
+              href="/founder/dashboard"
+              className="ml-1 inline-flex shrink-0 items-center gap-1.5 rounded-full border border-border/70 bg-background/70 px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground"
+            >
+              <ArrowRightLeft className="h-3.5 w-3.5 opacity-70" aria-hidden />
+              Switch to Founder
+            </Link>
           </div>
         </div>
       </div>

@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { useAuthSession } from '@/components/auth-session-provider'
 import {
   Download,
   Database,
@@ -42,7 +41,6 @@ interface TrainingDataExport {
 }
 
 export default function TrainingDataPage() {
-  const { loading: authLoading, isAdmin, email, user } = useAuthSession()
   const [loading, setLoading] = useState(true)
   const [data, setData] = useState<TrainingDataExport | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -60,17 +58,6 @@ export default function TrainingDataPage() {
     setLoading(true)
     setError(null)
     try {
-      if (authLoading) {
-        setLoading(false)
-        return
-      }
-      const userEmail = user?.email || email
-      if (!userEmail || !isAdmin) {
-        setError(`Access denied. You must be logged in as the admin. Current: ${userEmail || 'not logged in'}`)
-        setLoading(false)
-        return
-      }
-
       let url = '/api/training-data'
       const params = new URLSearchParams()
       if (typeFilter && typeFilter !== 'all') params.set('type', typeFilter)
@@ -92,10 +79,9 @@ export default function TrainingDataPage() {
   }
 
   useEffect(() => {
-    if (authLoading) return
     void fetchData()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authLoading])
+  }, [])
 
   const handleApplyFilters = () => {
     fetchData()
