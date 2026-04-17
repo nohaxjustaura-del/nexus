@@ -5,7 +5,16 @@ import { getCurrentUser } from '@/lib/auth'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
-export async function GET() {
+const DEFAULT_LIMIT = 30
+const MAX_LIMIT = 100
+
+function toPositiveInt(value: string | null, fallback: number): number {
+  const parsed = Number.parseInt(value ?? '', 10)
+  if (!Number.isFinite(parsed) || parsed <= 0) return fallback
+  return parsed
+}
+
+export async function GET(request: Request) {
   try {
     const user = await getCurrentUser()
     
@@ -27,10 +36,21 @@ export async function GET() {
       })
     }
 
-    // Get all analyses for this founder (ordered by most recent)
+    const { searchParams } = new URL(request.url)
+    const includeResult = searchParams.get('includeResult') === '1'
+    const limit = Math.min(toPositiveInt(searchParams.get('limit'), DEFAULT_LIMIT), MAX_LIMIT)
+
+    // Get analyses for this founder (ordered by most recent)
     const analyses = await db.resumeAnalysis.findMany({
       where: { founderId: founder.id },
       orderBy: { createdAt: 'desc' },
+      take: limit,
+      select: {
+        id: true,
+        createdAt: true,
+        compatibilityScore: true,
+        fullResult: includeResult,
+      },
     })
 
     if (analyses.length === 0) {
@@ -42,10 +62,10 @@ export async function GET() {
     // Parse and format each analysis
     const formattedAnalyses = analyses.map(analysis => {
       let analysisResult = null
-      if (analysis.fullResult) {
+      if (includeResult && analysis.fullResult) {
         try {
           analysisResult = JSON.parse(analysis.fullResult)
-        } catch (e) {
+        } catch {
           console.warn('Could not parse stored analysis result')
         }
       }

@@ -5,7 +5,16 @@ import { getCurrentUser } from '@/lib/auth'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
-export async function GET() {
+const DEFAULT_LIMIT = 24
+const MAX_LIMIT = 100
+
+function toPositiveInt(value: string | null, fallback: number): number {
+  const parsed = Number.parseInt(value ?? '', 10)
+  if (!Number.isFinite(parsed) || parsed <= 0) return fallback
+  return parsed
+}
+
+export async function GET(request: Request) {
   try {
     const user = await getCurrentUser()
 
@@ -35,45 +44,78 @@ export async function GET() {
       })
     }
 
-    // Get all analysis types
+    const { searchParams } = new URL(request.url)
+    const limit = Math.min(toPositiveInt(searchParams.get('limit'), DEFAULT_LIMIT), MAX_LIMIT)
+    const includeResult = searchParams.get('includeResult') === '1'
+
+    // Pull only the most recent slice from each analysis type.
+    // This avoids fetching/parsing an unbounded amount of historical JSON.
     const [resumeAnalyses, videoPitches, pitchDeckAnalyses, pitchIdeaAnalyses] = await Promise.all([
-      // Resume analyses
       db.resumeAnalysis.findMany({
         where: { founderId: founder.id },
         orderBy: { createdAt: 'desc' },
+        take: limit,
+        select: {
+          id: true,
+          createdAt: true,
+          compatibilityScore: true,
+          resumeFileName: true,
+          fullResult: includeResult,
+        },
       }).catch(() => []),
-      // Video pitch analyses
       db.videoPitch.findMany({
-        where: { 
+        where: {
           founderId: founder.id,
           analysisResult: { not: null },
         },
         orderBy: { createdAt: 'desc' },
+        take: limit,
+        select: {
+          id: true,
+          createdAt: true,
+          fileName: true,
+          analysisResult: includeResult,
+        },
       }).catch(() => []),
-      // Pitch deck analyses
       db.pitchDeckAnalysis.findMany({
-        where: { 
+        where: {
           founderId: founder.id,
           analysisResult: { not: null },
         },
         orderBy: { createdAt: 'desc' },
+        take: limit,
+        select: {
+          id: true,
+          createdAt: true,
+          fileName: true,
+          fileUrl: true,
+          overallScore: true,
+          analysisResult: includeResult,
+        },
       }).catch(() => []),
-      // Pitch idea analyses
       (db as any).pitchIdeaAnalysis.findMany({
-        where: { 
+        where: {
           founderId: founder.id,
           analysisResult: { not: null },
         },
         orderBy: { createdAt: 'desc' },
+        take: limit,
+        select: {
+          id: true,
+          createdAt: true,
+          ideaText: true,
+          analysisResult: includeResult,
+          smartMatchResults: includeResult,
+        },
       }).catch(() => []),
     ])
 
     // Format all analyses with equal importance
     const allAnalyses = [
       // Resume analyses
-      ...resumeAnalyses.map(analysis => {
+      ...resumeAnalyses.map((analysis) => {
         let analysisResult = null
-        if (analysis.fullResult) {
+        if (includeResult && analysis.fullResult) {
           try {
             analysisResult = JSON.parse(analysis.fullResult)
           } catch {
@@ -92,9 +134,9 @@ export async function GET() {
         }
       }),
       // Video pitch analyses
-      ...videoPitches.map(pitch => {
+      ...videoPitches.map((pitch) => {
         let analysisResult = null
-        if (pitch.analysisResult) {
+        if (includeResult && pitch.analysisResult) {
           try {
             analysisResult = JSON.parse(pitch.analysisResult)
           } catch {
@@ -116,7 +158,7 @@ export async function GET() {
       // 🆕 Pitch deck analyses (now stored in database)
       ...pitchDeckAnalyses.map((analysis: any) => {
         let analysisResult = null
-        if (analysis.analysisResult) {
+        if (includeResult && analysis.analysisResult) {
           try {
             analysisResult = JSON.parse(analysis.analysisResult)
           } catch {
@@ -138,7 +180,7 @@ export async function GET() {
       // Pitch idea analyses
       ...pitchIdeaAnalyses.map((analysis: any) => {
         let analysisResult = null
-        if (analysis.analysisResult) {
+        if (includeResult && analysis.analysisResult) {
           try {
             analysisResult = JSON.parse(analysis.analysisResult)
           } catch {
@@ -146,7 +188,7 @@ export async function GET() {
           }
         }
         let smartMatchResults = null
-        if (analysis.smartMatchResults) {
+        if (includeResult && analysis.smartMatchResults) {
           try {
             smartMatchResults = JSON.parse(analysis.smartMatchResults)
           } catch {
@@ -176,7 +218,7 @@ export async function GET() {
     ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
 
     return NextResponse.json({
-      analyses: allAnalyses,
+      analyses: allAnalyses.slice(0, limit),
     })
   } catch (error: unknown) {
     console.error('[API] /api/all-analyses', error)

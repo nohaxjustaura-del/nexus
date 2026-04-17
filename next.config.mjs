@@ -26,7 +26,7 @@ const nextConfig = {
     formats: ['image/avif', 'image/webp'],
     deviceSizes: [640, 750, 828, 1080, 1200, 1920],
     imageSizes: [16, 32, 48, 64, 96, 128, 256],
-    minimumCacheTTL: 60,
+    minimumCacheTTL: 86400,
   },
   
   // Compiler optimizations
@@ -46,6 +46,7 @@ const nextConfig = {
       'react-markdown',
       'lucide-react',
     ],
+    optimizeCss: true,
   },
 
   /**

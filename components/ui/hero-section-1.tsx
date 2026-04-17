@@ -32,9 +32,10 @@ const menuItems = [
 export type HeroSectionProps = {
   showHeader?: boolean
   verifiedInvestorCountLabel: string
+  analysesCountLabel: string
 }
 
-export function HeroSection({ showHeader = true, verifiedInvestorCountLabel }: HeroSectionProps) {
+export function HeroSection({ showHeader = true, verifiedInvestorCountLabel, analysesCountLabel }: HeroSectionProps) {
   const { loading: authLoading, authenticated, verified } = useAuthSession()
   const [mounted, setMounted] = React.useState(false)
 
@@ -50,6 +51,7 @@ export function HeroSection({ showHeader = true, verifiedInvestorCountLabel }: H
     mounted && isVerifiedUser ? '/founder/discover' : SIGNUP_DISCOVER
 
   const investorCount = parseInt(verifiedInvestorCountLabel.replace(/,/g, ''), 10) || 1200
+  const analysesCount = parseInt(analysesCountLabel.replace(/,/g, ''), 10) || 3000
   const trustedLogoItems = React.useMemo(
     () => [
       { id: 'yc', label: 'Y Combinator', src: 'https://www.google.com/s2/favicons?domain=ycombinator.com&sz=64' },
@@ -108,11 +110,11 @@ export function HeroSection({ showHeader = true, verifiedInvestorCountLabel }: H
                     {BRAND_HERO_EYEBROW}
                   </p>
                   <h1 className="hero-reveal-item hero-title mx-auto mt-3 max-w-4xl lg:mt-6 lg:text-[3.25rem]">
-                    Find the <span className="gradient-text">investors</span> who actually fund companies like yours
+                    Fundraise with a <span className="gradient-text">fit engine</span>, not a static investor list
                   </h1>
                   <p className="hero-reveal-item hero-copy mt-8 max-w-xl">
-                    Upload your pitch once. Get scored feedback, a ranked shortlist matched to your company, and clear next steps
-                    in minutes, not months.
+                    NEXUS reads your pitch like a first-pass partner, then ranks real investors by mandate fit, stage, sector,
+                    and check size so founders target the right people and investors see stronger, better-matched opportunities.
                   </p>
                 </div>
 
@@ -155,7 +157,7 @@ export function HeroSection({ showHeader = true, verifiedInvestorCountLabel }: H
                     <div className="flex items-center gap-1.5">
                       <Sparkles className="h-4 w-4 text-primary/70" strokeWidth={1.75} />
                       <AnimatedCounter
-                        value={50000}
+                        value={analysesCount}
                         suffix="+"
                         className="text-2xl font-bold text-foreground md:text-3xl"
                       />
