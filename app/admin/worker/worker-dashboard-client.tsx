@@ -318,7 +318,7 @@ export function WorkerDashboardClient() {
           <div className="rounded-lg border border-dashed bg-muted/30 p-6">
             <h2 className="mb-2 text-base font-semibold">One-off seed research</h2>
             <p className="mb-4 text-sm text-muted-foreground">
-              Runs full VC research (thesis + profile) on a fixed short list: Sequoia, a16z, Benchmark, Accel, YC. Separate
+              Runs full investor research (thesis + profile) on a fixed short list: Sequoia, a16z, Benchmark, Accel, YC. Separate
               from monthly thesis/profile windows and from the discover ingest worker.
             </p>
             <button
@@ -327,7 +327,7 @@ export function WorkerDashboardClient() {
               disabled={triggering === 'vc-research'}
               className="rounded-md border bg-background px-4 py-2 text-sm font-medium hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {triggering === 'vc-research' ? 'Starting…' : 'Run seed VC research'}
+              {triggering === 'vc-research' ? 'Starting…' : 'Run seed investor research'}
             </button>
           </div>
 

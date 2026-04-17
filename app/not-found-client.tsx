@@ -29,7 +29,7 @@ export function NotFoundClient() {
         <Link href="/founder/discover">
           <Button size="lg" variant="outline" className="gap-2">
             <Search className="h-5 w-5" />
-            Discover VCs
+            Discover Investors
           </Button>
         </Link>
       </div>
@@ -39,3 +39,4 @@ export function NotFoundClient() {
     </div>
   )
 }
+

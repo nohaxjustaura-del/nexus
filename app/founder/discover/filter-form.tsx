@@ -35,10 +35,10 @@ const FUND_TYPES = [
   { value: '', label: 'All Types' },
   { value: 'accelerator', label: 'Accelerator' },
   { value: 'fellowship', label: 'Fellowship' },
-  { value: 'micro-VC', label: 'Micro-VC' },
-  { value: 'institutional', label: 'Institutional VC' },
+  { value: 'micro-VC', label: 'Micro-Investor' },
+  { value: 'institutional', label: 'Institutional Investor' },
   { value: 'angel', label: 'Angel Network' },
-  { value: 'CVC', label: 'Corporate VC' },
+  { value: 'CVC', label: 'Corporate Investor' },
 ]
 
 export function FilterForm() {

@@ -1,21 +1,17 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Button, buttonVariants } from '@/components/ui/button'
+import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { toast } from '@/components/ui/toast-simple'
-import { cn } from '@/lib/utils'
 import {
-  CheckCircle,
   ChevronDown,
   ChevronRight,
-  Download,
-  FileText,
+  Layers,
   Loader2,
   Search,
   UserX,
-  XCircle,
 } from 'lucide-react'
 
 export type FounderOnboardingQueueItem = {
@@ -61,22 +57,6 @@ type DetailsPayload = {
   } | null
 }
 
-function previewKind(url: string | null | undefined): 'pdf' | 'image' | 'unknown' {
-  if (!url) return 'unknown'
-  const base = url.split('?')[0].toLowerCase()
-  if (base.endsWith('.pdf')) return 'pdf'
-  if (/\.(png|jpe?g|webp|gif)$/i.test(base)) return 'image'
-  return 'unknown'
-}
-
-function inlineFileUrl(email: string) {
-  return `/api/admin/founders/verification/file/${encodeURIComponent(email)}?disposition=inline`
-}
-
-function downloadFileUrl(email: string) {
-  return `/api/admin/founders/verification/file/${encodeURIComponent(email)}`
-}
-
 function formatWhen(iso: string | null | undefined) {
   if (!iso) return '-'
   try {
@@ -86,12 +66,9 @@ function formatWhen(iso: string | null | undefined) {
   }
 }
 
-function statusBadgeVariant(
-  status: string | null,
-  kind: 'signup' | 'id'
-): 'default' | 'secondary' | 'destructive' | 'outline' {
+function statusBadgeVariant(status: string | null): 'default' | 'secondary' | 'destructive' | 'outline' {
   if (!status) return 'outline'
-  if (status === 'pending') return kind === 'signup' ? 'secondary' : 'secondary'
+  if (status === 'pending') return 'secondary'
   if (status === 'approved') return 'default'
   if (status === 'rejected') return 'destructive'
   return 'outline'
@@ -110,7 +87,7 @@ export function FounderOnboardingQueue() {
   const [detailsLoading, setDetailsLoading] = useState<Set<string>>(() => new Set())
 
   const [submitting, setSubmitting] = useState<string | null>(null)
-  const [idBusy, setIdBusy] = useState<{ email: string; action: 'approve' | 'reject' } | null>(null)
+  const [bulkApproving, setBulkApproving] = useState(false)
 
   useEffect(() => {
     const t = setTimeout(() => setDebouncedQ(searchInput.trim()), 320)
@@ -247,42 +224,38 @@ export function FounderOnboardingQueue() {
     }
   }
 
-  const runIdDecision = async (email: string, action: 'approve' | 'reject') => {
-    setIdBusy({ email, action })
+  const approveAllPending = async () => {
+    if (
+      !confirm(
+        'Approve every pending signup in the queue right now? This will grant access to all currently pending accounts.'
+      )
+    ) {
+      return
+    }
+
+    setBulkApproving(true)
     try {
-      const res = await fetch(`/api/admin/founders/verification/${encodeURIComponent(email)}`, {
+      const res = await fetch('/api/admin/users/approvals', {
         method: 'PATCH',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action }),
       })
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}))
-        throw new Error(data.error || 'Update failed')
-      }
-
-      if (action === 'approve') {
-        const res2 = await fetch(`/api/admin/users/approve/${encodeURIComponent(email)}`, {
-          method: 'PATCH',
-          credentials: 'include',
-          headers: { 'Content-Type': 'application/json' },
-        })
-        if (!res2.ok) {
-          toast.error('ID saved, but account approval failed. Approve signup from this row if needed.')
-        }
-      }
-
-      toast.success(action === 'approve' ? 'Founder ID verified' : 'ID submission rejected')
-      setDetailsByEmail((d) => {
-        const next = { ...d }
-        delete next[email]
-        return next
-      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data?.error || 'Bulk approve failed')
+      const approvedCount =
+        typeof data?.approvedCount === 'number' && Number.isFinite(data.approvedCount)
+          ? data.approvedCount
+          : 0
+      toast.success(
+        approvedCount > 0
+          ? `Approved ${approvedCount} pending signup${approvedCount === 1 ? '' : 's'}`
+          : 'No pending signups to approve'
+      )
       await loadQueueFirstPage()
     } catch (e: unknown) {
-      toast.error(e instanceof Error ? e.message : 'Something went wrong')
+      toast.error(e instanceof Error ? e.message : 'Bulk approve failed')
     } finally {
-      setIdBusy(null)
+      setBulkApproving(false)
     }
   }
 
@@ -311,7 +284,7 @@ export function FounderOnboardingQueue() {
     () =>
       debouncedQ
         ? `Search: “${debouncedQ}”`
-        : 'Showing the most recent signups and ID submissions. Search by email or name.',
+        : 'Showing the most recent signups. Search by email or name.',
     [debouncedQ]
   )
 
@@ -329,8 +302,24 @@ export function FounderOnboardingQueue() {
             aria-label="Search queue"
           />
         </div>
-        <p className="text-xs text-muted-foreground sm:max-w-sm sm:text-right">{searchHint}</p>
+        <div className="flex items-center gap-2 self-end sm:self-auto">
+          <p className="hidden text-xs text-muted-foreground sm:block sm:max-w-sm sm:text-right">{searchHint}</p>
+          <Button type="button" size="sm" variant="outline" onClick={approveAllPending} disabled={bulkApproving}>
+            {bulkApproving ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Approving...
+              </>
+            ) : (
+              <>
+                <Layers className="mr-2 h-4 w-4" />
+                Approve all pending
+              </>
+            )}
+          </Button>
+        </div>
       </div>
+      <p className="text-xs text-muted-foreground sm:hidden">{searchHint}</p>
 
       {queueError && (
         <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">{queueError}</div>
@@ -354,12 +343,6 @@ export function FounderOnboardingQueue() {
           const isOpen = expanded.has(row.email)
           const details = detailsByEmail[row.email]
           const dLoading = detailsLoading.has(row.email)
-          const rowBusy = idBusy?.email === row.email
-          const rejectLoading = rowBusy && idBusy?.action === 'reject'
-          const approveLoading = rowBusy && idBusy?.action === 'approve'
-          const vUrl = details?.verification?.url
-          const kind = vUrl ? previewKind(vUrl) : row.idPreviewKind ?? 'unknown'
-          const src = inlineFileUrl(row.email)
 
           return (
             <li key={row.email} className="overflow-hidden rounded-lg border bg-card">
@@ -378,21 +361,12 @@ export function FounderOnboardingQueue() {
                   )}
                   <div className="mt-1.5 flex flex-wrap gap-1.5">
                     {row.signupStatus ? (
-                      <Badge variant={statusBadgeVariant(row.signupStatus, 'signup')} className="text-xs">
+                      <Badge variant={statusBadgeVariant(row.signupStatus)} className="text-xs">
                         Signup: {row.signupStatus}
                       </Badge>
                     ) : (
                       <Badge variant="outline" className="text-xs">
                         No signup row
-                      </Badge>
-                    )}
-                    {row.idStatus ? (
-                      <Badge variant={statusBadgeVariant(row.idStatus, 'id')} className="text-xs">
-                        ID: {row.idStatus}
-                      </Badge>
-                    ) : (
-                      <Badge variant="outline" className="text-xs">
-                        No ID submission
                       </Badge>
                     )}
                   </div>
@@ -509,105 +483,6 @@ export function FounderOnboardingQueue() {
                     </div>
                   )}
 
-                  <section className="rounded-md border bg-background p-3">
-                    <h3 className="mb-2 text-sm font-semibold">Founder ID document</h3>
-                    {!row.hasIdFile && !vUrl && (
-                      <p className="text-sm text-muted-foreground">No ID file uploaded for this email.</p>
-                    )}
-                    {(row.hasIdFile || vUrl) && (
-                      <>
-                        <div className="relative min-h-[200px] overflow-hidden rounded-md border bg-muted/20">
-                          {!vUrl && dLoading ? (
-                            <div className="flex h-52 items-center justify-center text-sm text-muted-foreground">
-                              Loading preview…
-                            </div>
-                          ) : !vUrl ? (
-                            <div className="flex h-52 items-center justify-center text-sm text-muted-foreground">
-                              No file on record
-                            </div>
-                          ) : kind === 'image' ? (
-                            // eslint-disable-next-line @next/next/no-img-element -- admin stream; Next/Image not applicable
-                            <img
-                              src={src}
-                              alt={`ID document for ${row.email}`}
-                              className="mx-auto max-h-[min(60vh,560px)] w-full object-contain"
-                            />
-                          ) : kind === 'pdf' ? (
-                            <iframe
-                              title={`ID PDF ${row.email}`}
-                              src={src}
-                              className="h-[min(60vh,560px)] w-full bg-card"
-                            />
-                          ) : (
-                            <div className="flex h-52 flex-col items-center justify-center gap-2 p-4 text-center">
-                              <FileText className="h-9 w-9 text-muted-foreground" />
-                              <p className="text-sm text-muted-foreground">
-                                Preview unavailable. Open or download to review.
-                              </p>
-                              <a
-                                href={src}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className={cn(buttonVariants({ variant: 'outline', size: 'sm' }))}
-                              >
-                                Open file
-                              </a>
-                            </div>
-                          )}
-                        </div>
-                        <div className="mt-3 flex flex-wrap items-center gap-2">
-                          <a
-                            href={vUrl || row.hasIdFile ? downloadFileUrl(row.email) : '#'}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className={cn(
-                              buttonVariants({ variant: 'outline', size: 'sm' }),
-                              (!vUrl && !row.hasIdFile) && 'pointer-events-none opacity-50'
-                            )}
-                            onClick={(e) => {
-                              if (!vUrl && !row.hasIdFile) e.preventDefault()
-                            }}
-                          >
-                            <Download className="mr-2 h-4 w-4" />
-                            Download
-                          </a>
-                          {row.idStatus === 'pending' && (
-                            <div className="ml-auto flex flex-wrap gap-2">
-                              <Button
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                className="border-destructive/40 text-destructive hover:bg-destructive/10"
-                                disabled={rowBusy}
-                                onClick={() => runIdDecision(row.email, 'reject')}
-                              >
-                                {rejectLoading ? (
-                                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                ) : (
-                                  <XCircle className="mr-2 h-4 w-4" />
-                                )}
-                                Reject ID
-                              </Button>
-                              <Button
-                                type="button"
-                                size="sm"
-                                className="bg-green-600 hover:bg-green-700"
-                                disabled={rowBusy}
-                                onClick={() => runIdDecision(row.email, 'approve')}
-                              >
-                                {approveLoading ? (
-                                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                ) : (
-                                  <CheckCircle className="mr-2 h-4 w-4" />
-                                )}
-                                Verify ID
-                              </Button>
-                            </div>
-                          )}
-                        </div>
-                      </>
-                    )}
-                  </section>
                 </div>
               )}
             </li>

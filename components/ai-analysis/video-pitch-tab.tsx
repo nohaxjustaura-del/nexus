@@ -55,7 +55,7 @@ export function VideoPitchAnalysisTab() {
     if (credits && error && error.includes('Not enough balance')) {
       setError(null)
     }
-  }, [credits])
+  }, [credits, error])
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -103,7 +103,7 @@ export function VideoPitchAnalysisTab() {
     
     // Wait for credits to load if they haven't yet
     if (!credits) {
-      setError('Loading your balance… Please wait a moment and try again.')
+      setError('Loading your balanceâ€¦ Please wait a moment and try again.')
       return
     }
     
@@ -243,7 +243,7 @@ export function VideoPitchAnalysisTab() {
         <CardHeader className="space-y-1 pb-2">
           <CardTitle className="text-lg">Video pitch</CardTitle>
           <CardDescription>
-            MP4, MOV, or WebM · up to 500MB · about 2–10 minutes works best
+            MP4, MOV, or WebM Â· up to 500MB Â· about 2â€“10 minutes works best
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-5 pt-2">
@@ -322,7 +322,7 @@ export function VideoPitchAnalysisTab() {
                   {VIDEO_AI_CREDIT_COST}/run
                 </Badge>
               </div>
-              <p className="mt-1 text-xs text-muted-foreground">Instant scores and VC matches</p>
+              <p className="mt-1 text-xs text-muted-foreground">Instant scores and investor matches</p>
             </button>
             <button
               type="button"
@@ -339,7 +339,7 @@ export function VideoPitchAnalysisTab() {
                   {VIDEO_REVIEWER_CREDIT_COST}/run
                 </Badge>
               </div>
-              <p className="mt-1 text-xs text-muted-foreground">Founders vetted by top programs · ~2–3 days</p>
+              <p className="mt-1 text-xs text-muted-foreground">Founders vetted by top programs Â· ~2â€“3 days</p>
             </button>
           </div>
         </div>
@@ -384,7 +384,7 @@ export function VideoPitchAnalysisTab() {
                 <span className="font-medium text-foreground">
                   {reviewType === 'ai' ? VIDEO_AI_CREDIT_COST : VIDEO_REVIEWER_CREDIT_COST}
                 </span>
-                {' · '}
+                {' Â· '}
                 Balance:{' '}
                 <span className="font-medium text-foreground">{credits.credits ?? 0}</span>
                 {credits.isPremium && (
@@ -394,7 +394,7 @@ export function VideoPitchAnalysisTab() {
                 )}
               </>
             ) : (
-              'Loading balance…'
+              'Loading balanceâ€¦'
             )}
           </p>
           {credits &&
@@ -425,12 +425,12 @@ export function VideoPitchAnalysisTab() {
             {analyzing ? (
               <>
                 <Sparkles className="mr-2 h-4 w-4 animate-spin" />
-                Analyzing…
+                Analyzingâ€¦
               </>
             ) : !credits ? (
               <>
                 <Sparkles className="mr-2 h-4 w-4 animate-spin" />
-                Loading…
+                Loadingâ€¦
               </>
             ) : (
               <>
@@ -496,7 +496,7 @@ export function VideoPitchAnalysisTab() {
                 <ul className="space-y-2">
                   {(result.strengths || []).map((strength: string, i: number) => (
                     <li key={i} className="text-sm flex items-start gap-2">
-                      <span className="text-green-600 mt-0.5">✓</span>
+                      <span className="text-green-600 mt-0.5">âœ“</span>
                       <span>{strength}</span>
                     </li>
                   ))}
@@ -510,7 +510,7 @@ export function VideoPitchAnalysisTab() {
                 <ul className="space-y-2">
                   {(result.weaknesses || []).map((weakness: string, i: number) => (
                     <li key={i} className="text-sm flex items-start gap-2">
-                      <span className="text-orange-600 mt-0.5">•</span>
+                      <span className="text-orange-600 mt-0.5"> - </span>
                       <span>{weakness}</span>
                     </li>
                   ))}
@@ -528,7 +528,7 @@ export function VideoPitchAnalysisTab() {
                 <ul className="space-y-2">
                   {result.improvements.map((improvement: string, i: number) => (
                     <li key={i} className="text-sm flex items-start gap-2">
-                      <span className="text-blue-600 mt-0.5">→</span>
+                      <span className="text-blue-600 mt-0.5">â†’</span>
                       <span>{improvement}</span>
                     </li>
                   ))}
@@ -540,12 +540,12 @@ export function VideoPitchAnalysisTab() {
             </Card>
             )}
 
-            {/* Top VC Recommendations */}
+            {/* Top Investor Recommendations */}
             {result.topVCRecommendations && result.topVCRecommendations.length > 0 && (
               <div className="space-y-4">
                 <h3 className="font-semibold text-lg flex items-center gap-2">
                   <Target className="h-5 w-5 text-primary" />
-                  Top VC Recommendations
+                  Top Investor Recommendations
                 </h3>
                 <div className="grid gap-4">
                   {result.topVCRecommendations.map((vc: any, i: number) => (
@@ -577,7 +577,7 @@ export function VideoPitchAnalysisTab() {
                               <div className="mt-3 p-3 rounded-lg bg-gradient-to-br from-indigo-50 to-blue-50 border border-indigo-200/60 space-y-1.5">
                                 <h5 className="text-xs font-semibold text-indigo-700 flex items-center gap-1.5">
                                   <TrendingUp className="h-3 w-3" />
-                                  Live VC Intelligence
+                                  Live Investor Intelligence
                                 </h5>
                                 {vc.livePulse.summary?.recentPortfolio && (
                                   <p className="text-xs text-muted-foreground">{vc.livePulse.summary.recentPortfolio}</p>
@@ -606,12 +606,12 @@ export function VideoPitchAnalysisTab() {
               </div>
             )}
 
-            {/* All Matched VCs */}
+            {/* All Matched Investors */}
             {result.matchedVCs && result.matchedVCs.length > 0 && (
               <div className="space-y-4">
                 <h3 className="font-semibold text-lg flex items-center gap-2">
                   <TrendingUp className="h-5 w-5 text-primary" />
-                  All Matched VCs ({result.matchedVCs.length})
+                  All Matched Investors ({result.matchedVCs.length})
                 </h3>
                 <div className="space-y-2 max-h-96 overflow-y-auto">
                   {result.matchedVCs.map((vc: any, i: number) => (
@@ -672,7 +672,7 @@ export function VideoPitchAnalysisTab() {
               </div>
             )}
 
-            {/* Saved report — same screen as post-run, with section scores and matches */}
+            {/* Saved report â€” same screen as post-run, with section scores and matches */}
             <div className="pt-4 border-t">
               <Link
                 href={
@@ -694,3 +694,7 @@ export function VideoPitchAnalysisTab() {
 }
 
 // Pitch Idea Analysis Component
+
+
+
+

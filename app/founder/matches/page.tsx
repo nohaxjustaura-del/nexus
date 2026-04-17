@@ -311,7 +311,7 @@ export default async function MatchesPage({
     return {
       id: investor.id || `match-${idx}`,
       investor: {
-        firmName: investor.firmName || 'Unknown VC',
+        firmName: investor.firmName || 'Unknown Investor',
         name: investor.name || '',
         fundType: investor.fundType || 'institutional',
         stages,

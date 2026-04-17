@@ -54,6 +54,7 @@ export interface FounderCandidate {
     bearCase: string | null
     analysisType: string
     analysisCount: number
+    updatedAt?: string | Date | null
   } | null
   prefs: {
     isImmigrant: boolean

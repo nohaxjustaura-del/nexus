@@ -49,6 +49,7 @@ export function AuthSessionProvider({ children }: { children: React.ReactNode })
   const [isAdmin, setIsAdmin] = useState(false)
   const [user, setUser] = useState<AuthUser | undefined>(undefined)
   const inFlightRef = useRef<Promise<void> | null>(null)
+  const lastFetchAtRef = useRef<number>(0)
 
   const parseJson = useCallback(async (res: Response) => {
     const data = await res.json().catch(() => ({}))
@@ -80,11 +81,16 @@ export function AuthSessionProvider({ children }: { children: React.ReactNode })
       const run = (async () => {
         if (!silent) setLoading(true)
         try {
+          const now = Date.now()
+          // Prevent repeated focus/visibility events from hammering auth checks.
+          if (silent && now - lastFetchAtRef.current < 15_000) return
           const res = await fetch('/api/auth/check', {
             method: 'GET',
             credentials: 'include',
             headers: { 'Cache-Control': 'no-store' },
+            cache: 'no-store',
           })
+          lastFetchAtRef.current = now
           await parseJson(res)
         } catch {
           setAuthenticated(false)

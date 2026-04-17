@@ -259,7 +259,7 @@ export default function FounderLandingClient({
             </Button>
           </div>
           <ul className="flex flex-wrap justify-center gap-x-6 gap-y-2 text-xs text-muted-foreground">
-            {['Why NEXUS', 'Pricing', 'VC guide'].map((label) => (
+            {['Why NEXUS', 'Pricing', 'Investor guide'].map((label) => (
               <li key={label}>
                 <Link
                   href={
@@ -269,7 +269,7 @@ export default function FounderLandingClient({
                         ? authenticated && verified
                           ? '/pricing'
                           : SIGNUP_PRICING
-                        : '/vc-guide'
+                      : '/vc-guide'
                   }
                   className="underline-offset-4 hover:text-foreground hover:underline"
                 >

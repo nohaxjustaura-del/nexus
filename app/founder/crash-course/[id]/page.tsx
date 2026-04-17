@@ -19,7 +19,7 @@ export default function CrashCoursePage() {
       whatTheyValue: [
         {
           title: 'Clear problem-solution fit',
-          description: 'VCs invest in solutions to real, painful problems. Clearly articulate the problem, who experiences it, and why existing solutions fail.',
+          description: 'Investors invest in solutions to real, painful problems. Clearly articulate the problem, who experiences it, and why existing solutions fail.',
         },
         {
           title: 'Traction and proof points',
@@ -45,7 +45,7 @@ export default function CrashCoursePage() {
       questions: [
         {
           question: 'What\'s your customer acquisition strategy?',
-          why: 'VCs want to understand how you\'ll scale beyond early adopters',
+          why: 'Investors want to understand how you\'ll scale beyond early adopters',
           answer: 'Prepare: CAC/LTV ratios, marketing channels tested, sales funnel metrics',
         },
         {
@@ -60,7 +60,7 @@ export default function CrashCoursePage() {
         },
         {
           question: 'Why is now the right time for this?',
-          why: 'VCs look for market timing and catalysts',
+          why: 'Investors look for market timing and catalysts',
           answer: 'Explain: recent tech shifts, regulatory changes, or behavior changes',
         },
         {
@@ -79,11 +79,11 @@ export default function CrashCoursePage() {
       warmIntros: [
         {
           path: 'Portfolio founders',
-          details: 'Research the VC\'s portfolio and reach out to founders they\'ve backed. Ask for advice first, intro second.',
+          details: 'Research the investor\'s portfolio and reach out to founders they\'ve backed. Ask for advice first, intro second.',
         },
         {
           path: 'Industry events & conferences',
-          details: 'Attend sector-specific conferences where your target VCs speak or sponsor. Engage meaningfully.',
+          details: 'Attend sector-specific conferences where your target investors speak or sponsor. Engage meaningfully.',
         },
         {
           path: 'Mutual connections',
@@ -91,7 +91,7 @@ export default function CrashCoursePage() {
         },
         {
           path: 'Accelerator programs',
-          details: 'Y Combinator, Techstars, and other accelerators provide direct access to top VCs through demo days.',
+          details: 'Y Combinator, Techstars, and other accelerators provide direct access to top investors through demo days.',
         },
       ],
       proofPoints: [
@@ -109,7 +109,7 @@ export default function CrashCoursePage() {
         },
         {
           title: 'Sequoia\'s Writing a Business Plan',
-          description: 'Framework used by one of the most successful VC firms',
+          description: 'Framework used by one of the most successful investor firms',
           url: 'https://www.sequoiacap.com/article/writing-a-business-plan/',
         },
         {
@@ -144,7 +144,7 @@ export default function CrashCoursePage() {
             Fundraising Crash Course
           </Badge>
           <h1 className="mb-4 text-4xl font-bold">
-            How to Pitch VCs Successfully
+            How to Pitch Investors Successfully
           </h1>
           <p className="text-lg text-muted-foreground">
             A comprehensive guide to crafting winning investor pitches
@@ -153,7 +153,7 @@ export default function CrashCoursePage() {
 
         {/* What They Value */}
         <section className="mb-12">
-          <h2 className="mb-6 text-2xl font-bold">1. What VCs Value Most</h2>
+          <h2 className="mb-6 text-2xl font-bold">1. What Investors Value Most</h2>
           <div className="space-y-4">
             {course.content.whatTheyValue.map((item, i) => (
               <Card key={i}>
@@ -195,7 +195,7 @@ export default function CrashCoursePage() {
 
         {/* Questions */}
         <section className="mb-12">
-          <h2 className="mb-6 text-2xl font-bold">3. Common Questions VCs Ask</h2>
+          <h2 className="mb-6 text-2xl font-bold">3. Common Questions Investors Ask</h2>
           <div className="space-y-4">
             {course.content.questions.map((q, i) => (
               <Card key={i}>
@@ -308,7 +308,7 @@ export default function CrashCoursePage() {
           <CardContent className="p-8 text-center">
             <h3 className="mb-2 text-xl font-bold">Ready to Start Pitching?</h3>
             <p className="mb-6 text-sm text-muted-foreground">
-              Use this framework to tighten your pitch and aim at VCs who match your stage.
+              Use this framework to tighten your pitch and aim at investors who match your stage.
             </p>
             <div className="flex justify-center gap-4">
               <Link href="/founder/matches">

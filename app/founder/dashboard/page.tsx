@@ -28,6 +28,7 @@ import { legacyNexusExtrasEnabled } from '@/lib/nexus-surface-flags'
 import { FounderWorkspaceTabs } from '@/components/founder-workspace-tabs'
 import { AnimatedCounter } from '@/components/ui/animated-counter'
 import { ProgressRing } from '@/components/ui/progress-ring'
+import { useAccountCapabilities } from '@/components/account-capabilities-provider'
 
 type HubSummary = {
   subscription: { isPro: boolean; tier: string }
@@ -45,7 +46,7 @@ type HubSummary = {
 
 const analysisTypeConfig: Record<string, { icon: typeof FileText; label: string; color: string }> = {
   'video-pitch': { icon: Video, label: 'Video pitch', color: 'text-violet-400' },
-  'unified-pitch': { icon: Video, label: 'Unified pitch', color: 'text-violet-400' },
+  'unified-pitch': { icon: Video, label: 'Pitch analysis', color: 'text-violet-400' },
   'pitch-deck': { icon: FileText, label: 'Pitch deck', color: 'text-blue-400' },
   'pitch-idea': { icon: Lightbulb, label: 'Pitch idea', color: 'text-amber-400' },
 }
@@ -55,6 +56,7 @@ export default function FounderDashboard() {
   const [summary, setSummary] = useState<HubSummary | null>(null)
   const [canAccessFounderNetwork, setCanAccessFounderNetwork] = useState(false)
   const [recentAnalysesCollapsed, setRecentAnalysesCollapsed] = useState(false)
+  const { capabilities } = useAccountCapabilities()
 
   useEffect(() => {
     let alive = true
@@ -62,16 +64,6 @@ export default function FounderDashboard() {
     const maxWait = window.setTimeout(() => {
       if (alive) setPending(false)
     }, maxWaitMs)
-
-    fetch('/api/account/capabilities', { credentials: 'include' })
-      .then(async (r) => {
-        if (!alive || !r.ok) return
-        const data = (await r.json()) as { authenticated?: boolean; canAccessFounderNetwork?: boolean }
-        if (alive && data.authenticated && data.canAccessFounderNetwork) {
-          setCanAccessFounderNetwork(true)
-        }
-      })
-      .catch(() => {})
 
     fetch('/api/founder/hub-summary', { credentials: 'include' })
       .then(async (r) => {
@@ -95,6 +87,10 @@ export default function FounderDashboard() {
       window.clearTimeout(maxWait)
     }
   }, [])
+
+  useEffect(() => {
+    setCanAccessFounderNetwork(Boolean(capabilities?.canAccessFounderNetwork))
+  }, [capabilities?.canAccessFounderNetwork])
 
   const showNetworkStartHere =
     legacyNexusExtrasEnabled() && canAccessFounderNetwork

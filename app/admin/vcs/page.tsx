@@ -27,7 +27,7 @@ export default async function AdminVCsPage() {
     ])
   } catch (e) {
     console.error('[admin/vcs] initial load failed', e)
-    loadError = 'Could not load VC data from the database. Try refreshing the page.'
+    loadError = 'Could not load investor data from the database. Try refreshing the page.'
   }
 
   const initialInvestors = investors.map((inv) => ({
@@ -50,3 +50,4 @@ export default async function AdminVCsPage() {
     />
   )
 }
+

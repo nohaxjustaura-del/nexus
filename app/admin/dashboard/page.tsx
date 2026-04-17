@@ -6,16 +6,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import {
   DashboardIconBuilding2,
   DashboardIconClock,
-  DashboardIconFileCheck,
   DashboardIconShield,
   DashboardIconUsers,
 } from "./dashboard-stat-icons"
 import { isAdminEmail } from "@/lib/constants"
-import {
-  enrichFounderVerifications,
-  serializeFounderVerificationRows,
-} from "@/lib/admin/founder-verifications"
-
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
@@ -29,7 +23,6 @@ export default async function AdminDashboardPage() {
   // Fetch all pending items in parallel
   const [
     userApprovals,
-    founderVerificationPending,
     vcClaims,
     unverifiedVCs
   ] = await Promise.all([
@@ -45,20 +38,6 @@ export default async function AdminDashboardPage() {
       }
     })(),
 
-    (async () => {
-      try {
-        const rows = await db.founderVerification.findMany({
-          where: { status: 'pending' },
-          orderBy: { submittedAt: 'desc' },
-        })
-        const enriched = await enrichFounderVerifications(rows)
-        return serializeFounderVerificationRows(enriched)
-      } catch (error) {
-        console.error('Error loading founder verifications:', error)
-        return []
-      }
-    })(),
-    
     // Pending VC claims
     db.vCClaim.findMany({
       where: { status: 'pending' },
@@ -66,7 +45,7 @@ export default async function AdminDashboardPage() {
       take: 100,
     }),
     
-    // Unverified VCs
+    // Unverified Investors
     db.investor.findMany({
       where: { verified: false },
       select: {
@@ -84,10 +63,9 @@ export default async function AdminDashboardPage() {
   // Calculate statistics
   const stats = {
     userSignups: userApprovals.length,
-    founderVerifications: founderVerificationPending.length,
     vcClaims: vcClaims.length,
     unverifiedVCs: unverifiedVCs.length,
-    total: userApprovals.length + founderVerificationPending.length + vcClaims.length + unverifiedVCs.length,
+    total: userApprovals.length + vcClaims.length + unverifiedVCs.length,
   }
 
   return (
@@ -111,7 +89,7 @@ export default async function AdminDashboardPage() {
         </div>
 
         {/* Stats Cards */}
-        <div className="mb-8 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <div className="mb-8 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium">User Signups</CardTitle>
@@ -125,18 +103,7 @@ export default async function AdminDashboardPage() {
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Founder Verifications</CardTitle>
-              <DashboardIconFileCheck className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.founderVerifications}</div>
-              <p className="text-xs text-muted-foreground">ID verification pending</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">VC Claims</CardTitle>
+              <CardTitle className="text-sm font-medium">Investor Claims</CardTitle>
               <DashboardIconBuilding2 className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
@@ -147,7 +114,7 @@ export default async function AdminDashboardPage() {
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Unverified VCs</CardTitle>
+              <CardTitle className="text-sm font-medium">Unverified Investors</CardTitle>
               <DashboardIconShield className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
@@ -165,7 +132,6 @@ export default async function AdminDashboardPage() {
             createdAt: u.createdAt.toISOString(),
             reviewedAt: u.reviewedAt?.toISOString(),
           }))}
-          founderVerificationPending={founderVerificationPending}
           vcClaims={vcClaims.map(c => ({
             ...c,
             createdAt: c.createdAt.toISOString(),
@@ -180,4 +146,6 @@ export default async function AdminDashboardPage() {
     </div>
   )
 }
+
+
 

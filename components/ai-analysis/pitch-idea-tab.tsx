@@ -81,7 +81,7 @@ export function PitchIdeaAnalysisTab() {
         }
       }
     } catch {
-      // Silently fail for interim  -  next chunk will retry
+      // Silently fail for interim • next chunk will retry
     } finally {
       transcriptionInFlightRef.current = false
     }
@@ -222,7 +222,7 @@ export function PitchIdeaAnalysisTab() {
     }
     
     if (!credits) {
-      setError('Loading your balance… Please wait a moment and try again.')
+      setError('Loading your balanceâ€¦ Please wait a moment and try again.')
       return
     }
     
@@ -443,7 +443,7 @@ export function PitchIdeaAnalysisTab() {
               <CardContent>
                 <ul className="text-sm space-y-2">
                   {analysis.strengths.slice(0, 4).map((strength: string, i: number) => (
-                    <li key={i} className="text-muted-foreground">• {strength}</li>
+                    <li key={i} className="text-muted-foreground"> -  {strength}</li>
                   ))}
                 </ul>
               </CardContent>
@@ -461,7 +461,7 @@ export function PitchIdeaAnalysisTab() {
               <CardContent>
                 <ul className="text-sm space-y-2">
                   {analysis.improvements.slice(0, 4).map((improvement: string, i: number) => (
-                    <li key={i} className="text-muted-foreground">• {improvement}</li>
+                    <li key={i} className="text-muted-foreground"> -  {improvement}</li>
                   ))}
                 </ul>
               </CardContent>
@@ -479,7 +479,7 @@ export function PitchIdeaAnalysisTab() {
               <CardContent>
                 <ul className="text-sm space-y-2">
                   {analysis.suggestions.slice(0, 4).map((suggestion: string, i: number) => (
-                    <li key={i} className="text-muted-foreground">• {suggestion}</li>
+                    <li key={i} className="text-muted-foreground"> -  {suggestion}</li>
                   ))}
                 </ul>
               </CardContent>
@@ -496,10 +496,10 @@ export function PitchIdeaAnalysisTab() {
                 <div>
                   <CardTitle className="text-2xl font-bold flex items-center gap-2">
                     <Target className="h-6 w-6 text-primary" />
-                    Recommended VCs
+                    Recommended Investors
                   </CardTitle>
                   <CardDescription className="text-base mt-2">
-                    {matches.length} VCs that might be interested in your pitch idea
+                    {matches.length} investors that might be interested in your pitch idea
                   </CardDescription>
                 </div>
                 <Badge className="bg-gradient-to-r from-primary to-blue-600 text-white px-4 py-1.5 text-sm">
@@ -543,7 +543,7 @@ export function PitchIdeaAnalysisTab() {
                       <div className="flex items-start justify-between mb-4">
                         <div className="flex-1">
                           <div className="flex items-center gap-3 mb-2">
-                            <h3 className="text-lg font-bold text-foreground">{investor.firmName || 'Unknown VC'}</h3>
+                            <h3 className="text-lg font-bold text-foreground">{investor.firmName || 'Unknown Investor'}</h3>
                             <Badge variant="outline" className={`text-xs font-semibold ${scoreBadge.color}`}>
                               {scoreBadge.text}
                             </Badge>
@@ -560,7 +560,7 @@ export function PitchIdeaAnalysisTab() {
                             )}
                           </div>
                           <p className="text-sm text-muted-foreground mb-1">
-                            {investor.fundType || 'VC'} • {fmtCheckRange(investor.checkMin, investor.checkMax)}
+                            {investor.fundType || 'Investor'} • {fmtCheckRange(investor.checkMin, investor.checkMax)}
                           </p>
                           {investor.bio && (
                             <p className="text-xs text-muted-foreground mt-2 line-clamp-2">{investor.bio.substring(0, 120)}...</p>
@@ -637,7 +637,7 @@ export function PitchIdeaAnalysisTab() {
                           <div className="p-3 rounded-lg bg-gradient-to-br from-indigo-500/12 to-primary/10 border border-indigo-500/25 space-y-1.5">
                             <h5 className="text-xs font-semibold text-indigo-300 flex items-center gap-1.5">
                               <TrendingUp className="h-3 w-3" />
-                              Live VC Intelligence
+                              Live Investor Intelligence
                             </h5>
                             {match.livePulse.summary.recentPortfolio && (
                               <p className="text-xs text-muted-foreground">{match.livePulse.summary.recentPortfolio}</p>
@@ -685,7 +685,7 @@ export function PitchIdeaAnalysisTab() {
         <CardHeader className="space-y-1 pb-2">
           <CardTitle className="text-lg">Pitch idea</CardTitle>
           <CardDescription>
-            Text or a small document · {PITCH_IDEA_CREDIT_COST} from balance per run after your free weekly quota
+            Text or a small document Â· {PITCH_IDEA_CREDIT_COST} from balance per run after your free weekly quota
             {credits && !credits.isPremium && credits.pitchIdeaWeeklyFree ? (
               <span className="mt-1 block text-xs text-muted-foreground">
                 Free tier: {credits.pitchIdeaWeeklyFree.remaining} of {credits.pitchIdeaWeeklyFree.limit} analyses left
@@ -826,8 +826,8 @@ export function PitchIdeaAnalysisTab() {
                       <Upload className="mb-2 h-7 w-7 text-muted-foreground/70" />
                       <p className="text-sm text-muted-foreground">
                         <span className="font-medium text-primary">Choose file</span>
-                        {' · '}
-                        PDF, DOC, TXT · 10MB max
+                        {' Â· '}
+                        PDF, DOC, TXT Â· 10MB max
                       </p>
                     </label>
                   )}
@@ -897,7 +897,7 @@ export function PitchIdeaAnalysisTab() {
                   )}
                 </>
               ) : (
-                'Loading balance…'
+                'Loading balanceâ€¦'
               )}
             </p>
             {credits &&
@@ -931,12 +931,12 @@ export function PitchIdeaAnalysisTab() {
             {analyzing ? (
               <>
                 <Sparkles className="mr-2 h-4 w-4 animate-spin" />
-                Analyzing…
+                Analyzingâ€¦
               </>
             ) : !credits ? (
               <>
                 <Sparkles className="mr-2 h-4 w-4 animate-spin" />
-                Loading…
+                Loadingâ€¦
               </>
             ) : (
               <>
@@ -950,3 +950,8 @@ export function PitchIdeaAnalysisTab() {
     </div>
   )
 }
+
+
+
+
+

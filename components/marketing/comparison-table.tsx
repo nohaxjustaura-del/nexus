@@ -1,14 +1,15 @@
 import { CheckCircle, X } from 'lucide-react'
 
 const comparisonRows = [
-  { feature: 'Searchable investor database', nexus: true, pitchbook: true },
+  { feature: 'Searchable verified investor database', nexus: true, pitchbook: true },
   { feature: 'AI pitch analysis & scoring', nexus: true, pitchbook: false },
-  { feature: 'AI-powered investor matching', nexus: true, pitchbook: false },
+  { feature: 'AI-ranked investor matching with fit rationale', nexus: true, pitchbook: false },
   { feature: 'Market intelligence & trends', nexus: true, pitchbook: true },
-  { feature: 'Rich investor profiles', nexus: true, pitchbook: true },
+  { feature: 'Mandate-aware investor profiles', nexus: true, pitchbook: true },
   { feature: 'Built for first-time founders', nexus: true, pitchbook: false },
   { feature: 'Plain-English explanations', nexus: true, pitchbook: false },
-  { feature: 'Self-serve (no sales call)', nexus: true, pitchbook: false },
+  { feature: 'Self-serve onboarding (no sales call)', nexus: true, pitchbook: false },
+  { feature: 'Cancel anytime subscription flexibility', nexus: true, pitchbook: false },
 ]
 
 export function ComparisonTable({ compact = false }: { compact?: boolean }) {
@@ -16,7 +17,10 @@ export function ComparisonTable({ compact = false }: { compact?: boolean }) {
 
   return (
     <div className="rounded-2xl border border-border/60 bg-card/50 p-6 md:p-8">
-      <h2 className="mb-6 text-center text-xl font-bold md:text-2xl">NEXUS vs PitchBook</h2>
+      <h2 className="mb-2 text-center text-xl font-bold md:text-2xl">NEXUS vs PitchBook</h2>
+      <p className="mb-6 text-center text-sm text-muted-foreground">
+        Compare practical fundraising outcomes, not just database access.
+      </p>
       <div className="mx-auto max-w-2xl space-y-2">
         {rows.map((row) => (
           <div

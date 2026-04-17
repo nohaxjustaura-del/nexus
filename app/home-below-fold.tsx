@@ -16,6 +16,8 @@ import {
   BadgeCheck,
   Users,
   Zap,
+  ArrowRight,
+  BrainCircuit,
 } from 'lucide-react'
 import { track as trackEvent } from '@/lib/analytics'
 import type { UniversalAnalysisResult } from '@/lib/universal-analysis-engine'
@@ -52,20 +54,17 @@ const track = (event: string, props?: Record<string, unknown>) => {
 function HomeHowItWorksConnector() {
   return (
     <div className="flex flex-col items-center py-3 sm:py-4" aria-hidden>
-      <div className="h-7 w-px shrink-0 rounded-full bg-gradient-to-b from-transparent via-border/70 to-primary/25" />
+      <span className="how-connector-track how-connector-track--top">
+        <ChevronDown className="how-connector-direction how-connector-direction--top" strokeWidth={2.1} aria-hidden />
+      </span>
       <span className="group relative z-[1] flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-primary/30 bg-background/95 text-primary shadow-[0_0_0_1px_rgba(99,102,241,0.06),0_6px_20px_rgba(15,23,42,0.18)] transition-shadow duration-500 group-hover:shadow-[0_0_0_1px_rgba(99,102,241,0.1),0_10px_28px_rgba(15,23,42,0.24)]">
         <span className="absolute inset-0 rounded-full bg-primary/[0.07] blur-[1px] transition-opacity duration-500 group-hover:opacity-100" />
-        <span
-          className="pointer-events-none absolute inset-[-6px] rounded-full border border-primary/18 animate-connector-ring"
-          aria-hidden
-        />
-        <ChevronDown
-          className="relative h-4 w-4 animate-connector-chevron will-change-transform"
-          strokeWidth={2.25}
-          aria-hidden
-        />
+        <span className="how-connector-core-glow" />
+        <ChevronDown className="relative h-4 w-4" strokeWidth={2.25} aria-hidden />
       </span>
-      <div className="h-7 w-px shrink-0 rounded-full bg-gradient-to-b from-primary/25 via-border/70 to-transparent" />
+      <span className="how-connector-track how-connector-track--bottom">
+        <ChevronDown className="how-connector-direction how-connector-direction--bottom" strokeWidth={2.1} aria-hidden />
+      </span>
     </div>
   )
 }
@@ -103,10 +102,11 @@ export function HomeBelowFold({
                 id="home-how-heading"
                 className="mt-3 font-heading text-2xl font-semibold tracking-tight text-foreground sm:text-3xl text-balance"
               >
-                Upload once. Score. Shortlist. Go.
+                From raw pitch to mandate-matched investor targets.
               </h2>
               <p className="mt-3 text-sm leading-relaxed text-muted-foreground sm:text-[15px]">
-                From first upload to ranked outreach targets in minutes, not weeks.
+                Not another static database: NEXUS combines pitch analysis plus live investor mandate data so both founder outreach
+                and investor screening get materially more precise.
               </p>
             </div>
           </ScrollReveal>
@@ -120,7 +120,7 @@ export function HomeBelowFold({
                     <StepNumber step="1" />
                     <div>
                       <h3 id="home-demo-step-1" className="font-medium text-foreground">Upload your pitch</h3>
-                      <p className="text-xs text-muted-foreground">Deck, answers, or video -- one submission feeds everything.</p>
+                      <p className="text-xs text-muted-foreground">Deck, answers, or video -- one submission powers the full fit workflow.</p>
                     </div>
                   </div>
                   <ul className="divide-y divide-border/35 overflow-hidden rounded-xl border border-border/40 bg-background/80">
@@ -174,7 +174,7 @@ export function HomeBelowFold({
                     <StepNumber step="3" />
                     <div>
                       <h3 id="home-demo-step-3" className="font-medium text-foreground">Act on your matches</h3>
-                      <p className="text-xs text-muted-foreground">Turn scores into outreach-ready next steps.</p>
+                      <p className="text-xs text-muted-foreground">Turn fit scores into focused founder outreach and cleaner investor pipelines.</p>
                     </div>
                   </div>
                   <div className="space-y-2">
@@ -208,11 +208,11 @@ export function HomeBelowFold({
                     id="home-why-better-heading"
                     className="mt-3 font-heading text-lg font-semibold tracking-tight text-foreground"
                   >
-                    Build with mentors who are in the arena right now
+                    Get warm introductions to successful founders and investors
                   </h3>
                   <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                    Skip generic advice loops. Get direct feedback and practical fundraising guidance from operators building real
-                    companies today.
+                    Skip generic advice loops. Connect directly with successful founders, VC firm partners, and active investors for
+                    practical fundraising guidance.
                   </p>
 
                   <div className="mt-5 space-y-3">
@@ -266,7 +266,7 @@ export function HomeBelowFold({
         </div>
       </section>
 
-      {/* Closing CTA */}
+      {/* Why us teaser */}
       <section className="section-shell-compact border-b-0 px-4 sm:px-6">
         <ScrollReveal>
           <div className="mx-auto max-w-2xl">
@@ -275,33 +275,49 @@ export function HomeBelowFold({
 
               <div className="relative">
                 <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-                  <Zap className="h-5 w-5 text-primary" strokeWidth={1.75} />
+                  <BrainCircuit className="h-5 w-5 text-primary" strokeWidth={1.75} />
                 </div>
                 <h2 className="mt-4 font-heading text-xl font-semibold tracking-tight text-foreground sm:text-2xl text-balance">
-                  Ready to find your investors?
+                  Why founders choose NEXUS
                 </h2>
+                <p className="mx-auto mt-3 max-w-xl text-sm leading-relaxed text-muted-foreground">
+                  We are not just a list or a one-shot AI answer. NEXUS gives you an advanced pipeline from analysis to investor-fit
+                  execution.
+                </p>
+                <div className="mx-auto mt-5 max-w-xl space-y-2 text-left">
+                  {[
+                    'Multi-pass pitch analysis, not one generic chat response.',
+                    'Verified investor intelligence with stage, thesis, and check-size context.',
+                    'Action-ready output: ranked matches, rationale, and next outreach steps.',
+                  ].map((item) => (
+                    <p key={item} className="flex items-start gap-2 text-sm text-foreground/90">
+                      <Zap className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" strokeWidth={1.9} />
+                      <span>{item}</span>
+                    </p>
+                  ))}
+                </div>
                 <div className="mt-6 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
-                  <Button
-                    size="lg"
-                    onClick={() => {
-                      track('cta_clicked', { name: 'bottom_cta', page: 'home' })
-                      router.push(mounted && isVerifiedUser ? '/founder/ai-analysis' : '/signup')
-                    }}
-                    className="w-full rounded-xl px-8 shadow-lg shadow-primary/20 sm:w-auto"
-                  >
-                    Get started free
-                    <Rocket className="ml-2 h-4 w-4" />
+                  <Button asChild size="lg" className="w-full rounded-xl px-8 shadow-lg shadow-primary/20 sm:w-auto">
+                    <Link
+                      href="/why-nexus"
+                      onClick={() => {
+                        track('cta_clicked', { name: 'home_why_us_primary', page: 'home' })
+                      }}
+                    >
+                      See why NEXUS is different
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </Link>
                   </Button>
                   <Button
                     size="lg"
                     variant="outline"
                     onClick={() => {
-                      track('cta_clicked', { name: 'bottom_cta_secondary', page: 'home' })
-                      router.push(mounted && isVerifiedUser ? '/founder/discover' : SIGNUP_DISCOVER)
+                      track('cta_clicked', { name: 'home_why_us_secondary', page: 'home' })
+                      router.push(mounted && isVerifiedUser ? '/founder/ai-analysis' : '/signup')
                     }}
                     className="w-full rounded-xl sm:w-auto"
                   >
-                    Browse investors
+                    Analyze your pitch
                   </Button>
                 </div>
               </div>

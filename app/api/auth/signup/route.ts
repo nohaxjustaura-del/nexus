@@ -13,6 +13,7 @@ import { isExistingUserAuthError } from '@/lib/auth-user-exists-error'
 import { sendSignupInviteViaSupabase } from '@/lib/supabase/auth-email-delivery'
 import { AUTH_EMAIL_SPAM_DELIVERABILITY_HINT } from '@/lib/resend-user-messages'
 import { isDisposableSignupEmail } from '@/lib/disposable-email'
+import { db } from '@/lib/db'
 
 export const dynamic = 'force-dynamic'
 
@@ -49,6 +50,25 @@ export async function POST(request: NextRequest) {
     const callbackUrl = `${siteUrl}/api/auth/callback?next=${encodeURIComponent(afterAuthPath)}`
 
     const adminClient = createSupabaseAdminClient()
+
+    // Every new signup enters the review queue; already-approved users stay approved.
+    const existingApproval = await db.userApproval.findUnique({ where: { email: normalizedEmail } })
+    if (!existingApproval) {
+      await db.userApproval.create({
+        data: {
+          email: normalizedEmail,
+          status: 'pending',
+        },
+      })
+    } else if (existingApproval.status !== 'approved') {
+      await db.userApproval.update({
+        where: { email: normalizedEmail },
+        data: {
+          status: 'pending',
+          reviewedAt: null,
+        },
+      })
+    }
 
     if (!hasResendConfigured()) {
       const invite = await sendSignupInviteViaSupabase({

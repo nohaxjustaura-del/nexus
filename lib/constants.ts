@@ -20,6 +20,8 @@ function parseAdminEmails(): { ordered: string[]; set: Set<string> } {
 }
 
 const { ordered: adminEmailsOrdered, set: adminEmailSet } = parseAdminEmails()
+const allowAllAdminsInDev =
+  process.env.NODE_ENV !== 'production' && adminEmailSet.size === 0
 
 /** Env order (deduped); used when resolving an admin DB user without a session. */
 export const ADMIN_EMAILS_ORDERED: readonly string[] = adminEmailsOrdered
@@ -30,6 +32,7 @@ export const ADMIN_EMAIL: string | undefined =
 
 export function isAdminEmail(email: string | null | undefined): boolean {
   if (!email) return false
+  if (allowAllAdminsInDev) return true
   return adminEmailSet.has(email.trim().toLowerCase())
 }
 

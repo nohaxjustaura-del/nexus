@@ -34,7 +34,7 @@ function isInvestorAccount(userType: string | undefined) {
   return t === 'vc' || t === 'investor'
 }
 
-const SIGNUP_INVESTOR = `/signup?redirect=${encodeURIComponent('/vc/claim')}`
+const SIGNUP_INVESTOR = `/signup?redirect=${encodeURIComponent('/investor/onboarding')}`
 
 export default function InvestorLandingClient({
   verifiedInvestorCountLabel,
@@ -47,14 +47,14 @@ export default function InvestorLandingClient({
   useEffect(() => {
     if (loading || !authenticated || (!isInvestorAccount(user?.userType) && !isAdmin)) return
     if (!verified) {
-      router.replace('/vc/claim')
+      router.replace('/investor/onboarding')
       return
     }
-    router.replace('/investor/dashboard')
+    router.replace('/investor/discover')
   }, [loading, authenticated, verified, user?.userType, router, isAdmin])
 
-  const dashboardHref = '/investor/dashboard'
-  const claimHref = '/vc/claim'
+  const dashboardHref = '/investor/discover'
+  const claimHref = '/investor/onboarding'
 
   const actsAsInvestor = isInvestorAccount(user?.userType) || isAdmin
 
@@ -200,7 +200,7 @@ export default function InvestorLandingClient({
             {[
               {
                 step: '1',
-                title: 'Sign up as Investor / VC',
+                title: 'Sign up as Investor',
                 body: 'Use your work email so we can tie the listing to your firm and approval workflow.',
               },
               {
@@ -272,7 +272,7 @@ export default function InvestorLandingClient({
               </Link>
             </Button>
             <Button asChild size="lg" variant="secondary" className="rounded-xl px-6">
-              <Link href="/login?redirect=%2Fvc%2Fclaim">Log in to finish claim</Link>
+              <Link href="/login?redirect=%2Finvestor%2Fonboarding">Log in to finish setup</Link>
             </Button>
           </div>
           </div>

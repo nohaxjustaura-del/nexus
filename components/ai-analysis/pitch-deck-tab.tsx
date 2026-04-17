@@ -52,7 +52,7 @@ export function PitchDeckAnalysisTab() {
     if (credits && error && error.includes('Not enough balance')) {
       setError(null)
     }
-  }, [credits])
+  }, [credits, error])
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -70,7 +70,7 @@ export function PitchDeckAnalysisTab() {
     
     // Wait for credits to load if they haven't yet
     if (!credits) {
-      setError('Loading your balance… Please wait a moment and try again.')
+      setError('Loading your balanceâ€¦ Please wait a moment and try again.')
       return
     }
     
@@ -201,7 +201,7 @@ export function PitchDeckAnalysisTab() {
                   Analysis Complete
                 </CardTitle>
                 <CardDescription className="mt-2">
-                  Your pitch deck has been analyzed against {matches.length} VCs
+                  Your pitch deck has been analyzed against {matches.length} investors
                 </CardDescription>
                 {(analysis.overallScore != null || analysis.finalScore != null) && (
                   <p className="mt-3 text-2xl font-bold tabular-nums text-primary">
@@ -297,22 +297,22 @@ export function PitchDeckAnalysisTab() {
                 <span className="text-sm font-semibold text-purple-900">Niche Match:</span>
                 {isStudent && (
                   <Badge className="bg-purple-100 text-purple-700 border-purple-300">
-                    🎓 Student Founder → Matched with Student VCs (Dorm Room Fund, 1517 Fund, Neo)
+                    ðŸŽ“ Student Founder â†’ Matched with Student Investors (Dorm Room Fund, 1517 Fund, Neo)
                   </Badge>
                 )}
                 {isTechnical && (
                   <Badge className="bg-blue-100 text-blue-700 border-blue-300">
-                    💻 Technical Founder → Matched with DevTools/AI VCs (Boldstart, Amplify, Root)
+                    ðŸ’» Technical Founder â†’ Matched with DevTools/AI Investors (Boldstart, Amplify, Root)
                   </Badge>
                 )}
                 {isUnderrepresented && (
                   <Badge className="bg-green-100 text-green-700 border-green-300">
-                    🌈 Diverse Founder → Matched with Diversity-Focused VCs (Fearless Fund, Slauson & Co)
+                    ðŸŒˆ Diverse Founder â†’ Matched with Diversity-Focused Investors (Fearless Fund, Slauson & Co)
                   </Badge>
                 )}
                 {hasTraction && (
                   <Badge className="bg-orange-100 text-orange-700 border-orange-300">
-                    📈 Has Traction → Matched with Growth VCs
+                    ðŸ“ˆ Has Traction â†’ Matched with Growth Investors
                   </Badge>
                 )}
               </div>
@@ -354,7 +354,7 @@ export function PitchDeckAnalysisTab() {
                 <ul className="text-sm space-y-2">
                   {analysis.gaps.slice(0, 4).map((gap: string, i: number) => (
                     <li key={i} className="text-muted-foreground flex items-start gap-2">
-                      <span className="text-orange-600">•</span>
+                      <span className="text-orange-600"> - </span>
                       <span>{gap}</span>
                     </li>
                   ))}
@@ -375,7 +375,7 @@ export function PitchDeckAnalysisTab() {
                 <ul className="text-sm space-y-2">
                   {analysis.suggestions.slice(0, 4).map((suggestion: string, i: number) => (
                     <li key={i} className="text-muted-foreground flex items-start gap-2">
-                      <span className="text-blue-600">•</span>
+                      <span className="text-blue-600"> - </span>
                       <span>{suggestion}</span>
                     </li>
                   ))}
@@ -429,7 +429,7 @@ export function PitchDeckAnalysisTab() {
         {/* VC Matches with Enhanced "Why This Match" */}
         <Card>
           <CardHeader>
-            <CardTitle>Your Top VC Matches</CardTitle>
+            <CardTitle>Your Top Investor Matches</CardTitle>
             <CardDescription>
               Ranked by compatibility • {matches.length} matches found
             </CardDescription>
@@ -449,7 +449,7 @@ export function PitchDeckAnalysisTab() {
                       <div className="flex items-start justify-between mb-4">
                         <div>
                           <div className="flex items-center gap-2">
-                            <h3 className="text-lg font-semibold">{investor.firmName || 'Unknown VC'}</h3>
+                            <h3 className="text-lg font-semibold">{investor.firmName || 'Unknown Investor'}</h3>
                             {match.livePulse && match.livePulse.signalStrength > 1 && (
                               <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-full px-2 py-0.5">
                                 <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
@@ -517,7 +517,7 @@ export function PitchDeckAnalysisTab() {
                           <div className="p-3 rounded-lg bg-gradient-to-br from-indigo-50 to-blue-50 border border-indigo-200/60 space-y-1.5">
                             <h5 className="text-xs font-semibold text-indigo-700 flex items-center gap-1.5">
                               <TrendingUp className="h-3 w-3" />
-                              Live VC Intelligence
+                              Live Investor Intelligence
                             </h5>
                             {match.livePulse.summary.recentPortfolio && (
                               <p className="text-xs text-muted-foreground">{match.livePulse.summary.recentPortfolio}</p>
@@ -559,7 +559,7 @@ export function PitchDeckAnalysisTab() {
           </Link>
           <Link href="/founder/discover" className="flex-1">
             <Button className="w-full">
-              Explore More VCs
+              Explore More Investors
             </Button>
           </Link>
         </div>
@@ -573,7 +573,7 @@ export function PitchDeckAnalysisTab() {
         <CardHeader className="space-y-1 pb-2">
           <CardTitle className="text-lg">Pitch deck</CardTitle>
           <CardDescription>
-            PDF, PPT, or PPTX · up to 50MB · {PITCH_DECK_CREDIT_COST} from balance per run
+            PDF, PPT, or PPTX Â· up to 50MB Â· {PITCH_DECK_CREDIT_COST} from balance per run
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-5 pt-2">
@@ -650,7 +650,7 @@ export function PitchDeckAnalysisTab() {
                 )}
               </>
             ) : (
-              'Loading balance…'
+              'Loading balanceâ€¦'
             )}
           </p>
           {credits && (!credits.isPremium && (credits.credits ?? 0) < PITCH_DECK_CREDIT_COST) && (
@@ -671,12 +671,12 @@ export function PitchDeckAnalysisTab() {
           {analyzing ? (
             <>
               <Sparkles className="mr-2 h-4 w-4 animate-spin" />
-              Analyzing…
+              Analyzingâ€¦
             </>
           ) : !credits ? (
             <>
               <Sparkles className="mr-2 h-4 w-4 animate-spin" />
-              Loading…
+              Loadingâ€¦
             </>
           ) : (
             <>
@@ -690,5 +690,14 @@ export function PitchDeckAnalysisTab() {
     </div>
   )
 }
+
+
+
+
+
+
+
+
+
 
 

@@ -74,12 +74,17 @@ export default function PricingClient({ verifiedInvestorCountLabel }: { verified
       name: 'Free',
       price: '$0',
       period: 'forever',
-      description: 'Explore the platform',
+      description: 'Validate investor fit before you spend',
+      audience: 'For first-time fundraising prep',
+      outcome: 'Run your first analysis and test whether the platform improves targeting quality.',
+      upgradeTrigger: 'Upgrade when you want more analyses and a larger shortlist per raise cycle.',
+      perkHeader: 'Starter access',
+      perkNote: 'Everything you need to test fundraising fit before committing.',
       features: [
-        { icon: Search, label: '50 investors', bold: true },
-        { icon: Sparkles, label: '1 analysis / month', bold: true },
-        { icon: Target, label: 'Top 5 matches' },
-        { icon: CheckCircle, label: 'Scoring & feedback' },
+        { icon: Search, label: '50 verified investor profiles', bold: true },
+        { icon: Sparkles, label: '5 AI analyses / month', bold: true },
+        { icon: Target, label: 'Top 5 investor matches per analysis' },
+        { icon: CheckCircle, label: 'Scoring + plain-English feedback' },
       ],
       highlighted: false,
     },
@@ -88,13 +93,20 @@ export default function PricingClient({ verifiedInvestorCountLabel }: { verified
       name: 'Pro',
       price: '$39',
       period: '/mo',
-      description: 'Full access for serious founders',
+      description: 'Move faster with full investor intelligence',
+      audience: 'For active fundraising founders',
+      outcome: 'Generate sharper shortlists, iterate your pitch quickly, and prioritize best-fit investors.',
+      upgradeTrigger: 'Best when one analysis per month is slowing your outreach momentum.',
+      perkHeader: 'Growth perks',
+      perkNote: 'Built to accelerate active outreach, iteration, and investor access.',
       features: [
         { icon: Search, label: `Full database (${verifiedInvestorCountLabel}+)`, bold: true },
         { icon: Sparkles, label: 'Unlimited analyses', bold: true },
         { icon: Target, label: '20 matches per analysis', bold: true },
         { icon: BarChart3, label: 'Market intelligence', bold: true },
         { icon: CheckCircle, label: 'Deal history & profiles' },
+        { icon: CheckCircle, label: 'Warm intro pathways' },
+        { icon: CheckCircle, label: 'Mentorship resources (top-fund-backed operators)' },
         { icon: CheckCircle, label: 'CSV export' },
       ],
       highlighted: true,
@@ -104,10 +116,17 @@ export default function PricingClient({ verifiedInvestorCountLabel }: { verified
       name: 'Team',
       price: '$99',
       period: '/mo',
-      description: 'For co-founders raising together',
+      description: 'Coordinate one fundraising system across your team',
+      audience: 'For co-founders and fundraising operators',
+      outcome: 'Keep everyone aligned on targets, notes, and next actions without duplicate research work.',
+      upgradeTrigger: 'Upgrade when multiple teammates are sharing investor workflows and accountability.',
+      perkHeader: 'Team leverage',
+      perkNote: 'Coordinate intros, mentor guidance, and pipeline decisions in one shared workspace.',
       features: [
         { icon: CheckCircle, label: 'Everything in Pro', bold: true },
         { icon: Users, label: '3 team seats', bold: true },
+        { icon: CheckCircle, label: 'Shared warm intro tracking' },
+        { icon: CheckCircle, label: 'Team mentorship resource access' },
         { icon: CheckCircle, label: 'Shared workspace' },
         { icon: CheckCircle, label: 'Priority support' },
       ],
@@ -132,6 +151,11 @@ export default function PricingClient({ verifiedInvestorCountLabel }: { verified
               PitchBook charges $30,000+/yr. NEXUS gives you AI pitch analysis, investor matching,
               and {verifiedInvestorCountLabel}+ verified investors -- starting free.
             </p>
+            <div className="mt-4 flex flex-wrap items-center justify-center gap-2 text-xs text-muted-foreground/70">
+              <span className="rounded-full border border-border/60 px-3 py-1">Self-serve, no sales call</span>
+              <span className="rounded-full border border-border/60 px-3 py-1">Cancel anytime</span>
+              <span className="rounded-full border border-border/60 px-3 py-1">Free re-runs on failures</span>
+            </div>
           </div>
         </ScrollReveal>
 
@@ -198,8 +222,23 @@ export default function PricingClient({ verifiedInvestorCountLabel }: { verified
                     <p className="mt-1 text-xs font-medium text-primary/80">Cancel anytime</p>
                   )}
                   <p className="mt-1 text-xs text-muted-foreground">{plan.description}</p>
+                  <p className="mt-3 text-xs font-medium text-foreground/90">{plan.audience}</p>
+                  <p className="mt-2 text-xs leading-relaxed text-muted-foreground">{plan.outcome}</p>
                 </CardHeader>
                 <CardContent className="flex flex-1 flex-col gap-5">
+                  <div
+                    className={cn(
+                      'rounded-lg border px-3 py-2',
+                      plan.id === 'free'
+                        ? 'border-border/60 bg-muted/20'
+                        : 'border-primary/30 bg-primary/[0.06]'
+                    )}
+                  >
+                    <p className="text-[11px] font-semibold uppercase tracking-wide text-foreground/90">
+                      {plan.perkHeader}
+                    </p>
+                    <p className="mt-1 text-xs text-muted-foreground">{plan.perkNote}</p>
+                  </div>
                   <ul className="flex-1 space-y-3">
                     {plan.features.map((feature) => {
                       const Icon = feature.icon
@@ -241,7 +280,7 @@ export default function PricingClient({ verifiedInvestorCountLabel }: { verified
                           'Processing...'
                         ) : (
                           <>
-                            Upgrade to Pro
+                            Unlock Pro access
                             <ArrowRight className="ml-2 h-4 w-4" />
                           </>
                         )}
@@ -263,11 +302,14 @@ export default function PricingClient({ verifiedInvestorCountLabel }: { verified
                         'Processing...'
                       ) : (
                         <>
-                          Start Team plan
+                          Start Team workspace
                           <ArrowRight className="ml-2 h-4 w-4" />
                         </>
                       )}
                     </Button>
+                  )}
+                  {plan.id !== 'free' && (
+                    <p className="text-xs leading-relaxed text-muted-foreground">{plan.upgradeTrigger}</p>
                   )}
                 </CardContent>
               </Card>

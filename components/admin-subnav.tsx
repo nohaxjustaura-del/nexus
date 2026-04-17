@@ -2,13 +2,17 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { ArrowRightLeft, Briefcase, LayoutDashboard, UserCheck, Building2, Shield } from 'lucide-react'
+import { LayoutDashboard, UserCheck, Building2, Shield } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const items = [
   { href: '/admin/dashboard', label: 'Overview', icon: LayoutDashboard },
   { href: '/admin/approvals', label: 'Founders', icon: UserCheck },
-  { href: '/admin/vcs', label: 'VCs', icon: Building2 },
+  { href: '/admin/vcs', label: 'Investors', icon: Building2 },
+] as const
+const previewItems = [
+  { href: '/founder/dashboard', label: 'F', title: 'Preview founder account' },
+  { href: '/investor/dashboard', label: 'I', title: 'Preview investor account' },
 ] as const
 
 /** Human-readable current admin screen for the subnav context line. */
@@ -22,7 +26,7 @@ function getAdminPageTitle(pathname: string | null | undefined): string {
     dashboard: 'Overview',
     approvals: 'Founder approvals',
     founders: 'Founder directory',
-    vcs: 'VC directory',
+    vcs: 'Investor directory',
     'pending-requests': 'Pending requests',
     'training-data': 'Training data',
     worker: 'Worker',
@@ -87,20 +91,28 @@ export function AdminSubnav() {
                 </Link>
               )
             })}
-            <Link
-              href="/founder/dashboard"
-              className="ml-1 inline-flex shrink-0 items-center gap-1.5 rounded-full border border-border/70 bg-background/70 px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground"
-            >
-              <ArrowRightLeft className="h-3.5 w-3.5 opacity-70" aria-hidden />
-              Switch to Founder
-            </Link>
-            <Link
-              href="/investor/dashboard"
-              className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-border/70 bg-background/70 px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground"
-            >
-              <Briefcase className="h-3.5 w-3.5 opacity-70" aria-hidden />
-              Switch to Investor
-            </Link>
+            <div className="ml-1 inline-flex shrink-0 items-center gap-1 rounded-full border border-border/70 bg-background/70 p-1">
+              <span className="px-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Preview</span>
+              {previewItems.map(({ href, label, title }) => {
+                const active = pathname === href || pathname?.startsWith(`${href}/`)
+                return (
+                  <Link
+                    key={href}
+                    href={href}
+                    title={title}
+                    aria-label={title}
+                    className={cn(
+                      'rounded-full px-2 py-1 text-xs font-semibold uppercase tracking-wide transition-colors',
+                      active
+                        ? 'bg-primary/15 text-foreground ring-1 ring-primary/25'
+                        : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground'
+                    )}
+                  >
+                    {label}
+                  </Link>
+                )
+              })}
+            </div>
           </div>
         </div>
       </div>

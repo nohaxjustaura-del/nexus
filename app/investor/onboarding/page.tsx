@@ -166,7 +166,7 @@ export default function InvestorOnboardingPage() {
       .then(data => {
         if (!alive) return
         if (data.exists && data.onboardingCompleted) {
-          router.replace('/investor/dashboard')
+          router.replace('/investor/discover')
           return
         }
         if (data.exists && data.profile) {
@@ -251,7 +251,7 @@ export default function InvestorOnboardingPage() {
       }
       toast.success('Profile saved! Redirecting to your dashboard...')
       await new Promise(r => setTimeout(r, 800))
-      router.push('/investor/dashboard')
+      router.push('/investor/discover')
     } catch (err: any) {
       toast.error(err?.message || 'Failed to save profile')
     } finally {

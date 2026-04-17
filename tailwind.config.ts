@@ -105,19 +105,6 @@ const config = {
           "0%, 100%": { transform: "translateY(0)", opacity: "0.55" },
           "50%": { transform: "translateY(4px)", opacity: "1" },
         },
-        /** Step-connector scroll hint: small travel, ease-out return, micro-hold at bottom */
-        "connector-chevron": {
-          "0%, 10%": { transform: "translateY(0)", opacity: "0.78" },
-          "42%": { transform: "translateY(5px)", opacity: "1" },
-          "52%": { transform: "translateY(5px)", opacity: "1" },
-          "90%, 100%": { transform: "translateY(0)", opacity: "0.78" },
-        },
-        /** Single soft ripple — calmer than default `ping` */
-        "connector-ring": {
-          "0%": { transform: "scale(1)", opacity: "0.38" },
-          "65%": { opacity: "0.08" },
-          "100%": { transform: "scale(1.42)", opacity: "0" },
-        },
         "trend-nudge": {
           "0%, 100%": { transform: "translate(0, 0)", opacity: "0.88" },
           "50%": { transform: "translate(2px, -2px)", opacity: "1" },
@@ -143,9 +130,6 @@ const config = {
         "fade-in": "fadeIn 0.6s ease-out",
         "shimmer": "shimmer 2s infinite",
         "chevron-bounce": "chevron-bounce 1.6s ease-in-out infinite",
-        "connector-chevron":
-          "connector-chevron 2.45s cubic-bezier(0.45, 0.05, 0.25, 1) infinite",
-        "connector-ring": "connector-ring 2.6s cubic-bezier(0.22, 1, 0.36, 1) infinite",
         "trend-nudge": "trend-nudge 1.6s ease-in-out infinite",
         "glow-pulse": "glow-pulse 2.5s ease-in-out infinite",
         "border-flow": "border-flow 4s linear infinite",

@@ -15,6 +15,24 @@ const PACK_MODULE_IDS = new Set([
   'distribution-diary',
   'demo-teardown',
 ])
+const DOWNLOAD_LOG_PREFIX = '__yc_download__:'
+const PREMIUM_DAILY_DOWNLOAD_LIMIT = 3
+
+function getTodayKey() {
+  return new Date().toISOString().slice(0, 10)
+}
+
+function getDownloadLogEntry(itemId: string) {
+  return `${DOWNLOAD_LOG_PREFIX}${getTodayKey()}:${itemId}`
+}
+
+function getTodayDownloadCount(purchases: string[]) {
+  const todayPrefix = `${DOWNLOAD_LOG_PREFIX}${getTodayKey()}:`
+  return purchases.reduce(
+    (count, entry) => (entry.startsWith(todayPrefix) ? count + 1 : count),
+    0
+  )
+}
 
 function hasModuleAccess(purchases: string[], itemId: string): boolean {
   if (purchases.includes('complete-pack')) return PACK_MODULE_IDS.has(itemId)
@@ -108,11 +126,25 @@ export async function GET(request: NextRequest) {
       purchases = []
     }
 
-    const allowed =
-      Boolean(userCredits.isPremium) || hasModuleAccess(purchases, itemId)
+    const isPremium = Boolean(userCredits.isPremium)
+    if (!isPremium) {
+      return NextResponse.json(
+        { error: 'Get access to these resources with premium first.' },
+        { status: 403 }
+      )
+    }
 
+    const allowed = hasModuleAccess(purchases, itemId)
     if (!allowed) {
       return NextResponse.json({ error: 'Item not purchased' }, { status: 403 })
+    }
+
+    const todayDownloadCount = getTodayDownloadCount(purchases)
+    if (todayDownloadCount >= PREMIUM_DAILY_DOWNLOAD_LIMIT) {
+      return NextResponse.json(
+        { error: 'Daily download limit reached (3 resources per day).' },
+        { status: 429 }
+      )
     }
 
     const material = MATERIALS[itemId]
@@ -120,11 +152,19 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid item ID' }, { status: 400 })
     }
 
+    const updatedPurchases = [...purchases, getDownloadLogEntry(itemId)]
+    await db.userCredits.update({
+      where: { userId: user.id },
+      data: { purchases: JSON.stringify(updatedPurchases) },
+    })
+
     return NextResponse.json({
       success: true,
       url: material.url,
       filename: material.filename,
       type: material.type,
+      downloadsRemainingToday:
+        PREMIUM_DAILY_DOWNLOAD_LIMIT - (todayDownloadCount + 1),
     })
   } catch (error) {
     logger.error('[YC-INSIDER-DOWNLOAD]', error)

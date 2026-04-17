@@ -256,7 +256,7 @@ export function VCCardClient({
                 : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
             }`}
             onClick={handleBookmark}
-            title={isBookmarked ? 'Remove bookmark' : 'Bookmark this VC'}
+            title={isBookmarked ? 'Remove bookmark' : 'Bookmark this investor'}
           >
             <Heart className={`h-4 w-4 ${isBookmarked ? 'fill-current' : ''}`} />
           </Button>

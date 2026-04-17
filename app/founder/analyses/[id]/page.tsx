@@ -12,7 +12,7 @@ export const runtime = 'nodejs'
 function typeLabel(t: string) {
   switch (t) {
     case 'unified-pitch':
-      return 'Unified pitch'
+      return 'Pitch analysis'
     case 'video-pitch':
       return 'Video pitch'
     case 'pitch-deck':

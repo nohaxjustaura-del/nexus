@@ -42,7 +42,7 @@ function newAnalysisEntryLabel(
   type: 'unified-pitch' | 'video-pitch' | 'pitch-idea' | 'pitch-deck' | string,
 ): string {
   if (!legacyNexusExtrasEnabled()) return 'New analysis'
-  if (type === 'unified-pitch') return 'New unified pitch'
+  if (type === 'unified-pitch') return 'New pitch analysis'
   if (type === 'video-pitch') return 'New video pitch'
   if (type === 'pitch-idea') return 'New pitch idea'
   return 'New pitch deck'
@@ -272,7 +272,7 @@ export default function MyAnalysesPage() {
                     className="px-3 py-2 border border-border bg-card rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary text-foreground"
                   >
                     <option value="all">All</option>
-                    <option value="unified-pitch">Unified</option>
+                    <option value="unified-pitch">Pitch Analysis</option>
                     <option value="video-pitch">Video</option>
                     <option value="pitch-deck">Deck</option>
                     <option value="pitch-idea">Idea</option>
@@ -370,7 +370,7 @@ export default function MyAnalysesPage() {
                             {analysis.type === 'pitch-idea' && <Lightbulb className="h-5 w-5 text-primary" />}
                           </div>
                           <span className="min-w-0">
-                            {analysis.type === 'unified-pitch' ? 'Unified Pitch Analysis' :
+                            {analysis.type === 'unified-pitch' ? 'Pitch Analysis' :
                              analysis.type === 'video-pitch' ? 'Video Analysis' :
                              analysis.type === 'pitch-deck' ? 'Deck Analysis' :
                              'Idea Analysis'}
@@ -478,7 +478,7 @@ export default function MyAnalysesPage() {
                             ) : (
                               <Video className="h-4 w-4" />
                             )}
-                            {analysis.type === 'unified-pitch' ? 'Unified pitch' : 'Video pitch'}
+                            {analysis.type === 'unified-pitch' ? 'Pitch analysis' : 'Video pitch'}
                           </h4>
                           {analysis.fileName && (
                             <p className="text-xs text-muted-foreground">
@@ -624,7 +624,7 @@ export default function MyAnalysesPage() {
                               {analysis.type === 'pitch-deck' && <Presentation className="h-5 w-5 text-primary" />}
                               {analysis.type === 'pitch-idea' && <Lightbulb className="h-5 w-5 text-primary" />}
                             </div>
-                            {analysis.type === 'unified-pitch' ? 'Unified Pitch Analysis' :
+                            {analysis.type === 'unified-pitch' ? 'Pitch Analysis' :
                              analysis.type === 'video-pitch' ? 'Video Pitch Analysis Report' :
                              analysis.type === 'pitch-deck' ? 'Pitch Deck Analysis Report' :
                              'Pitch Idea Analysis Report'}

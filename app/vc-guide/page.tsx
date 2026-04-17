@@ -160,7 +160,7 @@ export default function VCGuidePage() {
                 <CardHeader>
                   <div className="mb-2 flex items-center gap-2">
                     <Zap className="h-5 w-5 text-orange-500" aria-hidden />
-                    <CardTitle className="text-lg">Pre-seed / angel / scout / micro-VC</CardTitle>
+                    <CardTitle className="text-lg">Pre-seed / angel / scout / micro-investor</CardTitle>
                   </div>
                   <CardDescription>Checks: ~$50K–$750K</CardDescription>
                 </CardHeader>
@@ -459,7 +459,7 @@ export default function VCGuidePage() {
 
               <Card>
                 <CardHeader>
-                  <CardTitle>Corporate VC (CVC)</CardTitle>
+                  <CardTitle>Corporate Investor (CVC)</CardTitle>
                   <CardDescription>Strategic fit to the parent company</CardDescription>
                 </CardHeader>
                 <CardContent>

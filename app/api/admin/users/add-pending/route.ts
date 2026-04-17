@@ -27,23 +27,21 @@ export async function POST(request: NextRequest) {
 
     const normalized = email.toLowerCase().trim()
 
-    const now = new Date()
     await db.userApproval.upsert({
       where: { email: normalized },
       create: {
         email: normalized,
-        status: 'approved',
-        reviewedAt: now,
+        status: 'pending',
       },
       update: {
-        status: 'approved',
-        reviewedAt: now,
+        status: 'pending',
+        reviewedAt: null,
       },
     })
 
     return NextResponse.json({
       success: true,
-      message: `Email ${normalized} recorded as approved`,
+      message: `Email ${normalized} added to waitlist`,
     })
   } catch (error: any) {
     console.error('Add pending approval error:', error)

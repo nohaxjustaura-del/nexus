@@ -253,7 +253,7 @@ export function UnifiedPitchTab() {
               <Layers className="h-5 w-5" aria-hidden />
             </div>
             <div className="min-w-0 space-y-2">
-              <CardTitle className="text-lg font-semibold tracking-tight">Unified pitch</CardTitle>
+              <CardTitle className="text-lg font-semibold tracking-tight">Pitch analysis</CardTitle>
               <CardDescription className="text-sm leading-relaxed">
                 Add structured answers and any supporting files. At least one input is required.{' '}
                 <span className="text-foreground">
@@ -408,7 +408,7 @@ export function UnifiedPitchTab() {
                     <p className="font-medium text-foreground">No reviewers are listed yet</p>
                     <p className="mt-1.5 text-xs">
                       Human review only shows people on your team who are onboarded as reviewers (active, verified, and
-                      marked VC-accepted in the database). If this is a fresh environment, use{' '}
+                      marked investor-accepted in the database). If this is a fresh environment, use{' '}
                       <span className="font-medium text-foreground">AI analysis</span> for now, or add{' '}
                       <code className="rounded bg-muted px-1 py-0.5 text-[0.7rem] text-foreground">Reviewer</code> rows
                       via Prisma. In local <code className="rounded bg-muted px-1 py-0.5 text-[0.7rem] text-foreground">npm run dev</code>, anyone with{' '}

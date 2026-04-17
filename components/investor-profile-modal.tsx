@@ -212,8 +212,8 @@ export function InvestorProfileModal({
                 )}
                 {investor.fundType && (
                   <Badge variant="outline" className="capitalize">
-                    {investor.fundType === 'CVC' ? 'Corporate VC' : 
-                     investor.fundType === 'micro-VC' ? 'Micro VC' : 
+                    {investor.fundType === 'CVC' ? 'Corporate Investor' : 
+                     investor.fundType === 'micro-VC' ? 'Micro Investor' : 
                      investor.fundType}
                   </Badge>
                 )}

@@ -45,26 +45,26 @@ export const NavAuth = memo(function NavAuth() {
                   </Link>
                   {!onAdminPage && (
                     <Link
-                      href={isInvestorPortal ? '/vc/profile' : '/founder/dashboard'}
+                      href={isInvestorPortal ? '/investor/profile' : '/founder/dashboard'}
                       className={cn(
                         'hidden sm:inline-flex lg:hidden',
                         buttonVariants({ size: 'sm', variant: 'outline' }),
                         'h-9 rounded-full border-border/80 px-3.5 text-sm font-medium shadow-none'
                       )}
                     >
-                      {isInvestorPortal ? 'Listing' : 'Hub'}
+                      {isInvestorPortal ? 'Profile' : 'Hub'}
                     </Link>
                   )}
                 </>
               ) : (
                 <Link
-                  href={isInvestorPortal ? '/vc/profile' : '/founder/dashboard'}
+                  href={isInvestorPortal ? '/investor/profile' : '/founder/dashboard'}
                   className={cn(
                     buttonVariants({ size: 'sm', variant: 'outline' }),
                     'h-9 rounded-full border-border/80 px-3.5 text-sm font-medium shadow-none lg:hidden'
                   )}
                 >
-                  {isInvestorPortal ? 'Listing' : 'Hub'}
+                  {isInvestorPortal ? 'Profile' : 'Hub'}
                 </Link>
               )}
             </>

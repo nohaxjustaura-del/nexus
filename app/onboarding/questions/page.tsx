@@ -117,7 +117,7 @@ export default function OnboardingQuestionsPage() {
         <div className="mb-8">
           <h1 className="font-heading mb-2 text-3xl font-semibold tracking-tight sm:text-4xl">Tell us about your startup</h1>
           <p className="text-base text-muted-foreground sm:text-lg">
-            A few questions so we can line up VCs, accelerators, and programs that fit your stage and sector
+            A few questions so we can line up investors, accelerators, and programs that fit your stage and sector
           </p>
         </div>
 
@@ -194,7 +194,7 @@ export default function OnboardingQuestionsPage() {
               <div>
                 <Label>Optional: Help us find diversity-focused programs (Select if applicable)</Label>
                 <p className="mb-3 text-xs text-muted-foreground">
-                  Some VCs and accelerators specifically support underrepresented founders. This info helps us match you with them.
+                  Some investors and accelerators specifically support underrepresented founders. This info helps us match you with them.
                 </p>
                 <div className="grid grid-cols-2 gap-3">
                   {['Woman Founder', 'BIPOC Founder', 'LGBTQ+ Founder', 'Immigrant Founder', 'First-Gen', 'International Student'].map(demo => (
@@ -470,11 +470,11 @@ export default function OnboardingQuestionsPage() {
               onClick={() => setStep(Math.max(1, step - 1))}
               disabled={step === 1}
             >
-              ← Back
+              â† Back
             </Button>
 
             {step < 5 ? (
-              <Button onClick={() => setStep(step + 1)}>Next →</Button>
+              <Button onClick={() => setStep(step + 1)}>Next â†’</Button>
             ) : (
               <Button onClick={handleSubmit}>Complete &amp; get matches</Button>
             )}
@@ -484,4 +484,6 @@ export default function OnboardingQuestionsPage() {
     </div>
   )
 }
+
+
 

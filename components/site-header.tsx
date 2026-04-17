@@ -30,7 +30,11 @@ const navDockClass = 'inline-flex max-w-full flex-nowrap items-center justify-ce
 const adminDesktopTabs = [
   { href: '/admin/dashboard', label: 'Overview' },
   { href: '/admin/approvals', label: 'Founders' },
-  { href: '/admin/vcs', label: 'VCs' },
+  { href: '/admin/vcs', label: 'Investors' },
+] as const
+const adminPreviewTabs = [
+  { href: '/founder/dashboard', label: 'F', title: 'Preview founder account' },
+  { href: '/investor/discover', label: 'I', title: 'Preview investor account' },
 ] as const
 
 function DesktopNavLink({
@@ -108,9 +112,10 @@ export function SiteHeader() {
 
   const investorMobileLinks: MobileNavItem[] = useMemo(() => {
     const base: MobileNavItem[] = [
-      { section: 'Workspace', href: '/investor/dashboard', label: 'Dashboard' },
-      { href: '/vc/profile', label: 'Listing' },
-      { href: '/investor/network', label: 'Network' },
+      { section: 'Workspace', href: '/investor/discover', label: 'Discover' },
+      { href: '/investor/saved', label: 'Saved' },
+      { href: '/investor/profile', label: 'Profile' },
+      { href: '/investor/network', label: 'Resources' },
     ]
     if (authenticated) {
       base.push({ section: 'Account', href: '/account', label: 'Account' })
@@ -123,8 +128,9 @@ export function SiteHeader() {
       ? ([
           { section: 'Admin', href: '/admin/dashboard', label: 'Overview' },
           { href: '/admin/approvals', label: 'Founders' },
-          { href: '/admin/vcs', label: 'VCs' },
-          { section: 'Switch', href: '/founder/dashboard', label: 'Switch to Founder' },
+          { href: '/admin/vcs', label: 'Investors' },
+          { section: 'Preview', href: '/founder/dashboard', label: 'Founder (F)' },
+          { href: '/investor/discover', label: 'Investor (I)' },
         ] as MobileNavItem[])
       : chrome === 'guest'
       ? guestMobileLinks
@@ -138,7 +144,7 @@ export function SiteHeader() {
     isAdminRoute
       ? '/admin/dashboard'
       : chrome === 'investor'
-      ? '/investor/dashboard'
+      ? '/investor/discover'
       : chrome === 'mentor'
         ? '/mentor/dashboard'
         : chrome === 'founder'
@@ -189,11 +195,29 @@ export function SiteHeader() {
           suppressHydrationWarning
         >
             {isAdminRoute && (
-              <div className={navDockClass}>
+              <div className={cn(navDockClass, 'gap-1.5')}>
                 {adminDesktopTabs.map(({ href, label }) => (
                   <DesktopNavLink key={href} href={href} label={label} pathname={pathname} />
                 ))}
-                <DesktopNavLink href="/founder/dashboard" label="Switch to Founder" pathname={pathname} />
+                <div className="ml-1 inline-flex items-center gap-1 rounded-full border border-border/70 bg-background/70 p-1">
+                  <span className="px-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Preview</span>
+                  {adminPreviewTabs.map(({ href, label, title }) => (
+                    <Link
+                      key={href}
+                      href={href}
+                      title={title}
+                      aria-label={title}
+                      className={cn(
+                        'rounded-full px-2 py-1 text-xs font-semibold uppercase tracking-wide transition-colors',
+                        pathname === href || pathname?.startsWith(`${href}/`)
+                          ? 'bg-primary/15 text-foreground ring-1 ring-primary/25'
+                          : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground'
+                      )}
+                    >
+                      {label}
+                    </Link>
+                  ))}
+                </div>
               </div>
             )}
 
@@ -230,9 +254,10 @@ export function SiteHeader() {
 
             {!isAdminRoute && chrome === 'investor' && (
               <div className={navDockClass}>
-                <DesktopNavLink href="/investor/dashboard" label="Dashboard" pathname={pathname} />
-                <DesktopNavLink href="/vc/profile" label="Listing" pathname={pathname} />
-                <DesktopNavLink href="/investor/network" label="Network" pathname={pathname} />
+                <DesktopNavLink href="/investor/discover" label="Discover" pathname={pathname} />
+                <DesktopNavLink href="/investor/saved" label="Saved" pathname={pathname} />
+                <DesktopNavLink href="/investor/profile" label="Profile" pathname={pathname} />
+                <DesktopNavLink href="/investor/network" label="Resources" pathname={pathname} />
               </div>
             )}
         </nav>
@@ -251,3 +276,4 @@ export function SiteHeader() {
     </header>
   )
 }
+

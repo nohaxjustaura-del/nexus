@@ -149,7 +149,7 @@ export default function VideoPitchUploadPage() {
               Home
             </Link>
             <Link href="/founder/discover" className="text-sm font-medium hover:text-primary">
-              Discover VCs
+              Discover Investors
             </Link>
           </nav>
         </div>
@@ -352,11 +352,11 @@ export default function VideoPitchUploadPage() {
                 </li>
                 <li className="flex items-start gap-2">
                   <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-                  <span>Receive top VC recommendations with application strategies</span>
+                  <span>Receive top investor recommendations with application strategies</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-                  <span>Learn the best approach for each VC (warm intro, cold email, timing)</span>
+                  <span>Learn the best approach for each investor (warm intro, cold email, timing)</span>
                 </li>
               </ul>
             </div>
@@ -368,11 +368,11 @@ export default function VideoPitchUploadPage() {
                 Tips for Best Results
               </h3>
               <ul className="space-y-2 text-sm text-muted-foreground">
-                <li>• Keep your pitch between 2-10 minutes for optimal analysis</li>
-                <li>• Ensure good audio quality so your speech can be transcribed accurately</li>
-                <li>• Include specific metrics (revenue, users, growth rates) in your pitch</li>
-                <li>• Clearly explain your problem, solution, and market opportunity</li>
-                <li>• Show enthusiasm and confidence in your delivery</li>
+                <li> -  Keep your pitch between 2-10 minutes for optimal analysis</li>
+                <li> -  Ensure good audio quality so your speech can be transcribed accurately</li>
+                <li> -  Include specific metrics (revenue, users, growth rates) in your pitch</li>
+                <li> -  Clearly explain your problem, solution, and market opportunity</li>
+                <li> -  Show enthusiasm and confidence in your delivery</li>
               </ul>
             </div>
           </CardContent>
@@ -382,13 +382,17 @@ export default function VideoPitchUploadPage() {
         <div className="mt-8 text-center">
           <p className="text-sm text-muted-foreground">
             Need help? <Link href="/" className="text-primary hover:underline">Contact support</Link> or{' '}
-            <Link href="/founder/discover" className="text-primary hover:underline">browse VCs</Link>
+            <Link href="/founder/discover" className="text-primary hover:underline">browse investors</Link>
           </p>
         </div>
       </div>
     </div>
   )
 }
+
+
+
+
 
 
 

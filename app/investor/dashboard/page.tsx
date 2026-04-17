@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { Badge } from '@/components/ui/badge'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { useAuthSession } from '@/components/auth-session-provider'
@@ -84,6 +84,10 @@ interface FounderRecommendation {
   teamSize: number | null
   matchScore: number
   matchReasons: string[]
+  confidence: number
+  freshness: number
+  strictFilterPass: boolean
+  actionHint: string
   dimensionBreakdown: DimensionBreakdown
   analysisSummary: AnalysisSummary | null
 }
@@ -242,6 +246,8 @@ function FounderCard({ rec, bookmarked, onToggleBookmark }: {
               {rec.teamSize != null && rec.teamSize > 0 && (
                 <span className="flex items-center gap-1"><Users className="h-3 w-3" />Team of {rec.teamSize}</span>
               )}
+              <span className="flex items-center gap-1"><Shield className="h-3 w-3" />{rec.confidence}% confidence</span>
+              <span className="flex items-center gap-1"><Sparkles className="h-3 w-3" />{rec.freshness}% freshness</span>
             </div>
 
             {/* Executive summary */}
@@ -259,6 +265,7 @@ function FounderCard({ rec, bookmarked, onToggleBookmark }: {
                 ))}
               </div>
             )}
+            <p className="mt-2 text-xs font-medium text-primary">{rec.actionHint}</p>
           </div>
 
           {/* Actions */}
@@ -474,12 +481,22 @@ function FounderCard({ rec, bookmarked, onToggleBookmark }: {
 
 export default function InvestorDashboard() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { isAdmin, loading: sessionLoading } = useAuthSession()
   const [loading, setLoading] = useState(true)
   const [recommendations, setRecommendations] = useState<FounderRecommendation[]>([])
   const [bookmarkedIds, setBookmarkedIds] = useState<Set<string>>(new Set())
   const [investorName, setInvestorName] = useState('')
-  const [filter, setFilter] = useState<'all' | 'analyzed' | 'top' | 'bookmarked'>('all')
+  const [filter, setFilter] = useState<'all' | 'analyzed' | 'top' | 'bookmarked'>(
+    searchParams.get('view') === 'saved' ? 'bookmarked' : 'all',
+  )
+  const [strictStage, setStrictStage] = useState(false)
+  const [strictCheck, setStrictCheck] = useState(false)
+  const [strictGeo, setStrictGeo] = useState(false)
+  const [analyzedOnly, setAnalyzedOnly] = useState(false)
+  const [refreshing, setRefreshing] = useState(false)
+  const [dataSource, setDataSource] = useState<'saved' | 'refresh' | null>(null)
+  const [lastRefreshedAt, setLastRefreshedAt] = useState<string | null>(null)
 
   useEffect(() => {
     if (sessionLoading) return
@@ -499,14 +516,24 @@ export default function InvestorDashboard() {
           setInvestorName(profileData.profile?.firmName || 'Your Firm')
         }
 
+        const query = new URLSearchParams({
+          strictStage: String(strictStage),
+          strictCheck: String(strictCheck),
+          strictGeo: String(strictGeo),
+          analyzedOnly: String(analyzedOnly),
+        })
         const [recsRes, bmRes] = await Promise.all([
-          fetch('/api/investor/recommended-founders', { credentials: 'include' }),
+          fetch(`/api/investor/recommended-founders?mode=saved&${query.toString()}`, { credentials: 'include' }),
           fetch('/api/investor/bookmarks', { credentials: 'include' }),
         ])
 
         if (recsRes.ok) {
           const recsData = await recsRes.json()
-          if (alive) setRecommendations(recsData.recommendations || [])
+          if (alive) {
+            setRecommendations(recsData.recommendations || [])
+            setDataSource(recsData.source || 'saved')
+            setLastRefreshedAt(recsData.refreshedAt || null)
+          }
         } else if (alive) {
           const errText = recsRes.status === 403 ? 'Complete onboarding to see matches.' : `Matches could not be loaded (${recsRes.status}).`
           toast.error(errText)
@@ -524,7 +551,36 @@ export default function InvestorDashboard() {
     }
     load()
     return () => { alive = false }
-  }, [router, isAdmin, sessionLoading])
+  }, [router, isAdmin, sessionLoading, strictStage, strictCheck, strictGeo, analyzedOnly])
+
+  const refreshRecommendations = useCallback(async () => {
+    setRefreshing(true)
+    try {
+      const query = new URLSearchParams({
+        strictStage: String(strictStage),
+        strictCheck: String(strictCheck),
+        strictGeo: String(strictGeo),
+        analyzedOnly: String(analyzedOnly),
+      })
+      const res = await fetch(`/api/investor/recommended-founders?${query.toString()}`, {
+        method: 'POST',
+        credentials: 'include',
+      })
+      if (!res.ok) {
+        const msg = res.status === 403 ? 'Complete onboarding to analyze founders.' : 'Failed to refresh founder analysis.'
+        throw new Error(msg)
+      }
+      const data = await res.json()
+      setRecommendations(data.recommendations || [])
+      setDataSource(data.source || 'refresh')
+      setLastRefreshedAt(data.refreshedAt || null)
+      toast.success('Top 10 founder matches refreshed.')
+    } catch (err: any) {
+      toast.error(err?.message || 'Could not refresh founder analysis')
+    } finally {
+      setRefreshing(false)
+    }
+  }, [strictStage, strictCheck, strictGeo, analyzedOnly])
 
   const toggleBookmark = useCallback(async (founderId: string) => {
     const was = bookmarkedIds.has(founderId)
@@ -576,7 +632,7 @@ export default function InvestorDashboard() {
           </div>
           <div className="text-center">
             <p className="text-sm font-medium text-foreground">Finding your best matches</p>
-            <p className="mt-0.5 text-xs text-muted-foreground">Analyzing founders against your thesis...</p>
+            <p className="mt-0.5 text-xs text-muted-foreground">Loading your saved founder matches...</p>
           </div>
         </div>
       </div>
@@ -608,14 +664,30 @@ export default function InvestorDashboard() {
         <header className="mb-8">
           <Badge variant="secondary" className="mb-3 px-3 py-1 text-xs font-medium">
             <Briefcase className="mr-1.5 h-3.5 w-3.5" />
-            Investor Dashboard
+            Investor Discover
           </Badge>
           <h1 className="font-heading text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
             {investorName}
           </h1>
           <p className="mt-1.5 max-w-xl text-sm text-muted-foreground">
-            Founders matched to your investment thesis. Expand any card for AI-powered analysis and detailed insights.
+            AI-ranked founders matched to your mandate, with confidence and freshness signals for faster diligence.
           </p>
+          <div className="mt-4 flex flex-wrap items-center gap-2">
+            <Button onClick={refreshRecommendations} disabled={refreshing} className="gap-2">
+              {refreshing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+              {refreshing ? 'Analyzing...' : 'Analyze New Top 10'}
+            </Button>
+            {lastRefreshedAt && (
+              <span className="text-xs text-muted-foreground">
+                Last refreshed {new Date(lastRefreshedAt).toLocaleString()}
+              </span>
+            )}
+            {dataSource && (
+              <Badge variant="secondary" className="text-[11px]">
+                Source: {dataSource === 'saved' ? 'Saved results' : 'Fresh analysis'}
+              </Badge>
+            )}
+          </div>
         </header>
 
         {/* Stats */}
@@ -648,6 +720,13 @@ export default function InvestorDashboard() {
               {label}
             </button>
           ))}
+        </div>
+
+        <div className="mb-6 flex flex-wrap items-center gap-2 text-xs">
+          <button type="button" onClick={() => setStrictStage((v) => !v)} className={cn('rounded-full border px-3 py-1.5', strictStage ? 'border-primary/50 bg-primary/10 text-foreground' : 'border-border/50 text-muted-foreground')}>Strict stage</button>
+          <button type="button" onClick={() => setStrictCheck((v) => !v)} className={cn('rounded-full border px-3 py-1.5', strictCheck ? 'border-primary/50 bg-primary/10 text-foreground' : 'border-border/50 text-muted-foreground')}>Strict check size</button>
+          <button type="button" onClick={() => setStrictGeo((v) => !v)} className={cn('rounded-full border px-3 py-1.5', strictGeo ? 'border-primary/50 bg-primary/10 text-foreground' : 'border-border/50 text-muted-foreground')}>Strict geography</button>
+          <button type="button" onClick={() => setAnalyzedOnly((v) => !v)} className={cn('rounded-full border px-3 py-1.5', analyzedOnly ? 'border-primary/50 bg-primary/10 text-foreground' : 'border-border/50 text-muted-foreground')}>AI analyzed only</button>
         </div>
 
         {/* Results */}

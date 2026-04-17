@@ -187,7 +187,7 @@ export function PitchFeedbackComparison({ analyses }: PitchFeedbackComparisonPro
                     </div>
                     <div>
                       <p className="text-sm font-medium text-foreground">
-                        {analysis.type === 'unified-pitch' && 'Unified pitch'}
+                        {analysis.type === 'unified-pitch' && 'Pitch analysis'}
                         {analysis.type === 'video-pitch' && 'Video Pitch'}
                         {analysis.type === 'pitch-deck' && 'Pitch Deck'}
                         {analysis.type === 'pitch-idea' && 'Pitch Idea'}

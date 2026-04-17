@@ -2,13 +2,14 @@
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { AlertTriangle, ArrowRight, CreditCard } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { FounderProfileEditor } from './profile/founder-profile-editor'
+import { useAccountCapabilities } from '@/components/account-capabilities-provider'
 
 export type AccountPageClientProps = {
   email: string
@@ -29,28 +30,7 @@ export function AccountPageClient({
   const isMentor = typeLabel === 'mentor'
   const isVc = typeLabel === 'vc' || typeLabel === 'investor'
 
-  const [caps, setCaps] = useState<{
-    hasFounderProfile?: boolean
-    hasInvestorProfile?: boolean
-  } | null>(null)
-
-  useEffect(() => {
-    let cancelled = false
-    fetch('/api/account/capabilities', { credentials: 'include' })
-      .then((r) => r.json())
-      .then((d) => {
-        if (!cancelled && d?.authenticated) {
-          setCaps({
-            hasFounderProfile: Boolean(d.hasFounderProfile),
-            hasInvestorProfile: Boolean(d.hasInvestorProfile),
-          })
-        }
-      })
-      .catch(() => {})
-    return () => {
-      cancelled = true
-    }
-  }, [])
+  const { capabilities: caps } = useAccountCapabilities()
 
   const canUseFounderWorkspace = isFounder && Boolean(caps?.hasFounderProfile)
 
@@ -151,7 +131,7 @@ export function AccountPageClient({
               <CardTitle className="text-lg">Workspace</CardTitle>
               <CardDescription>
                 {isVc
-                  ? 'Investor accounts use the VC area: listing, matches, and extract tools.'
+                  ? 'Investor accounts use the investor area: listing, matches, and extract tools.'
                   : isMentor
                     ? 'Mentor accounts use the mentor workspace for guidance and support workflows.'
                     : 'Founder accounts use the founder hub, discover, and analysis tools.'}

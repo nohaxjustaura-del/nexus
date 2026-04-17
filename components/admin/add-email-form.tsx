@@ -36,7 +36,7 @@ export function AddEmailForm({ onSuccess }: AddEmailFormProps = {}) {
       const data = await res.json()
 
       if (res.ok) {
-        setMessage({ type: 'success', text: `Recorded ${email} as approved` })
+        setMessage({ type: 'success', text: `Added ${email} to waitlist` })
         setEmail('')
         onSuccess?.()
         setTimeout(() => {
@@ -57,7 +57,7 @@ export function AddEmailForm({ onSuccess }: AddEmailFormProps = {}) {
       <div className="flex flex-1 flex-col gap-2 sm:flex-row sm:gap-2">
         <Input
           type="email"
-          placeholder="Email to pre-approve"
+          placeholder="Email to add to waitlist"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           className="flex-1"

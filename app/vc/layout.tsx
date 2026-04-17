@@ -23,7 +23,7 @@ export default function VCLayout({ children }: { children: React.ReactNode }) {
 
     if (t !== 'vc' && t !== 'investor') {
       if (t === 'mentor') router.push('/mentor/dashboard')
-      else router.push('/founder/dashboard')
+      else router.push('/investor')
       return
     }
 

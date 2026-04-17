@@ -295,7 +295,7 @@ export default function PitchDeckAnalysisPage() {
             Pitch deck feedback
           </h1>
           <p className="mx-auto max-w-2xl text-lg text-muted-foreground">
-            Upload your pitch deck and get detailed feedback on what to improve, plus discover which VCs are the best fit for your startup.
+            Upload your pitch deck and get detailed feedback on what to improve, plus discover which investors are the best fit for your startup.
           </p>
         </div>
 
@@ -613,7 +613,7 @@ export default function PitchDeckAnalysisPage() {
               </Card>
             )}
 
-            {/* Top VC Matches */}
+            {/* Top Investor Matches */}
             <Card>
               <CardHeader>
                 <div className="flex items-center justify-between">
@@ -642,7 +642,7 @@ export default function PitchDeckAnalysisPage() {
                     </div>
                     <h3 className="mb-2 text-lg font-semibold">Unlock Your Top 5 Matches</h3>
                     <p className="mb-4 text-sm text-muted-foreground">
-                      See your highest compatibility scores and best-fit VCs
+                      See your highest compatibility scores and best-fit investors
                     </p>
                     <div className="mb-4 flex items-center justify-center gap-2 text-sm">
                       {credits?.isPremium && (
@@ -751,4 +751,7 @@ export default function PitchDeckAnalysisPage() {
     </div>
   )
 }
+
+
+
 

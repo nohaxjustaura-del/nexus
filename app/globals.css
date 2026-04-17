@@ -268,6 +268,45 @@
   }
 }
 
+@keyframes how-connector-snake {
+  0% {
+    transform: translate(-50%, -140%);
+    opacity: 0;
+  }
+  14% {
+    opacity: 1;
+  }
+  86% {
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, 140%);
+    opacity: 0;
+  }
+}
+
+@keyframes how-connector-breathe {
+  0%,
+  100% {
+    opacity: 0.45;
+    transform: scale(0.92);
+  }
+  50% {
+    opacity: 0.95;
+    transform: scale(1.06);
+  }
+}
+
+@keyframes how-connector-arrow-fade {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 0.85;
+  }
+}
+
 .will-change-transform {
   will-change: transform;
 }
@@ -373,6 +412,18 @@
     opacity: 1;
     animation: none;
     transform: none;
+  }
+
+  .how-connector-track::after {
+    animation: none;
+    opacity: 0.65;
+    transform: translate(-50%, 0);
+  }
+
+  .how-connector-direction,
+  .how-connector-core-glow {
+    animation: none;
+    opacity: 0.75;
   }
 }
 
@@ -541,6 +592,87 @@
 
   .demo-step-list > li {
     @apply list-none;
+  }
+
+  .how-connector-track {
+    position: relative;
+    height: 1.95rem;
+    width: 3px;
+    flex-shrink: 0;
+    overflow: visible;
+    border-radius: 9999px;
+    background-image: repeating-linear-gradient(
+      to bottom,
+      hsl(var(--border) / 0.82) 0 5px,
+      transparent 5px 10px
+    );
+  }
+
+  .how-connector-track::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    width: 3px;
+    height: 18px;
+    transform: translate(-50%, -130%);
+    border-radius: 9999px;
+    background: linear-gradient(
+      to bottom,
+      hsl(var(--primary) / 0),
+      hsl(var(--primary) / 1) 45%,
+      hsl(var(--primary) / 0)
+    );
+    box-shadow:
+      0 0 10px hsl(var(--primary) / 0.62),
+      0 0 20px hsl(var(--primary) / 0.28);
+    animation: how-connector-snake 1.8s ease-in-out infinite;
+  }
+
+  .how-connector-track--bottom::after {
+    animation-delay: 0.9s;
+  }
+
+  .dark .how-connector-track {
+    background-image: repeating-linear-gradient(
+      to bottom,
+      hsl(var(--border) / 0.9) 0 5px,
+      transparent 5px 10px
+    );
+  }
+
+  .dark .how-connector-track::after {
+    box-shadow:
+      0 0 12px hsl(var(--primary) / 0.72),
+      0 0 22px hsl(var(--primary) / 0.34);
+  }
+
+  .how-connector-direction {
+    position: absolute;
+    left: 50%;
+    z-index: 2;
+    height: 0.72rem;
+    width: 0.72rem;
+    transform: translateX(-50%);
+    color: hsl(var(--primary) / 0.85);
+    animation: how-connector-arrow-fade 2.2s ease-in-out infinite;
+  }
+
+  .how-connector-direction--top {
+    bottom: -0.5rem;
+  }
+
+  .how-connector-direction--bottom {
+    top: -0.5rem;
+    animation-delay: 0.85s;
+  }
+
+  .how-connector-core-glow {
+    pointer-events: none;
+    position: absolute;
+    inset: 0.35rem;
+    border-radius: 9999px;
+    background: radial-gradient(circle, hsl(var(--primary) / 0.28) 0%, hsl(var(--primary) / 0) 70%);
+    animation: how-connector-breathe 2.4s ease-in-out infinite;
   }
 
   .demo-step-badge {

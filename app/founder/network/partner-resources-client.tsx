@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
+import { usePathname, useRouter } from 'next/navigation'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -60,6 +61,8 @@ const PARTNER_BUNDLE_SAVE_CREDITS =
   PARTNER_MODULES_A_LA_CARTE_TOTAL - PARTNER_COMPLETE_PACK_CREDITS
 
 export default function PartnerResourcesClient({ partnerSlug }: { partnerSlug: string }) {
+  const router = useRouter()
+  const pathname = usePathname()
   const [loading, setLoading] = useState(true)
   const [isPremium, setIsPremium] = useState(false)
   const [credits, setCredits] = useState(0)
@@ -156,7 +159,7 @@ export default function PartnerResourcesClient({ partnerSlug }: { partnerSlug: s
 
   const openFounderRequest = (founderKey: YcFounderKey, founderName: string, requestType: YcRequestType) => {
     if (!isPremium) {
-      toast.error('Upgrade to Premium to message founders.')
+      router.push(`/pricing?from=${encodeURIComponent(pathname || '/founder/network')}`)
       return
     }
     setRequestModal({ open: true, founderKey, founderName, requestType })
@@ -346,15 +349,14 @@ export default function PartnerResourcesClient({ partnerSlug }: { partnerSlug: s
                     <p className="max-w-sm text-sm text-zinc-200">
                       Upgrade to Premium for LinkedIn, Ask / Book, and full founder access with {partner.name}.
                     </p>
-                    <Link
-                      href="/pricing"
-                      className={cn(
-                        buttonVariants(),
-                        'bg-amber-500 text-zinc-950 hover:bg-amber-400'
-                      )}
+                    <Button
+                      onClick={() =>
+                        router.push(`/pricing?from=${encodeURIComponent(pathname || '/founder/network')}`)
+                      }
+                      className="bg-amber-500 text-zinc-950 hover:bg-amber-400"
                     >
                       Upgrade for mentorship &amp; playbooks
-                    </Link>
+                    </Button>
                   </div>
                 ) : null}
               </div>
@@ -366,11 +368,6 @@ export default function PartnerResourcesClient({ partnerSlug }: { partnerSlug: s
             
             {/* Module 1: Application Deconstruction */}
             <Card className="relative border border-zinc-700 bg-zinc-900/50 transition-colors hover:border-violet-500/40">
-              {hasPurchased('application-deconstruction') && (
-                <div className="absolute top-3 right-3">
-                  <CheckCircle className="h-5 w-5 text-blue-400" />
-                </div>
-              )}
               <CardHeader className="pb-3">
                 <div className="flex items-start gap-3">
                   <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-violet-500/15">
@@ -382,9 +379,6 @@ export default function PartnerResourcesClient({ partnerSlug }: { partnerSlug: s
                       <Badge className="border border-violet-500/35 bg-violet-500/20 text-xs text-violet-200">
                         Most Valuable
                       </Badge>
-                      <span className="ml-auto text-xs font-semibold tabular-nums text-zinc-400">
-                        {PARTNER_MODULE_CREDITS['application-deconstruction']}
-                      </span>
                     </div>
                     <CardDescription className="text-xs">Raw YC application answers + why each works + fill-in templates</CardDescription>
                   </div>
@@ -471,11 +465,6 @@ export default function PartnerResourcesClient({ partnerSlug }: { partnerSlug: s
 
             {/* Module 2: Pitch Deck Autopsy */}
             <Card className="relative border border-zinc-700 bg-zinc-900/50 transition-colors hover:border-sky-500/40">
-              {hasPurchased('pitch-deck-autopsy') && (
-                <div className="absolute top-3 right-3">
-                  <CheckCircle className="h-5 w-5 text-blue-400" />
-                </div>
-              )}
               <CardHeader className="pb-3">
                 <div className="flex items-start gap-3">
                   <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-sky-500/15">
@@ -484,9 +473,6 @@ export default function PartnerResourcesClient({ partnerSlug }: { partnerSlug: s
                   <div className="min-w-0 flex-1">
                     <div className="mb-1 flex flex-wrap items-center gap-2">
                       <CardTitle className="text-lg">Pitch Deck Autopsy</CardTitle>
-                      <span className="ml-auto text-xs font-semibold tabular-nums text-zinc-400">
-                        {PARTNER_MODULE_CREDITS['pitch-deck-autopsy']}
-                      </span>
                     </div>
                     <CardDescription className="text-xs">Annotated deck + critical slides + what YC questioned</CardDescription>
                   </div>
@@ -570,11 +556,6 @@ export default function PartnerResourcesClient({ partnerSlug }: { partnerSlug: s
 
             {/* Module 3: Interview Simulator */}
             <Card className="relative border border-zinc-700 bg-zinc-900/50 transition-colors hover:border-blue-500/40">
-              {hasPurchased('interview-simulator') && (
-                <div className="absolute top-3 right-3">
-                  <CheckCircle className="h-5 w-5 text-blue-400" />
-                </div>
-              )}
               <CardHeader className="pb-3">
                 <div className="flex items-start gap-3">
                   <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-500/15">
@@ -583,9 +564,6 @@ export default function PartnerResourcesClient({ partnerSlug }: { partnerSlug: s
                   <div className="min-w-0 flex-1">
                     <div className="mb-1 flex flex-wrap items-center gap-2">
                       <CardTitle className="text-lg">Interview Simulator</CardTitle>
-                      <span className="ml-auto text-xs font-semibold tabular-nums text-zinc-400">
-                        {PARTNER_MODULE_CREDITS['interview-simulator']}
-                      </span>
                     </div>
                     <CardDescription className="text-xs">YC questions + their answers + what YC was testing + drill mode</CardDescription>
                   </div>
@@ -669,11 +647,6 @@ export default function PartnerResourcesClient({ partnerSlug }: { partnerSlug: s
 
             {/* Module 4: Metrics Timeline */}
             <Card className="relative border border-zinc-700 bg-zinc-900/50 transition-colors hover:border-amber-500/40">
-              {hasPurchased('metrics-timeline') && (
-                <div className="absolute top-3 right-3">
-                  <CheckCircle className="h-5 w-5 text-blue-400" />
-                </div>
-              )}
               <CardHeader className="pb-3">
                 <div className="flex items-start gap-3">
                   <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-amber-500/15">
@@ -682,9 +655,6 @@ export default function PartnerResourcesClient({ partnerSlug }: { partnerSlug: s
                   <div className="min-w-0 flex-1">
                     <div className="mb-1 flex flex-wrap items-center gap-2">
                       <CardTitle className="text-lg">Metrics Snapshot Timeline</CardTitle>
-                      <span className="ml-auto text-xs font-semibold tabular-nums text-zinc-400">
-                        {PARTNER_MODULE_CREDITS['metrics-timeline']}
-                      </span>
                     </div>
                     <CardDescription className="text-xs">Their traction at 90/30/0 days before YC + growth story</CardDescription>
                   </div>
@@ -768,11 +738,6 @@ export default function PartnerResourcesClient({ partnerSlug }: { partnerSlug: s
 
             {/* Module 5: Distribution Diary */}
             <Card className="relative border border-zinc-700 bg-zinc-900/50 transition-colors hover:border-indigo-500/40">
-              {hasPurchased('distribution-diary') && (
-                <div className="absolute top-3 right-3">
-                  <CheckCircle className="h-5 w-5 text-blue-400" />
-                </div>
-              )}
               <CardHeader className="pb-3">
                 <div className="flex items-start gap-3">
                   <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-indigo-500/15">
@@ -781,9 +746,6 @@ export default function PartnerResourcesClient({ partnerSlug }: { partnerSlug: s
                   <div className="min-w-0 flex-1">
                     <div className="mb-1 flex flex-wrap items-center gap-2">
                       <CardTitle className="text-lg">Distribution Diary</CardTitle>
-                      <span className="ml-auto text-xs font-semibold tabular-nums text-zinc-400">
-                        {PARTNER_MODULE_CREDITS['distribution-diary']}
-                      </span>
                     </div>
                     <CardDescription className="text-xs">First 10 customers + outreach scripts + what worked/failed</CardDescription>
                   </div>
@@ -867,11 +829,6 @@ export default function PartnerResourcesClient({ partnerSlug }: { partnerSlug: s
 
             {/* Module 6: Demo Teardown */}
             <Card className="relative border border-zinc-700 bg-zinc-900/50 transition-colors hover:border-rose-500/40">
-              {hasPurchased('demo-teardown') && (
-                <div className="absolute top-3 right-3">
-                  <CheckCircle className="h-5 w-5 text-blue-400" />
-                </div>
-              )}
               <CardHeader className="pb-3">
                 <div className="flex items-start gap-3">
                   <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-rose-500/15">
@@ -880,9 +837,6 @@ export default function PartnerResourcesClient({ partnerSlug }: { partnerSlug: s
                   <div className="min-w-0 flex-1">
                     <div className="mb-1 flex flex-wrap items-center gap-2">
                       <CardTitle className="text-lg">Demo Teardown</CardTitle>
-                      <span className="ml-auto text-xs font-semibold tabular-nums text-zinc-400">
-                        {PARTNER_MODULE_CREDITS['demo-teardown']}
-                      </span>
                     </div>
                     <CardDescription className="text-xs">Application video + timestamp notes + what to copy</CardDescription>
                   </div>

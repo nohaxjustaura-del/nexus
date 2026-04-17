@@ -106,7 +106,7 @@ export default function BookmarksPage() {
         </div>
 
         <div className="mb-6 rounded-2xl border border-border/60 bg-card/70 p-5 shadow-sm backdrop-blur-sm md:p-6">
-          <h1 className="mb-2 text-3xl font-bold tracking-tight">Your Bookmarked VCs</h1>
+          <h1 className="mb-2 text-3xl font-bold tracking-tight">Your Bookmarked Investors</h1>
           <p className="text-muted-foreground">
             {bookmarks.length} investor{bookmarks.length !== 1 ? 's' : ''} saved
           </p>
@@ -119,15 +119,15 @@ export default function BookmarksPage() {
             </div>
             <h2 className="mb-2 text-2xl font-bold text-foreground">No Bookmarks Yet</h2>
             <p className="mb-2 text-muted-foreground max-w-md mx-auto">
-              Start exploring and save your favorite VCs to keep track of them
+              Start exploring and save your favorite investors to keep track of them
             </p>
             <p className="mb-6 text-sm text-slate-500">
-              Click the heart icon on any VC card to bookmark them
+              Click the heart icon on any investor card to bookmark them
             </p>
             <Link href="/founder/discover">
               <Button size="lg" className="bg-gradient-to-r from-primary to-blue-600 hover:from-primary/90 hover:to-blue-700">
                 <Target className="mr-2 h-5 w-5" />
-                Discover VCs
+                Discover Investors
               </Button>
             </Link>
           </Card>
@@ -237,3 +237,6 @@ export default function BookmarksPage() {
     </div>
   )
 }
+
+
+

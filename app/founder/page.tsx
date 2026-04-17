@@ -7,13 +7,13 @@ export const revalidate = 120
 
 export const metadata: Metadata = {
   title: 'Founders',
-  description: `${BRAND_NAME} for founders: allocator-style pitch analysis, ranked investor matches from verified VCs and angels, discovery, crash courses, and outreach workflow, not generic AI lists.`,
+  description: `${BRAND_NAME} for founders: allocator-style pitch analysis, ranked investor matches from verified investors and angels, discovery, crash courses, and outreach workflow, not generic AI lists.`,
   openGraph: {
-    title: `Founders · ${BRAND_NAME}`,
+    title: `Founders Â· ${BRAND_NAME}`,
     description: `Pitch analysis, investor discovery, and ranked shortlists from verified mandates.`,
   },
   twitter: {
-    title: `Founders · ${BRAND_NAME}`,
+    title: `Founders Â· ${BRAND_NAME}`,
     description: `Pitch analysis, discovery, and ranked investor shortlists in one workspace.`,
   },
 }
@@ -23,3 +23,4 @@ export default async function FounderLandingPage() {
   const verifiedInvestorCountLabel = formatVerifiedInvestorCount(count)
   return <FounderLandingClient verifiedInvestorCountLabel={verifiedInvestorCountLabel} />
 }
+

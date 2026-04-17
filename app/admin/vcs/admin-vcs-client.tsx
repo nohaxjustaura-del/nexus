@@ -89,7 +89,7 @@ export function AdminVcsClient({
       ])
 
       if (!investorsRes.ok || !claimsRes.ok) {
-        toast.error('Failed to refresh VC data')
+        toast.error('Failed to refresh investor data')
         return
       }
 
@@ -100,7 +100,7 @@ export function AdminVcsClient({
       setClaims(claimsData.claims || [])
     } catch (error) {
       console.error('Error loading data:', error)
-      toast.error('Error refreshing VC data')
+      toast.error('Error refreshing investor data')
     }
   }
 
@@ -115,7 +115,7 @@ export function AdminVcsClient({
       if (res.ok) {
         await loadData()
       } else {
-        toast.error('Failed to approve VC claim')
+        toast.error('Failed to approve investor claim')
       }
     } catch (error) {
       console.error('Error approving claim:', error)
@@ -137,7 +137,7 @@ export function AdminVcsClient({
       if (res.ok) {
         await loadData()
       } else {
-        toast.error('Failed to reject VC claim')
+        toast.error('Failed to reject investor claim')
       }
     } catch (error) {
       console.error('Error rejecting claim:', error)
@@ -165,7 +165,7 @@ export function AdminVcsClient({
   }
 
   const handleDelete = async (investorId: string) => {
-    const confirmDelete = confirm('Delete this VC? This action cannot be undone.')
+    const confirmDelete = confirm('Delete this investor? This action cannot be undone.')
     if (!confirmDelete) return
 
     try {
@@ -177,11 +177,11 @@ export function AdminVcsClient({
         await loadData()
       } else {
         const data = await res.json().catch(() => ({}))
-        toast.error(data.error || 'Failed to delete VC')
+        toast.error(data.error || 'Failed to delete investor')
       }
     } catch (error) {
-      console.error('Error deleting VC:', error)
-      toast.error('Error deleting VC')
+      console.error('Error deleting investor:', error)
+      toast.error('Error deleting investor')
     }
   }
 
@@ -223,7 +223,7 @@ export function AdminVcsClient({
       <div className="container mx-auto max-w-7xl px-4 py-8 sm:px-6">
         <div className="mb-8">
           <h1 className="font-heading text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
-            VC management
+            Investor management
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Approve claims and manage investor profiles
@@ -242,7 +242,7 @@ export function AdminVcsClient({
         <Accordion type="single" collapsible className="mb-6 rounded-lg border border-border/60 bg-card/50">
           <AccordionItem value="vc-admin-tips" className="border-0 px-4">
             <AccordionTrigger className="py-3 text-sm font-medium hover:no-underline">
-              VC admin tips
+              Investor admin tips
             </AccordionTrigger>
             <AccordionContent>
               <ul className="list-disc space-y-1.5 pb-3 pl-5 text-sm text-muted-foreground">
@@ -261,7 +261,7 @@ export function AdminVcsClient({
         <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Total VCs</CardTitle>
+              <CardTitle className="text-sm font-medium">Total investors</CardTitle>
               <Building2 className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
@@ -319,10 +319,10 @@ export function AdminVcsClient({
                 <div>
                   <CardTitle className="flex items-center gap-2">
                     <Clock className="h-5 w-5 text-blue-600" />
-                    Pending VC Claims ({pendingClaims.length})
+                    Pending investor claims ({pendingClaims.length})
                   </CardTitle>
                   <CardDescription>
-                    Review and approve new VC profile claims
+                    Review and approve new investor profile claims
                   </CardDescription>
                 </div>
                 <Button
@@ -467,12 +467,12 @@ export function AdminVcsClient({
           </CardContent>
         </Card>
 
-        {/* VC List */}
+        {/* Investor List */}
         <div className="space-y-4">
           {filteredInvestors.length === 0 ? (
             <Card>
               <CardContent className="pt-6 text-center text-muted-foreground">
-                No VCs found matching your criteria.
+                No investors found matching your criteria.
               </CardContent>
             </Card>
           ) : (

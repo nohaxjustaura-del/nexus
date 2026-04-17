@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import HomeClient from '@/app/home-client'
 import { formatVerifiedInvestorCount, getVerifiedInvestorCountForCurrentEnv } from '@/lib/investor-public-stats'
-import { getHomeDemoRubricForCurrentEnv } from '@/lib/home-demo-rubric'
+import { getHomeDemoRubric } from '@/lib/home-demo-rubric'
 import { getPublicAnalysesCountForCurrentEnv } from '@/lib/public-analyses-stats'
 import { BRAND_DEFAULT_TITLE } from '@/lib/brand'
 
@@ -30,7 +30,7 @@ export default async function HomePage() {
   const [count, analysesCount, homeDemoRubric] = await Promise.all([
     getVerifiedInvestorCountForCurrentEnv(),
     getPublicAnalysesCountForCurrentEnv(),
-    getHomeDemoRubricForCurrentEnv(),
+    getHomeDemoRubric(),
   ])
   const verifiedInvestorCountLabel = formatVerifiedInvestorCount(count)
   const analysesCountLabel = formatVerifiedInvestorCount(analysesCount)

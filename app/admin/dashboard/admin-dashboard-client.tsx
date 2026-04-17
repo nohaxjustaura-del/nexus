@@ -9,7 +9,6 @@ import {
   Users, 
   Building2, 
   Shield, 
-  FileCheck, 
   CheckCircle, 
   XCircle, 
   Mail, 
@@ -24,8 +23,6 @@ import Link from "next/link"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { toast } from '@/components/ui/toast-simple'
-import { FounderVerificationReviewPanel } from '@/components/admin/founder-verification-review-panel'
-import type { FounderVerificationReviewItem } from '@/lib/admin/founder-verifications'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
 
 interface UserApproval {
@@ -56,14 +53,12 @@ interface UnverifiedVC {
 
 interface AdminDashboardClientProps {
   userApprovals: UserApproval[]
-  founderVerificationPending: FounderVerificationReviewItem[]
   vcClaims: VCClaim[]
   unverifiedVCs: UnverifiedVC[]
 }
 
 export function AdminDashboardClient({
   userApprovals,
-  founderVerificationPending,
   vcClaims,
   unverifiedVCs,
 }: AdminDashboardClientProps) {
@@ -75,7 +70,6 @@ export function AdminDashboardClient({
 
   const hasPending =
     userApprovals.length +
-      founderVerificationPending.length +
       vcClaims.length +
       unverifiedVCs.length >
     0
@@ -152,7 +146,7 @@ export function AdminDashboardClient({
       if (!res.ok) throw new Error('Failed to approve')
       router.refresh()
     } catch (error) {
-      toast.error('Failed to approve VC claim')
+      toast.error('Failed to approve investor claim')
       setProcessingState(`vcclaim-${claimId}`, false)
     }
   }
@@ -166,10 +160,10 @@ export function AdminDashboardClient({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ verified: true }),
       })
-      if (!res.ok) throw new Error('Failed to verify VC')
+      if (!res.ok) throw new Error('Failed to verify investor')
       router.refresh()
     } catch (error) {
-      toast.error('Failed to verify VC')
+      toast.error('Failed to verify investor')
       setProcessingState(`vc-${vcId}`, false)
     }
   }
@@ -263,7 +257,7 @@ export function AdminDashboardClient({
             <ul className="list-disc space-y-1.5 pb-3 pl-5 text-sm text-muted-foreground">
               <li>Approve or reject pending signups before users get full access.</li>
               <li>Review founder ID uploads, then verify or reject from the panel.</li>
-              <li>Process VC profile claims and verify new investor records from the lists below.</li>
+              <li>Process investor profile claims and verify new investor records from the lists below.</li>
               <li>
                 Use <span className="font-medium text-foreground">Revoke by email</span> only when someone is not on these
                 queues. See expanded notes on that card.
@@ -377,31 +371,15 @@ export function AdminDashboardClient({
         </Card>
       )}
 
-      {/* Founder Verifications */}
-      {founderVerificationPending.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <FileCheck className="h-5 w-5" />
-              Founder ID Verifications ({founderVerificationPending.length})
-            </CardTitle>
-            <CardDescription>Review each ID on this page, then verify or reject</CardDescription>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <FounderVerificationReviewPanel pending={founderVerificationPending} showHeader={false} />
-          </CardContent>
-        </Card>
-      )}
-
       {/* VC Claims */}
       {vcClaims.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Building2 className="h-5 w-5" />
-              VC Profile Claims ({vcClaims.length})
+              Investor Profile Claims ({vcClaims.length})
             </CardTitle>
-            <CardDescription>VCs claiming their profiles</CardDescription>
+            <CardDescription>Investors claiming their profiles</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
@@ -458,9 +436,9 @@ export function AdminDashboardClient({
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Shield className="h-5 w-5" />
-              Unverified VCs ({unverifiedVCs.length})
+              Unverified Investors ({unverifiedVCs.length})
             </CardTitle>
-            <CardDescription>VC profiles not yet verified</CardDescription>
+            <CardDescription>Investor profiles not yet verified</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
@@ -583,4 +561,9 @@ export function AdminDashboardClient({
     </div>
   )
 }
+
+
+
+
+
 

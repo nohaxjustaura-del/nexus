@@ -55,7 +55,7 @@ export default function ResumeAnalysisDisabledPage() {
                   </div>
                   <p className="text-sm text-muted-foreground mb-4">
                     Upload a video pitch and get expert feedback on your presentation, delivery, and content. 
-                    Plus, get matched with VCs based on your pitch.
+                    Plus, get matched with investors based on your pitch.
                   </p>
                   <Button className="w-full">
                     Analyze Video Pitch
@@ -75,7 +75,7 @@ export default function ResumeAnalysisDisabledPage() {
                   </div>
                   <p className="text-sm text-muted-foreground mb-4">
                     Upload your pitch deck for slide-by-slide notes on messaging and story. 
-                    Get VC recommendations too.
+                    Get investor recommendations too.
                   </p>
                   <Button className="w-full">
                     Analyze Pitch Deck
@@ -93,3 +93,5 @@ export default function ResumeAnalysisDisabledPage() {
     </div>
   )
 }
+
+

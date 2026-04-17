@@ -111,3 +111,10 @@ export const getHomeDemoRubric = unstable_cache(loadHomeDemoRubricFromDb, ['home
   revalidate: 300,
   tags: [HOME_DEMO_RUBRIC_CACHE_TAG],
 })
+
+export async function getHomeDemoRubricForCurrentEnv(): Promise<UniversalAnalysisResult> {
+  if (process.env.NODE_ENV === 'development') {
+    return loadHomeDemoRubricFromDb()
+  }
+  return getHomeDemoRubric()
+}

@@ -52,11 +52,30 @@ export async function POST(request: NextRequest) {
       await (db as any).investorFounderBookmark.delete({
         where: { id: existing.id },
       })
+      await (db as any).investorFounderProgress.deleteMany({
+        where: { investorId: investor.id, founderId },
+      })
       return NextResponse.json({ bookmarked: false })
     }
 
     await (db as any).investorFounderBookmark.create({
       data: { investorId: investor.id, founderId, notes: notes || null },
+    })
+
+    await (db as any).investorFounderProgress.upsert({
+      where: {
+        investorId_founderId: {
+          investorId: investor.id,
+          founderId,
+        },
+      },
+      create: {
+        investorId: investor.id,
+        founderId,
+        stage: 'saved',
+        notes: notes || null,
+      },
+      update: {},
     })
 
     return NextResponse.json({ bookmarked: true })

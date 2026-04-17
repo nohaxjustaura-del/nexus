@@ -15,6 +15,12 @@ export async function GET() {
     const parse = (s: string | null) => {
       try { return JSON.parse(s || '[]') } catch { return [] }
     }
+    const parseFounderFocus = (s: string | null) => {
+      const parsed = parse(s)
+      if (Array.isArray(parsed)) return parsed
+      if (typeof parsed === 'string' && parsed.trim()) return [parsed.trim()]
+      return []
+    }
 
     return NextResponse.json({
       exists: true,
@@ -42,7 +48,7 @@ export async function GET() {
         coInvestPreference: investor.coInvestPreference,
         valueAddTags: parse(investor.valueAddTags),
         ethicsTags: parse(investor.ethicsTags),
-        founderFocus: parse(investor.founderFocus),
+        founderFocus: parseFounderFocus(investor.founderFocus),
         notableInvestments: parse(investor.notableInvestments),
         portfolio: parse(investor.portfolio),
         linkedinUrl: investor.linkedinUrl,

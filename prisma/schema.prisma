@@ -95,6 +95,8 @@ model Founder {
   firmDeals            VCFirmDeal[] // founderId matches Founder id
   analysisSummaries    FounderAnalysisSummary[]
   investorBookmarkedBy InvestorFounderBookmark[]
+  investorProgress     InvestorFounderProgress[]
+  recommendationSnapshotItems InvestorRecommendationSnapshotItem[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -183,6 +185,8 @@ model Investor {
   savedSearches        SavedSearch[] // userId matches Investor id
   enrichmentCache      VCEnrichmentCache?
   investorBookmarks    InvestorFounderBookmark[]
+  founderProgress      InvestorFounderProgress[]
+  recommendationSnapshots InvestorRecommendationSnapshot[]
 
   // Investor onboarding fields
   onboardingCompleted Boolean @default(false)
@@ -245,6 +249,7 @@ model ResumeAnalysis {
 
   @@index([founderId])
   @@index([createdAt])
+  @@index([founderId, createdAt])
 }
 
 model Bookmark {
@@ -355,6 +360,7 @@ model VideoPitch {
   updatedAt DateTime @updatedAt
 
   @@index([founderId])
+  @@index([founderId, createdAt])
 }
 
 model VideoPitchReview {
@@ -408,6 +414,7 @@ model PitchDeckAnalysis {
   updatedAt DateTime @updatedAt
 
   @@index([founderId])
+  @@index([founderId, createdAt])
 }
 
 // Pitch Idea Analysis results (text-based pitch analysis)
@@ -425,6 +432,7 @@ model PitchIdeaAnalysis {
   updatedAt DateTime @updatedAt
 
   @@index([founderId])
+  @@index([founderId, createdAt])
 }
 
 // Voice recordings from pitch idea speech-to-text
@@ -1112,6 +1120,68 @@ model InvestorFounderBookmark {
 
   @@unique([investorId, founderId])
   @@index([investorId])
+}
+
+enum InvestorFounderProgressStage {
+  saved
+  contacted
+  meeting
+  closed
+}
+
+model InvestorFounderProgress {
+  id         String                      @id @default(cuid())
+  investorId String
+  founderId  String
+  stage      InvestorFounderProgressStage @default(saved)
+  notes      String?
+  investor   Investor                    @relation(fields: [investorId], references: [id], onDelete: Cascade)
+  founder    Founder                     @relation(fields: [founderId], references: [id], onDelete: Cascade)
+  createdAt  DateTime                    @default(now())
+  updatedAt  DateTime                    @updatedAt
+
+  @@unique([investorId, founderId])
+  @@index([investorId, stage])
+  @@index([founderId])
+}
+
+model InvestorRecommendationSnapshot {
+  id             String   @id @default(cuid())
+  investorId     String
+  investor       Investor @relation(fields: [investorId], references: [id], onDelete: Cascade)
+  source         String   @default("manual_refresh")
+  contextVersion Int      @default(1)
+  refreshedAt    DateTime @default(now())
+  createdAt      DateTime @default(now())
+
+  items InvestorRecommendationSnapshotItem[]
+
+  @@index([investorId, refreshedAt(sort: Desc)])
+  @@index([createdAt])
+}
+
+model InvestorRecommendationSnapshotItem {
+  id         String                         @id @default(cuid())
+  snapshotId String
+  snapshot   InvestorRecommendationSnapshot @relation(fields: [snapshotId], references: [id], onDelete: Cascade)
+  founderId  String
+  founder    Founder                        @relation(fields: [founderId], references: [id], onDelete: Cascade)
+
+  rank               Int
+  recommendationRowId String
+  matchScore         Int
+  confidence         Int
+  freshness          Int
+  strictFilterPass   Boolean @default(true)
+  actionHint         String
+  matchReasons       String   @default("[]")
+  dimensionBreakdown String   @default("{}")
+  payload            String
+  createdAt          DateTime @default(now())
+
+  @@unique([snapshotId, rank])
+  @@index([snapshotId])
+  @@index([founderId])
 }
 
 // Cached enrichment data from Exa web search for VC scoring

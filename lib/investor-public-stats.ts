@@ -11,6 +11,17 @@ export const getVerifiedInvestorCount = unstable_cache(
   { revalidate: 120, tags: [VERIFIED_INVESTOR_COUNT_CACHE_TAG] }
 )
 
+export async function getVerifiedInvestorCountLive(): Promise<number> {
+  return db.investor.count({ where: { verified: true } })
+}
+
+export async function getVerifiedInvestorCountForCurrentEnv(): Promise<number> {
+  if (process.env.NODE_ENV === 'development') {
+    return getVerifiedInvestorCountLive()
+  }
+  return getVerifiedInvestorCount()
+}
+
 export function revalidateVerifiedInvestorCountCache() {
   revalidateTag(VERIFIED_INVESTOR_COUNT_CACHE_TAG)
 }

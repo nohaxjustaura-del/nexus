@@ -25,7 +25,7 @@ export default function InvestorLayout({ children }: { children: React.ReactNode
         return
       }
       if (t && t !== 'vc' && t !== 'investor') {
-        router.push('/founder/dashboard')
+        router.push('/investor')
         return
       }
     }

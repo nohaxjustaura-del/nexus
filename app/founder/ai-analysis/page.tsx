@@ -41,7 +41,7 @@ export default function AIAnalysisPage() {
             <p className="mt-3 text-sm text-muted-foreground">
               {mode === 'unified' ? (
                 <>
-                  <span className="font-medium text-foreground">Unified pitch</span>: analyze deck, video, and context together.
+                  <span className="font-medium text-foreground">Pitch analysis</span>: analyze deck, video, and context together.
                 </>
               ) : (
                 <>
@@ -70,7 +70,7 @@ export default function AIAnalysisPage() {
                 onClick={() => setMode('unified')}
               >
                 <Layers className="h-4 w-4 shrink-0 opacity-80" aria-hidden />
-                <span className="text-center leading-tight">Unified pitch</span>
+                <span className="text-center leading-tight">Pitch analysis</span>
               </button>
               <button
                 type="button"
