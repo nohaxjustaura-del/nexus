@@ -113,6 +113,7 @@ export default function RootLayout({ children }: RootLayoutProps) {
                     </nav>
                     <nav className="flex min-w-[9.5rem] flex-col gap-1" aria-label="Footer company">
                       <p className="eyebrow-label mb-2 text-foreground/70">Company</p>
+                      <FooterChromeLink href="/why-nexus">Why NEXUS</FooterChromeLink>
                       <FooterChromeLink href="/about">About</FooterChromeLink>
                       <FooterChromeLink href="/contact">Contact</FooterChromeLink>
                       <FooterChromeLink href="/legal">Legal</FooterChromeLink>

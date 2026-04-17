@@ -6,7 +6,6 @@ import { ComparisonTable } from '@/components/marketing/comparison-table'
 import {
   Sparkles,
   BrainCircuit,
-  BarChart3,
   Target,
   ArrowRight,
   DollarSign,
@@ -18,30 +17,30 @@ import {
   ShieldCheck,
 } from 'lucide-react'
 
-const goldenFeatures = [
+const founderFeatureCards = [
   {
-    icon: Workflow,
-    title: 'Advanced fundraising pipeline',
+    icon: CheckCircle2,
+    title: 'Warm intro pathways, not cold guessing',
     description:
-      'NEXUS runs a full workflow: intake, multi-pass analysis, investor fit ranking, and clear next actions in one place.',
+      'Spot likely intro paths and relationship context so outreach starts warmer and more relevant.',
+  },
+  {
+    icon: Sparkles,
+    title: 'Founder resources from real operators',
+    description:
+      'Get practical playbooks, examples, and prompts shaped by founders and investors linked to top-tier ecosystems.',
   },
   {
     icon: Database,
-    title: 'Verified investor intelligence',
+    title: 'Mandate-aware investor targeting',
     description:
-      'You get structured investor context, including stage, thesis, check-size behavior, and mandate signals, not just names on a list.',
-  },
-  {
-    icon: BrainCircuit,
-    title: 'Better than generic LLM output',
-    description:
-      'Generic chat tools stop at text. NEXUS turns analysis into ranked matches, rationale, and practical next steps you can execute.',
+      'Filter by stage, sector, check size, and thesis behavior so your list is built for fit, not vanity.',
   },
   {
     icon: Target,
-    title: 'Actionable results',
+    title: 'Execution-ready next steps',
     description:
-      'Move from insight to action fast: shortlist the right investors, tailor your story, and improve your outreach quality.',
+      'Each recommendation includes why it fits and what to do next so progress does not stop in chat.',
   },
 ]
 
@@ -70,17 +69,24 @@ const pipelineSteps = [
 
 const whyBetterRows = [
   {
-    generic: 'One prompt in, one response out',
-    nexus: 'Structured end-to-end workflow built for fundraising decisions',
+    generic: 'Mostly static templates and directories',
+    nexus: 'Live workflow from intake to fit-ranked targets and execution steps',
   },
   {
-    generic: 'Broad internet knowledge with limited investor context',
+    generic: 'Broad advice with weak mandate context',
     nexus: 'Verified investor intelligence with mandate-level fit signals',
   },
   {
-    generic: 'Advice that often ends in the chat window',
-    nexus: 'Ranked matches, rationale, and immediate next actions',
+    generic: 'Suggestions that still need heavy founder translation',
+    nexus: 'Clear rationale, outreach angles, and immediate actions',
   },
+]
+
+const founderOutcomes = [
+  'Spend less time researching and more time meeting aligned investors',
+  'Tailor your narrative by investor thesis and check behavior',
+  'Improve reply rates with higher-context outreach',
+  'Run your fundraising as a repeatable system, not one-off prompts',
 ]
 
 export default function WhyNexusPage() {
@@ -93,13 +99,44 @@ export default function WhyNexusPage() {
             Why Us
           </Badge>
           <h1 className="font-heading text-3xl font-bold tracking-tight text-foreground md:text-5xl">
-            Why founders choose NEXUS
+            Why founders choose NEXUS over generic resource platforms
           </h1>
           <p className="mx-auto mt-4 max-w-xl text-base text-muted-foreground">
-            NEXUS is built for real fundraising decisions. We combine advanced analysis, verified investor intelligence, and
-            action-ready outputs so you can target the right investors with confidence.
+            NEXUS turns fundraising into an execution system: analyze your pitch, rank true-fit investors, and move with clear
+            next actions.
           </p>
         </header>
+
+        <div className="mb-16">
+          <Card className="border-border/80">
+            <CardContent className="p-6">
+              <h2 className="text-center text-xl font-bold md:text-2xl">Built for founders who need momentum</h2>
+              <p className="mx-auto mt-3 max-w-2xl text-center text-sm text-muted-foreground">
+                Resources are informed by founder and investor patterns from top-tier ecosystems (for example YC, a16z, and
+                Sequoia networks) where applicable, while staying focused on what is actionable for your round.
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="mb-16">
+          <h2 className="mb-8 text-center text-xl font-bold md:text-2xl">Cool features founders actually use</h2>
+          <div className="grid gap-6 md:grid-cols-2">
+            {founderFeatureCards.map((f) => (
+              <Card key={f.title} className="border-border/80">
+                <CardContent className="p-6">
+                  <div className="mb-3 flex items-center gap-3">
+                    <div className="rounded-lg bg-primary/10 p-2.5">
+                      <f.icon className="h-5 w-5 text-primary" />
+                    </div>
+                    <h3 className="text-lg font-semibold text-foreground">{f.title}</h3>
+                  </div>
+                  <p className="text-sm leading-relaxed text-muted-foreground">{f.description}</p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
 
         <div className="mb-16">
           <h2 className="mb-8 text-center text-xl font-bold md:text-2xl">Our pipeline advantage</h2>
@@ -121,34 +158,13 @@ export default function WhyNexusPage() {
         </div>
 
         <div className="mb-16">
-          <h2 className="mb-8 text-center text-xl font-bold md:text-2xl">
-            What makes NEXUS different
-          </h2>
-          <div className="grid gap-6 md:grid-cols-2">
-            {goldenFeatures.map((f) => (
-              <Card key={f.title} className="border-border/80">
-                <CardContent className="p-6">
-                  <div className="mb-3 flex items-center gap-3">
-                    <div className="rounded-lg bg-primary/10 p-2.5">
-                      <f.icon className="h-5 w-5 text-primary" />
-                    </div>
-                    <h3 className="text-lg font-semibold text-foreground">{f.title}</h3>
-                  </div>
-                  <p className="text-sm leading-relaxed text-muted-foreground">{f.description}</p>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
-
-        <div className="mb-16">
-          <h2 className="mb-8 text-center text-xl font-bold md:text-2xl">NEXUS vs generic LLM tools</h2>
+          <h2 className="mb-8 text-center text-xl font-bold md:text-2xl">Why this beats generic founder resource tools</h2>
           <div className="space-y-3">
             {whyBetterRows.map((row) => (
               <Card key={row.generic} className="border-border/80">
                 <CardContent className="grid gap-3 p-5 md:grid-cols-2">
                   <div className="rounded-lg border border-border/60 bg-muted/20 p-3">
-                    <p className="text-[11px] font-mono uppercase tracking-[0.12em] text-muted-foreground">Generic LLM</p>
+                    <p className="text-[11px] font-mono uppercase tracking-[0.12em] text-muted-foreground">Typical platform</p>
                     <p className="mt-1 text-sm text-muted-foreground">{row.generic}</p>
                   </div>
                   <div className="rounded-lg border border-primary/25 bg-primary/[0.05] p-3">
@@ -162,20 +178,15 @@ export default function WhyNexusPage() {
         </div>
 
         <div className="mb-16">
-          <h2 className="mb-8 text-center text-xl font-bold md:text-2xl">Not just a list of investors</h2>
+          <h2 className="mb-8 text-center text-xl font-bold md:text-2xl">Founder outcomes, not just analysis</h2>
           <Card className="border-border/80">
             <CardContent className="p-6">
               <p className="text-sm leading-relaxed text-muted-foreground">
-                A static list tells you who exists. NEXUS tells you who actually fits and why. Each target is backed by richer
-                context so your outreach is focused and credible.
+                Most platforms stop at content. NEXUS helps you move from analysis to execution with clear fit rationale and
+                targeted actions.
               </p>
               <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                {[
-                  'Stage and check-size alignment',
-                  'Sector and thesis relevance',
-                  'Mandate and behavior signals',
-                  'Clear fit rationale per investor',
-                ].map((item) => (
+                {founderOutcomes.map((item) => (
                   <div key={item} className="flex items-center gap-2 rounded-lg border border-border/60 bg-card/70 px-3 py-2.5">
                     <ShieldCheck className="h-4 w-4 text-primary" />
                     <span className="text-sm text-foreground/90">{item}</span>

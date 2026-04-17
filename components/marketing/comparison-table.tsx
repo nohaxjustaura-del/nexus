@@ -6,6 +6,7 @@ const comparisonRows = [
   { feature: 'AI-ranked investor matching with fit rationale', nexus: true, pitchbook: false },
   { feature: 'Market intelligence & trends', nexus: true, pitchbook: true },
   { feature: 'Mandate-aware investor profiles', nexus: true, pitchbook: true },
+  { feature: 'Warm intro path signals and outreach guidance', nexus: true, pitchbook: false },
   { feature: 'Built for first-time founders', nexus: true, pitchbook: false },
   { feature: 'Plain-English explanations', nexus: true, pitchbook: false },
   { feature: 'Self-serve onboarding (no sales call)', nexus: true, pitchbook: false },
