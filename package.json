@@ -90,6 +90,7 @@
     "@types/pdfkit": "^0.17.4",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.0",
+    "critters": "^0.0.23",
     "disposable-email-domains": "^1.0.62",
     "dotenv": "^16.6.1",
     "exa-js": "^2.7.0",
