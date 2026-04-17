@@ -1,0 +1,86 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:
+  schedule:
+    - cron: '0 6 * * 1'
+
+jobs:
+  lint-and-types:
+    runs-on: ubuntu-latest
+    env:
+      # Placeholders so `next build` / Prisma load paths that read env never see empty strings (no real services contacted during build).
+      DATABASE_URL: postgresql://ci:ci@127.0.0.1:5432/ci?schema=public&sslmode=disable
+      DIRECT_DATABASE_URL: postgresql://ci:ci@127.0.0.1:5432/ci?schema=public&sslmode=disable
+      NEXT_PUBLIC_SUPABASE_URL: https://ci-placeholder.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiJ9.ci-placeholder-signature
+      SUPABASE_SERVICE_ROLE_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoic2VydmljZV9yb2xlIn0.ci-placeholder-signature
+      OPENROUTER_API_KEY: sk-or-v1-ci-placeholder-openrouter-key-min-length
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: ESLint
+        run: npm run lint
+
+      - name: TypeScript
+        run: npm run type-check
+
+      - name: Targeted tests
+        run: npm run test:matching
+
+      - name: Auth policy regression
+        run: npm run test:auth-policy
+
+      - name: Production build
+        run: npm run build
+
+      - name: Perf budget guardrail
+        run: npm run perf:budget
+
+  bundle-analysis:
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'schedule' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: postgresql://ci:ci@127.0.0.1:5432/ci?schema=public&sslmode=disable
+      DIRECT_DATABASE_URL: postgresql://ci:ci@127.0.0.1:5432/ci?schema=public&sslmode=disable
+      NEXT_PUBLIC_SUPABASE_URL: https://ci-placeholder.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiJ9.ci-placeholder-signature
+      SUPABASE_SERVICE_ROLE_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoic2VydmljZV9yb2xlIn0.ci-placeholder-signature
+      OPENROUTER_API_KEY: sk-or-v1-ci-placeholder-openrouter-key-min-length
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build bundle analyzer report
+        run: npm run analyze
+
+      - name: Upload analyzer report artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: bundle-analyzer-report
+          path: |
+            .next/analyze/**/*.html
+            .next/analyze/**/*.json
+          if-no-files-found: warn
