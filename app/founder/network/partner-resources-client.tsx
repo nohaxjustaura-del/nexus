@@ -22,6 +22,7 @@ import {
   Target,
   Zap,
   BarChart3,
+  Phone,
 } from 'lucide-react'
 import { toast } from '@/components/ui/toast-simple'
 import {
@@ -157,6 +158,8 @@ export default function PartnerResourcesClient({ partnerSlug }: { partnerSlug: s
     )
   }
 
+  const showPlaybooks = partner.showYcPlaybookModules !== false
+  const advisorHub = !showPlaybooks
   const openFounderRequest = (founderKey: YcFounderKey, founderName: string, requestType: YcRequestType) => {
     if (!isPremium) {
       router.push(`/pricing?from=${encodeURIComponent(pathname || '/founder/network')}`)
@@ -186,43 +189,51 @@ export default function PartnerResourcesClient({ partnerSlug }: { partnerSlug: s
                 ← All partners
               </Link>
             </div>
-            <div className="flex flex-wrap items-center justify-end gap-2">
-              <div className="inline-flex items-center gap-3 rounded-lg border border-zinc-700 bg-zinc-900 px-4 py-2 text-zinc-100">
-                <Coins className="h-3.5 w-3.5 shrink-0 text-primary" />
-                <span className="text-sm font-semibold">
-                  Balance: {credits >= Number.MAX_SAFE_INTEGER / 2 ? '∞' : credits}
-                </span>
-                <Link href="/pricing">
-                  <Button size="sm" variant="secondary" className="h-7 bg-zinc-800 text-xs text-zinc-100 hover:bg-zinc-700">
-                    Buy more
-                  </Button>
-                </Link>
+            {showPlaybooks ? (
+              <div className="flex flex-wrap items-center justify-end gap-2">
+                <div className="inline-flex items-center gap-3 rounded-lg border border-zinc-700 bg-zinc-900 px-4 py-2 text-zinc-100">
+                  <Coins className="h-3.5 w-3.5 shrink-0 text-primary" />
+                  <span className="text-sm font-semibold">
+                    Balance: {credits >= Number.MAX_SAFE_INTEGER / 2 ? '∞' : credits}
+                  </span>
+                  <Link href="/pricing">
+                    <Button size="sm" variant="secondary" className="h-7 bg-zinc-800 text-xs text-zinc-100 hover:bg-zinc-700">
+                      Buy more
+                    </Button>
+                  </Link>
+                </div>
+                {!isPremium ? (
+                  <Link
+                    href="/pricing"
+                    className={cn(
+                      buttonVariants(),
+                      'bg-amber-500 text-zinc-950 hover:bg-amber-400'
+                    )}
+                  >
+                    Upgrade for mentorship &amp; playbooks
+                  </Link>
+                ) : null}
               </div>
-              {!isPremium ? (
-                <Link
-                  href="/pricing"
-                  className={cn(
-                    buttonVariants(),
-                    'bg-amber-500 text-zinc-950 hover:bg-amber-400'
-                  )}
-                >
-                  Upgrade for mentorship &amp; playbooks
-                </Link>
-              ) : null}
-            </div>
+            ) : null}
           </div>
 
           <div className="text-center">
             <h1 className="mb-3 text-4xl font-bold text-zinc-50 md:text-5xl">{partner.heroTitle}</h1>
-            <p className="mx-auto max-w-2xl text-pretty text-lg leading-relaxed text-zinc-400">
-              {partner.heroSubtitleBeforePremium}
-              <strong className="text-zinc-300">Premium</strong>
-              {partner.heroSubtitleAfterPremium}
-            </p>
+            {partner.heroSubtitlePlain ? (
+              <p className="mx-auto max-w-2xl text-pretty text-lg leading-relaxed text-zinc-400">
+                {partner.heroSubtitlePlain}
+              </p>
+            ) : (
+              <p className="mx-auto max-w-2xl text-pretty text-lg leading-relaxed text-zinc-400">
+                {partner.heroSubtitleBeforePremium}
+                <strong className="text-zinc-300">Premium</strong>
+                {partner.heroSubtitleAfterPremium}
+              </p>
+            )}
           </div>
         </div>
 
-        {!isPremium && (
+        {showPlaybooks && !isPremium && (
           <Card className="mb-10 border-amber-500/35 bg-gradient-to-br from-amber-950/40 to-zinc-900/90 text-zinc-100">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-amber-100">
@@ -270,81 +281,190 @@ export default function PartnerResourcesClient({ partnerSlug }: { partnerSlug: s
               <p className="text-sm text-zinc-500">{partner.resourcesTagline}</p>
             </CardHeader>
             <CardContent className="pt-2">
-              <div className="relative min-h-[220px] rounded-xl border border-zinc-800/80 bg-zinc-950/30 p-4 md:p-5">
+              <div
+                className={cn(
+                  'relative rounded-xl border p-4 md:p-5',
+                  advisorHub
+                    ? 'min-h-[240px] border-amber-500/30 bg-gradient-to-br from-zinc-950 via-zinc-950/80 to-amber-950/25 p-6 shadow-[0_0_0_1px_rgba(251,191,36,0.08)] md:p-8'
+                    : 'min-h-[220px] border-zinc-800/80 bg-zinc-950/30',
+                )}
+              >
                 <div
                   className={cn(
                     'rounded-xl',
-                    !isPremium && 'pointer-events-none select-none blur-sm'
+                    showPlaybooks && !isPremium && 'pointer-events-none select-none blur-sm',
                   )}
                 >
-                  <div className="grid gap-8 md:grid-cols-2 md:gap-10">
-                    {partner.foundersPreview.map((f) => (
-                      <div key={f.name} className="flex items-start gap-3">
-                        <Image
-                          src={f.imageSrc}
-                          alt={f.imageAlt}
-                          width={56}
-                          height={56}
-                          className="h-14 w-14 shrink-0 rounded-full object-cover ring-2 ring-zinc-700"
-                        />
-                        <div className="min-w-0 flex-1">
-                          <div className="mb-1 flex flex-wrap items-center gap-2">
-                            <h4 className="font-semibold text-zinc-50">{f.name}</h4>
-                            <Badge className="border-amber-500/40 bg-amber-500/20 text-xs text-amber-100 hover:bg-amber-500/25">
-                              {partner.listSummary}
-                            </Badge>
+                  <div
+                    className={cn(
+                      'gap-8',
+                      advisorHub
+                        ? 'flex flex-col items-stretch gap-8'
+                        : 'grid md:grid-cols-2 md:gap-10',
+                    )}
+                  >
+                    {partner.foundersPreview.map((f) => {
+                      const telHref = f.phone ? `tel:${f.phone.replace(/\D/g, '')}` : undefined
+                      if (advisorHub) {
+                        return (
+                          <div
+                            key={f.name}
+                            className="flex w-full max-w-3xl flex-col items-center gap-6 text-center md:flex-row md:items-start md:gap-10 md:text-left"
+                          >
+                            <div className="relative shrink-0">
+                              <div
+                                className="absolute -inset-1 rounded-full bg-gradient-to-br from-amber-400/35 via-amber-500/15 to-transparent blur-md"
+                                aria-hidden
+                              />
+                              <Image
+                                src={f.imageSrc}
+                                alt={f.imageAlt}
+                                width={144}
+                                height={144}
+                                className="relative h-32 w-32 rounded-full object-cover ring-4 ring-amber-500/40 ring-offset-4 ring-offset-zinc-950 md:h-36 md:w-36"
+                              />
+                            </div>
+                            <div className="min-w-0 flex-1 space-y-3">
+                              <div className="space-y-1">
+                                <div className="flex flex-wrap items-center justify-center gap-2 md:justify-start">
+                                  <h4 className="text-2xl font-bold tracking-tight text-zinc-50 md:text-3xl">{f.name}</h4>
+                                  <Badge className="border-amber-500/45 bg-amber-500/20 text-[10px] font-semibold uppercase tracking-wide text-amber-100">
+                                    {partner.listSummary}
+                                  </Badge>
+                                </div>
+                                {f.locationLine ? (
+                                  <p className="text-sm font-medium text-zinc-400">{f.locationLine}</p>
+                                ) : null}
+                              </div>
+                              <p className="text-sm leading-relaxed text-zinc-300 md:text-base">{f.roleLine}</p>
+                              <div className="flex flex-wrap justify-center gap-2 md:justify-start">
+                                <Badge
+                                  variant="outline"
+                                  className="border-zinc-600 bg-zinc-900/80 text-xs text-zinc-300"
+                                >
+                                  {f.tag}
+                                </Badge>
+                              </div>
+                              <div className="flex flex-col gap-3 pt-2 sm:flex-row sm:flex-wrap sm:justify-center md:justify-start">
+                                {telHref ? (
+                                  <a
+                                    href={telHref}
+                                    className={cn(
+                                      buttonVariants({ size: 'lg' }),
+                                      'inline-flex items-center justify-center gap-2 bg-amber-500 text-zinc-950 shadow-lg shadow-amber-500/25 hover:bg-amber-400',
+                                    )}
+                                  >
+                                    <Phone className="h-4 w-4 shrink-0" />
+                                    {f.phone}
+                                  </a>
+                                ) : null}
+                                {partner.partnerSiteUrl ? (
+                                  <a
+                                    href={partner.partnerSiteUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className={cn(
+                                      buttonVariants({ variant: 'outline', size: 'lg' }),
+                                      'inline-flex items-center justify-center gap-2 border-zinc-600 bg-zinc-900 text-zinc-100 hover:bg-zinc-800 hover:text-white',
+                                    )}
+                                  >
+                                    Firm website
+                                    <ExternalLink className="h-4 w-4 shrink-0" />
+                                  </a>
+                                ) : null}
+                                {f.linkedInUrl ? (
+                                  <a
+                                    href={f.linkedInUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className={cn(
+                                      buttonVariants({ variant: 'secondary', size: 'lg' }),
+                                      'inline-flex items-center justify-center gap-2 bg-zinc-800 text-zinc-100 hover:bg-zinc-700',
+                                    )}
+                                  >
+                                    LinkedIn
+                                    <ExternalLink className="h-4 w-4 shrink-0" />
+                                  </a>
+                                ) : null}
+                              </div>
+                            </div>
                           </div>
-                          <p className="mb-2 text-sm leading-snug text-zinc-400">{f.roleLine}</p>
-                          <div className="mb-3">
-                            <Badge
-                              variant="outline"
-                              className="border-zinc-600 bg-zinc-800/80 text-xs text-zinc-300"
-                            >
-                              {f.tag}
-                            </Badge>
-                          </div>
-                          <div className="flex flex-wrap gap-2">
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant="outline"
-                              disabled={!isPremium}
-                              className="border-zinc-600 bg-zinc-800 text-zinc-100 hover:bg-zinc-700 hover:text-white"
-                              onClick={() => openFounderRequest(f.founderKey, f.name, 'ask')}
-                            >
-                              <MessageSquare className="mr-1.5 h-3 w-3" />
-                              Ask
-                            </Button>
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant="outline"
-                              disabled={!isPremium}
-                              className="border-zinc-600 bg-zinc-800 text-zinc-100 hover:bg-zinc-700 hover:text-white"
-                              onClick={() => openFounderRequest(f.founderKey, f.name, 'book')}
-                            >
-                              <Calendar className="mr-1.5 h-3 w-3" />
-                              Book
-                            </Button>
-                            <a
-                              href={f.linkedInUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              aria-label={`${f.name} on LinkedIn`}
-                              className={cn(
-                                buttonVariants({ variant: 'ghost', size: 'sm' }),
-                                'text-zinc-300 hover:bg-zinc-800 hover:text-white'
-                              )}
-                            >
-                              <ExternalLink className="h-3 w-3" />
-                            </a>
+                        )
+                      }
+                      return (
+                        <div key={f.name} className="flex items-start gap-3">
+                          <Image
+                            src={f.imageSrc}
+                            alt={f.imageAlt}
+                            width={56}
+                            height={56}
+                            className="h-14 w-14 shrink-0 rounded-full object-cover ring-2 ring-zinc-700"
+                          />
+                          <div className="min-w-0 flex-1">
+                            <div className="mb-1 flex flex-wrap items-center gap-2">
+                              <h4 className="font-semibold text-zinc-50">{f.name}</h4>
+                              <Badge className="border-amber-500/40 bg-amber-500/20 text-xs text-amber-100 hover:bg-amber-500/25">
+                                {partner.listSummary}
+                              </Badge>
+                            </div>
+                            <p className="mb-2 text-sm leading-snug text-zinc-400">{f.roleLine}</p>
+                            <div className="mb-3">
+                              <Badge
+                                variant="outline"
+                                className="border-zinc-600 bg-zinc-800/80 text-xs text-zinc-300"
+                              >
+                                {f.tag}
+                              </Badge>
+                            </div>
+                            <div className="flex flex-wrap gap-2">
+                              {f.founderKey ? (
+                                <>
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="outline"
+                                    disabled={!isPremium}
+                                    className="border-zinc-600 bg-zinc-800 text-zinc-100 hover:bg-zinc-700 hover:text-white"
+                                    onClick={() => openFounderRequest(f.founderKey!, f.name, 'ask')}
+                                  >
+                                    <MessageSquare className="mr-1.5 h-3 w-3" />
+                                    Ask
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="outline"
+                                    disabled={!isPremium}
+                                    className="border-zinc-600 bg-zinc-800 text-zinc-100 hover:bg-zinc-700 hover:text-white"
+                                    onClick={() => openFounderRequest(f.founderKey!, f.name, 'book')}
+                                  >
+                                    <Calendar className="mr-1.5 h-3 w-3" />
+                                    Book
+                                  </Button>
+                                </>
+                              ) : null}
+                              {f.linkedInUrl ? (
+                                <a
+                                  href={f.linkedInUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  aria-label={`${f.name} on LinkedIn`}
+                                  className={cn(
+                                    buttonVariants({ variant: 'ghost', size: 'sm' }),
+                                    'text-zinc-300 hover:bg-zinc-800 hover:text-white',
+                                  )}
+                                >
+                                  <ExternalLink className="h-3 w-3" />
+                                </a>
+                              ) : null}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    ))}
+                      )
+                    })}
                   </div>
                 </div>
-                {!isPremium ? (
+                {showPlaybooks && !isPremium ? (
                   <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 rounded-xl bg-zinc-950/70 px-4 text-center backdrop-blur-[3px]">
                     <p className="max-w-sm text-sm text-zinc-200">
                       Upgrade to Premium for LinkedIn, Ask / Book, and full founder access with {partner.name}.
@@ -363,7 +483,8 @@ export default function PartnerResourcesClient({ partnerSlug }: { partnerSlug: s
             </CardContent>
           </Card>
 
-          {/* Premium Modules */}
+          {showPlaybooks ? (
+            <>
           <div className="space-y-4 [&_h3]:text-zinc-50 [&_.text-muted-foreground]:text-zinc-400">
             
             {/* Module 1: Application Deconstruction */}
@@ -1000,6 +1121,8 @@ export default function PartnerResourcesClient({ partnerSlug }: { partnerSlug: s
               Pricing &amp; Premium
             </Link>
           </p>
+            </>
+          ) : null}
 
         </div>
       </div>

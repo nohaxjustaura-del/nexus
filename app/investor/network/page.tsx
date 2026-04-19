@@ -62,7 +62,12 @@ export default async function InvestorNetworkIndexPage() {
                   </span>
                 </div>
 
-                <div className="grid gap-4 sm:grid-cols-2">
+                <div
+                  className={cn(
+                    'grid gap-4',
+                    partner.foundersPreview.length > 1 ? 'sm:grid-cols-2' : 'sm:max-w-xl',
+                  )}
+                >
                   {partner.foundersPreview.map((f) => (
                     <div
                       key={f.name}

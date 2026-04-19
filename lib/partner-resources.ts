@@ -8,8 +8,12 @@ export type PartnerFounderPreview = {
   /** One-line role line (shown under name) */
   roleLine: string
   tag: string
-  founderKey: ResourcePartnerFounderKey
-  linkedInUrl: string
+  /** When set, Ask / Book routes to the legacy YC insider founder request flow. */
+  founderKey?: ResourcePartnerFounderKey
+  linkedInUrl?: string
+  /** E.164 or formatted phone for advisor-style hubs */
+  phone?: string
+  locationLine?: string
 }
 
 export type ResourcePartner = {
@@ -26,7 +30,13 @@ export type ResourcePartner = {
   heroTitle: string
   heroSubtitleBeforePremium: string
   heroSubtitleAfterPremium: string
+  /** When set, replaces the Premium split subtitle (used for non-YC partner hubs). */
+  heroSubtitlePlain?: string
   foundersPreview: PartnerFounderPreview[]
+  /** Default true (YC-style playbooks + credits). False = directory / advisor contact hub only. */
+  showYcPlaybookModules?: boolean
+  /** Primary site for the partner organization (advisor hubs). */
+  partnerSiteUrl?: string
 }
 
 /** Directory + detail pages for /founder/network and /founder/network/[slug] */
@@ -62,6 +72,36 @@ export const RESOURCE_PARTNERS: ResourcePartner[] = [
         tag: 'COO + Operations',
         founderKey: 'inigo',
         linkedInUrl: 'https://www.linkedin.com/in/inigolenderking/',
+      },
+    ],
+  },
+  {
+    slug: 'transworld',
+    name: 'Transworld Business Advisors',
+    listSummary: 'M&A · brokerage',
+    listDetail:
+      'Calvin Tampubolon — buy-side / sell-side business brokerage, mergers & acquisitions, and exit planning with Transworld in Los Angeles.',
+    companyIntro:
+      'Transworld connects business buyers and sellers worldwide with deep brokerage and M&A experience — from confidential listings through close. Calvin leads the Los Angeles desk: sell a business, buy a business, or structure an exit with a senior operator in the chair.',
+    resourcesTagline:
+      'Direct line to Calvin: call, open the firm site, or connect on LinkedIn when you are ready to move.',
+    heroTitle: 'Transworld × Nexus',
+    heroSubtitleBeforePremium: '',
+    heroSubtitleAfterPremium: '',
+    heroSubtitlePlain:
+      'Los Angeles–based Transworld desk for acquisitions, divestitures, and exit consulting — one call to the right broker.',
+    showYcPlaybookModules: false,
+    partnerSiteUrl: 'https://www.tworld.com/',
+    foundersPreview: [
+      {
+        name: 'Calvin Tampubolon',
+        imageSrc: '/network-partners/calvin-tampubolon.png',
+        imageAlt: 'Calvin Tampubolon',
+        roleLine:
+          'Managing Partner — business brokerage, mergers & acquisitions, exit consulting; franchise owner; board member.',
+        tag: 'Los Angeles metro',
+        phone: '(800) 205-7605',
+        locationLine: 'Los Angeles metropolitan area',
       },
     ],
   },
