@@ -2,7 +2,7 @@ import { db } from '@/lib/db'
 import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
 import { BRAND_NAME } from '@/lib/brand'
-import InvestorProfileClient from './investor-profile-client'
+import InvestorProfileClient, { type PortfolioListItem } from './investor-profile-client'
 
 export const dynamic = 'force-dynamic'
 
@@ -96,7 +96,7 @@ export default async function InvestorProfilePage({ params }: { params: { id: st
         geoFocus: parseJSON(investor.geoFocus) as string[],
         geography: parseJSON(investor.geography) as string[],
         valueAddTags: parseJSON(investor.valueAddTags) as string[],
-        portfolio: parseJSON(investor.portfolio) as string[],
+        portfolio: parseJSON(investor.portfolio) as PortfolioListItem[],
         proofPoints: parseJSON(investor.proofPoints) as string[],
       }}
       enrichment={enrichment ? {

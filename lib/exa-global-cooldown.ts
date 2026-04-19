@@ -35,5 +35,7 @@ export function triggerExaGlobalCooldown(): void {
 }
 
 export function exaQuotaErrorMessage(msg: string): boolean {
-  return /402|403|429|quota|credit|limit|exceeded|payment|unauthor/i.test(msg)
+  return /402|403|429|quota|credit|credits?\s*limit|limit|exceeded|payment|unauthor|top\s*up|rate\s*limit/i.test(
+    msg,
+  )
 }

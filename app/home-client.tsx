@@ -8,13 +8,23 @@ import type { UniversalAnalysisResult } from '@/lib/universal-analysis-engine'
 import { HeroSection } from '@/components/ui/hero-section-1'
 import type { HomeBelowFoldProps } from '@/app/home-below-fold'
 
+// Default SSR on: `ssr: false` + `loading: () => null` made the server emit no nodes here while the
+// client often hydrated the real chunk immediately (dev / preloaded), causing div-tree mismatches.
 const HomeBelowFold = dynamic<HomeBelowFoldProps>(
   () => import('@/app/home-below-fold').then((m) => ({ default: m.HomeBelowFold })),
-  { ssr: false, loading: () => null }
+  {
+    loading: () => (
+      <div className="min-h-[32vh] w-full animate-pulse rounded-xl bg-muted/20" aria-hidden />
+    ),
+  },
 )
 const ProductPreview = dynamic(
   () => import('@/components/marketing/product-preview').then((m) => ({ default: m.ProductPreview })),
-  { ssr: false, loading: () => null }
+  {
+    loading: () => (
+      <div className="min-h-[28rem] w-full animate-pulse rounded-xl bg-muted/15" aria-hidden />
+    ),
+  },
 )
 
 export type HomeClientProps = {

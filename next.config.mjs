@@ -17,7 +17,7 @@ const nextConfig = {
   poweredByHeader: false,
 
   // Dev fetch tree (GET … │ GET https://… (cache skip) │ │ Cache skipped reason: …):
-  // In Next 14, defining `logging.fetches` *enables* that nested fetch logging; `fullUrl` only
+  // In Next 15+, defining `logging.fetches` *enables* that nested fetch logging; `fullUrl` only
   // shortens URLs. Omit `logging` entirely for a clean terminal. To debug upstream fetches,
   // temporarily add: `logging: { fetches: { fullUrl: true } }`.
 
@@ -107,11 +107,21 @@ const nextConfig = {
         value: 'max-age=31536000; includeSubDomains; preload',
       })
     }
-    return [
+    const base = [
       {
         source: '/:path*',
         headers: globalSecurity,
       },
+    ]
+
+    // In `next dev`, chunk paths and webpack runtime churn; `immutable` makes the browser keep
+    // stale `/_next/static/chunks/*` and surfaces ChunkLoadError / `options.factory` undefined.
+    if (process.env.NODE_ENV !== 'production') {
+      return base
+    }
+
+    return [
+      ...base,
       {
         // Never override Content-Type here: this pattern matches CSS, fonts, and JS.
         // Forcing application/javascript breaks styles + RSC/webpack under X-Content-Type-Options: nosniff.

@@ -26,6 +26,39 @@ function formatCheckRange(min: number | null, max: number | null): string {
   return fmt(min || max || 0)
 }
 
+/** DB `portfolio` JSON may be string names or structured objects. */
+export type PortfolioListItem =
+  | string
+  | {
+      name?: string
+      companyName?: string
+      sector?: string
+      stage?: string
+      outcome?: string
+    }
+
+function portfolioDisplayLabel(item: PortfolioListItem): string {
+  if (typeof item === 'string') return item.trim()
+  if (item && typeof item === 'object') {
+    return (
+      (typeof item.name === 'string' && item.name.trim()) ||
+      (typeof item.companyName === 'string' && item.companyName.trim()) ||
+      ''
+    )
+  }
+  return ''
+}
+
+function portfolioSubtitle(item: PortfolioListItem): string | null {
+  if (typeof item === 'string') return null
+  if (!item || typeof item !== 'object') return null
+  const parts: string[] = []
+  if (typeof item.sector === 'string' && item.sector.trim()) parts.push(item.sector.trim())
+  if (typeof item.stage === 'string' && item.stage.trim()) parts.push(item.stage.trim())
+  if (typeof item.outcome === 'string' && item.outcome.trim()) parts.push(item.outcome.trim())
+  return parts.length ? parts.join(' · ') : null
+}
+
 interface InvestorProfileClientProps {
   investor: {
     id: string
@@ -45,7 +78,7 @@ interface InvestorProfileClientProps {
     fundSize: string | null
     leadFollow: string
     thesis: string | null
-    portfolio: string[]
+    portfolio: PortfolioListItem[]
     notableInvestments: string | null
     proofPoints: string[]
     valueAddTags: string[]
@@ -220,11 +253,27 @@ export default function InvestorProfileClient({ investor, enrichment }: Investor
                 </CardHeader>
                 <CardContent>
                   <div className="flex flex-wrap gap-2">
-                    {investor.portfolio.map((company) => (
-                      <Badge key={company} variant="secondary" className="px-3 py-1.5 text-sm">
-                        {company}
-                      </Badge>
-                    ))}
+                    {investor.portfolio.map((company, index) => {
+                      const label = portfolioDisplayLabel(company)
+                      const sub = portfolioSubtitle(company)
+                      if (!label && !sub) return null
+                      const title = label || 'Portfolio company'
+                      return (
+                        <Badge
+                          key={`portfolio-${index}-${title}`}
+                          variant="secondary"
+                          className="flex max-w-full flex-col items-stretch px-3 py-1.5 text-start text-sm"
+                          title={sub ?? undefined}
+                        >
+                          <span className="block truncate">{title}</span>
+                          {sub ? (
+                            <span className="mt-0.5 block truncate text-xs font-normal text-muted-foreground">
+                              {sub}
+                            </span>
+                          ) : null}
+                        </Badge>
+                      )
+                    })}
                   </div>
                 </CardContent>
               </Card>
