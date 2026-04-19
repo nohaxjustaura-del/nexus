@@ -54,16 +54,10 @@ const track = (event: string, props?: Record<string, unknown>) => {
 function HomeHowItWorksConnector() {
   return (
     <div className="flex flex-col items-center py-3 sm:py-4" aria-hidden>
-      <span className="how-connector-track how-connector-track--top">
-        <ChevronDown className="how-connector-direction how-connector-direction--top" strokeWidth={2.1} aria-hidden />
-      </span>
       <span className="group relative z-[1] flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-primary/30 bg-background/95 text-primary shadow-[0_0_0_1px_rgba(99,102,241,0.06),0_6px_20px_rgba(15,23,42,0.18)] transition-shadow duration-500 group-hover:shadow-[0_0_0_1px_rgba(99,102,241,0.1),0_10px_28px_rgba(15,23,42,0.24)]">
         <span className="absolute inset-0 rounded-full bg-primary/[0.07] blur-[1px] transition-opacity duration-500 group-hover:opacity-100" />
         <span className="how-connector-core-glow" />
         <ChevronDown className="relative h-4 w-4" strokeWidth={2.25} aria-hidden />
-      </span>
-      <span className="how-connector-track how-connector-track--bottom">
-        <ChevronDown className="how-connector-direction how-connector-direction--bottom" strokeWidth={2.1} aria-hidden />
       </span>
     </div>
   )

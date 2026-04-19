@@ -80,16 +80,16 @@ export const RESOURCE_PARTNERS: ResourcePartner[] = [
     name: 'Transworld Business Advisors',
     listSummary: 'M&A · brokerage',
     listDetail:
-      'Calvin Tampubolon — buy-side / sell-side business brokerage, mergers & acquisitions, and exit planning with Transworld in Los Angeles.',
+      'Calvin Tampubolon handles buy-side and sell-side brokerage, M&A, and exit planning with Transworld in Los Angeles.',
     companyIntro:
-      'Transworld connects business buyers and sellers worldwide with deep brokerage and M&A experience — from confidential listings through close. Calvin leads the Los Angeles desk: sell a business, buy a business, or structure an exit with a senior operator in the chair.',
+      'Transworld helps people buy and sell businesses with brokers who have been through the process many times, from a quiet first conversation through closing. Calvin runs the Los Angeles office. Whether you want to sell, buy, or map out an exit, you work with him directly.',
     resourcesTagline:
-      'Direct line to Calvin: call, open the firm site, or connect on LinkedIn when you are ready to move.',
+      'Call Calvin, open the firm site, or reach him on LinkedIn when you want to take a next step.',
     heroTitle: 'Transworld × Nexus',
     heroSubtitleBeforePremium: '',
     heroSubtitleAfterPremium: '',
     heroSubtitlePlain:
-      'Los Angeles–based Transworld desk for acquisitions, divestitures, and exit consulting — one call to the right broker.',
+      'Los Angeles-based Transworld desk for acquisitions, divestitures, and exit consulting. One call gets you to the right broker.',
     showYcPlaybookModules: false,
     partnerSiteUrl: 'https://www.tworld.com/',
     foundersPreview: [
@@ -98,7 +98,7 @@ export const RESOURCE_PARTNERS: ResourcePartner[] = [
         imageSrc: '/network-partners/calvin-tampubolon.png',
         imageAlt: 'Calvin Tampubolon',
         roleLine:
-          'Managing Partner — business brokerage, mergers & acquisitions, exit consulting; franchise owner; board member.',
+          'Managing Partner. Business brokerage, M&A, and exit consulting; franchise owner; board member.',
         tag: 'Los Angeles metro',
         phone: '(800) 205-7605',
         locationLine: 'Los Angeles metropolitan area',
