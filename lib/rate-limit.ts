@@ -74,9 +74,14 @@ function getClientIP(request: NextRequest): string {
   if (realIP) {
     return realIP
   }
-  
-  // Fallback
-  return request.ip || 'unknown'
+
+  const cfConnecting = request.headers.get('cf-connecting-ip')
+  if (cfConnecting) {
+    return cfConnecting.trim()
+  }
+
+  // NextRequest no longer exposes `.ip`; headers above cover proxies / edge.
+  return 'unknown'
 }
 
 /**

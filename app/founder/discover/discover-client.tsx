@@ -10,6 +10,8 @@ import { LayoutGrid, Table2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface DiscoverClientProps {
+  /** When true (?all=1), show the full investor list (no server cap); expand virtualized window to match. */
+  viewAll?: boolean
   investors: Array<{
     id: string
     firmName: string | null
@@ -39,17 +41,27 @@ interface DiscoverClientProps {
 
 type ViewMode = 'table' | 'cards'
 
-export default function DiscoverClient({ investors, profileComplete }: DiscoverClientProps) {
+export default function DiscoverClient({
+  investors,
+  profileComplete,
+  viewAll = false,
+}: DiscoverClientProps) {
   const [bookmarkedIds, setBookmarkedIds] = useState<Set<string>>(new Set())
   const safeInvestors = useMemo(() => (Array.isArray(investors) ? investors : []), [investors])
-  const [visibleCount, setVisibleCount] = useState(24)
+  const [visibleCount, setVisibleCount] = useState(() =>
+    viewAll && Array.isArray(investors) ? investors.length : 24,
+  )
   const [viewMode, setViewMode] = useState<ViewMode>('table')
   const hasMore = safeInvestors.length > visibleCount
   const visibleInvestors = useMemo(() => safeInvestors.slice(0, visibleCount), [safeInvestors, visibleCount])
 
   useEffect(() => {
-    setVisibleCount(24)
-  }, [safeInvestors.length])
+    if (viewAll) {
+      setVisibleCount(safeInvestors.length)
+    } else {
+      setVisibleCount(24)
+    }
+  }, [viewAll, safeInvestors.length])
 
   useEffect(() => {
     fetch('/api/bookmarks', { credentials: 'include' })

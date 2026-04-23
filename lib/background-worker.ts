@@ -45,6 +45,20 @@ import {
   researchVCsBatch,
 } from '../scripts/auto-research-vcs'
 import { getLiveInvestorPulse } from './exa-service'
+
+/** Second argument to getLiveInvestorPulse: prefer real website host for conviction Exa query; else first sector label. */
+function exaPulseDomainFromInvestor(websiteUrl: string | null | undefined, sectors: string[]): string {
+  const w = websiteUrl?.trim()
+  if (w) {
+    try {
+      const u = new URL(w.startsWith('http') ? w : `https://${w}`)
+      if (u.hostname && u.hostname.length > 2) return u.hostname
+    } catch {
+      /* ignore */
+    }
+  }
+  return sectors[0] || 'technology'
+}
 import {
   readWorkerVcRefreshState,
   isThesisRefreshDue,
@@ -376,7 +390,7 @@ async function executeExaEnrichment(): Promise<void> {
         discoverable: true,
         enrichmentCache: { is: null },
       },
-      select: { id: true, firmName: true, sectors: true },
+      select: { id: true, firmName: true, sectors: true, websiteUrl: true },
       take: uncachedTake,
       orderBy: { updatedAt: 'desc' },
     })
@@ -386,14 +400,24 @@ async function executeExaEnrichment(): Promise<void> {
       where: {
         lastUpdated: { lt: new Date(Date.now() - 24 * 60 * 60 * 1000) },
       },
-      select: { investorId: true, investor: { select: { firmName: true, sectors: true } } },
+      select: { investorId: true, investor: { select: { firmName: true, sectors: true, websiteUrl: true } } },
       take: staleTake,
       orderBy: { lastUpdated: 'asc' },
     })
 
     const rawEnrich = [
-      ...uncachedVCs.map(vc => ({ id: vc.id, firmName: vc.firmName, sectors: vc.sectors })),
-      ...staleCache.map(c => ({ id: c.investorId, firmName: c.investor.firmName, sectors: c.investor.sectors })),
+      ...uncachedVCs.map((vc) => ({
+        id: vc.id,
+        firmName: vc.firmName,
+        sectors: vc.sectors,
+        websiteUrl: vc.websiteUrl,
+      })),
+      ...staleCache.map((c) => ({
+        id: c.investorId,
+        firmName: c.investor.firmName,
+        sectors: c.investor.sectors,
+        websiteUrl: c.investor.websiteUrl,
+      })),
     ]
     const toEnrich = rawEnrich.filter((vc) => isInvestorEligibleForWorkers(vc.firmName))
 
@@ -423,8 +447,12 @@ async function executeExaEnrichment(): Promise<void> {
     for (const vc of toEnrich) {
       try {
         let sectors: string[] = []
-        try { sectors = JSON.parse(vc.sectors || '[]') } catch { /* ignore */ }
-        const domain = sectors[0] || 'technology'
+        try {
+          sectors = JSON.parse(vc.sectors || '[]')
+        } catch {
+          /* ignore */
+        }
+        const domain = exaPulseDomainFromInvestor(vc.websiteUrl, sectors)
 
         await getLiveInvestorPulse(vc.firmName, domain, vc.id)
         enriched++

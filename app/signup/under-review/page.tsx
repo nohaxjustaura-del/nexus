@@ -1,3 +1,5 @@
+import Link from 'next/link'
+
 export const dynamic = 'force-dynamic'
 
 export default function UnderReviewPage() {
@@ -11,9 +13,9 @@ export default function UnderReviewPage() {
             as soon as your account is approved. While you wait, browsing is limited.
           </p>
           <div className="mt-8 space-x-3">
-            <a href="/" className="inline-flex items-center rounded-md bg-primary px-4 py-2 text-primary-foreground">
+            <Link href="/" className="inline-flex items-center rounded-md bg-primary px-4 py-2 text-primary-foreground">
               Go to Home
-            </a>
+            </Link>
           </div>
         </div>
       </div>

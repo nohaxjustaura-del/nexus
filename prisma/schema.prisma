@@ -187,6 +187,7 @@ model Investor {
   investorBookmarks    InvestorFounderBookmark[]
   founderProgress      InvestorFounderProgress[]
   recommendationSnapshots InvestorRecommendationSnapshot[]
+  portfolioCompanies      InvestorPortfolioCompany[]
 
   // Investor onboarding fields
   onboardingCompleted Boolean @default(false)
@@ -195,6 +196,16 @@ model Investor {
   investmentApproach  String?
   coInvestPreference  String?
   yearsInvesting      Int?
+
+  /// Structured enrichment (Exa + LLM); see lib/investor-enrichment.ts
+  foundedYear         Int?
+  /// JSON string array of partner/GP names (max 5 in extraction)
+  partnerNames        String?
+  activelyInvesting   Boolean  @default(true)
+  /// Latest deal signal: end of max(investmentYear) among enriched deals, or latest investmentDate when present
+  lastDealDate        DateTime?
+  enrichedAt          DateTime?
+  enrichmentVersion   Int      @default(0)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -206,6 +217,32 @@ model Investor {
   @@index([firmName])
   @@index([createdAt])
   @@index([onboardingCompleted])
+}
+
+/// Per-deal portfolio row from investor enrichment (Exa + LLM). amount is USD millions, not Investor checkSize thousands.
+model InvestorPortfolioCompany {
+  id               String    @id @default(cuid())
+  investorId       String
+  investor         Investor  @relation(fields: [investorId], references: [id], onDelete: Cascade)
+  companyName      String
+  companyWebsite   String?
+  sector           String?
+  stage            String?
+  investmentYear   Int?
+  investmentDate   DateTime?
+  /// Notional round size in USD millions (e.g. 5 = $5M). Do not confuse with Investor.checkSizeMin/Max (thousands USD).
+  amount           Float?
+  amountCurrency   String?   @default("USD")
+  isLead           Boolean?
+  coInvestors      String    @default("[]")
+  sourceUrl        String?
+  confidence       Float     @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([investorId])
+  @@index([investmentYear])
 }
 
 model Mentor {

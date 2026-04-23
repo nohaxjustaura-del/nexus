@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect } from 'react'
+import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useAuthSession } from '@/components/auth-session-provider'
 
@@ -101,9 +102,9 @@ export default function SignupThankYouPage() {
             Follow the link in your email to verify your address. After that, you can use the product right away.
           </p>
           <div className="mt-8 space-x-3">
-            <a href="/" className="inline-flex items-center rounded-md bg-primary px-4 py-2 text-primary-foreground">
+            <Link href="/" className="inline-flex items-center rounded-md bg-primary px-4 py-2 text-primary-foreground">
               Go to Home
-            </a>
+            </Link>
           </div>
         </div>
       </div>

@@ -78,20 +78,37 @@ function investorMatchesDirectorySearch(
 
 export const runtime = "nodejs"
 
+/** Next.js 15+: `searchParams` is async; normalize to single string values for this page. */
+function flattenSearchParams(
+  raw: Record<string, string | string[] | undefined>,
+): Record<string, string | undefined> {
+  const out: Record<string, string | undefined> = {}
+  for (const [k, v] of Object.entries(raw)) {
+    if (v == null) out[k] = undefined
+    else if (Array.isArray(v)) out[k] = v[0]
+    else out[k] = v
+  }
+  return out
+}
+
 export default async function DiscoverPage({
   searchParams,
 }: {
-  searchParams: { 
-    fundType?: string
-    sector?: string
-    stage?: string
-    min?: string
-    max?: string
-    all?: string
-    search?: string
-    [key: string]: string | undefined // Allow advanced filter params
-  }
+  searchParams: Promise<{
+    fundType?: string | string[]
+    sector?: string | string[]
+    stage?: string | string[]
+    min?: string | string[]
+    max?: string | string[]
+    all?: string | string[]
+    search?: string | string[]
+    geographicRestriction?: string | string[]
+    willLead?: string | string[]
+    [key: string]: string | string[] | undefined
+  }>
 }) {
+  const sp = flattenSearchParams(await searchParams)
+
   let profileComplete = true
   let prefDefaults: {
     fundType?: string
@@ -272,8 +289,8 @@ export default async function DiscoverPage({
   // Background reasons are now set in the earlier query block above
 
   // Apply filters if any
-  const viewAll = searchParams.all === '1' || searchParams.all === 'true'
-  const hasSearch = Boolean(searchParams.search?.trim())
+  const viewAll = sp.all === '1' || sp.all === 'true'
+  const hasSearch = Boolean(sp.search?.trim())
 
   // PRIORITY: Sort investors to put Y Combinator at the top
   const sortedInvestors = [...investors].sort((a, b) => {
@@ -287,7 +304,7 @@ export default async function DiscoverPage({
   let filteredInvestors = sortedInvestors
   const FREE_TAILORED_LIMIT = 5 // Show top 5 tailored matches for free
   // Merge profile defaults for "For you" — but not while searching (search should not be narrowed by hidden prefs)
-  const effectiveParams: any = { ...searchParams }
+  const effectiveParams: any = { ...sp }
   if (!viewAll && !hasSearch) {
     for (const [k, v] of Object.entries(prefDefaults)) {
       if (effectiveParams[k] == null || effectiveParams[k] === '') {
@@ -297,8 +314,8 @@ export default async function DiscoverPage({
   }
 
   // Search: match across firm, partner, thesis, sectors, stages, geo, tags, portfolio, etc.
-  if (searchParams.search?.trim()) {
-    const q = searchParams.search.trim()
+  if (sp.search?.trim()) {
+    const q = sp.search.trim()
     filteredInvestors = filteredInvestors.filter((inv) => investorMatchesDirectorySearch(inv, q))
     filteredInvestors = [...filteredInvestors].sort((a, b) =>
       compareInvestorsByDiscoverSearch(a, b, q),
@@ -385,8 +402,8 @@ export default async function DiscoverPage({
   // Advanced filters - ONLY apply geo/lead/speed filters if explicitly in URL params
   // (not from user defaults, which are too aggressive for the tailored view)
   // Geographic restriction - only if user explicitly set it in URL
-  if (searchParams.geographicRestriction || (effectiveParams.geographicRestriction && viewAll)) {
-    const geoRestriction = searchParams.geographicRestriction || effectiveParams.geographicRestriction
+  if (sp.geographicRestriction || (effectiveParams.geographicRestriction && viewAll)) {
+    const geoRestriction = sp.geographicRestriction || effectiveParams.geographicRestriction
     filteredInvestors = filteredInvestors.filter(inv => {
       const geoFocus = parseJSONStringArray(inv.geoFocus)
       if (geoFocus.length === 0) return true // Include investors with no geo specified
@@ -401,16 +418,16 @@ export default async function DiscoverPage({
   }
 
   // Lead/Follow filter - only if user explicitly set it in URL
-  if (searchParams.willLead) {
+  if (sp.willLead) {
     filteredInvestors = filteredInvestors.filter(inv => {
       if (!inv.leadFollow) return true // Include investors with no lead/follow preference
-      if (searchParams.willLead === 'never') {
+      if (sp.willLead === 'never') {
         return inv.leadFollow === 'follow'
       }
-      if (searchParams.willLead === 'usually') {
+      if (sp.willLead === 'usually') {
         return inv.leadFollow === 'lead'
       }
-      if (searchParams.willLead === 'sometimes') {
+      if (sp.willLead === 'sometimes') {
         return inv.leadFollow === 'either' || inv.leadFollow === 'lead'
       }
       return true
@@ -462,7 +479,7 @@ export default async function DiscoverPage({
 
   // SAFETY: If filters are too aggressive and resulted in < 5 investors,
   // relax the sector filter (keep stage filter which is more important)
-  if (!viewAll && !hasSearch && !searchParams.sector && filteredInvestors.length < 5) {
+  if (!viewAll && !hasSearch && !sp.sector && filteredInvestors.length < 5) {
     // Re-filter from sorted investors with only stage filter
     filteredInvestors = sortedInvestors
     
@@ -531,8 +548,9 @@ export default async function DiscoverPage({
   const verifiedInDirectory = investors.reduce((n, inv) => n + (inv.verified ? 1 : 0), 0)
   const verifiedLabel = formatVerifiedInvestorCount(verifiedInDirectory)
 
+  // Cap payload for tailored / filtered views (RSC size + render cost). "All" must list everyone.
   const SERVER_PAGE_CAP = 120
-  if (filteredInvestors.length > SERVER_PAGE_CAP) {
+  if (!viewAll && filteredInvestors.length > SERVER_PAGE_CAP) {
     filteredInvestors = filteredInvestors.slice(0, SERVER_PAGE_CAP)
   }
 
@@ -587,6 +605,7 @@ export default async function DiscoverPage({
         </p>
 
         <DiscoverClient
+          viewAll={viewAll}
           investors={filteredInvestors.map((inv) => ({
             id: inv.id,
             firmName: inv.firmName,
