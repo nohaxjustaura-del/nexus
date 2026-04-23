@@ -17,9 +17,25 @@ function parseJSON(val: unknown): unknown[] {
   }
 }
 
-export async function generateMetadata({ params }: { params: { id: string } }): Promise<Metadata> {
+function parseStringList(val: unknown, max = 50): string[] {
+  return parseJSON(val)
+    .filter((x): x is string => typeof x === 'string')
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .slice(0, max)
+}
+
+type PageParams = { id: string } | Promise<{ id: string }>
+
+async function resolveParamsId(params: PageParams): Promise<string> {
+  const p = await Promise.resolve(params)
+  return p.id
+}
+
+export async function generateMetadata({ params }: { params: PageParams }): Promise<Metadata> {
+  const id = await resolveParamsId(params)
   const investor = await db.investor.findUnique({
-    where: { id: params.id, isPublic: true },
+    where: { id, isPublic: true },
     select: { firmName: true, fundType: true, thesis: true },
   })
   if (!investor) return { title: 'Investor Not Found' }
@@ -33,9 +49,11 @@ export async function generateMetadata({ params }: { params: { id: string } }): 
   }
 }
 
-export default async function InvestorProfilePage({ params }: { params: { id: string } }) {
-  const investor = await db.investor.findUnique({
-    where: { id: params.id, isPublic: true },
+export default async function InvestorProfilePage({ params }: { params: PageParams }) {
+  const id = await resolveParamsId(params)
+
+  const row = await db.investor.findUnique({
+    where: { id, isPublic: true },
     select: {
       id: true,
       firmName: true,
@@ -66,43 +84,113 @@ export default async function InvestorProfilePage({ params }: { params: { id: st
       twitterUrl: true,
       linkedinUrl: true,
       crunchbaseUrl: true,
+      foundedYear: true,
+      partnerNames: true,
+      activelyInvesting: true,
+      lastDealDate: true,
+      enrichedAt: true,
+      portfolioCompanies: {
+        orderBy: { investmentYear: 'desc' },
+        select: {
+          id: true,
+          companyName: true,
+          companyWebsite: true,
+          sector: true,
+          stage: true,
+          investmentYear: true,
+          investmentDate: true,
+          amount: true,
+          isLead: true,
+          coInvestors: true,
+          confidence: true,
+        },
+      },
+      enrichmentCache: {
+        select: { snapshot: true, recentDeals: true },
+      },
     },
   })
 
-  if (!investor) notFound()
+  if (!row) notFound()
 
-  let enrichment: { snapshot: string | null; recentDeals: string | null } | null = null
-  try {
-    const cache = await (db as any).vCEnrichmentCache.findUnique({
-      where: { investorId: params.id },
-      select: { snapshot: true, recentDeals: true },
-    })
-    if (cache) {
-      enrichment = {
-        snapshot: cache.snapshot ?? null,
-        recentDeals: cache.recentDeals ?? null,
+  const { enrichmentCache, portfolioCompanies: portfolioRows, ...investorBase } = row
+
+  const enrichment = enrichmentCache
+    ? {
+        snapshot: enrichmentCache.snapshot ?? null,
+        recentDeals: enrichmentCache.recentDeals ?? null,
       }
-    }
-  } catch {
-    // enrichment cache may not exist
-  }
+    : null
+
+  const portfolioCompanies = portfolioRows.map(({ investmentDate, ...rest }) => ({
+    ...rest,
+    investmentDate: investmentDate?.toISOString() ?? null,
+  }))
+
+  const recentDealsParsed = parseJSON(enrichmentCache?.recentDeals) as unknown[]
+  const recentDealKeys =
+    recentDealsParsed[0] && typeof recentDealsParsed[0] === 'object'
+      ? Object.keys(recentDealsParsed[0] as object).slice(0, 8)
+      : []
+
+  // #region agent log
+  fetch('http://127.0.0.1:7471/ingest/0f685c44-f6c8-4b99-b23e-84e0cc9d4f08', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '6d9bda' },
+    body: JSON.stringify({
+      sessionId: '6d9bda',
+      location: 'app/investors/[id]/page.tsx:server',
+      message: 'investor_profile_server_row',
+      hypothesisId: 'H1-H6',
+      data: {
+        resolvedId: id,
+        firmName: row.firmName,
+        portfolioCompanyRows: portfolioRows.length,
+        hasEnrichmentCacheRow: Boolean(enrichmentCache),
+        snapshotChars: enrichmentCache?.snapshot?.length ?? 0,
+        thesisChars: row.thesis?.length ?? 0,
+        recentDealsParsedLen: recentDealsParsed.length,
+        recentDealFirstKeys: recentDealKeys,
+        foundedYear: row.foundedYear,
+        partnerNamesDbType: typeof investorBase.partnerNames,
+        sectorsJsonLen: typeof investorBase.sectors === 'string' ? investorBase.sectors.length : 0,
+        stagesJsonLen: typeof investorBase.stages === 'string' ? investorBase.stages.length : 0,
+        enrichedAt: investorBase.enrichedAt?.toISOString?.() ?? null,
+      },
+      timestamp: Date.now(),
+    }),
+  }).catch(() => {})
+  // #endregion
 
   return (
     <InvestorProfileClient
       investor={{
-        ...investor,
-        stages: parseJSON(investor.stages) as string[],
-        sectors: parseJSON(investor.sectors) as string[],
-        geoFocus: parseJSON(investor.geoFocus) as string[],
-        geography: parseJSON(investor.geography) as string[],
-        valueAddTags: parseJSON(investor.valueAddTags) as string[],
-        portfolio: parseJSON(investor.portfolio) as PortfolioListItem[],
-        proofPoints: parseJSON(investor.proofPoints) as string[],
+        ...investorBase,
+        lastDealDate: investorBase.lastDealDate?.toISOString() ?? null,
+        enrichedAt: investorBase.enrichedAt?.toISOString() ?? null,
+        partnerNames: parseStringList(investorBase.partnerNames, 5),
+        portfolioCompanies,
+        stages: parseJSON(investorBase.stages) as string[],
+        sectors: parseJSON(investorBase.sectors) as string[],
+        geoFocus: parseJSON(investorBase.geoFocus) as string[],
+        geography: parseJSON(investorBase.geography) as string[],
+        valueAddTags: parseJSON(investorBase.valueAddTags) as string[],
+        portfolio: parseJSON(investorBase.portfolio) as PortfolioListItem[],
+        proofPoints: parseJSON(investorBase.proofPoints) as string[],
       }}
-      enrichment={enrichment ? {
-        snapshot: enrichment.snapshot,
-        recentDeals: parseJSON(enrichment.recentDeals) as Array<{ name?: string; date?: string; amount?: string }>,
-      } : null}
+      enrichment={
+        enrichment
+          ? {
+              snapshot: enrichment.snapshot,
+              recentDeals: recentDealsParsed as Array<{
+                name?: string
+                title?: string
+                date?: string | null
+                amount?: string
+              }>,
+            }
+          : null
+      }
     />
   )
 }

@@ -261,6 +261,8 @@ const firmConfidenceSchema = z.object({
   partnerNames: z.number().min(0).max(10),
   sectors: z.number().min(0).max(10),
   activelyInvesting: z.number().min(0).max(10),
+  /** Present on new prompts; older LLM responses may omit — default 0. */
+  firmSummary: z.number().min(0).max(10).optional().default(0),
 })
 
 const firmExtractSchema = z.object({
@@ -274,6 +276,11 @@ const firmExtractSchema = z.object({
     .default([])
     .transform((a) => a.slice(0, 4)),
   activelyInvesting: z.boolean().nullable().optional(),
+  /** Grounded 2–3 sentence mandate; max 350 chars (trimmed). */
+  firmSummary: z
+    .string()
+    .optional()
+    .transform((s) => (typeof s === 'string' ? s : '').trim().slice(0, 350)),
   confidence: firmConfidenceSchema,
 })
 
@@ -299,9 +306,10 @@ Extraction guidance (read the excerpts carefully):
 - partnerNames: Look for people identified as Partner, General Partner, GP, Managing Partner, or listed on the firm's team page. Return up to 5 distinct "First Last" names as written in the sources. Empty array only if no names appear.
 - sectors: Normalize ONLY to this exact list (comma-separated in your head): ${sectorList}. Max 4 labels. Else [] if none of these labels are clearly supported.
 - activelyInvesting: true if any investment, fund close, or deal activity from 2023 onward is mentioned for this firm; false only if sources clearly indicate they stopped investing before 2022; null only if there is genuinely no signal either way.
-- confidence.*: Integer 0-10 per field group. If you extracted foundedYear / partnerNames / sectors / activelyInvesting from clear wording in the excerpts, use 7-10 for that group. Use 0 only when that information is genuinely absent from ALL excerpts — not because phrasing was informal.
+- firmSummary: A single string of at most 350 characters (hard limit). Write 2–3 short sentences as a neutral third-person investment mandate: typical stages, sector focus, geographic focus, and any distinctive approach when supported by the excerpts. Ground every clause in the source material; do not invent. Do not mention how to apply, contact instructions, or outreach. If the excerpts lack enough signal for a substantive summary, return an empty string.
+- confidence.*: Integer 0-10 per field group. If you extracted foundedYear / partnerNames / sectors / activelyInvesting / firmSummary from clear wording in the excerpts, use 7-10 for that group. Use 0 only when that information is genuinely absent from ALL excerpts — not because phrasing was informal.
 
-Return one JSON object with keys: foundedYear, partnerNames, sectors, activelyInvesting, confidence (object with foundedYear, partnerNames, sectors, activelyInvesting as numbers).`
+Return one JSON object with keys: foundedYear, partnerNames, sectors, activelyInvesting, firmSummary, confidence (object with foundedYear, partnerNames, sectors, activelyInvesting, firmSummary as numbers).`
 
   const user = `Fund / firm name: "${firmName}"\n\nSource material:\n${rawSources.slice(0, 120_000)}`
 
@@ -321,7 +329,8 @@ Return one JSON object with keys: foundedYear, partnerNames, sectors, activelyIn
       partnerNames: [],
       sectors: [],
       activelyInvesting: null,
-      confidence: { foundedYear: 0, partnerNames: 0, sectors: 0, activelyInvesting: 0 },
+      firmSummary: '',
+      confidence: { foundedYear: 0, partnerNames: 0, sectors: 0, activelyInvesting: 0, firmSummary: 0 },
     }
   }
 
@@ -631,6 +640,52 @@ function computeLastDealDate(deals: CleanPortfolioDeal[]): Date | null {
   return new Date(Date.UTC(maxY, 5, 15, 12, 0, 0, 0))
 }
 
+/** Profile / hero thesis is "weak" when empty or only a short tagline — safe to replace with firmSummary. */
+export function isThesisWeakForEnrichment(thesis: string | null | undefined): boolean {
+  const t = thesis?.trim() ?? ''
+  return t.length === 0 || t.length < 120
+}
+
+function formatDealAmountForCache(amount: number): string {
+  if (!Number.isFinite(amount) || amount <= 0) return ''
+  if (amount >= 1) {
+    const rounded = Math.abs(amount % 1) < 0.05 ? amount.toFixed(0) : amount.toFixed(1)
+    return `$${rounded}M`
+  }
+  return `$${Math.round(amount * 1000)}K`
+}
+
+/** Shape matches public profile `recentDeals` consumption (`name`, `date`, `amount`). */
+export function buildRecentDealsForEnrichmentCache(deals: CleanPortfolioDeal[]): Array<{
+  name?: string
+  date?: string
+  amount?: string
+}> {
+  const sorted = [...deals].sort((a, b) => {
+    const ya = a.investmentYear ?? 0
+    const yb = b.investmentYear ?? 0
+    if (ya !== yb) return yb - ya
+    const ta = a.investmentDate?.getTime() ?? 0
+    const tb = b.investmentDate?.getTime() ?? 0
+    return tb - ta
+  })
+  return sorted.slice(0, 12).map((d) => {
+    const date =
+      d.investmentDate != null
+        ? d.investmentDate.toISOString().slice(0, 10)
+        : d.investmentYear != null
+          ? String(d.investmentYear)
+          : undefined
+    const amt =
+      d.amount != null && Number.isFinite(d.amount) && d.amount > 0 ? formatDealAmountForCache(d.amount) : undefined
+    return {
+      name: d.companyName,
+      date,
+      amount: amt,
+    }
+  })
+}
+
 export type PersistEnrichmentInput = {
   investorId: string
   firm: FirmEnrichmentFields
@@ -663,12 +718,32 @@ export async function persistEnrichment(input: PersistEnrichmentInput): Promise<
       activelyInvesting: true,
       lastDealDate: true,
       sectors: true,
+      thesis: true,
+      enrichmentCache: { select: { snapshot: true, recentDeals: true } },
     },
   })
   if (!existing) throw new Error(`Investor not found: ${investorId}`)
 
   /** Only replace relational portfolio when this run produced ≥1 deal; do not wipe on sector-only updates. */
   const shouldRewritePortfolioRows = deals.length > 0
+
+  const firmSummaryTrim = (firm.firmSummary ?? '').trim().slice(0, 350)
+
+  const recentDealsJson =
+    deals.length > 0 ? JSON.stringify(buildRecentDealsForEnrichmentCache(deals)) : null
+
+  const snapExisting = existing.enrichmentCache?.snapshot ?? ''
+  const dealsExisting = existing.enrichmentCache?.recentDeals ?? '[]'
+  const hasCacheRow = Boolean(existing.enrichmentCache)
+  const snapshotToPersist = firmSummaryTrim.length > 0 ? firmSummaryTrim : null
+  const snapshotChanged = snapshotToPersist !== null && snapshotToPersist !== snapExisting
+  /** Keep Investor.thesis aligned with cache snapshot when snapshot updates, so APIs/UI never show two divergent mandates. */
+  const thesisShouldSync =
+    firmSummaryTrim.length > 0 &&
+    (isThesisWeakForEnrichment(existing.thesis) || snapshotChanged)
+  const dealsChanged = recentDealsJson !== null && recentDealsJson !== dealsExisting
+  const cacheCreate = !hasCacheRow && (snapshotToPersist !== null || recentDealsJson !== null)
+  const cacheNeedsWrite = snapshotChanged || dealsChanged || cacheCreate
 
   const scalarPatch: Prisma.InvestorUpdateInput = {
     foundedYear: firm.foundedYear ?? null,
@@ -686,6 +761,10 @@ export async function persistEnrichment(input: PersistEnrichmentInput): Promise<
     scalarPatch.sectors = newSectorsJson
   }
 
+  if (thesisShouldSync) {
+    scalarPatch.thesis = firmSummaryTrim
+  }
+
   const sectorsUpdated = Boolean(newSectorsJson && newSectorsJson !== (existing.sectors || '[]'))
 
   const foundedChanged = (firm.foundedYear ?? null) !== (existing.foundedYear ?? null)
@@ -697,9 +776,18 @@ export async function persistEnrichment(input: PersistEnrichmentInput): Promise<
     firm.activelyInvesting !== null &&
     firm.activelyInvesting !== undefined &&
     firm.activelyInvesting !== existing.activelyInvesting
+  const thesisChanged =
+    thesisShouldSync && (existing.thesis?.trim() ?? '') !== firmSummaryTrim
 
   const hasNetChange =
-    shouldRewritePortfolioRows || sectorsUpdated || foundedChanged || partnersChanged || lastDealChanged || activeChanged
+    shouldRewritePortfolioRows ||
+    sectorsUpdated ||
+    foundedChanged ||
+    partnersChanged ||
+    lastDealChanged ||
+    activeChanged ||
+    thesisChanged ||
+    cacheNeedsWrite
 
   if (!hasNetChange) {
     const inv = await db.investor.findUnique({
@@ -710,6 +798,30 @@ export async function persistEnrichment(input: PersistEnrichmentInput): Promise<
   }
 
   const enrichedAt = new Date()
+
+  const cacheUpdatePayload: {
+    snapshot?: string
+    recentDeals?: string
+    lastUpdated: Date
+    isConflict: boolean
+  } = {
+    lastUpdated: enrichedAt,
+    isConflict: false,
+  }
+  if (snapshotToPersist !== null) {
+    cacheUpdatePayload.snapshot = snapshotToPersist
+  }
+  if (recentDealsJson !== null) {
+    cacheUpdatePayload.recentDeals = recentDealsJson
+  }
+
+  const cacheCreatePayload = {
+    investorId,
+    snapshot: snapshotToPersist ?? '',
+    recentDeals: recentDealsJson ?? '[]',
+    lastUpdated: enrichedAt,
+    isConflict: false,
+  }
 
   const investor = await db.$transaction(async (tx) => {
     if (shouldRewritePortfolioRows) {
@@ -735,7 +847,7 @@ export async function persistEnrichment(input: PersistEnrichmentInput): Promise<
       }
     }
 
-    return tx.investor.update({
+    const inv = await tx.investor.update({
       where: { id: investorId },
       data: {
         ...scalarPatch,
@@ -744,6 +856,16 @@ export async function persistEnrichment(input: PersistEnrichmentInput): Promise<
       },
       include: { portfolioCompanies: true },
     })
+
+    if (cacheNeedsWrite) {
+      await tx.vCEnrichmentCache.upsert({
+        where: { investorId },
+        create: cacheCreatePayload,
+        update: cacheUpdatePayload,
+      })
+    }
+
+    return inv
   })
 
   return { investor, skipped: false, sectorsUpdated }

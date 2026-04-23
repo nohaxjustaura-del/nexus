@@ -46,7 +46,12 @@ const nextConfig = {
       'react-markdown',
       'lucide-react',
     ],
-    optimizeCss: true,
+    /**
+     * Critical CSS inlining + stylesheet preload can throw in the client chunk loader
+     * (`lazy-dynamic/preload-css`: "Cannot read properties of undefined (reading 'call')")
+     * on navigations such as `/founder/dashboard` (Next 15.5.x + webpack). Prefer stable CSS loading.
+     */
+    optimizeCss: false,
   },
 
   /**

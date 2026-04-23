@@ -3,13 +3,18 @@ import { db } from '@/lib/db'
 
 export const dynamic = 'force-dynamic'
 
-export async function GET(
-  _request: NextRequest,
-  { params }: { params: { id: string } },
-) {
+type RouteParams = { id: string } | Promise<{ id: string }>
+
+async function routeParamId(params: RouteParams): Promise<string> {
+  const p = await Promise.resolve(params)
+  return p.id
+}
+
+export async function GET(_request: NextRequest, { params }: { params: RouteParams }) {
   try {
+    const id = await routeParamId(params)
     const investor = await db.investor.findUnique({
-      where: { id: params.id, isPublic: true },
+      where: { id, isPublic: true },
       select: {
         id: true,
         firmName: true,
@@ -19,6 +24,7 @@ export async function GET(
         stages: true,
         sectors: true,
         geoFocus: true,
+        geography: true,
         checkMin: true,
         checkMax: true,
         checkSizeMin: true,
@@ -39,6 +45,28 @@ export async function GET(
         twitterUrl: true,
         linkedinUrl: true,
         crunchbaseUrl: true,
+        foundedYear: true,
+        partnerNames: true,
+        activelyInvesting: true,
+        lastDealDate: true,
+        enrichedAt: true,
+        portfolioCompanies: {
+          orderBy: { investmentYear: 'desc' },
+          select: {
+            id: true,
+            companyName: true,
+            companyWebsite: true,
+            sector: true,
+            stage: true,
+            investmentYear: true,
+            investmentDate: true,
+            amount: true,
+            isLead: true,
+            coInvestors: true,
+            confidence: true,
+          },
+        },
+        enrichmentCache: { select: { snapshot: true, recentDeals: true } },
       },
     })
 
@@ -46,18 +74,24 @@ export async function GET(
       return NextResponse.json({ error: 'Not found' }, { status: 404 })
     }
 
-    let enrichment: { snapshot?: string; recentDeals?: string } | null = null
-    try {
-      enrichment = await (db as any).vCEnrichmentCache.findUnique({
-        where: { investorId: params.id },
-        select: { snapshot: true, recentDeals: true },
-      })
-    } catch {
-      // enrichment cache may not exist for all investors
-    }
+    const { enrichmentCache, ...inv } = investor
+    const enrichment = enrichmentCache
+      ? {
+          snapshot: enrichmentCache.snapshot ?? null,
+          recentDeals: enrichmentCache.recentDeals ?? '[]',
+        }
+      : null
 
     return NextResponse.json({
-      investor,
+      investor: {
+        ...inv,
+        lastDealDate: investor.lastDealDate?.toISOString() ?? null,
+        enrichedAt: investor.enrichedAt?.toISOString() ?? null,
+        portfolioCompanies: investor.portfolioCompanies.map((p) => ({
+          ...p,
+          investmentDate: p.investmentDate?.toISOString() ?? null,
+        })),
+      },
       enrichment: enrichment
         ? {
             snapshot: enrichment.snapshot ?? null,

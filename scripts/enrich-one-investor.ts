@@ -84,6 +84,11 @@ function printEnrichmentReport(
   console.log(
     `Actively investing: ${inv.activelyInvesting} (model: ${firm.activelyInvesting === null ? 'null' : String(firm.activelyInvesting)}, conf: ${firm.confidence.activelyInvesting}/10)`,
   )
+  const sumPreview =
+    firm.firmSummary.length > 160 ? `${firm.firmSummary.slice(0, 160)}…` : firm.firmSummary || '—'
+  console.log(
+    `Firm summary:       ${firm.firmSummary.length ? `${firm.firmSummary.length} chars — ${sumPreview}` : '—'} (conf: ${firm.confidence.firmSummary}/10)`,
+  )
   console.log(`Portfolio deals:    ${deals.length} (${yearSpan})`)
   console.log(`  - with amount:     ${withAmount}`)
   console.log(`  - lead rounds:     ${leadRounds}`)

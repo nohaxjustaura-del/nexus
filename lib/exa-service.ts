@@ -1,6 +1,7 @@
 import { db } from "./db";
 import { runExaWithKeyFailover } from "./exa-key-failover";
 import { isExaGlobalCooldownActive } from "./exa-global-cooldown";
+import { firmNameForExaSearch } from "./investor-enrichment";
 
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 
@@ -106,7 +107,8 @@ async function fetchFromExa(
   threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
   const startDate = threeMonthsAgo.toISOString().split("T")[0];
 
-  const { activityQuery, convictionQuery } = buildQueries(vcName, domain, fundType)
+  const queryName = firmNameForExaSearch(vcName)
+  const { activityQuery, convictionQuery } = buildQueries(queryName, domain, fundType)
 
   const failover = await runExaWithKeyFailover(async (exa) => {
     const [dealsResponse, leadershipResponse] = await Promise.all([
@@ -187,18 +189,36 @@ export async function getLiveInvestorPulse(
   const signalStrength = Math.min(totalResults, 6);
 
   // --- Persist to cache ---
+  let snapshotForResponse = snapshot
   if (investorId) {
+    const existingCache = await db.vCEnrichmentCache.findUnique({
+      where: { investorId },
+      select: { snapshot: true },
+    })
+    const weakTemplate =
+      deals.length === 0 &&
+      snapshot.startsWith('No recent funding announcements found for')
+    const keepRichSnapshot =
+      weakTemplate && (existingCache?.snapshot?.trim().length ?? 0) > 80
+    const snapshotToWrite = keepRichSnapshot ? (existingCache?.snapshot ?? snapshot) : snapshot
+    snapshotForResponse = snapshotToWrite
+
+    // Do not overwrite stored deals when Exa returns nothing — a prior LLM enrich or richer Exa
+    // pass may have populated `recentDeals`; writing [] makes the public profile chart look "stuck".
+    const cacheUpdateBase = {
+      lastUpdated: new Date(),
+      isConflict,
+      ...(keepRichSnapshot ? {} : { snapshot: snapshotToWrite }),
+    }
+    const cacheUpdate =
+      deals.length > 0 ? { ...cacheUpdateBase, recentDeals: JSON.stringify(deals) } : cacheUpdateBase
+
     await db.vCEnrichmentCache.upsert({
       where: { investorId },
-      update: {
-        snapshot,
-        recentDeals: JSON.stringify(deals),
-        lastUpdated: new Date(),
-        isConflict,
-      },
+      update: cacheUpdate,
       create: {
         investorId,
-        snapshot,
+        snapshot: snapshotToWrite,
         recentDeals: JSON.stringify(deals),
         lastUpdated: new Date(),
         isConflict,
@@ -209,7 +229,7 @@ export async function getLiveInvestorPulse(
   return {
     vcName,
     domain,
-    snapshot,
+    snapshot: snapshotForResponse,
     recentDeals: deals,
     thoughtLeadership: leadership,
     fromCache: false,
