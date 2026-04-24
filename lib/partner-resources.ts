@@ -16,9 +16,37 @@ export type PartnerFounderPreview = {
   locationLine?: string
 }
 
+/** Used to group cards on /founder/network and /investor/network */
+export type ResourcePartnerNetworkSection = 'founder-company' | 'venture-capital' | 'ma-brokerage'
+
+export const NETWORK_SECTION_ORDER: ResourcePartnerNetworkSection[] = [
+  'founder-company',
+  'venture-capital',
+  'ma-brokerage',
+]
+
+export const NETWORK_SECTION_LABEL: Record<
+  ResourcePartnerNetworkSection,
+  { title: string; description: string }
+> = {
+  'founder-company': {
+    title: 'Founder & company hubs',
+    description: 'YC teams, playbooks, and optional Ask / Book with founders.',
+  },
+  'venture-capital': {
+    title: 'Venture capital',
+    description: 'LPs and venture partners—deal flow and firm-side intros, separate from M&A brokers.',
+  },
+  'ma-brokerage': {
+    title: 'M&A & business brokerage',
+    description: 'Buy-side, sell-side, and exit planning with Transworld (Los Angeles).',
+  },
+}
+
 export type ResourcePartner = {
   slug: string
   name: string
+  networkSection: ResourcePartnerNetworkSection
   /** One line for badges (e.g. YC W26) */
   listSummary: string
   /** Legacy directory line; index uses founders + companyIntro visually */
@@ -37,6 +65,15 @@ export type ResourcePartner = {
   showYcPlaybookModules?: boolean
   /** Primary site for the partner organization (advisor hubs). */
   partnerSiteUrl?: string
+  /** Replaces the default "Firm website" label on advisor hubs when set. */
+  partnerSiteLabel?: string
+  /** Extra org links (e.g. a second fund or program) shown next to the primary site button. */
+  extraPartnerLinks?: { label: string; href: string }[]
+  /**
+   * Optional second card on the hub, e.g. M&A & brokerage when the main profile is venture—keeps
+   * narratives from blending (Calvin’s desk vs Jonathan’s VC work).
+   */
+  secondaryHub?: { title: string; description: string; ctaLabel: string; ctaHref: string }
 }
 
 /** Directory + detail pages for /founder/network and /founder/network/[slug] */
@@ -44,6 +81,7 @@ export const RESOURCE_PARTNERS: ResourcePartner[] = [
   {
     slug: 'luel',
     name: 'Luel',
+    networkSection: 'founder-company',
     listSummary: 'YC W26',
     listDetail:
       'William Namgyal (CEO) and Inigo Lenderking (COO), YC W26 - rights-cleared multimodal training data; playbooks and founder access on this hub.',
@@ -78,6 +116,7 @@ export const RESOURCE_PARTNERS: ResourcePartner[] = [
   {
     slug: 'transworld',
     name: 'Transworld Business Advisors',
+    networkSection: 'ma-brokerage',
     listSummary: 'M&A · brokerage',
     listDetail:
       'Calvin Tampubolon handles buy-side and sell-side brokerage, M&A, and exit planning with Transworld in Los Angeles.',
@@ -105,7 +144,55 @@ export const RESOURCE_PARTNERS: ResourcePartner[] = [
       },
     ],
   },
+  {
+    slug: 'jonathan-cheung',
+    name: 'Jonathan Cheung, CFA',
+    networkSection: 'venture-capital',
+    listSummary: 'Tunitas · GoingVC',
+    listDetail:
+      'LP at Tunitas Ventures and Venture Partner at GoingVC Partners—California early-stage and strategic venture work.',
+    companyIntro:
+      'This hub is for Jonathan’s venture side: he is a Limited Partner with Tunitas Ventures and a Venture Partner with GoingVC Partners, focused on deal flow, diligence context, and founder-friendly intros. That is separate from day-to-day M&A and business brokerage, which is covered in the section below (and from Calvin’s Transworld Los Angeles desk on its own hub).',
+    resourcesTagline: 'Start on LinkedIn, or open Tunitas and GoingVC in the links below when you want firm context first.',
+    heroTitle: 'Jonathan Cheung, CFA',
+    heroSubtitleBeforePremium: '',
+    heroSubtitleAfterPremium: '',
+    heroSubtitlePlain: 'Venture: Tunitas LP and GoingVC Venture Partner. Use the links for firm context, LinkedIn to say hi.',
+    showYcPlaybookModules: false,
+    partnerSiteUrl: 'https://www.tunitas.vc/',
+    partnerSiteLabel: 'Tunitas Ventures',
+    extraPartnerLinks: [
+      { label: 'GoingVC Partners', href: 'https://www.goingvc.com/goingvc-partners' },
+    ],
+    secondaryHub: {
+      title: 'M&A & business brokerage',
+      description:
+        'Jonathan also works with Transworld on mid-market business sales and acquisitions in Southern California. That practice is a different lane from his venture work above, and it is not the same office as the Los Angeles Transworld hub in our network (Calvin’s card).',
+      ctaLabel: 'Transworld profile (brokerage)',
+      ctaHref: 'https://www.transworldma.com/team/jonathan-cheung/',
+    },
+    foundersPreview: [
+      {
+        name: 'Jonathan Cheung, CFA',
+        imageSrc: '/network-partners/jonathan-cheung.png',
+        imageAlt: 'Jonathan Cheung, CFA',
+        roleLine:
+          'Limited Partner, Tunitas Ventures. Venture Partner, GoingVC Partners. Based in Southern California.',
+        tag: 'Venture · SoCal',
+        locationLine: 'Orange County & Los Angeles, California',
+        linkedInUrl: 'https://www.linkedin.com/in/jonathan-cheung-cfa/',
+      },
+    ],
+  },
 ]
+
+export function getResourcePartnersByNetworkSection() {
+  return NETWORK_SECTION_ORDER.map((section) => ({
+    section,
+    label: NETWORK_SECTION_LABEL[section],
+    partners: RESOURCE_PARTNERS.filter((p) => p.networkSection === section),
+  })).filter((g) => g.partners.length > 0)
+}
 
 export function getResourcePartner(slug: string): ResourcePartner | undefined {
   return RESOURCE_PARTNERS.find((p) => p.slug === slug)
