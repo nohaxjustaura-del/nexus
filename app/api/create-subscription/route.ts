@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { stripe, PREMIUM_SUBSCRIPTION } from '@/lib/stripe'
+import { stripe, PREMIUM_SUBSCRIPTION, TEAM_SUBSCRIPTION } from '@/lib/stripe'
 import { getCurrentUser } from '@/lib/auth'
 import { getSiteUrl } from '@/lib/site-url'
 
@@ -9,6 +9,16 @@ export const runtime = 'nodejs'
 
 export async function POST(request: NextRequest) {
   try {
+    let plan: 'pro' | 'team' = 'pro'
+    try {
+      const body = await request.json()
+      if (body?.plan === 'team') plan = 'team'
+    } catch {
+      // no JSON body: default Pro
+    }
+
+    const line = plan === 'team' ? TEAM_SUBSCRIPTION : PREMIUM_SUBSCRIPTION
+
     // Get current user
     const user = await getCurrentUser()
     if (!user || !user.email) {
@@ -38,10 +48,10 @@ export async function POST(request: NextRequest) {
           price_data: {
             currency: 'usd',
             product_data: {
-              name: PREMIUM_SUBSCRIPTION.name,
-              description: PREMIUM_SUBSCRIPTION.description,
+              name: line.name,
+              description: line.description,
             },
-            unit_amount: PREMIUM_SUBSCRIPTION.price * 100, // Convert to cents
+            unit_amount: line.price * 100,
             recurring: {
               interval: 'month',
             },
@@ -53,6 +63,7 @@ export async function POST(request: NextRequest) {
         userId: user.id || user.email,
         userEmail: user.email,
         premium: 'true',
+        plan,
       },
       customer: customerId,
       customer_email: !customerId ? user.email : undefined,
