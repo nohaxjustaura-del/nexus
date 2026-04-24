@@ -35,7 +35,8 @@ export const NETWORK_SECTION_LABEL: Record<
   },
   'venture-capital': {
     title: 'Venture capital',
-    description: 'LPs and venture partners—deal flow and firm-side intros, separate from M&A brokers.',
+    description:
+      'LPs and venture partners: deal flow and firm-side intros for founders, separate from M&A brokers.',
   },
   'ma-brokerage': {
     title: 'M&A & business brokerage',
@@ -70,7 +71,7 @@ export type ResourcePartner = {
   /** Extra org links (e.g. a second fund or program) shown next to the primary site button. */
   extraPartnerLinks?: { label: string; href: string }[]
   /**
-   * Optional second card on the hub, e.g. M&A & brokerage when the main profile is venture—keeps
+   * Optional second card on the hub, e.g. M&A & brokerage when the main profile is venture; keeps
    * narratives from blending (Calvin’s desk vs Jonathan’s VC work).
    */
   secondaryHub?: { title: string; description: string; ctaLabel: string; ctaHref: string }
@@ -150,9 +151,9 @@ export const RESOURCE_PARTNERS: ResourcePartner[] = [
     networkSection: 'venture-capital',
     listSummary: 'Tunitas · GoingVC',
     listDetail:
-      'LP at Tunitas Ventures and Venture Partner at GoingVC Partners—California early-stage and strategic venture work.',
+      'LP at Tunitas Ventures and Venture Partner at GoingVC Partners, focused on early-stage and strategic venture work in California.',
     companyIntro:
-      'This hub is for Jonathan’s venture side: he is a Limited Partner with Tunitas Ventures and a Venture Partner with GoingVC Partners, focused on deal flow, diligence context, and founder-friendly intros. That is separate from day-to-day M&A and business brokerage, which is covered in the section below (and from Calvin’s Transworld Los Angeles desk on its own hub).',
+      'This hub is for Jonathan’s venture work. He is a Limited Partner with Tunitas Ventures and a Venture Partner with GoingVC Partners, with attention to deal flow, diligence, and practical intros for founders. His Transworld M&A and brokerage practice is a different lane: you will find it in the second card on this page. Calvin’s Transworld Los Angeles desk has its own hub in the directory.',
     resourcesTagline: 'Start on LinkedIn, or open Tunitas and GoingVC in the links below when you want firm context first.',
     heroTitle: 'Jonathan Cheung, CFA',
     heroSubtitleBeforePremium: '',
@@ -164,10 +165,10 @@ export const RESOURCE_PARTNERS: ResourcePartner[] = [
     extraPartnerLinks: [
       { label: 'GoingVC Partners', href: 'https://www.goingvc.com/goingvc-partners' },
     ],
-    secondaryHub: {
+      secondaryHub: {
       title: 'M&A & business brokerage',
       description:
-        'Jonathan also works with Transworld on mid-market business sales and acquisitions in Southern California. That practice is a different lane from his venture work above, and it is not the same office as the Los Angeles Transworld hub in our network (Calvin’s card).',
+        'Jonathan also works with Transworld on mid-market business sales and acquisitions in Southern California. That work sits apart from his venture role on this page, and it is not the same office as the Los Angeles Transworld hub in our network (Calvin’s card).',
       ctaLabel: 'Transworld profile (brokerage)',
       ctaHref: 'https://www.transworldma.com/team/jonathan-cheung/',
     },
@@ -177,7 +178,7 @@ export const RESOURCE_PARTNERS: ResourcePartner[] = [
         imageSrc: '/network-partners/jonathan-cheung.png',
         imageAlt: 'Jonathan Cheung, CFA',
         roleLine:
-          'Limited Partner, Tunitas Ventures. Venture Partner, GoingVC Partners. Based in Southern California.',
+          'Limited Partner at Tunitas Ventures and Venture Partner at GoingVC Partners. Orange County and Los Angeles.',
         tag: 'Venture · SoCal',
         locationLine: 'Orange County & Los Angeles, California',
         linkedInUrl: 'https://www.linkedin.com/in/jonathan-cheung-cfa/',
