@@ -14,6 +14,13 @@ export type PartnerFounderPreview = {
   /** E.164 or formatted phone for advisor-style hubs */
   phone?: string
   locationLine?: string
+  /**
+   * Calendly scheduling URL for this contact.
+   * When set, the "Book" button uses the CalendarBooking flow
+   * (pre-booking form → Calendly popup) instead of the legacy text modal.
+   * Must be a real Calendly URL before deploying to production.
+   */
+  calendlyUrl?: string
 }
 
 export type ResourcePartner = {
@@ -63,6 +70,8 @@ export const RESOURCE_PARTNERS: ResourcePartner[] = [
         tag: 'Product + Strategy',
         founderKey: 'william',
         linkedInUrl: 'https://www.linkedin.com/in/william-namgyal/',
+        // TODO: Replace with real Calendly URL from partner before going live
+        // calendlyUrl: 'https://calendly.com/william-namgyal/nexus-intro',
       },
       {
         name: 'Inigo Lenderking',
@@ -72,6 +81,8 @@ export const RESOURCE_PARTNERS: ResourcePartner[] = [
         tag: 'COO + Operations',
         founderKey: 'inigo',
         linkedInUrl: 'https://www.linkedin.com/in/inigolenderking/',
+        // TODO: Replace with real Calendly URL from partner before going live
+        // calendlyUrl: 'https://calendly.com/inigo-lenderking/nexus-intro',
       },
     ],
   },
