@@ -576,6 +576,7 @@ model NetworkMeetingBooking {
   @@index([partnerSlug])
   @@index([status])
   @@index([createdAt])
+  @@index([userId, createdAt])
 }
 
 model VerificationCode {
