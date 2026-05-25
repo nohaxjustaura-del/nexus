@@ -100,10 +100,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: validation.error }, { status: 400 })
     }
 
-    // 5. Validate partnerSlug exists in our registry
-    if (!getResourcePartner(partnerSlug)) {
+    // 5. Validate partnerSlug exists and founderName belongs to that partner
+    const partner = getResourcePartner(partnerSlug)
+    if (!partner) {
       return NextResponse.json(
         { error: 'Unknown partner.' },
+        { status: 400 }
+      )
+    }
+
+    const founderExists = partner.foundersPreview.some((f) => f.name === founderName)
+    if (!founderExists) {
+      return NextResponse.json(
+        { error: 'Unknown contact for this partner.' },
         { status: 400 }
       )
     }
