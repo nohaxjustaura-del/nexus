@@ -155,7 +155,7 @@ export function getScoringOpenRouterModel(): string {
   if (scoring) return scoring
   const vc = process.env.OPENROUTER_VC_EXTRACTION_MODEL?.trim()
   if (vc) return vc
-  return 'deepseek/deepseek-chat'
+  return 'meta-llama/llama-3.3-70b-instruct'
 }
 
 /** Model for match narrative generation. */
@@ -310,6 +310,53 @@ function resolveMaxTokens(override?: number): number {
   return 4096
 }
 
+// ---------------------------------------------------------------------------
+// Scoring concurrency limiter
+// ---------------------------------------------------------------------------
+
+/** Simple FIFO concurrency gate — prevents rate-limit bursts on scoring calls. */
+function makeLimiter(concurrency: number) {
+  let running = 0
+  const queue: Array<() => void> = []
+  return function limit<T>(fn: () => Promise<T>): Promise<T> {
+    return new Promise<T>((resolve, reject) => {
+      const execute = () => {
+        running++
+        fn()
+          .then(resolve, reject)
+          .finally(() => {
+            running--
+            if (queue.length > 0) queue.shift()!()
+          })
+      }
+      if (running < concurrency) execute()
+      else queue.push(execute)
+    })
+  }
+}
+
+function resolveScoringConcurrency(): number {
+  const raw = process.env.SCORING_LLM_CONCURRENCY?.trim()
+  const n = raw ? parseInt(raw, 10) : NaN
+  if (Number.isFinite(n) && n >= 1 && n <= 10) return n
+  return 2
+}
+
+/**
+ * Shared concurrency gate for all `forceOpenRouter: true` scoring calls.
+ *
+ * The scoring pipeline (Phase 2) fires up to 8 concurrent DeepSeek calls:
+ *   5 criterion batches + 2 adversarial (bull/bear) + 1 tier classifier.
+ * Without throttling, these all hit DeepSeek simultaneously and trigger 429s
+ * that cascade into every pass falling back to placeholder values.
+ *
+ * Default: 2 concurrent (safe for DeepSeek free/limited tier).
+ * Override: SCORING_LLM_CONCURRENCY env var (1–10).
+ * To eliminate 429s entirely, set OPENROUTER_SCORING_MODEL to a model with
+ * higher rate limits (e.g. meta-llama/llama-3.3-70b-instruct).
+ */
+const _scoringLimiter = makeLimiter(resolveScoringConcurrency())
+
 /** Generate text using OpenRouter. */
 export async function openrouterGenerateText(
   prompt: string,
@@ -456,7 +503,12 @@ function resolveJsonLlm(options: {
   return { client: oc, model: options.model ?? getOllamaVcModel(), backend: 'ollama' }
 }
 
-export async function openrouterGenerateJson<T = any>(options: {
+/**
+ * Internal implementation — runs a single JSON LLM call with retry/fallback logic.
+ * External callers should use `openrouterGenerateJson`, which applies the scoring
+ * concurrency limiter when `forceOpenRouter: true`.
+ */
+async function _openrouterGenerateJsonCore<T = any>(options: {
   system: string
   user: string
   temperature?: number
@@ -601,4 +653,29 @@ export async function openrouterGenerateJson<T = any>(options: {
     }
     throw e
   }
+}
+
+/**
+ * Generate JSON using an OpenRouter (or Ollama) LLM.
+ *
+ * When `forceOpenRouter: true` (all scoring passes), the call is routed through
+ * `_scoringLimiter` to cap concurrent DeepSeek/scoring requests at
+ * SCORING_LLM_CONCURRENCY (default 2). This prevents the 8 Phase-2 calls from
+ * hitting DeepSeek's rate limit simultaneously and 429-cascading into every
+ * scoring pass falling back to placeholder values.
+ */
+export async function openrouterGenerateJson<T = any>(options: {
+  system: string
+  user: string
+  temperature?: number
+  model?: string
+  maxTokens?: number
+  retryOnParseError?: boolean
+  forceOpenRouter?: boolean
+  useVcPipeline?: boolean
+}): Promise<T> {
+  if (options.forceOpenRouter === true) {
+    return _scoringLimiter<T>(() => _openrouterGenerateJsonCore<T>(options))
+  }
+  return _openrouterGenerateJsonCore<T>(options)
 }

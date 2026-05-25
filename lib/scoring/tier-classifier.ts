@@ -29,12 +29,7 @@
  * summary, reference anchors, and stage context.
  */
 
-import { getAIClient } from "../ai"
-import {
-  getModelNameForScoring,
-  getOpenRouterClient,
-  getScoringLlmClient,
-} from "../openrouter"
+import { openrouterGenerateJson } from "../openrouter"
 import { logger } from "../logger"
 import type { VerifiedFacts, ReferenceAnchor, Tier, TierResult } from "./types"
 
@@ -332,38 +327,13 @@ export async function classifyTier(
   logger.log(`[TIER-CLASSIFIER] Starting independent tier classification (stage: ${stage})`)
 
   try {
-    const client = getScoringLlmClient() ?? getAIClient()
-    const model = getModelNameForScoring("gpt-4o")
-    const useJsonObject = !!getOpenRouterClient()
-
-    const completion = await client.chat.completions.create({
-      model,
-      messages: [
-        { role: "system", content: SYSTEM_PROMPT },
-        { role: "user",   content: buildUserPrompt(facts, pitchSummary, stage) },
-      ],
+    const raw = await openrouterGenerateJson<any>({
+      system: SYSTEM_PROMPT,
+      user: buildUserPrompt(facts, pitchSummary, stage),
       temperature: 0.2,
-      max_tokens: 2000,
-      ...(useJsonObject ? { response_format: { type: "json_object" } } : {}),
-    } as any)
-
-    const content = completion.choices[0]?.message?.content ?? "{}"
-
-    let raw: any
-    try {
-      raw = JSON.parse(content)
-    } catch {
-      const first = content.indexOf("{")
-      const last  = content.lastIndexOf("}")
-      if (first >= 0 && last > first) {
-        try { raw = JSON.parse(content.slice(first, last + 1)) } catch { /* fall through */ }
-      }
-    }
-
-    if (!raw) {
-      logger.error("[TIER-CLASSIFIER]", "Could not parse JSON response — using fallback")
-      return fallbackTierResult()
-    }
+      maxTokens: 2000,
+      forceOpenRouter: true,
+    })
 
     // Validate tier
     const rawTier = String(raw?.tier ?? "").toUpperCase()
