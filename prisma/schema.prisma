@@ -515,6 +515,7 @@ model User {
   credits UserCredits?
 
   ycInsiderFounderRequests YCInsiderFounderRequest[]
+  networkMeetingBookings   NetworkMeetingBooking[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -541,6 +542,40 @@ model YCInsiderFounderRequest {
   @@index([createdAt])
   @@index([userId])
   @@index([status])
+}
+
+/// Calendar booking intent logged before the founder enters Calendly.
+/// status: pending_calendar | scheduled | cancelled | no_show
+model NetworkMeetingBooking {
+  id          String  @id @default(cuid())
+  userId      String
+  user        User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userEmail   String
+
+  /// Matches ResourcePartner.slug (e.g. "luel", "transworld")
+  partnerSlug String  @db.VarChar(100)
+  /// Display name of the person being booked (e.g. "William Namgyal")
+  founderName String  @db.VarChar(200)
+
+  /// Required: meeting purpose entered by the founder (≤200 chars)
+  purpose     String  @db.VarChar(200)
+  /// Optional: additional context (≤1000 chars)
+  details     String? @db.Text
+
+  /// Calendly event URI — populated by webhook handler in a future iteration.
+  /// utm_content=<id> in the Calendly URL is the matching key.
+  calendlyEventUri String? @db.VarChar(500)
+
+  /// pending_calendar | scheduled | cancelled | no_show
+  status      String  @default("pending_calendar") @db.VarChar(32)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId])
+  @@index([partnerSlug])
+  @@index([status])
+  @@index([createdAt])
 }
 
 model VerificationCode {
