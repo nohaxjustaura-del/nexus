@@ -101,7 +101,7 @@ export function InvestorBookingModal({
 
       onOpenChange(false)
 
-      if (typeof window !== 'undefined' && window.Calendly) {
+      if (window.Calendly) {
         window.Calendly.initPopupWidget({ url: enrichedUrl })
       } else {
         window.open(enrichedUrl, '_blank', 'noopener,noreferrer')
@@ -124,6 +124,7 @@ export function InvestorBookingModal({
       {/* Backdrop */}
       <button
         type="button"
+        tabIndex={-1}
         className="absolute inset-0 bg-black/70 backdrop-blur-[2px]"
         aria-label="Close"
         onClick={() => !submitting && onOpenChange(false)}
