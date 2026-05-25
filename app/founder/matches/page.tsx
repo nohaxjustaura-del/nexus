@@ -27,8 +27,6 @@ import { getCurrentUser } from "@/lib/auth"
 import { parseJSON, fmtCheckSize, fmtCheckRange } from "@/lib/utils"
 import { logger } from "@/lib/logger"
 import { loadFounderAnalysisById } from "@/lib/analysis/load-founder-analysis"
-import { FounderWorkspaceTabs } from "@/components/founder-workspace-tabs"
-
 export const dynamic = "force-dynamic"
 export const runtime = "nodejs"
 
@@ -212,10 +210,6 @@ export default async function MatchesPage({
     return (
       <div className="min-h-screen bg-background">
         <div className="page-shell-narrow">
-          <div className="mb-4">
-            <FounderWorkspaceTabs />
-          </div>
-
           {/* Locked Content */}
           <Card className="relative overflow-hidden rounded-2xl border border-border/60 bg-card/95 shadow-sm">
             <CardContent className="relative pt-12 pb-12 text-center sm:px-8">
@@ -271,10 +265,6 @@ export default async function MatchesPage({
     return (
       <div className="min-h-screen bg-background">
         <div className="page-shell-narrow">
-          <div className="mb-4">
-            <FounderWorkspaceTabs />
-          </div>
-
           <Card className="rounded-2xl border border-border/60 bg-card/95 shadow-sm">
             <CardContent className="pt-12 pb-12 text-center sm:px-8">
               <AlertCircle className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
@@ -333,10 +323,6 @@ export default async function MatchesPage({
   return (
     <div className="min-h-screen bg-background">
       <div className="page-shell-narrow">
-        <div className="mb-4">
-          <FounderWorkspaceTabs />
-        </div>
-
         {/* Header */}
         <div className="mb-4">
           <h1 className="mb-2 text-3xl font-bold">Your top investor matches</h1>

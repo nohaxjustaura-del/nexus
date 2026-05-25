@@ -54,8 +54,9 @@ export default function VerifyPage() {
   useEffect(() => {
     if (authLoading || !authenticated) return
     const isVc = user?.userType === 'vc' || user?.userType === 'investor'
-    const defaultVerified = isVc ? '/investor/dashboard' : '/founder/dashboard'
-    const defaultUnverified = isVc ? '/investor/onboarding' : '/founder/onboarding'
+    const isMentor = user?.userType === 'mentor'
+    const defaultVerified = isVc ? '/investor/dashboard' : isMentor ? '/mentor/dashboard' : '/founder/dashboard'
+    const defaultUnverified = isVc ? '/investor/onboarding' : isMentor ? '/mentor/onboarding' : '/founder/onboarding'
     const fallback = verified ? defaultVerified : defaultUnverified
     const target = sanitizeAuthNextPathForUserType(
       redirectUrl ? redirectUrl : undefined,

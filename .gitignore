@@ -15,6 +15,7 @@
 /build
 
 # misc
+.worktrees/
 .cursor/debug*.log
 .DS_Store
 *.pem

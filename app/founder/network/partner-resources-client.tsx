@@ -420,6 +420,17 @@ export default function PartnerResourcesClient({ partnerSlug }: { partnerSlug: s
                                     <ExternalLink className="h-4 w-4 shrink-0" />
                                   </a>
                                 ) : null}
+                                {f.calendlyUrl ? (
+                                  <Button
+                                    size="lg"
+                                    variant="outline"
+                                    className="inline-flex items-center justify-center gap-2 border-zinc-600 bg-zinc-900 text-zinc-100 hover:bg-zinc-800 hover:text-white"
+                                    onClick={() => openCalendarBooking(f, partner.slug)}
+                                  >
+                                    <Calendar className="h-4 w-4 shrink-0" />
+                                    Book meeting
+                                  </Button>
+                                ) : null}
                               </div>
                             </div>
                           </div>

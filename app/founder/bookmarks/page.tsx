@@ -17,8 +17,6 @@ import {
 import Link from "next/link"
 import { toast } from '@/components/ui/toast-simple'
 import { fmtCheckRange } from '@/lib/utils'
-import { FounderWorkspaceTabs } from '@/components/founder-workspace-tabs'
-
 interface Bookmark {
   id: string
   notes: string | null
@@ -101,10 +99,6 @@ export default function BookmarksPage() {
     <div className="relative min-h-screen bg-background">
       <div className="pointer-events-none fixed inset-0 -z-10 bg-page-mesh bg-dot-grid" aria-hidden />
       <div className="page-shell-narrow">
-        <div className="mb-6">
-          <FounderWorkspaceTabs />
-        </div>
-
         <div className="mb-6 rounded-2xl border border-border/60 bg-card/70 p-5 shadow-sm backdrop-blur-sm md:p-6">
           <h1 className="mb-2 text-3xl font-bold tracking-tight">Your Bookmarked Investors</h1>
           <p className="text-muted-foreground">

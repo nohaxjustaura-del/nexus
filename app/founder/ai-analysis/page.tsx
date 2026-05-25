@@ -23,10 +23,11 @@ export default function AIAnalysisPage() {
 
   return (
     <div className="relative min-h-screen bg-background">
-      <div className="pointer-events-none fixed inset-0 -z-10 bg-page-mesh" aria-hidden />
+      <div className="pointer-events-none fixed inset-0 -z-10 bg-page-mesh bg-dot-grid" aria-hidden />
       <div className="page-shell-narrow">
         <div className="mx-auto w-full max-w-3xl pb-12">
-          <header className="mb-8 border-b border-border/50 pb-8">
+
+          <header className="mb-8 rounded-2xl border border-border/60 bg-card/70 p-5 shadow-sm backdrop-blur-sm md:p-6">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <h1 className="font-heading text-2xl font-semibold tracking-tight md:text-3xl">
                 Analyze your pitch
@@ -64,12 +65,12 @@ export default function AIAnalysisPage() {
                 className={cn(
                   'flex min-h-[3rem] items-center justify-center gap-2 rounded-full px-3 py-2.5 text-sm font-medium transition-colors sm:min-h-[3.25rem] sm:px-4 sm:text-[0.9375rem]',
                   mode === 'unified'
-                    ? 'bg-background text-foreground shadow-sm ring-1 ring-border/70'
+                    ? 'bg-primary/10 text-primary shadow-sm ring-1 ring-primary/30'
                     : 'text-muted-foreground hover:text-foreground',
                 )}
                 onClick={() => setMode('unified')}
               >
-                <Layers className="h-4 w-4 shrink-0 opacity-80" aria-hidden />
+                <Layers className="h-4 w-4 shrink-0" aria-hidden />
                 <span className="text-center leading-tight">Pitch analysis</span>
               </button>
               <button
@@ -79,12 +80,12 @@ export default function AIAnalysisPage() {
                 className={cn(
                   'flex min-h-[3rem] items-center justify-center gap-2 rounded-full px-3 py-2.5 text-sm font-medium transition-colors sm:min-h-[3.25rem] sm:px-4 sm:text-[0.9375rem]',
                   mode === 'pitch-idea'
-                    ? 'bg-background text-foreground shadow-sm ring-1 ring-border/70'
+                    ? 'bg-primary/10 text-primary shadow-sm ring-1 ring-primary/30'
                     : 'text-muted-foreground hover:text-foreground',
                 )}
                 onClick={() => setMode('pitch-idea')}
               >
-                <Lightbulb className="h-4 w-4 shrink-0 opacity-80" aria-hidden />
+                <Lightbulb className="h-4 w-4 shrink-0" aria-hidden />
                 <span className="text-center leading-tight">Pitch idea</span>
               </button>
             </div>

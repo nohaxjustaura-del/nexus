@@ -27,8 +27,6 @@ import { cn } from "@/lib/utils"
 import { PitchFeedbackComparison } from "@/components/pitch-feedback-comparison"
 import { getRubricSectionScoresFromResult } from "@/lib/analysis/is-safe-rubric-for-dashboard"
 import { legacyNexusExtrasEnabled } from '@/lib/nexus-surface-flags'
-import { FounderWorkspaceTabs } from "@/components/founder-workspace-tabs"
-
 function newAnalysisEntryHref(
   type: 'unified-pitch' | 'video-pitch' | 'pitch-idea' | 'pitch-deck' | string,
 ): string {
@@ -218,10 +216,6 @@ export default function MyAnalysesPage() {
   return (
     <div className="min-h-screen bg-background">
       <div className="page-shell-narrow">
-        <div className="mb-4">
-          <FounderWorkspaceTabs />
-        </div>
-
         <div className="mb-6">
           <h1 className="mb-2 text-3xl font-semibold tracking-tight text-foreground md:text-4xl">
             My Analyses

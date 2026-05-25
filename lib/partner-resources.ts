@@ -70,8 +70,7 @@ export const RESOURCE_PARTNERS: ResourcePartner[] = [
         tag: 'Product + Strategy',
         founderKey: 'william',
         linkedInUrl: 'https://www.linkedin.com/in/william-namgyal/',
-        // TODO: Replace with real Calendly URL from partner before going live
-        // calendlyUrl: 'https://calendly.com/william-namgyal/nexus-intro',
+        calendlyUrl: 'https://calendly.com/kelvinw-berkeley/luel',
       },
       {
         name: 'Inigo Lenderking',
@@ -81,8 +80,7 @@ export const RESOURCE_PARTNERS: ResourcePartner[] = [
         tag: 'COO + Operations',
         founderKey: 'inigo',
         linkedInUrl: 'https://www.linkedin.com/in/inigolenderking/',
-        // TODO: Replace with real Calendly URL from partner before going live
-        // calendlyUrl: 'https://calendly.com/inigo-lenderking/nexus-intro',
+        calendlyUrl: 'https://calendly.com/kelvinw-berkeley/luel',
       },
     ],
   },
@@ -113,6 +111,7 @@ export const RESOURCE_PARTNERS: ResourcePartner[] = [
         tag: 'Los Angeles metro',
         phone: '(800) 205-7605',
         locationLine: 'Los Angeles metropolitan area',
+        calendlyUrl: 'https://calendly.com/kelvinw-berkeley/transworld-business-advisors',
       },
     ],
   },

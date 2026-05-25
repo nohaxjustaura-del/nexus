@@ -4,8 +4,6 @@ import { getCurrentUser } from "@/lib/auth"
 import { parseJSON } from "@/lib/utils"
 import Link from "next/link"
 import { redirect } from "next/navigation"
-import { FounderWorkspaceTabs } from "@/components/founder-workspace-tabs"
-
 /**
  * Investor JSON columns are stored as strings but may arrive pre-parsed (e.g. JsonValue).
  * Always return a real string[] so callers can use .some / .join safely.
@@ -557,21 +555,19 @@ export default async function DiscoverPage({
   return (
     <div className="min-h-screen bg-background" data-page="discover">
       <div className="page-shell-narrow">
-        <header className="mb-6 md:mb-8">
-          <h1 className="font-heading text-2xl font-semibold tracking-tight text-foreground md:text-3xl">
-            Investors
-          </h1>
-          <p className="mt-1 text-sm text-muted-foreground md:text-base">
-            {verifiedLabel} verified investors
-            {totalInDirectory !== verifiedInDirectory
-              ? ` · ${totalInDirectory.toLocaleString('en-US')} profiles in directory`
-              : ' in directory'}
-            {showLimitedTailored ? ' · run analysis to unlock full list' : ''}
-          </p>
-        </header>
-
-        <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
-          <FounderWorkspaceTabs />
+        <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-6">
+          <header>
+            <h1 className="font-heading text-2xl font-semibold tracking-tight text-foreground md:text-3xl">
+              Investors
+            </h1>
+            <p className="mt-1 text-sm text-muted-foreground md:text-base">
+              {verifiedLabel} verified investors
+              {totalInDirectory !== verifiedInDirectory
+                ? ` · ${totalInDirectory.toLocaleString('en-US')} profiles in directory`
+                : ' in directory'}
+              {showLimitedTailored ? ' · run analysis to unlock full list' : ''}
+            </p>
+          </header>
 
           <div
             className="inline-flex shrink-0 rounded-xl border border-border/70 bg-card p-1"

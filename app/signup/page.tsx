@@ -1,5 +1,5 @@
 import { Suspense } from 'react'
-import { SignUpForm } from './signup-form'
+import { SignUpFormGate } from './signup-form-entry'
 
 function SignUpFallback() {
   return (
@@ -15,7 +15,7 @@ function SignUpFallback() {
 export default function SignUpPage() {
   return (
     <Suspense fallback={<SignUpFallback />}>
-      <SignUpForm />
+      <SignUpFormGate />
     </Suspense>
   )
 }

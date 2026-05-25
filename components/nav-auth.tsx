@@ -70,7 +70,13 @@ export const NavAuth = memo(function NavAuth() {
             </>
           ) : (
             <Link
-              href="/founder/onboarding"
+              href={
+                isInvestorPortal
+                  ? '/investor/onboarding'
+                  : user?.userType === 'mentor'
+                    ? '/mentor/onboarding'
+                    : '/founder/onboarding'
+              }
               className={cn(buttonVariants({ size: 'sm' }), 'h-9 rounded-full px-4 text-sm font-semibold shadow-none')}
             >
               Onboarding

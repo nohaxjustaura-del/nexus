@@ -355,12 +355,12 @@ export function PitchIdeaAnalysisTab() {
     
     return (
       <div className="space-y-6">
-        <Card className="border-2 border-primary/20 bg-gradient-to-br from-primary/5 to-blue-50/30">
+        <Card className="border-2 border-primary/20 bg-gradient-to-br from-primary/5 to-card">
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
                 <CardTitle className="flex items-center gap-2">
-                  <CheckCircle className="h-6 w-6 text-green-600" />
+                  <CheckCircle className="h-6 w-6 text-success" />
                   Analysis Complete
                 </CardTitle>
                 <CardDescription className="mt-2">
@@ -381,7 +381,7 @@ export function PitchIdeaAnalysisTab() {
 
         {/* Founder Feedback CTA */}
         {!result.founderFeedback && (
-          <Card className="border-2 border-purple-200 bg-purple-50/50">
+          <Card className="border-2 border-primary/20 bg-primary/5">
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
@@ -403,10 +403,10 @@ export function PitchIdeaAnalysisTab() {
 
         {/* Founder Feedback Results */}
         {result.founderFeedback && (
-          <Card className="border-2 border-purple-300 bg-gradient-to-br from-purple-50 to-pink-50">
+          <Card className="border-2 border-primary/30 bg-gradient-to-br from-primary/10 to-card">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Crown className="h-5 w-5 text-purple-600" />
+                <Crown className="h-5 w-5 text-primary" />
                 Feedback from YC-Funded Founders
               </CardTitle>
               <CardDescription>Personalized advice from Inigo & William</CardDescription>
@@ -433,10 +433,10 @@ export function PitchIdeaAnalysisTab() {
         {!analysis.rubricAnalysis && (
         <div className="grid md:grid-cols-3 gap-4">
           {analysis.strengths && analysis.strengths.length > 0 && (
-            <Card className="border-2 border-green-200 bg-green-50/30">
+            <Card className="border-2 border-success/30 bg-success/10">
               <CardHeader>
                 <CardTitle className="text-base flex items-center gap-2">
-                  <CheckCircle className="h-5 w-5 text-green-600" />
+                  <CheckCircle className="h-5 w-5 text-success" />
                   Strengths
                 </CardTitle>
               </CardHeader>
@@ -451,10 +451,10 @@ export function PitchIdeaAnalysisTab() {
           )}
 
           {analysis.improvements && analysis.improvements.length > 0 && (
-            <Card className="border-2 border-orange-200 bg-orange-50/30">
+            <Card className="border-2 border-warning/30 bg-warning/10">
               <CardHeader>
                 <CardTitle className="text-base flex items-center gap-2">
-                  <Lightbulb className="h-5 w-5 text-orange-600" />
+                  <Lightbulb className="h-5 w-5 text-warning" />
                   Improvements
                 </CardTitle>
               </CardHeader>
@@ -469,10 +469,10 @@ export function PitchIdeaAnalysisTab() {
           )}
 
           {analysis.suggestions && analysis.suggestions.length > 0 && (
-            <Card className="border-2 border-blue-200 bg-blue-50/30">
+            <Card className="border-2 border-primary/30 bg-primary/10">
               <CardHeader>
                 <CardTitle className="text-base flex items-center gap-2">
-                  <Target className="h-5 w-5 text-blue-600" />
+                  <Target className="h-5 w-5 text-primary" />
                   Next Steps
                 </CardTitle>
               </CardHeader>
@@ -752,7 +752,7 @@ export function PitchIdeaAnalysisTab() {
                     </span>
                   )}
                   {voiceRecordingId && !isRecording && !isTranscribing && (
-                    <span className="text-xs text-green-600 flex items-center gap-1">
+                    <span className="text-xs text-success flex items-center gap-1">
                       <CheckCircle className="h-3 w-3" />
                       Saved
                     </span>

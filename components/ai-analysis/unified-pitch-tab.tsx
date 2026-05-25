@@ -366,7 +366,7 @@ export function UnifiedPitchTab() {
                   'relative flex min-h-[5.5rem] flex-col items-center justify-center gap-1.5 rounded-t-xl border-b border-border p-5 text-center transition-[background-color,box-shadow] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background md:min-h-0 md:rounded-l-xl md:border-b-0 md:border-r md:border-border md:p-6',
                   reviewType === 'ai'
                     ? 'z-[1] bg-primary/[0.08] shadow-[0_0_0_2px_hsl(var(--primary))]'
-                    : 'hover:bg-muted/35',
+                    : 'hover:bg-primary/[0.04]',
                 )}
               >
                 <div className="flex items-center justify-center gap-2 text-sm font-medium text-foreground">
@@ -386,7 +386,7 @@ export function UnifiedPitchTab() {
                   'relative flex min-h-[5.5rem] flex-col items-center justify-center gap-1.5 rounded-b-xl p-5 text-center transition-[background-color,box-shadow] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background md:min-h-0 md:rounded-r-xl md:p-6',
                   reviewType === 'reviewer'
                     ? 'z-[1] bg-primary/[0.08] shadow-[0_0_0_2px_hsl(var(--primary))]'
-                    : 'hover:bg-muted/35',
+                    : 'hover:bg-primary/[0.04]',
                 )}
               >
                 <div className="flex items-center justify-center gap-2 text-sm font-medium text-foreground">

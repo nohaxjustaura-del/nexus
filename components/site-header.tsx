@@ -6,6 +6,7 @@ import { useMemo } from 'react'
 import { NexusWordmark } from '@/components/nexus-wordmark'
 import { NavAuth } from '@/components/nav-auth'
 import { ProtectedNavLink } from '@/components/protected-nav-link'
+import { FounderInvestorsNav } from '@/components/founder-investors-nav'
 import { MobileNav, type MobileNavItem } from '@/components/ui/mobile-nav'
 import { cn } from '@/lib/utils'
 import { useChromeMode } from '@/components/chrome-mode-provider'
@@ -87,6 +88,8 @@ export function SiteHeader() {
       { section: 'Workspace', href: '/founder/dashboard', label: 'Hub' },
       { href: '/founder/discover', label: 'Investors' },
       { href: '/founder/ai-analysis', label: 'Analyze' },
+      { href: '/founder/my-analyses', label: 'Analyses' },
+      { href: '/founder/bookmarks', label: 'Bookmarks' },
       { href: '/market-intelligence', label: 'Market' },
       ...(showFounderNetworkNav ? [{ href: '/founder/network', label: 'Network' as const }] : []),
       { section: 'More', href: '/pricing', label: 'Upgrade' },
@@ -234,7 +237,7 @@ export function SiteHeader() {
             {!isAdminRoute && chrome === 'founder' && (
               <div className={navDockClass}>
                 <ProtectedNavLink href="/founder/dashboard">Hub</ProtectedNavLink>
-                <ProtectedNavLink href="/founder/discover">Investors</ProtectedNavLink>
+                <FounderInvestorsNav />
                 <ProtectedNavLink href="/founder/ai-analysis">Analyze</ProtectedNavLink>
                 <ProtectedNavLink href="/market-intelligence">Market</ProtectedNavLink>
                 {showFounderNetworkNav ? (

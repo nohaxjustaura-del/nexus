@@ -25,7 +25,6 @@ import Link from 'next/link'
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
 import { legacyNexusExtrasEnabled } from '@/lib/nexus-surface-flags'
-import { FounderWorkspaceTabs } from '@/components/founder-workspace-tabs'
 import { AnimatedCounter } from '@/components/ui/animated-counter'
 import { ProgressRing } from '@/components/ui/progress-ring'
 import { useAccountCapabilities } from '@/components/account-capabilities-provider'
@@ -141,10 +140,6 @@ export default function FounderDashboard() {
     <div className="relative min-h-screen bg-background">
       <div className="pointer-events-none fixed inset-0 -z-10 bg-page-mesh bg-dot-grid" aria-hidden />
       <div className="page-shell-narrow">
-        <div className="mb-6">
-          <FounderWorkspaceTabs />
-        </div>
-
         <header className="mb-8 rounded-2xl border border-border/60 bg-card/70 p-5 shadow-sm backdrop-blur-sm md:p-6">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div>

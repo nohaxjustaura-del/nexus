@@ -12,10 +12,11 @@ const PartnerResourcesClient = dynamic(() => import('../partner-resources-client
   ),
 })
 
-type Props = { params: { slug: string } }
+type Props = { params: Promise<{ slug: string }> }
 
-export function generateMetadata({ params }: Props): Metadata {
-  const p = getResourcePartner(params.slug)
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { slug } = await params
+  const p = getResourcePartner(slug)
   if (!p) return { title: 'Network' }
   return {
     title: `${p.name} - Partner network`,
@@ -24,7 +25,8 @@ export function generateMetadata({ params }: Props): Metadata {
 }
 
 export default async function PartnerResourceDetailPage({ params }: Props) {
-  if (!getResourcePartner(params.slug)) notFound()
+  const { slug } = await params
+  if (!getResourcePartner(slug)) notFound()
   await ensureFounderNetworkPageAccess()
-  return <PartnerResourcesClient partnerSlug={params.slug} />
+  return <PartnerResourcesClient partnerSlug={slug} />
 }
