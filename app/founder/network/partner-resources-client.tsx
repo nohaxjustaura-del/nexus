@@ -177,11 +177,11 @@ export default function PartnerResourcesClient({ partnerSlug }: { partnerSlug: s
     setRequestModal({ open: true, founderKey, founderName, requestType })
   }
 
-  const openCalendarBooking = (f: PartnerFounderPreview, partnerSlug: string) => {
+  const openCalendarBooking = (f: PartnerFounderPreview, slug: string) => {
     if (!f.calendlyUrl) return
     setBookingModal({
       open: true,
-      partnerSlug,
+      partnerSlug: slug,
       founderName: f.name,
       founderRole: f.roleLine,
       calendlyUrl: f.calendlyUrl,
