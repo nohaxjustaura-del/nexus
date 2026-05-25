@@ -11,7 +11,7 @@ export const STRIPE_PRICES = {
   STARTER_PACK: process.env.STRIPE_PRICE_STARTER || 'price_starter_50_credits', // $19 / 50 credits
   FOUNDER_PACK: process.env.STRIPE_PRICE_FOUNDER || 'price_founder_150_credits', // $49 / 150 credits
   PRO_PACK: process.env.STRIPE_PRICE_PRO || 'price_pro_400_credits', // $99 / 400 credits
-  PREMIUM: process.env.STRIPE_PRICE_PREMIUM || 'price_premium_monthly', // $79/month
+  PREMIUM: process.env.STRIPE_PRICE_PREMIUM || 'price_premium_monthly', // optional: use Stripe Price IDs instead of price_data
 }
 
 // Credit packages configuration
@@ -39,12 +39,18 @@ export const CREDIT_PACKAGES = {
   },
 }
 
-// Premium subscription configuration
+// Pro monthly subscription (Checkout uses price_data; amount must match /pricing)
 export const PREMIUM_SUBSCRIPTION = {
-  price: 79,
+  price: 39,
   priceId: STRIPE_PRICES.PREMIUM,
-  name: 'Premium',
-  description: 'Unlimited usage — best value if you run many analyses each month',
+  name: 'NEXUS Pro',
+  description: 'Unlimited analyses, full investor database, and Pro features. Billed monthly.',
+}
+
+export const TEAM_SUBSCRIPTION = {
+  price: 99,
+  name: 'NEXUS Team',
+  description: 'Everything in Pro plus team seats and shared workspace. Billed monthly.',
 }
 
 // Helper: Get package by credits

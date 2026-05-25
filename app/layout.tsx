@@ -3,9 +3,7 @@ import { Inter } from "next/font/google"
 import "./globals.css"
 import { cn } from "@/lib/utils"
 import { SessionKeeper } from "@/components/session-keeper"
-import { AuthSessionProvider } from "@/components/auth-session-provider"
-import { AccountCapabilitiesProvider } from "@/components/account-capabilities-provider"
-import { ChromeModeProvider } from "@/components/chrome-mode-provider"
+import { AppProviders } from "@/components/app-providers"
 import { SiteHeader } from "@/components/site-header"
 import Link from "next/link"
 import { ChevronRight } from "lucide-react"
@@ -70,9 +68,7 @@ export default function RootLayout({ children }: RootLayoutProps) {
       >
         <WebVitalsReporter />
         <SessionKeeper />
-        <AuthSessionProvider>
-          <AccountCapabilitiesProvider>
-            <ChromeModeProvider>
+        <AppProviders>
             {/* Skip to main content - Accessibility */}
             <a
               href="#main-content"
@@ -129,9 +125,7 @@ export default function RootLayout({ children }: RootLayoutProps) {
               </div>
             </footer>
             <AppToaster />
-            </ChromeModeProvider>
-          </AccountCapabilitiesProvider>
-        </AuthSessionProvider>
+        </AppProviders>
       </body>
     </html>
   )

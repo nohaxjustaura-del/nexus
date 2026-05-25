@@ -402,10 +402,25 @@ export default function PartnerResourcesClient({ partnerSlug }: { partnerSlug: s
                                       'inline-flex items-center justify-center gap-2 border-zinc-600 bg-zinc-900 text-zinc-100 hover:bg-zinc-800 hover:text-white',
                                     )}
                                   >
-                                    Firm website
+                                    {partner.partnerSiteLabel ?? 'Firm website'}
                                     <ExternalLink className="h-4 w-4 shrink-0" />
                                   </a>
                                 ) : null}
+                                {partner.extraPartnerLinks?.map((link) => (
+                                  <a
+                                    key={link.href}
+                                    href={link.href}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className={cn(
+                                      buttonVariants({ variant: 'outline', size: 'lg' }),
+                                      'inline-flex items-center justify-center gap-2 border-zinc-600 bg-zinc-900 text-zinc-100 hover:bg-zinc-800 hover:text-white',
+                                    )}
+                                  >
+                                    {link.label}
+                                    <ExternalLink className="h-4 w-4 shrink-0" />
+                                  </a>
+                                ))}
                                 {f.linkedInUrl ? (
                                   <a
                                     href={f.linkedInUrl}
@@ -538,6 +553,31 @@ export default function PartnerResourcesClient({ partnerSlug }: { partnerSlug: s
               </div>
             </CardContent>
           </Card>
+
+          {partner.secondaryHub ? (
+            <Card className="border border-zinc-700 bg-zinc-900/80 shadow-none">
+              <CardHeader className="space-y-2 pb-2">
+                <CardTitle className="text-lg text-zinc-50">{partner.secondaryHub.title}</CardTitle>
+                <CardDescription className="text-sm leading-relaxed text-zinc-400">
+                  {partner.secondaryHub.description}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <a
+                  href={partner.secondaryHub.ctaHref}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={cn(
+                    buttonVariants({ variant: 'outline', size: 'lg' }),
+                    'inline-flex items-center justify-center gap-2 border-zinc-600 bg-zinc-950 text-zinc-100 hover:bg-zinc-800 hover:text-white',
+                  )}
+                >
+                  {partner.secondaryHub.ctaLabel}
+                  <ExternalLink className="h-4 w-4 shrink-0" />
+                </a>
+              </CardContent>
+            </Card>
+          ) : null}
 
           {showPlaybooks ? (
             <>
