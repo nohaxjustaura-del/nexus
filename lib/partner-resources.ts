@@ -175,7 +175,7 @@ export const RESOURCE_PARTNERS: ResourcePartner[] = [
     extraPartnerLinks: [
       { label: 'GoingVC Partners', href: 'https://www.goingvc.com/goingvc-partners' },
     ],
-      secondaryHub: {
+    secondaryHub: {
       title: 'M&A & business brokerage',
       description:
         'Jonathan also works with Transworld on mid-market business sales and acquisitions in Southern California. That work sits apart from his venture role on this page, and it is not the same office as the Los Angeles Transworld hub in our network (Calvin’s card).',
@@ -192,6 +192,7 @@ export const RESOURCE_PARTNERS: ResourcePartner[] = [
         tag: 'Venture · SoCal',
         locationLine: 'Orange County & Los Angeles, California',
         linkedInUrl: 'https://www.linkedin.com/in/jonathan-cheung-cfa/',
+        calendlyUrl: 'https://calendly.com/kelvinw-berkeley/jon',
       },
     ],
   },
