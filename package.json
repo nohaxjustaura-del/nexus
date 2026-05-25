@@ -13,6 +13,7 @@
     "type-check": "tsc --noEmit",
     "test:matching": "tsx lib/matching/__tests__/matching-signals.test-runner.ts",
     "test:auth-policy": "tsx lib/auth/__tests__/ai-analysis-auth-policy.test-runner.ts",
+    "test:network-booking": "tsx lib/network/__tests__/validate-booking-request.test-runner.ts",
     "perf:budget": "node scripts/check-budgets.mjs",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
     "db:push": "prisma db push",
