@@ -11,7 +11,7 @@ export const DEFAULT_TEST_SUPER_EMAIL = 'test12345@nexus.test'
 const TEST_SUPER_CREDITS = 1_000_000
 
 export function isTestSuperAccountEnabled(): boolean {
-  return process.env.ENABLE_TEST_SUPER_ACCOUNT === 'true'
+  return (process.env.ENABLE_TEST_SUPER_ACCOUNT ?? '').trim().toLowerCase() === 'true'
 }
 
 export function getTestSuperAccountLogin(): string {
