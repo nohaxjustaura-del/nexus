@@ -31,7 +31,9 @@ import {
   type YcRequestType,
 } from '@/components/yc-insider-founder-request-modal'
 import { normalizeUserCreditsApiPayload } from '@/lib/client/normalize-user-credits-api'
-import { getResourcePartner } from '@/lib/partner-resources'
+import { getResourcePartner, type PartnerFounderPreview } from '@/lib/partner-resources'
+import { InvestorBookingModal } from '@/components/investor-booking-modal'
+import { CalendlyLoader } from '@/components/calendly-loader'
 
 const PACK_MODULE_IDS = [
   'application-deconstruction',
@@ -80,6 +82,13 @@ export default function PartnerResourcesClient({ partnerSlug }: { partnerSlug: s
     founderName: '',
     requestType: 'ask',
   })
+  const [bookingModal, setBookingModal] = useState<{
+    open: boolean
+    partnerSlug: string
+    founderName: string
+    founderRole: string
+    calendlyUrl: string
+  } | null>(null)
 
   useEffect(() => {
     async function load() {
@@ -168,8 +177,32 @@ export default function PartnerResourcesClient({ partnerSlug }: { partnerSlug: s
     setRequestModal({ open: true, founderKey, founderName, requestType })
   }
 
+  const openCalendarBooking = (f: PartnerFounderPreview, partnerSlug: string) => {
+    if (!f.calendlyUrl) return
+    setBookingModal({
+      open: true,
+      partnerSlug,
+      founderName: f.name,
+      founderRole: f.roleLine,
+      calendlyUrl: f.calendlyUrl,
+    })
+  }
+
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100">
+      <CalendlyLoader />
+      {bookingModal && (
+        <InvestorBookingModal
+          open={bookingModal.open}
+          onOpenChange={(open) => {
+            if (!open) setBookingModal(null)
+          }}
+          partnerSlug={bookingModal.partnerSlug}
+          founderName={bookingModal.founderName}
+          founderRole={bookingModal.founderRole}
+          calendlyUrl={bookingModal.calendlyUrl}
+        />
+      )}
       <YcInsiderFounderRequestModal
         open={requestModal.open}
         onOpenChange={(open) => setRequestModal((m) => ({ ...m, open }))}
@@ -241,7 +274,8 @@ export default function PartnerResourcesClient({ partnerSlug }: { partnerSlug: s
                 Premium unlocks mentorship
               </CardTitle>
               <CardDescription className="text-zinc-400">
-                Premium: full founder profiles, LinkedIn, Ask / Book, and every playbook below at no extra charge.
+                Premium: full founder profiles, LinkedIn, Ask questions directly, and every playbook below at no extra charge.
+                Meeting bookings are open to all approved network members.
                 Without Premium, browse module descriptions and unlock each section from your balance, or buy the bundle.
               </CardDescription>
             </CardHeader>
@@ -418,30 +452,41 @@ export default function PartnerResourcesClient({ partnerSlug }: { partnerSlug: s
                             </div>
                             <div className="flex flex-wrap gap-2">
                               {f.founderKey ? (
-                                <>
-                                  <Button
-                                    type="button"
-                                    size="sm"
-                                    variant="outline"
-                                    disabled={!isPremium}
-                                    className="border-zinc-600 bg-zinc-800 text-zinc-100 hover:bg-zinc-700 hover:text-white"
-                                    onClick={() => openFounderRequest(f.founderKey!, f.name, 'ask')}
-                                  >
-                                    <MessageSquare className="mr-1.5 h-3 w-3" />
-                                    Ask
-                                  </Button>
-                                  <Button
-                                    type="button"
-                                    size="sm"
-                                    variant="outline"
-                                    disabled={!isPremium}
-                                    className="border-zinc-600 bg-zinc-800 text-zinc-100 hover:bg-zinc-700 hover:text-white"
-                                    onClick={() => openFounderRequest(f.founderKey!, f.name, 'book')}
-                                  >
-                                    <Calendar className="mr-1.5 h-3 w-3" />
-                                    Book
-                                  </Button>
-                                </>
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="outline"
+                                  disabled={!isPremium}
+                                  className="border-zinc-600 bg-zinc-800 text-zinc-100 hover:bg-zinc-700 hover:text-white"
+                                  onClick={() => openFounderRequest(f.founderKey!, f.name, 'ask')}
+                                >
+                                  <MessageSquare className="mr-1.5 h-3 w-3" />
+                                  Ask
+                                </Button>
+                              ) : null}
+                              {f.calendlyUrl ? (
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="outline"
+                                  className="border-zinc-600 bg-zinc-800 text-zinc-100 hover:bg-zinc-700 hover:text-white"
+                                  onClick={() => openCalendarBooking(f, partner.slug)}
+                                >
+                                  <Calendar className="mr-1.5 h-3 w-3" />
+                                  Book
+                                </Button>
+                              ) : f.founderKey ? (
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="outline"
+                                  disabled={!isPremium}
+                                  className="border-zinc-600 bg-zinc-800 text-zinc-100 hover:bg-zinc-700 hover:text-white"
+                                  onClick={() => openFounderRequest(f.founderKey!, f.name, 'book')}
+                                >
+                                  <Calendar className="mr-1.5 h-3 w-3" />
+                                  Book
+                                </Button>
                               ) : null}
                               {f.linkedInUrl ? (
                                 <a
