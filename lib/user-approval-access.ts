@@ -1,5 +1,6 @@
 import { db } from '@/lib/db'
 import { isAdminEmail } from '@/lib/constants'
+import { isTestSuperAccountEmail } from '@/lib/test-super-account'
 
 export type UserApprovalStatus = 'pending' | 'approved' | 'rejected'
 
@@ -12,6 +13,9 @@ export async function resolveUserApprovalAccess(email: string): Promise<{
   status: UserApprovalStatus
 }> {
   const normalized = email.toLowerCase().trim()
+  if (isTestSuperAccountEmail(normalized)) {
+    return { approved: true, status: 'approved' }
+  }
   if (isAdminEmail(normalized)) {
     return { approved: true, status: 'approved' }
   }

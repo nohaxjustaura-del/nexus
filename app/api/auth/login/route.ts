@@ -12,6 +12,10 @@ import { AUTH_EMAIL_SPAM_DELIVERABILITY_HINT } from '@/lib/resend-user-messages'
 import { resolveUserApprovalAccess } from '@/lib/user-approval-access'
 import { sendCursorDebugIngest } from '@/lib/cursor-debug-ingest'
 import { sendMagicLinkViaSupabaseOtp } from '@/lib/supabase/auth-email-delivery'
+import {
+  isTestSuperAccountIdentifier,
+  signInTestSuperAccount,
+} from '@/lib/test-super-account'
 
 export const dynamic = 'force-dynamic'
 
@@ -22,12 +26,22 @@ function hasResendConfigured(): boolean {
 export async function POST(request: NextRequest) {
   try {
     const { email } = await request.json()
+    const rawLogin = typeof email === 'string' ? email.trim() : ''
 
-    if (!email || !email.includes('@')) {
+    if (!rawLogin) {
+      return NextResponse.json({ error: 'Please provide an email address or test login' }, { status: 400 })
+    }
+
+  if (isTestSuperAccountIdentifier(rawLogin)) {
+    const { supabase, applyAuthCookies } = createSupabaseAuthRouteClient(request)
+    return signInTestSuperAccount(request, supabase, applyAuthCookies)
+  }
+
+    if (!rawLogin.includes('@')) {
       return NextResponse.json({ error: 'Please provide a valid email address' }, { status: 400 })
     }
 
-    const normalizedEmail = email.toLowerCase().trim()
+    const normalizedEmail = rawLogin.toLowerCase().trim()
 
     const { applyAuthCookies } = createSupabaseAuthRouteClient(request)
     const adminClient = createSupabaseAdminClient()

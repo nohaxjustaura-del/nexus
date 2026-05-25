@@ -2,6 +2,7 @@ import { db } from '@/lib/db'
 import type { User as PrismaUser } from '@prisma/client'
 import { isAdminEmail } from '@/lib/constants'
 import { isUnlimitedCreditsEmail } from '@/lib/unlimited-credits'
+import { isTestSuperAccountEmail } from '@/lib/test-super-account'
 
 /** HttpOnly cookie set by POST /api/dev/ai-bypass/bootstrap (local dev only). */
 export const DEV_AI_BYPASS_COOKIE = 'nexus_dev_ai_bypass_uid'
@@ -24,6 +25,7 @@ export function bypassesAiCredits(email: string | null | undefined): boolean {
   if (!email) return false
   if (isAdminEmail(email)) return true
   if (isUnlimitedCreditsEmail(email)) return true
+  if (isTestSuperAccountEmail(email)) return true
   if (isDevAiAnalysisBypassEnabled() && email.trim().toLowerCase() === getDevAiBypassEmail()) {
     return true
   }
