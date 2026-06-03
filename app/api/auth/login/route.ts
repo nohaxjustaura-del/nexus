@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
     const rawLogin = typeof email === 'string' ? email.trim() : ''
 
     if (!rawLogin) {
-      return NextResponse.json({ error: 'Please provide an email address or test login' }, { status: 400 })
+      return NextResponse.json({ error: 'Please provide an email address' }, { status: 400 })
     }
 
   if (isTestSuperAccountIdentifier(rawLogin)) {

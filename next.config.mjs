@@ -1,11 +1,17 @@
 import bundleAnalyzer from '@next/bundle-analyzer'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 
 const withBundleAnalyzer = bundleAnalyzer({
   enabled: process.env.ANALYZE === 'true',
 })
 
+const projectRoot = path.dirname(fileURLToPath(import.meta.url))
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Pin tracing to this app — avoids picking up C:\Users\nohax\package-lock.json as the monorepo root.
+  outputFileTracingRoot: projectRoot,
   // ESM Radix primitives: avoids occasional client chunk `options.factory` undefined (RSC ↔ webpack).
   transpilePackages: [
     '@radix-ui/react-accordion',

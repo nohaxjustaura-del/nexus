@@ -4,6 +4,7 @@ import { db } from '@/lib/db'
 import { logger } from '@/lib/logger'
 import { isAdminEmail } from '@/lib/constants'
 import { resolveUserApprovalAccess } from '@/lib/user-approval-access'
+import { isTestSuperAccountEmail } from '@/lib/test-super-account'
 
 export const dynamic = 'force-dynamic'
 
@@ -53,8 +54,9 @@ export async function GET(_request: NextRequest) {
     }
 
     const isAdmin = isAdminEmail(user.email)
+    const isTestSuper = isTestSuperAccountEmail(user.email)
     /** `emailVerified` on `User` is synced from Supabase `email_confirmed_at` in `syncPrismaUserFromAuth` (not a separate manual flag). */
-    const isVerified = isAdmin || (Boolean(user.emailVerified) && !accountRejected)
+    const isVerified = isAdmin || isTestSuper || (Boolean(user.emailVerified) && !accountRejected)
 
     if (!isVerified) {
       const res = NextResponse.json({

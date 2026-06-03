@@ -23,6 +23,7 @@ import {
   Zap,
   BarChart3,
   Phone,
+  Mail,
 } from 'lucide-react'
 import { toast } from '@/components/ui/toast-simple'
 import {
@@ -312,6 +313,11 @@ export default function PartnerResourcesClient({ partnerSlug }: { partnerSlug: s
               <CardDescription className="text-base leading-relaxed text-zinc-300">
                 {partner.companyIntro}
               </CardDescription>
+              {partner.eligibilityNote ? (
+                <p className="rounded-lg border border-amber-500/35 bg-amber-950/30 px-3 py-2 text-sm leading-relaxed text-amber-100/90">
+                  {partner.eligibilityNote}
+                </p>
+              ) : null}
               <p className="text-sm text-zinc-500">{partner.resourcesTagline}</p>
             </CardHeader>
             <CardContent className="pt-2">
@@ -339,6 +345,9 @@ export default function PartnerResourcesClient({ partnerSlug }: { partnerSlug: s
                   >
                     {partner.foundersPreview.map((f) => {
                       const telHref = f.phone ? `tel:${f.phone.replace(/\D/g, '')}` : undefined
+                      const mailHref = f.email
+                        ? `mailto:${f.email}${f.emailSubject ? `?subject=${encodeURIComponent(f.emailSubject)}` : ''}`
+                        : undefined
                       if (advisorHub) {
                         return (
                           <div
@@ -390,6 +399,18 @@ export default function PartnerResourcesClient({ partnerSlug }: { partnerSlug: s
                                   >
                                     <Phone className="h-4 w-4 shrink-0" />
                                     {f.phone}
+                                  </a>
+                                ) : null}
+                                {mailHref ? (
+                                  <a
+                                    href={mailHref}
+                                    className={cn(
+                                      buttonVariants({ size: 'lg' }),
+                                      'inline-flex items-center justify-center gap-2 bg-amber-500 text-zinc-950 shadow-lg shadow-amber-500/25 hover:bg-amber-400',
+                                    )}
+                                  >
+                                    <Mail className="h-4 w-4 shrink-0" />
+                                    {f.email}
                                   </a>
                                 ) : null}
                                 {partner.partnerSiteUrl ? (
@@ -447,6 +468,9 @@ export default function PartnerResourcesClient({ partnerSlug }: { partnerSlug: s
                                   </Button>
                                 ) : null}
                               </div>
+                              {f.emailNote ? (
+                                <p className="text-sm leading-relaxed text-zinc-400">{f.emailNote}</p>
+                              ) : null}
                             </div>
                           </div>
                         )

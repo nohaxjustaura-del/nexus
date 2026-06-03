@@ -11,7 +11,11 @@ export const DEFAULT_TEST_SUPER_EMAIL = 'test12345@nexus.test'
 const TEST_SUPER_CREDITS = 1_000_000
 
 export function isTestSuperAccountEnabled(): boolean {
-  return (process.env.ENABLE_TEST_SUPER_ACCOUNT ?? '').trim().toLowerCase() === 'true'
+  const explicit = (process.env.ENABLE_TEST_SUPER_ACCOUNT ?? '').trim().toLowerCase()
+  if (explicit === 'true') return true
+  if (explicit === 'false') return false
+  // Default on in local dev so `test12345` works without extra env setup.
+  return process.env.NODE_ENV === 'development'
 }
 
 export function getTestSuperAccountLogin(): string {

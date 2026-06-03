@@ -5,10 +5,19 @@ import { isAdminEmail } from '@/lib/constants'
 
 /** Skip `getUser()` when no Supabase session cookies are present — avoids a network round-trip for anonymous traffic. */
 function hasSupabaseSessionCookies(request: NextRequest): boolean {
-  return request.cookies.getAll().some(({ name }) => {
-    if (!name.startsWith('sb-')) return false
+  return request.cookies.getAll().some(({ name, value }) => {
+    if (!name.startsWith('sb-') || !value) return false
     return /auth|access-token|refresh-token/.test(name)
   })
+}
+
+/** Revoked, expired, or orphaned refresh tokens — clear cookies instead of retrying every request. */
+function isStaleSupabaseSessionError(error: { code?: string; message?: string }): boolean {
+  return (
+    error.code === 'refresh_token_not_found' ||
+    error.code === 'session_not_found' ||
+    Boolean(error.message?.includes('Refresh Token'))
+  )
 }
 
 export async function updateSupabaseSession(request: NextRequest) {
@@ -76,7 +85,15 @@ export async function updateSupabaseSession(request: NextRequest) {
   // Refreshes auth session when needed and writes updated cookies.
   const {
     data: { user },
+    error: authError,
   } = await supabase.auth.getUser()
+
+  if (authError) {
+    if (isStaleSupabaseSessionError(authError)) {
+      await supabase.auth.signOut()
+    }
+    return response
+  }
 
   if (user) {
     if (!isAdminEmail(user.email)) {

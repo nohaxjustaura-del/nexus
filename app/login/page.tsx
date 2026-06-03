@@ -87,9 +87,8 @@ export default function LoginPage() {
     
     // Validate email before submitting
     const trimmedEmail = email.trim()
-    const isTestSuperLogin = trimmedEmail.toLowerCase() === 'test12345'
-    if (!trimmedEmail || (!trimmedEmail.includes('@') && !isTestSuperLogin)) {
-      setError('Please enter a valid email address')
+    if (!trimmedEmail) {
+      setError('Please enter your email address')
       return
     }
     
@@ -181,7 +180,6 @@ export default function LoginPage() {
 
   const closeApprovalModal = () => setApprovalModal((m) => ({ ...m, open: false }))
   const closeAccountExistsModal = () => setAccountExistsModalOpen(false)
-  const isTestSuperLoginInput = email.trim().toLowerCase() === 'test12345'
 
   return (
     <div className="relative flex min-h-[calc(100vh-3.25rem)] items-center justify-center p-5 sm:p-8">
@@ -292,13 +290,13 @@ export default function LoginPage() {
           <form onSubmit={handleSubmit} noValidate className="space-y-4">
             <div className="space-y-2">
               <label htmlFor="email" className="text-sm font-medium">
-                Email or test login
+                Email
               </label>
               <Input
                 id="email"
                 type="text"
                 inputMode="email"
-                placeholder="you@example.com or test12345"
+                placeholder="you@example.com"
                 value={email}
                 onChange={(e) => {
                   setEmail(e.target.value)
@@ -321,11 +319,11 @@ export default function LoginPage() {
               {loading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  {isTestSuperLoginInput ? 'Signing in...' : 'Sending link...'}
+                  Sending link...
                 </>
               ) : (
                 <>
-                  {isTestSuperLoginInput ? 'Sign in' : 'Send Sign-In Link'}
+                  Send Sign-In Link
                   <Mail className="ml-2 h-4 w-4" />
                 </>
               )}
